@@ -56,6 +56,7 @@
                         <th>Thời gian làm việc</th>
                         <th>Vị trí</th>
                         <th>Trạng thái</th>
+                        <th>Ảnh</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
@@ -85,6 +86,13 @@
                                 @endif
                             </td>
                             <td>
+                                @if($schedule->image)
+                                    <img src="{{ asset('legacy/images/working-schedules/' . $schedule->image) }}" alt="Schedule image" class="img-thumbnail" style="max-width: 50px; max-height: 50px;">
+                                @else
+                                    <span class="text-muted">Không có</span>
+                                @endif
+                            </td>
+                            <td>
                                 <a href="{{ route('admin.working-schedules.show', $schedule->id) }}" class="btn btn-sm btn-info">
                                     <i class="fas fa-eye"></i> Xem
                                 </a>
@@ -102,7 +110,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center">Chưa có lịch nhân viên nào</td>
+                            <td colspan="9" class="text-center">Chưa có lịch nhân viên nào</td>
                         </tr>
                     @endforelse
                 </tbody>

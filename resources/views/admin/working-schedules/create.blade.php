@@ -17,7 +17,7 @@
         <h6 class="m-0 font-weight-bold text-primary">Thông tin lịch nhân viên</h6>
     </div>
     <div class="card-body">
-        <form action="{{ route('admin.working-schedules.store') }}" method="POST" class="needs-validation" novalidate>
+        <form action="{{ route('admin.working-schedules.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
             @csrf
             
             <div class="row">
@@ -89,6 +89,15 @@
                         @enderror
                     </div>
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label for="image">Ảnh</label>
+                <input type="file" class="form-control-file border @error('image') is-invalid @enderror" id="image" name="image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                <small class="form-text text-muted">Chấp nhận: JPG, PNG, GIF (tối đa 2MB)</small>
+                @error('image')
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="form-group">

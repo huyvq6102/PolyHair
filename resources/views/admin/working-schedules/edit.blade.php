@@ -26,7 +26,7 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.working-schedules.update', $schedule->id) }}" method="POST" class="needs-validation" novalidate>
+        <form action="{{ route('admin.working-schedules.update', $schedule->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
             @csrf
             @method('PUT')
             
@@ -81,6 +81,21 @@
                         @enderror
                     </div>
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label for="image">Ảnh</label>
+                @if($schedule->image)
+                    <div class="mb-2">
+                        <img src="{{ asset('legacy/images/working-schedules/' . $schedule->image) }}" alt="Current image" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                        <p class="text-muted small">Ảnh hiện tại</p>
+                    </div>
+                @endif
+                <input type="file" class="form-control-file border @error('image') is-invalid @enderror" id="image" name="image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                <small class="form-text text-muted">Chấp nhận: JPG, PNG, GIF (tối đa 2MB). Để trống nếu không muốn thay đổi.</small>
+                @error('image')
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="form-group">

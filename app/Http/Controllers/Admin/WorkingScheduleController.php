@@ -57,7 +57,16 @@ class WorkingScheduleController extends Controller
             'work_date' => 'required|date',
             'shift_id' => 'required|exists:working_shifts,id',
             'status' => 'required|in:available,busy,off',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('legacy/images/working-schedules'), $imageName);
+            $validated['image'] = $imageName;
+        }
 
         WorkingSchedule::create($validated);
 
@@ -96,7 +105,21 @@ class WorkingScheduleController extends Controller
             'work_date' => 'required|date',
             'shift_id' => 'required|exists:working_shifts,id',
             'status' => 'required|in:available,busy,off',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($schedule->image && file_exists(public_path('legacy/images/working-schedules/' . $schedule->image))) {
+                unlink(public_path('legacy/images/working-schedules/' . $schedule->image));
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('legacy/images/working-schedules'), $imageName);
+            $validated['image'] = $imageName;
+        }
 
         $schedule->update($validated);
 

@@ -53,6 +53,14 @@
                             @endif
                         </td>
                     </tr>
+                    @if($schedule->image)
+                    <tr>
+                        <th>Ảnh:</th>
+                        <td>
+                            <img src="{{ asset('legacy/images/working-schedules/' . $schedule->image) }}" alt="Schedule image" class="img-thumbnail" style="max-width: 300px; max-height: 300px;">
+                        </td>
+                    </tr>
+                    @endif
                 </table>
             </div>
             <div class="col-md-6">
