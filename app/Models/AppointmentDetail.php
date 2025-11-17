@@ -12,10 +12,13 @@ class AppointmentDetail extends Model
     protected $fillable = [
         'appointment_id',
         'service_variant_id',
+        'combo_id',
+        'combo_item_id',
         'employee_id',
         'price_snapshot',
         'duration',
         'status',
+        'notes',
     ];
 
     protected $casts = [
@@ -45,6 +48,22 @@ class AppointmentDetail extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    /**
+     * Combo of the appointment detail (if any).
+     */
+    public function combo(): BelongsTo
+    {
+        return $this->belongsTo(Combo::class);
+    }
+
+    /**
+     * Combo item reference.
+     */
+    public function comboItem(): BelongsTo
+    {
+        return $this->belongsTo(ComboItem::class);
     }
 }
 

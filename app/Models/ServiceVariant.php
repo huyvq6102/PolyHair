@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ServiceVariant extends Model
 {
@@ -16,11 +17,16 @@ class ServiceVariant extends Model
         'name',
         'price',
         'duration',
+        'is_default',
+        'is_active',
+        'notes',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'duration' => 'integer',
+        'is_default' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     /**
@@ -45,6 +51,16 @@ class ServiceVariant extends Model
     public function appointmentDetails(): HasMany
     {
         return $this->hasMany(AppointmentDetail::class);
+    }
+
+    /**
+     * Get all combos that reference this variant.
+     */
+    public function combos(): BelongsToMany
+    {
+        return $this->belongsToMany(Combo::class, 'combo_items')
+            ->withPivot(['service_id', 'quantity', 'price_override', 'notes'])
+            ->withTimestamps();
     }
 }
 

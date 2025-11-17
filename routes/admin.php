@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\ServiceCategoryController;
 use App\Http\Controllers\Admin\TypeController;
 use App\Http\Controllers\Admin\AppointmentController;
 use App\Http\Controllers\Admin\OrderController;
@@ -20,6 +21,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('types', TypeController::class);
     Route::resource('products', ProductController::class);
     Route::resource('services', ServiceController::class);
+    Route::resource('service-categories', ServiceCategoryController::class);
     Route::resource('appointments', AppointmentController::class);
     Route::resource('orders', OrderController::class);
     Route::resource('users', UserController::class);
