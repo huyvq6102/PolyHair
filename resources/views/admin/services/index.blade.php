@@ -43,11 +43,13 @@
             <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th>Mã dịch vụ</th>
+                        <th>Mã</th>
                         <th>Tên dịch vụ</th>
                         <th>Danh mục</th>
-                        <th>Hình ảnh</th>
+                        <th>Biến thể</th>
+                        <th>Combo</th>
                         <th>Trạng thái</th>
+                        <th>Hình ảnh</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
@@ -57,17 +59,19 @@
                             <td>{{ $service->id }}</td>
                             <td>{{ $service->name }}</td>
                             <td>{{ $service->category->name ?? 'N/A' }}</td>
-                            <td>
-                                @if($service->image)
-                                    <img src="{{ asset('legacy/images/products/' . $service->image) }}" alt="{{ $service->name }}" width="50" height="50">
-                                @else
-                                    <span class="text-muted">Không có ảnh</span>
-                                @endif
-                            </td>
+                            <td>{{ $service->serviceVariants->count() }}</td>
+                            <td>{{ $service->ownedCombos->count() }}</td>
                             <td>
                                 <span class="badge badge-{{ $service->status == 'Hoạt động' ? 'success' : 'secondary' }}">
                                     {{ $service->status }}
                                 </span>
+                            </td>
+                            <td>
+                                @if($service->image)
+                                    <img src="{{ asset('legacy/images/products/' . $service->image) }}" alt="{{ $service->name }}" width="60" height="60" class="img-thumbnail">
+                                @else
+                                    <span class="text-muted">Không có ảnh</span>
+                                @endif
                             </td>
                             <td>
                                 <a href="{{ route('admin.services.edit', $service->id) }}" class="btn btn-sm btn-primary">
