@@ -122,7 +122,7 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->role && $this->role->name === 'Admin';
+        return $this->role_id === 1; // Assuming role_id 1 is admin
     }
 
     /**

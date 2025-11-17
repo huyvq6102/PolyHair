@@ -44,14 +44,6 @@
         </a>
     </li>
 
-    <!-- Nav Item - Working Schedules -->
-    <li class="nav-item {{ str_contains($currentRoute, 'working-schedule') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.working-schedules.index') }}">
-            <i class="fas fa-fw fa-calendar-week"></i>
-            <span>Lịch nhân viên</span>
-        </a>
-    </li>
-
     <!-- Nav Item - Users -->
     <li class="nav-item">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages2" aria-expanded="true" aria-controls="collapsePages">
