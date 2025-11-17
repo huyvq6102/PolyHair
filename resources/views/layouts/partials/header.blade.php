@@ -80,22 +80,44 @@
                                     </div>
                                     
                                     @auth
-                                        <div class="dropdown no-arrow mr-1">
-                                            <button type="button" class="btn bg-transparent p-0 ml-2 dropdown-toggle text-white" id="dropdownMenuOffset" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-offset="0,20">
-                                                <i class="fa fa-user-o ml-2" aria-hidden="true"></i>
-                                                {{ auth()->user()->name }}
+                                        <div class="dropdown mr-1" style="position: relative;">
+                                            <button type="button" class="btn bg-transparent p-0 ml-2 text-white d-flex align-items-center" id="userDropdown" 
+                                                    style="border: none; outline: none; cursor: pointer;">
+                                                <span class="ml-1">{{ Str::limit(auth()->user()->name, 20) }}</span>
+                                                <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px;"></i>
                                             </button>
-                                            <div class="dropdown-menu" aria-labelledby="dropdownMenuOffset">
-                                                @if(auth()->user()->isAdmin())
-                                                    <a class="dropdown-item" href="{{ route('admin.dashboard') }}">Trang quản trị</a>
-                                                @endif
-                                                <a class="dropdown-item" href="{{ route('profile.edit') }}">Tài khoản của tôi</a>
-                                                <form method="POST" action="{{ route('logout') }}">
+                                            <div class="dropdown-menu dropdown-menu-right shadow-lg" aria-labelledby="userDropdown" 
+                                                style="min-width: 220px; border-radius: 8px; border: none; margin-top: 10px; padding: 0; display: none; position: absolute; right: 0; top: 100%; z-index: 1050;">
+                                                <form method="POST" action="{{ route('logout') }}" class="m-0">
                                                     @csrf
-                                                    <button type="submit" class="dropdown-item">Đăng xuất</button>
+                                                    <button type="submit" class="dropdown-item py-2 w-100 text-left" 
+                                                            style="border: none; background: none; cursor: pointer; color: #dc3545;">
+                                                        Đăng xuất
+                                                    </button>
                                                 </form>
                                             </div>
                                         </div>
+                                        <script>
+                                        document.addEventListener('DOMContentLoaded', function() {
+                                            var dropdown = document.querySelector('#userDropdown').closest('.dropdown');
+                                            var menu = dropdown.querySelector('.dropdown-menu');
+                                            var icon = dropdown.querySelector('#userDropdown');
+                                            var timeout;
+                                            function showMenu() {
+                                                clearTimeout(timeout);
+                                                menu.style.display = 'block';
+                                            }
+                                            function hideMenu() {
+                                                timeout = setTimeout(function() {
+                                                    menu.style.display = 'none';
+                                                }, 150);
+                                            }
+                                            icon.addEventListener('mouseenter', showMenu);
+                                            icon.addEventListener('mouseleave', hideMenu);
+                                            menu.addEventListener('mouseenter', showMenu);
+                                            menu.addEventListener('mouseleave', hideMenu);
+                                        });
+                                        </script>
                                     @else
                                         <a href="{{ route('login') }}" class="popup-with-form text-white text-uppercase ml-3 mt-1">Đăng nhập</a>
                                     @endauth

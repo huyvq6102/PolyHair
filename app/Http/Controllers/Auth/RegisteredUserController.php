@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,20 +32,36 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'phone' => ['required', 'string', 'max:20'],
+            'gender' => ['nullable', 'in:Nam,Nữ,Khác'],
+            'dob' => ['nullable', 'date'],
         ]);
 
-        $user = User::create([
+        // Tìm role "Khách hàng"
+        $customerRole = Role::where('name', 'Khách hàng')
+            ->orWhere('name', 'khách hàng')
+            ->orWhere('name', 'Khach hang')
+            ->first();
+
+        $userData = [
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-        ]);
+            'phone' => $request->phone,
+            'gender' => $request->gender ?? null,
+            'dob' => $request->dob ?? null,
+            'status' => 'Hoạt động',
+            'role_id' => $customerRole ? $customerRole->id : null,
+        ];
+
+        $user = User::create($userData);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect()->route('site.home')->with('success', 'Đăng ký thành công!');
     }
 }
