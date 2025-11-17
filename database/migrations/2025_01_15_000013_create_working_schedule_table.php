@@ -13,11 +13,31 @@ return new class extends Migration
     {
         Schema::create('working_schedule', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('employee_id')->nullable()->constrained('employees')->onDelete('cascade');
+
+            // Nhân viên (employees.id)
+            $table->foreignId('employee_id')
+                ->nullable()
+                ->constrained('employees')
+                ->onDelete('cascade');
+
+            // Ngày làm việc
             $table->date('work_date')->nullable();
-            $table->foreignId('shift_id')->nullable()->constrained('working_shifts')->onDelete('set null');
+
+            // Ca làm việc (working_shifts.id)
+            $table->foreignId('shift_id')
+                ->nullable()
+                ->constrained('working_shifts')
+                ->onDelete('set null');
+
+            // Trạng thái lịch: rảnh / bận / nghỉ
             $table->enum('status', ['available', 'busy', 'off'])->nullable();
+
+            // Ảnh minh họa lịch (nếu cần)
+            $table->string('image')->nullable();
+
+            // Cờ bàn giao (theo schema gốc MySQL, mặc định 0)
             $table->boolean('is_handover')->default(0);
+
             $table->timestamps();
             $table->softDeletes();
         });
@@ -31,4 +51,5 @@ return new class extends Migration
         Schema::dropIfExists('working_schedule');
     }
 };
+
 
