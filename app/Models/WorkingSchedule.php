@@ -17,12 +17,11 @@ class WorkingSchedule extends Model
         'work_date',
         'shift_id',
         'status',
-        'is_handover',
+        'image',
     ];
 
     protected $casts = [
         'work_date' => 'date',
-        'is_handover' => 'boolean',
     ];
 
     /**
