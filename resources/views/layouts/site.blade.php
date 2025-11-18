@@ -37,6 +37,8 @@
     <link rel="stylesheet" href="{{ asset('legacy/content/css/pgwslideshow.min.css') }}">
     <link rel="stylesheet" href="{{ asset('legacy/content/css/rateit.css') }}">
     <link rel="stylesheet" href="{{ asset('legacy/content/css/style.css') }}" />
+    <link rel="stylesheet" href="{{ asset('legacy/content/css/header.css') }}" />
+    <link rel="stylesheet" href="{{ asset('legacy/content/css/blade-custom.css') }}" />
     @stack('styles')
 </head>
 

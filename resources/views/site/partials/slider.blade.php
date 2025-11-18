@@ -45,7 +45,7 @@
                             @endphp
                             
                             @if($imageExists)
-                                <img style="height: 100vh; object-fit: cover;" src="{{ asset($imagePath) }}" class="img-fluid d-block w-100" alt="{{ $slider['name'] ?? 'Slider' }}">
+                                <img class="slider-img img-fluid d-block w-100" src="{{ asset($imagePath) }}" alt="{{ $slider['name'] ?? 'Slider' }}">
                                 <div class="slider_text text-center">
                                     <h3 class="">{{ $slider['name'] ?? 'Chăm sóc chuyên nghiệp' }}</h3>
                                     <p>{{ $slider['description'] ?? 'Dịch vụ chăm sóc tóc và làm đẹp hàng đầu' }}</p>
@@ -57,10 +57,10 @@
                                 </div>
                             @else
                                 <!-- Placeholder background if image doesn't exist -->
-                                <div style="height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
-                                    <div class="slider_text text-center" style="position: relative; z-index: 2;">
-                                        <h3 class="text-white" style="font-size: 3rem; margin-bottom: 1rem;">{{ $slider['name'] ?? 'Chăm sóc chuyên nghiệp' }}</h3>
-                                        <p class="text-white" style="font-size: 1.5rem; margin-bottom: 2rem;">{{ $slider['description'] ?? 'Dịch vụ chăm sóc tóc và làm đẹp hàng đầu' }}</p>
+                                <div class="slider-placeholder">
+                                    <div class="slider_text text-center slider-text-wrapper">
+                                        <h3 class="text-white">{{ $slider['name'] ?? 'Chăm sóc chuyên nghiệp' }}</h3>
+                                        <p class="text-white">{{ $slider['description'] ?? 'Dịch vụ chăm sóc tóc và làm đẹp hàng đầu' }}</p>
                                         <div class="book_room">
                                             <div class="book_btn d-lg-block">
                                                 <a class="popup-with-form" href="#test-form">Đặt lịch ngay</a>
