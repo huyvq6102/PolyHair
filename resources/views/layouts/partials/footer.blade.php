@@ -111,3 +111,27 @@
 <script src="{{ asset('legacy/content/js/gijgo.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/main.js') }}"></script>
 @stack('scripts')
+
+<script>
+    // Đảm bảo dropdown menu hoạt động
+    $(document).ready(function() {
+        // Khởi tạo Bootstrap dropdown
+        $('[data-toggle="dropdown"]').dropdown();
+        
+        // Xử lý click vào user dropdown
+        $('#userDropdown').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var menu = $(this).next('.dropdown-menu');
+            $('.dropdown-menu').not(menu).hide();
+            menu.toggle();
+        });
+        
+        // Đóng dropdown khi click bên ngoài
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.dropdown').length) {
+                $('.dropdown-menu').hide();
+            }
+        });
+    });
+</script>
