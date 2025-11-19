@@ -31,7 +31,8 @@ class ServiceService
      */
     public function getByCategory($categoryId)
     {
-        return Service::where('category_id', $categoryId)
+        return Service::with('category')
+            ->where('category_id', $categoryId)
             ->orderBy('id', 'desc')
             ->get();
     }
