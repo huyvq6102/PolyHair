@@ -90,6 +90,9 @@
 </footer>
 <!-- footer-end -->
 
+<!-- Appointment Form Popup -->
+@include('site.partials.appointment-form')
+
 <!-- JS here -->
 <script src="{{ asset('legacy/content/js/vendor/modernizr-3.5.0.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/vendor/jquery-2.1.3.min.js') }}"></script>

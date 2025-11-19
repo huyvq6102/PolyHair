@@ -6,6 +6,7 @@ use App\Http\Controllers\Site\ProductController;
 use App\Http\Controllers\Site\ServiceController;
 use App\Http\Controllers\Site\BlogController;
 use App\Http\Controllers\Site\ContactController;
+use App\Http\Controllers\Site\AppointmentController;
 use Illuminate\Support\Facades\Route;
 
 // Site Routes
@@ -31,6 +32,10 @@ Route::prefix('blog')->name('site.blog.')->group(function () {
 Route::prefix('contact')->name('site.contact.')->group(function () {
     Route::get('/', [ContactController::class, 'index'])->name('index');
     Route::post('/', [ContactController::class, 'store'])->name('store');
+});
+
+Route::prefix('appointment')->name('site.appointment.')->group(function () {
+    Route::post('/', [AppointmentController::class, 'store'])->name('store');
 });
 
 // Auth Routes
