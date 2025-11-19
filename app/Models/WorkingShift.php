@@ -22,6 +22,58 @@ class WorkingShift extends Model
         'duration' => 'integer',
     ];
 
+    protected function normalizeTime($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('H:i');
+        }
+
+        $value = (string) $value;
+        if (strpos($value, ' ') !== false) {
+            $parts = explode(' ', $value);
+            $value = end($parts);
+        }
+
+        return substr($value, 0, 5);
+    }
+
+    public function getFormattedStartTimeAttribute(): ?string
+    {
+        return $this->normalizeTime($this->start_time);
+    }
+
+    public function getFormattedEndTimeAttribute(): ?string
+    {
+        return $this->normalizeTime($this->end_time);
+    }
+
+    public function getDisplayTimeAttribute(): string
+    {
+        $start = $this->formatted_start_time;
+        $end = $this->formatted_end_time;
+
+        $predefined = [
+            '08:00' => '08h - 12h',
+            '12:00' => '12h - 17h',
+            '17:00' => '17h - 20h',
+            '20:00' => '20h - 22h',
+        ];
+
+        if ($start && isset($predefined[$start])) {
+            return $predefined[$start];
+        }
+
+        if ($start && $end) {
+            return sprintf('%sh - %sh', substr($start, 0, 2), substr($end, 0, 2));
+        }
+
+        return 'Chưa xác định';
+    }
+
     /**
      * Get all working schedules for the shift.
      */

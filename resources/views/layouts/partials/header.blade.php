@@ -16,7 +16,9 @@
                             </div>
                         </div>
                         <div class="col-xl-10 col-lg-10">
+
                             @include('layouts.partials.menu')
+
                         </div>
 
                         <div class="col-12">

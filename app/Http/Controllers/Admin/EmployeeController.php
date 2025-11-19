@@ -64,11 +64,17 @@ class EmployeeController extends Controller
             'status' => 'nullable|in:Đang làm việc,Nghỉ phép,Vô hiệu hóa',
         ]);
 
-        // Get or create Employee role
-        $employeeRole = Role::firstOrCreate(
-            ['name' => 'Employee'],
-            ['description' => 'Employee role for staff members']
-        );
+        // Get Nhân Viên role
+        $employeeRole = Role::where('name', 'Nhân Viên')
+            ->orWhere('name', 'Nhân viên')
+            ->orWhere('name', 'nhân viên')
+            ->first();
+        
+        if (!$employeeRole) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Không tìm thấy role "Nhân viên". Vui lòng tạo role này trước.');
+        }
 
         // Prepare user data
         $userData = [
@@ -142,11 +148,17 @@ class EmployeeController extends Controller
             'status' => 'nullable|in:Đang làm việc,Nghỉ phép,Vô hiệu hóa',
         ]);
 
-        // Get or create Employee role
-        $employeeRole = Role::firstOrCreate(
-            ['name' => 'Employee'],
-            ['description' => 'Employee role for staff members']
-        );
+        // Get Nhân Viên role
+        $employeeRole = Role::where('name', 'Nhân Viên')
+            ->orWhere('name', 'Nhân viên')
+            ->orWhere('name', 'nhân viên')
+            ->first();
+        
+        if (!$employeeRole) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Không tìm thấy role "Nhân viên". Vui lòng tạo role này trước.');
+        }
 
         // Prepare user data
         $userData = [

@@ -42,7 +42,7 @@
     <!-- about_area_end -->
 
     <!-- service_area_start -->
-    <div class="service_area" style="margin-bottom: 100px; padding-bottom: 100px;">
+    <div class="service_area custom-spacing">
         <div class="container">
             <div class="row">
                 <div class="col-xl-12">
@@ -87,7 +87,7 @@
 
     <!-- product_area_start -->
     @if($products->count() > 0)
-    <div class="product_area" style="margin-bottom: 100px; padding-bottom: 100px;">
+    <div class="product_area custom-spacing">
         <div class="container">
             <div class="row">
                 <div class="col-xl-12">

@@ -1,6 +1,7 @@
 @php
     $setting = app(\App\Services\SettingService::class)->getFirst();
     $currentRoute = request()->route()->getName() ?? '';
+    $serviceMenuActive = \Illuminate\Support\Str::startsWith($currentRoute, ['admin.services', 'admin.service-categories']);
 @endphp
 
 <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
@@ -24,14 +25,15 @@
     <hr class="sidebar-divider">
 
     <!-- Nav Item - Services -->
-    <li class="nav-item">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
+    <li class="nav-item {{ $serviceMenuActive ? 'active' : '' }}">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseServices" aria-expanded="{{ $serviceMenuActive ? 'true' : 'false' }}" aria-controls="collapseServices">
             <i class="fas fa-fw fa-folder"></i>
             <span>Dịch vụ</span>
         </a>
-        <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+        <div id="collapseServices" class="collapse {{ $serviceMenuActive ? 'show' : '' }}" aria-labelledby="headingServices" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item" href="{{ route('admin.services.index') }}">Quản lý dịch vụ</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.service-categories') ? 'active' : '' }}" href="{{ route('admin.service-categories.index') }}">Danh mục dịch vụ</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.services') ? 'active' : '' }}" href="{{ route('admin.services.index') }}">Quản lý dịch vụ</a>
             </div>
         </div>
     </li>
@@ -41,6 +43,14 @@
         <a class="nav-link" href="{{ route('admin.appointments.index') }}">
             <i class="fas fa-fw fa-calendar-alt"></i>
             <span>Lịch hẹn</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Working schedules -->
+    <li class="nav-item {{ str_contains($currentRoute, 'working-schedule') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.working-schedules.index') }}">
+            <i class="fas fa-fw fa-user-clock"></i>
+            <span>Lịch nhân viên</span>
         </a>
     </li>
 

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\ServiceService;
+use App\Models\Service;
 use App\Services\ServiceCategoryService;
+use App\Services\ServiceService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class ServiceController extends Controller
 {
@@ -24,7 +26,7 @@ class ServiceController extends Controller
     public function index(Request $request)
     {
         $keyword = $request->get('keyword');
-        
+
         if ($keyword) {
             $services = $this->serviceService->search($keyword);
         } else {
@@ -40,7 +42,8 @@ class ServiceController extends Controller
     public function create()
     {
         $categories = $this->serviceCategoryService->getAll();
-        return view('admin.services.create', compact('categories'));
+        $service = null;
+        return view('admin.services.create', compact('categories', 'service'));
     }
 
     /**
@@ -48,24 +51,13 @@ class ServiceController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'category_id' => 'required|exists:service_categories,id',
-            'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
-        ]);
+        $validated = $this->validateServiceRequest($request);
 
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->move(public_path('legacy/images/products'), $imageName);
-            $validated['image'] = $imageName;
-        }
+        $serviceData = $this->extractServiceData($validated, $request);
+        $variants = $validated['variants'] ?? [];
+        $combos = $validated['combos'] ?? [];
 
-        $validated['status'] = $validated['status'] ?? 'Hoạt động';
-
-        $this->serviceService->create($validated);
+        $this->serviceService->create($serviceData, $variants, $combos);
 
         return redirect()->route('admin.services.index')
             ->with('success', 'Dịch vụ đã được tạo thành công!');
@@ -78,6 +70,7 @@ class ServiceController extends Controller
     {
         $service = $this->serviceService->getOne($id);
         $categories = $this->serviceCategoryService->getAll();
+
         return view('admin.services.edit', compact('service', 'categories'));
     }
 
@@ -86,29 +79,14 @@ class ServiceController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'category_id' => 'required|exists:service_categories,id',
-            'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
-        ]);
+        $service = $this->serviceService->getOne($id);
+        $validated = $this->validateServiceRequest($request, true);
 
-        if ($request->hasFile('image')) {
-            $service = $this->serviceService->getOne($id);
-            
-            // Delete old image
-            if ($service->image && file_exists(public_path('legacy/images/products/' . $service->image))) {
-                unlink(public_path('legacy/images/products/' . $service->image));
-            }
-            
-            $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->move(public_path('legacy/images/products'), $imageName);
-            $validated['image'] = $imageName;
-        }
+        $serviceData = $this->extractServiceData($validated, $request, $service);
+        $variants = $validated['variants'] ?? [];
+        $combos = $validated['combos'] ?? [];
 
-        $this->serviceService->update($id, $validated);
+        $this->serviceService->update($service->id, $serviceData, $variants, $combos);
 
         return redirect()->route('admin.services.index')
             ->with('success', 'Dịch vụ đã được cập nhật thành công!');
@@ -123,5 +101,78 @@ class ServiceController extends Controller
 
         return redirect()->route('admin.services.index')
             ->with('success', 'Dịch vụ đã được xóa thành công!');
+    }
+
+    /**
+     * Validate incoming request for store/update.
+     */
+    protected function validateServiceRequest(Request $request, bool $isUpdate = false): array
+    {
+        $imageRule = $isUpdate ? 'nullable' : 'required';
+
+        return $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'image' => [$imageRule, 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            'category_id' => 'required|exists:service_categories,id',
+            'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
+            'base_price' => 'nullable|numeric|min:0',
+            'base_duration' => 'nullable|integer|min:0',
+            'variants' => 'required|array|min:1',
+            'variants.*.id' => 'nullable|exists:service_variants,id',
+            'variants.*.name' => 'required|string|max:255',
+            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.duration' => 'required|integer|min:0',
+            'variants.*.is_default' => 'nullable|boolean',
+            'variants.*.is_active' => 'nullable|boolean',
+            'variants.*.notes' => 'nullable|string',
+            'variants.*.attributes' => 'nullable|array',
+            'variants.*.attributes.*.name' => 'nullable|string|max:100',
+            'variants.*.attributes.*.value' => 'nullable|string|max:100',
+            'combos' => 'nullable|array',
+            'combos.*.id' => 'nullable|exists:combos,id',
+            'combos.*.name' => 'nullable|string|max:255',
+            'combos.*.slug' => 'nullable|string|max:255',
+            'combos.*.description' => 'nullable|string',
+            'combos.*.price' => 'nullable|numeric|min:0',
+            'combos.*.status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
+            'combos.*.sort_order' => 'nullable|integer|min:0',
+            'combos.*.variant_uids' => 'nullable|array|min:1',
+            'combos.*.variant_uids.*' => 'nullable|string',
+        ]);
+    }
+
+    /**
+     * Extract service data and handle image upload.
+     */
+    protected function extractServiceData(array $validated, Request $request, ?Service $service = null): array
+    {
+        $data = Arr::only($validated, [
+            'name',
+            'description',
+            'category_id',
+            'status',
+            'base_price',
+            'base_duration',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('legacy/images/products'), $imageName);
+            $data['image'] = $imageName;
+
+            if ($service && $service->image && file_exists(public_path('legacy/images/products/' . $service->image))) {
+                unlink(public_path('legacy/images/products/' . $service->image));
+            }
+        } elseif ($service) {
+            $data['image'] = $service->image;
+        }
+
+        if (empty($data['status'])) {
+            $data['status'] = 'Hoạt động';
+        }
+
+        return $data;
     }
 }
