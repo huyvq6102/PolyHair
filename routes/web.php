@@ -6,6 +6,7 @@ use App\Http\Controllers\Site\ProductController;
 use App\Http\Controllers\Site\ServiceController;
 use App\Http\Controllers\Site\BlogController;
 use App\Http\Controllers\Site\ContactController;
+use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\AppointmentController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,8 +35,20 @@ Route::prefix('contact')->name('site.contact.')->group(function () {
     Route::post('/', [ContactController::class, 'store'])->name('store');
 });
 
+Route::prefix('cart')->name('site.cart.')->group(function () {
+    Route::get('/', [CartController::class, 'index'])->name('index');
+    Route::post('/add', [CartController::class, 'add'])->name('add');
+    Route::put('/update/{key}', [CartController::class, 'update'])->name('update');
+    Route::delete('/remove/{key}', [CartController::class, 'remove'])->name('remove');
+    Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
+    Route::get('/count', [CartController::class, 'count'])->name('count');
+    Route::get('/seed-fake-data', [CartController::class, 'seedFakeData'])->name('seed-fake-data');
+});
+
 Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::post('/', [AppointmentController::class, 'store'])->name('store');
+    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
+    Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
 });
 
 // Auth Routes

@@ -617,17 +617,26 @@
                             '<div class="success-message">' + response.message + '</div>'
                         );
                         
-                        // Reset form after 2 seconds
+                        // Update cart count in header
+                        if (response.cart_count !== undefined) {
+                            $('.cart-icon .bag').text(response.cart_count);
+                        }
+                        
+                        // Reset form and redirect to cart after 1.5 seconds
                         setTimeout(function() {
                             $('#appointmentForm')[0].reset();
                             $.magnificPopup.close();
+                            
                             // Show toast notification if available
                             if (typeof toastr !== 'undefined') {
                                 toastr.success(response.message);
-                            } else {
-                                alert(response.message);
                             }
-                        }, 2000);
+                            
+                            // Redirect to cart page
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            }
+                        }, 1500);
                     }
                 },
                 error: function(xhr) {

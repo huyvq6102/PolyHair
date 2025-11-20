@@ -10,6 +10,7 @@ use App\Services\WordTimeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 class AppointmentController extends Controller
@@ -113,12 +114,24 @@ class AppointmentController extends Controller
                 'note' => $validated['note'] ?? null,
             ], $serviceVariantData);
 
+            // Add appointment to cart
+            $cart = Session::get('cart', []);
+            $cartKey = 'appointment_' . $appointment->id;
+            $cart[$cartKey] = [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1,
+            ];
+            Session::put('cart', $cart);
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất có thể.',
-                'appointment_id' => $appointment->id
+                'message' => 'Đặt lịch thành công! Đã thêm vào lịch đặt.',
+                'appointment_id' => $appointment->id,
+                'redirect_url' => route('site.cart.index'),
+                'cart_count' => count($cart),
             ]);
 
         } catch (\Exception $e) {
@@ -130,5 +143,39 @@ class AppointmentController extends Controller
             ], 422);
         }
     }
-}
 
+    /**
+     * Show appointment detail page.
+     */
+    public function show($id)
+    {
+        $appointment = \App\Models\Appointment::with([
+            'user', 
+            'employee.user', 
+            'appointmentDetails.serviceVariant.service',
+            'payments'
+        ])->findOrFail($id);
+        
+        // Calculate total price
+        $totalPrice = 0;
+        foreach ($appointment->appointmentDetails as $detail) {
+            $totalPrice += $detail->price_snapshot ?? 0;
+        }
+        
+        return view('site.appointment.show', compact('appointment', 'totalPrice'));
+    }
+
+    /**
+     * Show success page after booking.
+     */
+    public function success($id)
+    {
+        $appointment = \App\Models\Appointment::with([
+            'user', 
+            'employee.user', 
+            'appointmentDetails.serviceVariant.service'
+        ])->findOrFail($id);
+        
+        return view('site.appointment.success', compact('appointment'));
+    }
+}

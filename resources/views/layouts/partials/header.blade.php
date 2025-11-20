@@ -1,12 +1,24 @@
 @php
-    $setting = app(\App\Services\SettingService::class)->getFirst();
-    $types = app(\App\Services\TypeService::class)->getAll();
-    $employees = app(\App\Services\EmployeeService::class)->getAll();
-    $services = app(\App\Services\ServiceService::class)->getAll();
-    $wordTimes = app(\App\Services\WordTimeService::class)->getAll();
-    $currentRoute = request()->route()->getName() ?? '';
-    // Backward compatibility
-    $barbers = $employees;
+    try {
+        $setting = app(\App\Services\SettingService::class)->getFirst();
+        $types = app(\App\Services\TypeService::class)->getAll();
+        $employees = app(\App\Services\EmployeeService::class)->getAll();
+        $services = app(\App\Services\ServiceService::class)->getAll();
+        $wordTimes = app(\App\Services\WordTimeService::class)->getAll();
+        $currentRoute = request()->route()->getName() ?? '';
+        $cartCount = count(session('cart', []));
+        // Backward compatibility
+        $barbers = $employees;
+    } catch (\Exception $e) {
+        $setting = null;
+        $types = collect([]);
+        $employees = collect([]);
+        $services = collect([]);
+        $wordTimes = collect([]);
+        $currentRoute = '';
+        $cartCount = 0;
+        $barbers = collect([]);
+    }
 @endphp
 
 <!-- header-start -->
@@ -27,31 +39,34 @@
                                 <div class="menu_wrap_inner d-flex align-items-center justify-content-end">
                                     <div class="main-menu">
                                         <nav>
-                                            <ul id="navigation" class="mt-3">
-                                                <li><a class="{{ $currentRoute == 'site.home' ? 'active' : '' }}" href="{{ route('site.home') }}">Trang chủ</a></li>
-                                                <li><a class="{{ str_contains($currentRoute, 'service') ? 'active' : '' }}" href="{{ route('site.services.index') }}">Dịch vụ
+                                            <ul id="navigation">
+                                                <li><a class="{{ $currentRoute == 'site.home' ? 'active' : '' }}" href="{{ route('site.home') }}">TRANG CHỦ</a></li>
+                                                <li><a class="{{ str_contains($currentRoute, 'service') ? 'active' : '' }}" href="{{ route('site.services.index') }}">DỊCH VỤ
                                                     <ul class="submenu">
                                                         @foreach($types as $type)
                                                             <li><a href="{{ route('site.services.index', ['type' => $type->id]) }}"><img src="{{ asset('legacy/images/categories/' . $type->images) }}" class="mr-2" alt="" width="20" height="20">{{ $type->name }}</a></li>
                                                         @endforeach
                                                     </ul>
                                                 </li>
-                                                <li><a class="{{ str_contains($currentRoute, 'product') ? 'active' : '' }}" href="{{ route('site.products.index') }}">Sản phẩm</a></li>
-                                                <li><a class="{{ str_contains($currentRoute, 'blog') ? 'active' : '' }}" href="{{ route('site.blog.index') }}">Tin tức</a></li>
-                                                <li><a class="{{ str_contains($currentRoute, 'contact') ? 'active' : '' }}" href="{{ route('site.contact.index') }}">Liên hệ</a></li>
+                                                <li><a class="{{ str_contains($currentRoute, 'product') ? 'active' : '' }}" href="{{ route('site.products.index') }}">SẢN PHẨM</a></li>
+                                                <li><a class="{{ str_contains($currentRoute, 'blog') ? 'active' : '' }}" href="{{ route('site.blog.index') }}">TIN TỨC</a></li>
+                                                <li><a class="{{ str_contains($currentRoute, 'contact') ? 'active' : '' }}" href="{{ route('site.contact.index') }}">LIÊN HỆ</a></li>
                                             </ul>
                                         </nav>
                                     </div>
 
-                                    <div class="icon cart-icon">
-                                        <a href="#"><i class="fa fa-shopping-bag text-white ml-2" aria-hidden="true"></i><span class="bag">0</span></a>
+                                    <div class="icon cart-icon ml-3">
+                                        <a href="{{ route('site.cart.index') }}">
+                                            <i class="fa fa-shopping-bag text-white" aria-hidden="true"></i>
+                                            <span class="bag">{{ $cartCount }}</span>
+                                        </a>
                                     </div>
                                     
                                     @auth
-                                        <div class="dropdown mr-1" style="position: relative;">
-                                            <button type="button" class="btn bg-transparent p-0 ml-2 text-white d-flex align-items-center" id="userDropdown" 
+                                        <div class="dropdown ml-3" style="position: relative;">
+                                            <button type="button" class="btn bg-transparent p-0 text-white d-flex align-items-center" id="userDropdown" 
                                                     style="border: none; outline: none; cursor: pointer;">
-                                                <span class="ml-1">{{ Str::limit(auth()->user()->name, 20) }}</span>
+                                                <span class="text-uppercase">Administrator</span>
                                                 <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px;"></i>
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-right shadow-lg" aria-labelledby="userDropdown" 
@@ -87,7 +102,7 @@
                                         });
                                         </script>
                                     @else
-                                        <a href="{{ route('login') }}" class="popup-with-form text-white text-uppercase ml-3 mt-1">Đăng nhập</a>
+                                        <a href="{{ route('login') }}" class="text-white text-uppercase ml-3">Đăng nhập</a>
                                     @endauth
                                     
                                     <div class="book_room">
