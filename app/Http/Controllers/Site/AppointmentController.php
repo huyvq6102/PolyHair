@@ -83,7 +83,8 @@ class AppointmentController extends Controller
             
             // Calculate start and end time
             $appointmentDate = Carbon::parse($validated['appointment_date']);
-            $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $wordTime->time);
+            $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
+            $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
             
             // Calculate total duration from selected service variants
             $totalDuration = 0;
@@ -177,5 +178,96 @@ class AppointmentController extends Controller
         ])->findOrFail($id);
         
         return view('site.appointment.success', compact('appointment'));
+    }
+
+    /**
+     * Get available time slots for an employee on a specific date.
+     */
+    public function getAvailableTimeSlots(Request $request)
+    {
+        // Handle POST request for getting word_time_id
+        if ($request->isMethod('post') && $request->input('action') === 'get_or_create_word_time') {
+            $time = $request->input('time');
+            if (!$time) {
+                return response()->json(['success' => false, 'message' => 'Time is required'], 400);
+            }
+            
+            // Find or create word_time record
+            $wordTime = \App\Models\WordTime::firstOrCreate(
+                ['time' => $time],
+                ['time' => $time]
+            );
+            
+            return response()->json([
+                'success' => true,
+                'word_time_id' => $wordTime->id,
+            ]);
+        }
+        
+        // Handle GET request for available time slots
+        $request->validate([
+            'employee_id' => 'nullable|exists:employees,id',
+            'appointment_date' => 'required|date|after_or_equal:today',
+        ]);
+
+        $employeeId = $request->input('employee_id');
+        $appointmentDate = Carbon::parse($request->input('appointment_date'));
+
+        // Generate time slots from 7:00 to 22:00, every 30 minutes
+        $timeSlots = [];
+        $startTime = Carbon::parse('07:00');
+        $endTime = Carbon::parse('22:00');
+        
+        $currentTime = $startTime->copy();
+        while ($currentTime->lte($endTime)) {
+            $timeString = $currentTime->format('H:i');
+            
+            // Find or create word_time for this time slot
+            $wordTime = \App\Models\WordTime::firstOrCreate(
+                ['time' => $timeString],
+                ['time' => $timeString]
+            );
+            
+            $timeSlots[] = [
+                'time' => $timeString,
+                'display' => $timeString,
+                'word_time_id' => $wordTime->id,
+            ];
+            $currentTime->addMinutes(30);
+        }
+
+        // If employee is selected, check booked appointments
+        if ($employeeId) {
+            $bookedAppointments = \App\Models\Appointment::where('employee_id', $employeeId)
+                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
+                ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
+                ->get();
+
+            // Mark booked time slots as unavailable
+            // Only mark the exact time slot that matches the appointment start time
+            foreach ($bookedAppointments as $appointment) {
+                $appointmentStart = Carbon::parse($appointment->start_at);
+                $appointmentStartTime = $appointmentStart->format('H:i');
+                
+                foreach ($timeSlots as &$slot) {
+                    // Only mark unavailable if the slot time exactly matches the appointment start time
+                    if ($slot['time'] === $appointmentStartTime) {
+                        $slot['available'] = false;
+                    } else {
+                        $slot['available'] = $slot['available'] ?? true;
+                    }
+                }
+            }
+        } else {
+            // If no employee selected, all slots are available
+            foreach ($timeSlots as &$slot) {
+                $slot['available'] = true;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'time_slots' => $timeSlots,
+        ]);
     }
 }

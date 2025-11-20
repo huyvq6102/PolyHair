@@ -1,7 +1,38 @@
 @php
-    $employees = app(\App\Services\EmployeeService::class)->getAll()->filter(function($employee) {
-        return ($employee->status === 'active' || !$employee->status) && $employee->user;
-    });
+    // Lấy tất cả nhân viên từ database
+    $allEmployees = \App\Models\Employee::with(['user.role'])
+        ->whereNotNull('user_id')
+        ->orderBy('id', 'desc')
+        ->get();
+    
+    // Lọc nhân viên: loại trừ admin và nhân viên bị vô hiệu hóa
+    $employees = $allEmployees->filter(function($employee) {
+        // Bỏ qua nếu không có user
+        if (!$employee->user) {
+            return false;
+        }
+        
+        // Loại trừ admin - kiểm tra role_id
+        if ($employee->user->role_id == 1) {
+            return false;
+        }
+        
+        // Kiểm tra role name nếu có
+        if ($employee->user->role) {
+            $roleName = strtolower(trim($employee->user->role->name ?? ''));
+            if (in_array($roleName, ['admin', 'administrator'])) {
+                return false;
+            }
+        }
+        
+        // Loại trừ nhân viên bị vô hiệu hóa
+        if ($employee->status === 'Vô hiệu hóa') {
+            return false;
+        }
+        
+        return true;
+    })->values();
+    
     $wordTimes = app(\App\Services\WordTimeService::class)->getAll();
     $serviceVariants = \App\Models\ServiceVariant::with('service')->get();
 @endphp
@@ -105,14 +136,22 @@
                 <div class="form-section">
                     <h4 class="section-title"><i class="fa fa-users"></i> Chọn nhân viên <span class="optional">(Tùy chọn)</span></h4>
                     <div class="form-group">
+                        <label for="employee_id" class="form-label">
+                            <i class="fa fa-users"></i> Chọn nhân viên
+                        </label>
                         <select name="employee_id" id="employee_id" class="form-select">
                             <option value="">Không chọn - Để chúng tôi sắp xếp</option>
-                            @foreach($employees as $employee)
-                                <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
-                                    {{ $employee->user->name ?? 'Nhân viên' }}
-                                    @if($employee->position) - {{ $employee->position }} @endif
-                                </option>
-                            @endforeach
+                            @if($employees->count() > 0)
+                                @foreach($employees as $employee)
+                                    <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
+                                        {{ $employee->user->name ?? 'Nhân viên' }}
+                                        @if($employee->position) - {{ $employee->position }} @endif
+                                        @if($employee->level) ({{ $employee->level }}) @endif
+                                    </option>
+                                @endforeach
+                            @else
+                                <option value="" disabled>Không có nhân viên nào</option>
+                            @endif
                         </select>
                     </div>
                 </div>
@@ -135,17 +174,16 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="word_time_id" class="form-label">
+                        <label for="time_slot" class="form-label">
                             <i class="fa fa-clock-o"></i> Chọn giờ <span class="required">*</span>
                         </label>
-                        <select name="word_time_id" id="word_time_id" class="form-select" required>
-                            <option value="">-- Chọn giờ --</option>
-                            @foreach($wordTimes as $wordTime)
-                                <option value="{{ $wordTime->id }}" {{ old('word_time_id') == $wordTime->id ? 'selected' : '' }}>
-                                    {{ date('H:i', strtotime($wordTime->time)) }}
-                                </option>
-                            @endforeach
+                        <select name="time_slot" id="time_slot" class="form-select" required disabled>
+                            <option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>
                         </select>
+                        <input type="hidden" name="word_time_id" id="word_time_id" value="">
+                        <small class="form-text text-muted" id="timeSlotHelp" style="display: none; color: #666; font-size: 12px; margin-top: 5px;">
+                            <i class="fa fa-info-circle"></i> Các khung giờ đã được đặt sẽ không hiển thị
+                        </small>
                     </div>
                 </div>
                 
@@ -180,65 +218,69 @@
     .appointment-popup {
         background: #fff;
         padding: 0;
-        border-radius: 15px;
-        max-width: 650px;
-        max-height: 90vh;
+        border-radius: 12px;
+        max-width: 90%;
+        width: 100%;
+        max-width: 480px;
+        max-height: 85vh;
         overflow: hidden;
         box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        margin: 0 auto;
     }
     
     .popup_inner {
-        padding: 35px 40px;
-        max-height: 90vh;
+        padding: 20px 25px;
+        max-height: 85vh;
         overflow-y: auto;
     }
     
     /* Form Header */
     .form-header {
         text-align: center;
-        margin-bottom: 30px;
-        padding-bottom: 20px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
         border-bottom: 2px solid #f0f0f0;
     }
     
     .form-header h3 {
         color: #4A3600;
-        font-size: 26px;
+        font-size: 20px;
         font-weight: 600;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
     
     .form-header h3 i {
-        margin-right: 10px;
+        margin-right: 8px;
         color: #BC9321;
+        font-size: 18px;
     }
     
     .form-subtitle {
         color: #666;
-        font-size: 14px;
+        font-size: 12px;
         margin: 0;
     }
     
     /* Form Sections */
     .form-section {
-        margin-bottom: 25px;
+        margin-bottom: 18px;
     }
     
     .section-title {
         color: #4A3600;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 600;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
         display: flex;
         align-items: center;
-        padding-bottom: 10px;
+        padding-bottom: 8px;
         border-bottom: 1px solid #e9ecef;
     }
     
     .section-title i {
-        margin-right: 8px;
+        margin-right: 6px;
         color: #BC9321;
-        font-size: 18px;
+        font-size: 16px;
     }
     
     .section-title .required {
@@ -255,21 +297,22 @@
     
     /* Form Groups */
     .form-group {
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
     
     .form-label {
         display: block;
         font-weight: 500;
         color: #333;
-        margin-bottom: 8px;
-        font-size: 14px;
+        margin-bottom: 6px;
+        font-size: 13px;
     }
     
     .form-label i {
-        margin-right: 6px;
+        margin-right: 5px;
         color: #4A3600;
-        width: 16px;
+        width: 14px;
+        font-size: 13px;
     }
     
     .form-label .required {
@@ -289,10 +332,10 @@
     .form-select,
     .form-textarea {
         width: 100%;
-        padding: 12px 15px;
+        padding: 10px 12px;
         border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 14px;
+        border-radius: 6px;
+        font-size: 13px;
         transition: all 0.3s ease;
         background: #fff;
         font-family: inherit;
@@ -322,16 +365,16 @@
     
     .form-textarea {
         resize: vertical;
-        min-height: 80px;
+        min-height: 60px;
     }
     
     /* Service Variants */
     .service-variants-container {
-        max-height: 250px;
+        max-height: 200px;
         overflow-y: auto;
-        padding: 10px;
+        padding: 8px;
         background: #f8f9fa;
-        border-radius: 8px;
+        border-radius: 6px;
         border: 2px solid #e9ecef;
     }
     
@@ -418,57 +461,57 @@
     .variant-name {
         font-weight: 500;
         color: #333;
-        font-size: 14px;
+        font-size: 13px;
     }
     
     .variant-meta {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 12px;
     }
     
     .variant-price {
         color: #BC9321;
         font-weight: 600;
-        font-size: 15px;
+        font-size: 13px;
     }
     
     .variant-duration {
         color: #666;
-        font-size: 12px;
+        font-size: 11px;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
     }
     
     .variant-duration i {
-        font-size: 11px;
+        font-size: 10px;
     }
     
     /* Submit Button */
     .form-submit {
-        margin-top: 25px;
-        padding-top: 20px;
+        margin-top: 20px;
+        padding-top: 15px;
         border-top: 2px solid #f0f0f0;
     }
     
     .submit-btn {
         width: 100%;
-        padding: 15px 30px;
+        padding: 12px 20px;
         background: linear-gradient(135deg, #4A3600 0%, #5a4a00 100%);
         color: #fff;
         border: none;
-        border-radius: 8px;
-        font-size: 16px;
+        border-radius: 6px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
     }
     
     .submit-btn:hover {
@@ -539,29 +582,99 @@
     }
     
     /* Responsive */
+    @media (max-width: 991px) {
+        .appointment-popup {
+            max-width: 95%;
+            width: 95%;
+        }
+        
+        .popup_inner {
+            padding: 20px 25px;
+        }
+    }
+    
     @media (max-width: 767px) {
         .appointment-popup {
             max-width: 100%;
+            width: 100%;
             border-radius: 0;
             max-height: 100vh;
         }
         
         .popup_inner {
-            padding: 25px 20px;
+            padding: 20px 15px;
+        }
+        
+        .form-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
         }
         
         .form-header h3 {
-            font-size: 22px;
+            font-size: 20px;
+        }
+        
+        .form-subtitle {
+            font-size: 12px;
+        }
+        
+        .section-title {
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: 10px 12px;
+            font-size: 14px;
         }
         
         .service-variants-container {
             max-height: 200px;
+            padding: 8px;
+        }
+        
+        .variant-item {
+            padding: 10px;
         }
         
         .variant-content {
             flex-direction: column;
             align-items: flex-start;
             gap: 5px;
+        }
+        
+        .variant-checkbox {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .submit-btn {
+            padding: 12px 20px;
+            font-size: 14px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .popup_inner {
+            padding: 15px 12px;
+        }
+        
+        .form-header h3 {
+            font-size: 18px;
+        }
+        
+        .form-section {
+            margin-bottom: 20px;
+        }
+        
+        .service-variants-container {
+            max-height: 150px;
         }
     }
 </style>
@@ -586,6 +699,108 @@
         // Initialize checked state on load
         $('.variant-checkbox:checked').each(function() {
             $(this).closest('.variant-item').addClass('checked');
+        });
+        
+        // Load available time slots when employee or date changes
+        function loadAvailableTimeSlots() {
+            const employeeId = $('#employee_id').val();
+            const appointmentDate = $('#appointment_date').val();
+            const timeSlotSelect = $('#time_slot');
+            const wordTimeIdInput = $('#word_time_id');
+            const timeSlotHelp = $('#timeSlotHelp');
+            
+            // Reset time slot selection
+            timeSlotSelect.prop('disabled', true).html('<option value="">-- Đang tải khung giờ --</option>');
+            wordTimeIdInput.val('');
+            
+            // Check if date is selected
+            if (!appointmentDate) {
+                timeSlotSelect.html('<option value="">-- Vui lòng chọn ngày trước --</option>');
+                timeSlotHelp.hide();
+                return;
+            }
+            
+            // Load time slots via AJAX
+            $.ajax({
+                url: '{{ route("site.appointment.available-time-slots") }}',
+                method: 'GET',
+                data: {
+                    employee_id: employeeId || '',
+                    appointment_date: appointmentDate
+                },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success && response.time_slots) {
+                        timeSlotSelect.html('<option value="">-- Chọn giờ --</option>');
+                        
+                        let availableCount = 0;
+                        const currentlySelectedTime = timeSlotSelect.val(); // Keep track of selected time
+                        
+                        response.time_slots.forEach(function(slot) {
+                            if (slot.available !== false) {
+                                const option = $('<option></option>')
+                                    .attr('value', slot.time)
+                                    .attr('data-word-time-id', slot.word_time_id)
+                                    .text(slot.display);
+                                
+                                // If this is the currently selected time, keep it even if it becomes unavailable
+                                if (currentlySelectedTime && slot.time === currentlySelectedTime) {
+                                    option.text(slot.display + ' (Đã chọn)');
+                                }
+                                
+                                timeSlotSelect.append(option);
+                                availableCount++;
+                            }
+                        });
+                        
+                        // Restore selected value if it was selected before
+                        if (currentlySelectedTime) {
+                            const selectedOption = timeSlotSelect.find('option[value="' + currentlySelectedTime + '"]');
+                            if (selectedOption.length) {
+                                timeSlotSelect.val(currentlySelectedTime);
+                                $('#word_time_id').val(selectedOption.data('word-time-id'));
+                            }
+                        }
+                        
+                        if (availableCount === 0) {
+                            timeSlotSelect.html('<option value="" disabled>Không còn khung giờ trống</option>');
+                        } else {
+                            timeSlotSelect.prop('disabled', false);
+                            timeSlotHelp.show();
+                        }
+                    } else {
+                        timeSlotSelect.html('<option value="">-- Có lỗi xảy ra --</option>');
+                    }
+                },
+                error: function() {
+                    timeSlotSelect.html('<option value="">-- Có lỗi xảy ra khi tải khung giờ --</option>');
+                }
+            });
+        }
+        
+        // Handle employee selection change
+        $('#employee_id').on('change', function() {
+            loadAvailableTimeSlots();
+        });
+        
+        // Handle date selection change
+        $('#appointment_date').on('change', function() {
+            loadAvailableTimeSlots();
+        });
+        
+        // Handle time slot selection - set word_time_id
+        $('#time_slot').on('change', function() {
+            const selectedOption = $(this).find('option:selected');
+            const selectedTime = $(this).val();
+            const wordTimeId = selectedOption.data('word-time-id');
+            
+            if (wordTimeId && selectedTime) {
+                $('#word_time_id').val(wordTimeId);
+            } else {
+                $('#word_time_id').val('');
+            }
         });
         
         // Handle form submission via AJAX
@@ -617,26 +832,17 @@
                             '<div class="success-message">' + response.message + '</div>'
                         );
                         
-                        // Update cart count in header
-                        if (response.cart_count !== undefined) {
-                            $('.cart-icon .bag').text(response.cart_count);
-                        }
-                        
-                        // Reset form and redirect to cart after 1.5 seconds
+                        // Reset form after 2 seconds
                         setTimeout(function() {
                             $('#appointmentForm')[0].reset();
                             $.magnificPopup.close();
-                            
                             // Show toast notification if available
                             if (typeof toastr !== 'undefined') {
                                 toastr.success(response.message);
+                            } else {
+                                alert(response.message);
                             }
-                            
-                            // Redirect to cart page
-                            if (response.redirect_url) {
-                                window.location.href = response.redirect_url;
-                            }
-                        }, 1500);
+                        }, 2000);
                     }
                 },
                 error: function(xhr) {
