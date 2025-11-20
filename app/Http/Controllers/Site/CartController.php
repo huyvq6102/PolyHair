@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Site;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CartController extends Controller
 {
@@ -180,12 +182,58 @@ class CartController extends Controller
         $cart = Session::get('cart', []);
 
         if (isset($cart[$key])) {
+            $item = $cart[$key];
+            
+            // If it's an appointment, delete from database permanently
+            if (isset($item['type']) && $item['type'] === 'appointment' && isset($item['id'])) {
+                try {
+                    DB::beginTransaction();
+                    
+                    $appointment = \App\Models\Appointment::withTrashed()->find($item['id']);
+                    
+                    if ($appointment) {
+                        // Delete appointment details first
+                        \App\Models\AppointmentDetail::where('appointment_id', $appointment->id)->delete();
+                        
+                        // Delete appointment logs if exists
+                        if (Schema::hasTable('appointment_logs')) {
+                            \App\Models\AppointmentLog::where('appointment_id', $appointment->id)->delete();
+                        }
+                        
+                        // Delete promotion usages if exists
+                        if (Schema::hasTable('promotion_usages')) {
+                            \App\Models\PromotionUsage::where('appointment_id', $appointment->id)->delete();
+                        }
+                        
+                        // Delete reviews if exists
+                        if (Schema::hasTable('reviews')) {
+                            \App\Models\Review::where('appointment_id', $appointment->id)->delete();
+                        }
+                        
+                        // Delete payments if exists
+                        if (Schema::hasTable('payments')) {
+                            \App\Models\Payment::where('appointment_id', $appointment->id)->delete();
+                        }
+                        
+                        // Force delete the appointment (permanent delete from database)
+                        $appointment->forceDelete();
+                    }
+                    
+                    DB::commit();
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    \Log::error('Error deleting appointment from cart: ' . $e->getMessage());
+                    // Continue to remove from cart even if database delete fails
+                }
+            }
+            
+            // Remove from cart session
             unset($cart[$key]);
             Session::put('cart', $cart);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Đã xóa khỏi lịch đặt',
+                'message' => 'Đã xóa khỏi lịch đặt' . (isset($item['type']) && $item['type'] === 'appointment' ? ' và xóa khỏi hệ thống' : ''),
                 'cart_count' => count($cart),
             ]);
         }

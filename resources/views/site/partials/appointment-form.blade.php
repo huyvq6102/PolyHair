@@ -40,177 +40,167 @@
 <!-- Appointment Form Popup -->
 <div id="test-form" class="mfp-hide white-popup-block">
     <div class="popup_box appointment-popup">
-        <div class="popup_inner">
-            <div class="form-header">
-                <h3><i class="fa fa-calendar-check-o"></i> Đặt lịch cắt tóc</h3>
-                <p class="form-subtitle">Điền thông tin để đặt lịch hẹn với chúng tôi</p>
+        <div class="popup_inner p-4">
+
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h3 class="fw-bold">
+                    <i class="fa fa-calendar-check-o"></i> Đặt lịch cắt tóc
+                </h3>
+                <p class="text-muted">Điền thông tin để đặt lịch hẹn với chúng tôi</p>
             </div>
-            
+
             <form action="{{ route('site.appointment.store') }}" method="POST" id="appointmentForm">
                 @csrf
-                
+
                 <!-- Thông tin khách hàng -->
-                <div class="form-section">
-                    <h4 class="section-title"><i class="fa fa-user"></i> Thông tin khách hàng</h4>
-                    
-                    <div class="form-group">
-                        <label for="name" class="form-label">
-                            <i class="fa fa-user-circle"></i> Họ và tên <span class="required">*</span>
+                <div class="mb-4">
+                    <h5 class="fw-semibold mb-3">
+                        <i class="fa fa-user"></i> Thông tin khách hàng
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fa fa-user-circle"></i> Họ và tên <span class="text-danger">*</span>
                         </label>
                         <input type="text" 
-                               id="name" 
-                               name="name" 
-                               class="form-input" 
-                               placeholder="Nhập họ và tên của bạn" 
-                               value="{{ old('name', auth()->user()->name ?? '') }}" 
+                               name="name"
+                               class="form-control"
+                               placeholder="Nhập họ và tên"
+                               value="{{ old('name', auth()->user()->name ?? '') }}"
                                required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="phone" class="form-label">
-                            <i class="fa fa-phone"></i> Số điện thoại <span class="required">*</span>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fa fa-phone"></i> Số điện thoại <span class="text-danger">*</span>
                         </label>
                         <input type="tel" 
-                               id="phone" 
-                               name="phone" 
-                               class="form-input" 
-                               placeholder="Nhập số điện thoại" 
-                               value="{{ old('phone', auth()->user()->phone ?? '') }}" 
+                               name="phone"
+                               class="form-control"
+                               placeholder="Nhập số điện thoại"
+                               value="{{ old('phone', auth()->user()->phone ?? '') }}"
                                required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="email" class="form-label">
+
+                    <div class="mb-3">
+                        <label class="form-label">
                             <i class="fa fa-envelope"></i> Email
                         </label>
                         <input type="email" 
-                               id="email" 
-                               name="email" 
-                               class="form-input" 
-                               placeholder="Nhập email (tùy chọn)" 
+                               name="email"
+                               class="form-control"
+                               placeholder="Nhập email (tùy chọn)"
                                value="{{ old('email', auth()->user()->email ?? '') }}">
                     </div>
                 </div>
-                
+
                 <!-- Chọn dịch vụ -->
-                <div class="form-section">
-                    <h4 class="section-title"><i class="fa fa-scissors"></i> Chọn dịch vụ <span class="required">*</span></h4>
-                    <div class="service-variants-container">
-                        @php
-                            $groupedVariants = $serviceVariants->groupBy('service_id');
-                        @endphp
-                        @foreach($groupedVariants as $serviceId => $variants)
-                            @php
-                                $service = $variants->first()->service;
-                            @endphp
-                            <div class="service-group">
-                                <div class="service-category">
-                                    <i class="flaticon-scissors"></i> {{ $service->name ?? 'Dịch vụ' }}
-                                </div>
-                                <div class="variants-list">
-                                    @foreach($variants as $variant)
-                                        <label class="variant-item">
-                                            <input type="checkbox" 
-                                                   name="service_variants[]" 
-                                                   value="{{ $variant->id }}"
-                                                   {{ in_array($variant->id, old('service_variants', [])) ? 'checked' : '' }}
-                                                   class="variant-checkbox">
-                                            <div class="variant-content">
-                                                <span class="variant-name">{{ $variant->name }}</span>
-                                                <div class="variant-meta">
-                                                    <span class="variant-price">{{ number_format($variant->price, 0, ',', '.') }}đ</span>
-                                                    <span class="variant-duration">
-                                                        <i class="fa fa-clock-o"></i> {{ $variant->duration ?? 60 }} phút
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </label>
-                                    @endforeach
-                                </div>
+                <div class="mb-4">
+                    <h5 class="fw-semibold mb-3">
+                        <i class="fa fa-scissors"></i> Chọn dịch vụ <span class="text-danger">*</span>
+                    </h5>
+
+                    @php $groupedVariants = $serviceVariants->groupBy('service_id'); @endphp
+
+                    @foreach($groupedVariants as $serviceId => $variants)
+                        @php $service = $variants->first()->service; @endphp
+
+                        <div class="card mb-3 shadow-sm">
+                            <div class="card-header fw-bold">
+                                {{ $service->name }}
                             </div>
-                        @endforeach
-                    </div>
-                </div>
-                
-                <!-- Chọn nhân viên -->
-                <div class="form-section">
-                    <h4 class="section-title"><i class="fa fa-users"></i> Chọn nhân viên <span class="optional">(Tùy chọn)</span></h4>
-                    <div class="form-group">
-                        <label for="employee_id" class="form-label">
-                            <i class="fa fa-users"></i> Chọn nhân viên
-                        </label>
-                        <select name="employee_id" id="employee_id" class="form-select">
-                            <option value="">Không chọn - Để chúng tôi sắp xếp</option>
-                            @if($employees->count() > 0)
-                                @foreach($employees as $employee)
-                                    <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
-                                        {{ $employee->user->name ?? 'Nhân viên' }}
-                                        @if($employee->position) - {{ $employee->position }} @endif
-                                        @if($employee->level) ({{ $employee->level }}) @endif
-                                    </option>
+
+                            <div class="card-body">
+                                @foreach($variants as $variant)
+                                    <label class="d-flex justify-content-between align-items-center border rounded p-2 mb-2 bg-light">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input type="checkbox"
+                                                   name="service_variants[]"
+                                                   value="{{ $variant->id }}"
+                                                   class="form-check-input"
+                                                   {{ in_array($variant->id, old('service_variants', [])) ? 'checked' : '' }}>
+                                            <span>{{ $variant->name }}</span>
+                                        </div>
+
+                                        <div class="text-end small">
+                                            <div class="fw-bold">{{ number_format($variant->price, 0, ',', '.') }}đ</div>
+                                            <div><i class="fa fa-clock-o"></i> {{ $variant->duration }} phút</div>
+                                        </div>
+                                    </label>
                                 @endforeach
-                            @else
-                                <option value="" disabled>Không có nhân viên nào</option>
-                            @endif
-                        </select>
-                    </div>
+                            </div>
+                        </div>
+
+                    @endforeach
                 </div>
-                
-                <!-- Chọn thời gian -->
-                <div class="form-section">
-                    <h4 class="section-title"><i class="fa fa-clock-o"></i> Chọn thời gian</h4>
-                    
-                    <div class="form-group">
-                        <label for="appointment_date" class="form-label">
-                            <i class="fa fa-calendar"></i> Ngày đặt lịch <span class="required">*</span>
+
+                <!-- Nhân viên -->
+                <div class="mb-4">
+                    <h5 class="fw-semibold mb-3">
+                        <i class="fa fa-users"></i> Chọn nhân viên
+                    </h5>
+
+                    <select name="employee_id" class="form-select">
+                        <option value="">Không chọn - để chúng tôi sắp xếp</option>
+                        @foreach($employees as $employee)
+                            <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
+                                {{ $employee->user->name }}
+                                @if($employee->position) - {{ $employee->position }} @endif
+                                @if($employee->level) ({{ $employee->level }}) @endif
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Thời gian -->
+                <div class="mb-4">
+                    <h5 class="fw-semibold mb-3">
+                        <i class="fa fa-clock-o"></i> Chọn thời gian
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fa fa-calendar"></i> Ngày đặt lịch <span class="text-danger">*</span>
                         </label>
-                        <input type="date" 
-                               id="appointment_date" 
-                               name="appointment_date" 
-                               class="form-input" 
-                               value="{{ old('appointment_date') }}" 
-                               min="{{ date('Y-m-d') }}" 
+                        <input type="date"
+                               name="appointment_date"
+                               class="form-control"
+                               value="{{ old('appointment_date') }}"
+                               min="{{ date('Y-m-d') }}"
                                required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="time_slot" class="form-label">
-                            <i class="fa fa-clock-o"></i> Chọn giờ <span class="required">*</span>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fa fa-clock-o"></i> Chọn giờ <span class="text-danger">*</span>
                         </label>
-                        <select name="time_slot" id="time_slot" class="form-select" required disabled>
+                        <select name="time_slot" id="time_slot" class="form-select" disabled required>
                             <option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>
                         </select>
-                        <input type="hidden" name="word_time_id" id="word_time_id" value="">
-                        <small class="form-text text-muted" id="timeSlotHelp" style="display: none; color: #666; font-size: 12px; margin-top: 5px;">
-                            <i class="fa fa-info-circle"></i> Các khung giờ đã được đặt sẽ không hiển thị
-                        </small>
                     </div>
                 </div>
-                
+
                 <!-- Ghi chú -->
-                <div class="form-section">
-                    <div class="form-group">
-                        <label for="note" class="form-label">
-                            <i class="fa fa-comment-o"></i> Ghi chú <span class="optional">(Tùy chọn)</span>
-                        </label>
-                        <textarea name="note" 
-                                  id="note" 
-                                  class="form-textarea" 
-                                  rows="3" 
-                                  placeholder="Nhập ghi chú nếu có...">{{ old('note') }}</textarea>
-                    </div>
+                <div class="mb-4">
+                    <label class="form-label">
+                        <i class="fa fa-comment-o"></i> Ghi chú
+                    </label>
+                    <textarea name="note" class="form-control" rows="3" placeholder="Nhập ghi chú...">{{ old('note') }}</textarea>
                 </div>
-                
-                <!-- Submit button -->
-                <div class="form-submit">
-                    <button type="submit" class="submit-btn">
+
+                <!-- Submit -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary px-4 py-2">
                         <i class="fa fa-calendar-check-o"></i> Đặt lịch ngay
                     </button>
                 </div>
+
             </form>
         </div>
     </div>
 </div>
+
 
 @push('styles')
 <style>
