@@ -23,8 +23,8 @@
 
 <!-- header-start -->
 <header>
-        <div class="header-area ">
-            <div id="sticky-header" class="main-header-area">
+        <div class="header-area" style="position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 999; padding-top: 0;">
+            <div id="sticky-header" class="main-header-area" style="background: #4A3600; padding: 15px 0;">
                 <div class="container">
                     <div class="row align-items-center">
                         <div class="col-xl-2 col-lg-2">

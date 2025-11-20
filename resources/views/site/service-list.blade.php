@@ -3,23 +3,21 @@
 @section('title', 'Dịch vụ')
 
 @section('content')
-    <!-- breadcam_area_start -->
-    <div class="breadcam_area breadcam_bg_1 zigzag_bg_2">
-        <div class="container">
-            <div class="row">
-                <div class="col-xl-12">
-                    <div class="breadcam_thumb text-center">
-                        <h3>Dịch vụ của chúng tôi</h3>
-                        <p>Danh sách tất cả dịch vụ chăm sóc tóc và làm đẹp</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- breadcam_area_end -->
+
+    @php
+        $sliders = [
+            [
+                'name' => 'Dịch vụ của chúng tôi',
+                'images' => 'banner_service.png',
+                'description' => 'Danh sách tất cả dịch vụ chăm sóc tóc và làm đẹp'
+            ]
+        ];
+    @endphp
+    @include('site.partials.slider')
 
     <!-- service_area_start -->
-    <div class="service_area custom-spacing">
+    <div style="padding: 60px 0; margin-bottom: 100px;">
+
         <div class="container">
             @if($types->count() > 0)
             <div class="row mb-4">

@@ -3,34 +3,24 @@
 @section('title', 'Đăng nhập')
 
 @section('content')
-<!-- breadcrumb_area_start -->
-<div class="breadcrumb_area">
-    <div class="container">
-        <div class="row">
-            <div class="col-xl-12">
-                <div class="breadcrumb_content text-center">
-                    <h3>Đăng nhập</h3>
-                    <div class="breadcrumb">
-                        <ul>
-                            <li><a href="{{ route('site.home') }}">Trang chủ</a></li>
-                            <li>Đăng nhập</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- breadcrumb_area_end -->
+@push('styles')
+<link rel="stylesheet" href="{{ asset('legacy/content/css/auth-pages.css') }}">
+@endpush
 
-<!-- login_area_start -->
-<div class="login_area">
+<section class="auth-hero">
     <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-6">
-                <div class="card shadow-lg">
-                    <div class="card-body p-5">
-                        <h3 class="text-center mb-4">Đăng nhập</h3>
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <span class="text-uppercase" style="letter-spacing:4px;">Trải nghiệm PolyHair</span>
+                <h1 class="mt-3 mb-4">Đăng nhập<br>để tiếp tục</h1>
+                <p>
+                    Khám phá các dịch vụ chăm sóc tóc đẳng cấp, đặt lịch nhanh chóng và nhận ưu đãi cá nhân hoá.
+                    Đăng nhập ngay để tiếp tục hành trình trải nghiệm hệ sinh thái làm đẹp chuyên nghiệp tại PolyHair.
+                </p>
+            </div>
+            <div class="col-lg-5 ml-auto">
+                <div class="auth-form-wrapper">
+                    <h3 class="text-center text-white mb-4">Đăng nhập</h3>
                         
                         @if(session('status'))
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -97,6 +87,5 @@
             </div>
         </div>
     </div>
-</div>
-<!-- login_area_end -->
+</section>
 @endsection
