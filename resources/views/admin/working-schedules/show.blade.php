@@ -38,16 +38,6 @@
                         @endphp
                         <td><span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? ucfirst($status ?? 'N/A') }}</span></td>
                     </tr>
-                    <tr>
-                        <th>Ảnh:</th>
-                        <td>
-                            @if($schedule->image)
-                                <img src="{{ asset('legacy/images/working-schedules/' . $schedule->image) }}" alt="Ảnh lịch" class="img-thumbnail" style="max-width: 200px;">
-                            @else
-                                <span class="text-muted">Không có</span>
-                            @endif
-                        </td>
-                    </tr>
                 </table>
             </div>
             <div class="col-md-6">

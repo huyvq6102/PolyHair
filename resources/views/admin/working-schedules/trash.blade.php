@@ -24,7 +24,6 @@
                         <th>Ngày làm việc</th>
                         <th>Ca làm việc</th>
                         <th>Trạng thái</th>
-                        <th>Ảnh</th>
                         <th>Ngày xóa</th>
                         <th>Thao tác</th>
                     </tr>
@@ -42,13 +41,6 @@
                                     $badge = $status === 'available' ? 'success' : ($status === 'busy' ? 'warning' : 'secondary');
                                 @endphp
                                 <span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? ucfirst($status ?? 'N/A') }}</span>
-                            </td>
-                            <td>
-                                @if($schedule->image)
-                                    <img src="{{ asset('legacy/images/working-schedules/' . $schedule->image) }}" alt="Ảnh lịch" class="img-thumbnail" style="max-width: 60px;">
-                                @else
-                                    <span class="text-muted">Không có</span>
-                                @endif
                             </td>
                             <td>{{ optional($schedule->deleted_at)->format('d/m/Y H:i') }}</td>
                             <td>
@@ -70,7 +62,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center">Thùng rác trống</td>
+                            <td colspan="7" class="text-center">Thùng rác trống</td>
                         </tr>
                     @endforelse
                 </tbody>
