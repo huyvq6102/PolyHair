@@ -110,6 +110,7 @@
 <script src="{{ asset('legacy/content/js/nice-select.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.slicknav.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.magnific-popup.min.js') }}"></script>
+<script src="{{ asset('legacy/content/js/pgwslideshow.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/plugins.js') }}"></script>
 <script src="{{ asset('legacy/content/js/gijgo.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/main.js') }}"></script>
