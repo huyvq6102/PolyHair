@@ -236,32 +236,57 @@ class AppointmentController extends Controller
             $currentTime->addMinutes(30);
         }
 
-        // If employee is selected, check booked appointments
+        // Initialize all slots as available
+        foreach ($timeSlots as &$slot) {
+            $slot['available'] = true;
+        }
+
+        // Check all booked appointments for the selected date
+        // This includes appointments of all employees to prevent double booking
+        $bookedAppointments = \App\Models\Appointment::whereDate('start_at', $appointmentDate->format('Y-m-d'))
+            ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
+            ->get();
+
+        // Mark booked time slots as unavailable
+        // Check if any appointment's start time matches the slot time
+        foreach ($bookedAppointments as $appointment) {
+            if (!$appointment->start_at) {
+                continue;
+            }
+            
+            $appointmentStart = Carbon::parse($appointment->start_at);
+            $appointmentStartTime = $appointmentStart->format('H:i');
+            
+            // Mark the exact time slot as unavailable
+            foreach ($timeSlots as &$slot) {
+                if ($slot['time'] === $appointmentStartTime) {
+                    $slot['available'] = false;
+                }
+            }
+        }
+        
+        // If employee is selected, also check specifically for that employee's appointments
+        // This ensures we don't show slots that are already booked for the selected employee
         if ($employeeId) {
-            $bookedAppointments = \App\Models\Appointment::where('employee_id', $employeeId)
+            $employeeAppointments = \App\Models\Appointment::where('employee_id', $employeeId)
                 ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
                 ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
                 ->get();
-
-            // Mark booked time slots as unavailable
-            // Only mark the exact time slot that matches the appointment start time
-            foreach ($bookedAppointments as $appointment) {
+            
+            foreach ($employeeAppointments as $appointment) {
+                if (!$appointment->start_at) {
+                    continue;
+                }
+                
                 $appointmentStart = Carbon::parse($appointment->start_at);
                 $appointmentStartTime = $appointmentStart->format('H:i');
                 
+                // Mark the exact time slot as unavailable for this employee
                 foreach ($timeSlots as &$slot) {
-                    // Only mark unavailable if the slot time exactly matches the appointment start time
                     if ($slot['time'] === $appointmentStartTime) {
                         $slot['available'] = false;
-                    } else {
-                        $slot['available'] = $slot['available'] ?? true;
                     }
                 }
-            }
-        } else {
-            // If no employee selected, all slots are available
-            foreach ($timeSlots as &$slot) {
-                $slot['available'] = true;
             }
         }
 

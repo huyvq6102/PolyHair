@@ -822,9 +822,13 @@
                             '<div class="success-message">' + response.message + '</div>'
                         );
                         
+                        // Reload available time slots to hide the just booked slot
+                        loadAvailableTimeSlots();
+                        
                         // Reset form after 2 seconds
                         setTimeout(function() {
                             $('#appointmentForm')[0].reset();
+                            $('#time_slot').prop('disabled', true).html('<option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>');
                             $.magnificPopup.close();
                             // Show toast notification if available
                             if (typeof toastr !== 'undefined') {
