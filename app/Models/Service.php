@@ -13,6 +13,7 @@ class Service extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'service_code',
         'category_id',
         'name',
         'slug',
