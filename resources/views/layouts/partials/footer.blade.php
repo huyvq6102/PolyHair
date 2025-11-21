@@ -90,9 +90,12 @@
 </footer>
 <!-- footer-end -->
 
+<!-- Appointment Form Popup -->
+@include('site.partials.appointment-form')
+
 <!-- JS here -->
 <script src="{{ asset('legacy/content/js/vendor/modernizr-3.5.0.min.js') }}"></script>
-<script src="{{ asset('legacy/content/js/vendor/jquery-1.12.4.min.js') }}"></script>
+<script src="{{ asset('legacy/content/js/vendor/jquery-2.1.3.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/popper.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/bootstrap.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/owl.carousel.min.js') }}"></script>
@@ -107,6 +110,7 @@
 <script src="{{ asset('legacy/content/js/nice-select.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.slicknav.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.magnific-popup.min.js') }}"></script>
+<script src="{{ asset('legacy/content/js/pgwslideshow.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/plugins.js') }}"></script>
 <script src="{{ asset('legacy/content/js/gijgo.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/main.js') }}"></script>
