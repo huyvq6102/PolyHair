@@ -141,7 +141,7 @@
                         <i class="fa fa-users"></i> Chọn nhân viên
                     </h5>
 
-                    <select name="employee_id" class="form-select">
+                    <select name="employee_id" id="employee_id" class="form-select">
                         <option value="">Không chọn - để chúng tôi sắp xếp</option>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -165,6 +165,7 @@
                         </label>
                         <input type="date"
                                name="appointment_date"
+                               id="appointment_date"
                                class="form-control"
                                value="{{ old('appointment_date') }}"
                                min="{{ date('Y-m-d') }}"
@@ -178,6 +179,7 @@
                         <select name="time_slot" id="time_slot" class="form-select" disabled required>
                             <option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>
                         </select>
+                        <input type="hidden" name="word_time_id" id="word_time_id" value="">
                     </div>
                 </div>
 
@@ -755,17 +757,36 @@
                         }
                         
                         if (availableCount === 0) {
-                            timeSlotSelect.html('<option value="" disabled>Không còn khung giờ trống</option>');
+                            timeSlotSelect.html('<option value="" disabled>Không còn khung giờ trống cho nhân viên này</option>');
+                            timeSlotSelect.prop('disabled', true);
                         } else {
                             timeSlotSelect.prop('disabled', false);
-                            timeSlotHelp.show();
+                            if (timeSlotHelp && timeSlotHelp.length) {
+                                timeSlotHelp.show();
+                            }
                         }
                     } else {
-                        timeSlotSelect.html('<option value="">-- Có lỗi xảy ra --</option>');
+                        timeSlotSelect.html('<option value="">-- Không có khung giờ --</option>');
+                        timeSlotSelect.prop('disabled', true);
                     }
                 },
-                error: function() {
-                    timeSlotSelect.html('<option value="">-- Có lỗi xảy ra khi tải khung giờ --</option>');
+                error: function(xhr) {
+                    let errorMessage = 'Có lỗi xảy ra khi tải khung giờ';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        const errors = [];
+                        $.each(xhr.responseJSON.errors, function(key, value) {
+                            errors.push(value[0]);
+                        });
+                        errorMessage = errors.join(', ');
+                    }
+                    
+                    timeSlotSelect.html('<option value="" disabled>' + errorMessage + '</option>');
+                    timeSlotSelect.prop('disabled', true);
+                    
+                    console.error('Error loading time slots:', xhr.responseJSON || xhr.responseText);
                 }
             });
         }
