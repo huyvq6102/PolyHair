@@ -22,6 +22,15 @@
                 <div class="auth-form-wrapper">
                     <h3 class="text-center text-white mb-4">Đăng nhập</h3>
                         
+                        @if(session('success'))
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                {{ session('success') }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        @endif
+
                         @if(session('status'))
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
                                 {{ session('status') }}
@@ -47,7 +56,7 @@
                             <div class="form-group">
                                 <label for="email">Email <span class="text-danger">*</span></label>
                                 <input type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" 
-                                       value="{{ old('email') }}" required autofocus>
+                                       value="{{ old('email', session('email')) }}" required autofocus>
                                 @error('email')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -56,7 +65,7 @@
                             <div class="form-group">
                                 <label for="password">Mật khẩu <span class="text-danger">*</span></label>
                                 <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" 
-                                       required autocomplete="current-password">
+                                       value="" required autocomplete="current-password" placeholder="Nhập mật khẩu mới">
                                 @error('password')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
