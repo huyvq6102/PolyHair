@@ -11,7 +11,14 @@
                         <div class="col-xl-2 col-lg-2">
                             <div class="logo-img">
                                 <a href="{{ route('site.home') }}">
-                                    <img src="{{ asset('legacy/images/' . ($setting->logo ?? 'logox.png')) }}" alt="" width="100" height="80">
+                                    @php
+                                        $logoFile = $setting->logo ?? 'logox.png';
+                                        // Remove any leading slashes or legacy/images prefix if already present
+                                        $logoFile = ltrim($logoFile, '/');
+                                        $logoFile = str_replace('legacy/images/', '', $logoFile);
+                                        $logoPath = 'legacy/images/' . $logoFile;
+                                    @endphp
+                                    <img src="{{ asset($logoPath) }}" alt="Logo" width="100" height="80" style="max-width: 100%; height: auto;" onerror="console.error('Logo not found: {{ $logoPath }}'); this.src='{{ asset('legacy/images/logox.png') }}';">
                                 </a>
                             </div>
                         </div>

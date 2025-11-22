@@ -39,12 +39,22 @@
     </li>
 
     <!-- Nav Item - Appointments -->
-    <li class="nav-item {{ str_contains($currentRoute, 'appointment') ? 'active' : '' }}">
+    <li class="nav-item {{ str_contains($currentRoute, 'appointment') && !str_contains($currentRoute, 'employee') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.appointments.index') }}">
             <i class="fas fa-fw fa-calendar-alt"></i>
             <span>Lịch hẹn</span>
         </a>
     </li>
+
+    @if(auth()->user()->isEmployee())
+    <!-- Nav Item - Employee Appointments -->
+    <li class="nav-item {{ str_contains($currentRoute, 'employee.appointments') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('employee.appointments.index') }}">
+            <i class="fas fa-fw fa-clipboard-list"></i>
+            <span>Quản lý đơn đặt</span>
+        </a>
+    </li>
+    @endif
 
     <!-- Nav Item - Working schedules -->
     <li class="nav-item {{ str_contains($currentRoute, 'working-schedule') ? 'active' : '' }}">

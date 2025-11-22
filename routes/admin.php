@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AppointmentController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\EmployeeController;
+use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\WorkingScheduleController;
 use App\Http\Controllers\Admin\SettingController;
@@ -37,5 +38,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+});
+
+// Employee appointment routes (accessible by employees)
+Route::prefix('admin/employee')->name('employee.')->middleware(['auth'])->group(function () {
+    Route::get('appointments', [EmployeeAppointmentController::class, 'index'])->name('appointments.index');
+    Route::get('appointments/{id}', [EmployeeAppointmentController::class, 'show'])->name('appointments.show');
+    Route::post('appointments/{id}/confirm', [EmployeeAppointmentController::class, 'confirm'])->name('appointments.confirm');
+    Route::post('appointments/{id}/start', [EmployeeAppointmentController::class, 'start'])->name('appointments.start');
+    Route::post('appointments/{id}/complete', [EmployeeAppointmentController::class, 'complete'])->name('appointments.complete');
+    Route::post('appointments/{id}/cancel', [EmployeeAppointmentController::class, 'cancel'])->name('appointments.cancel');
 });
 

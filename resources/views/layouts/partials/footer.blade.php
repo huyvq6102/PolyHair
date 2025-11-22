@@ -109,6 +109,7 @@
 <script src="{{ asset('legacy/content/js/jquery.magnific-popup.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/plugins.js') }}"></script>
 <script src="{{ asset('legacy/content/js/gijgo.min.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script src="{{ asset('legacy/content/js/main.js') }}"></script>
 @stack('scripts')
 
@@ -135,3 +136,6 @@
         });
     });
 </script>
+
+<!-- Appointment Booking Form -->
+@include('site.partials.appointment-form')

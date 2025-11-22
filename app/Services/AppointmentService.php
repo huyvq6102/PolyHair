@@ -176,5 +176,80 @@ class AppointmentService
             ->orderBy('id', 'desc')
             ->get();
     }
+
+    /**
+     * Get appointments for employee with search, filter and pagination.
+     */
+    public function getForEmployeeWithFilters($employeeId, array $filters = [], $perPage = 10)
+    {
+        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service'])
+            ->where(function($q) use ($employeeId) {
+                // Appointments assigned to employee directly
+                $q->where('employee_id', $employeeId)
+                  // Or appointments where employee is assigned in appointment details
+                  ->orWhereHas('appointmentDetails', function($detailQuery) use ($employeeId) {
+                      $detailQuery->where('employee_id', $employeeId);
+                  });
+            });
+
+        // Filter by status
+        if (isset($filters['status']) && !empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        // Search by customer name
+        if (isset($filters['customer_name']) && !empty($filters['customer_name'])) {
+            $query->whereHas('user', function($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters['customer_name'] . '%');
+            });
+        }
+
+        // Search by phone
+        if (isset($filters['phone']) && !empty($filters['phone'])) {
+            $query->whereHas('user', function($q) use ($filters) {
+                $q->where('phone', 'like', '%' . $filters['phone'] . '%');
+            });
+        }
+
+        // Filter by date
+        if (isset($filters['date']) && !empty($filters['date'])) {
+            $query->whereDate('start_at', $filters['date']);
+        }
+
+        // Filter by date range
+        if (isset($filters['date_from']) && !empty($filters['date_from'])) {
+            $query->whereDate('start_at', '>=', $filters['date_from']);
+        }
+
+        if (isset($filters['date_to']) && !empty($filters['date_to'])) {
+            $query->whereDate('start_at', '<=', $filters['date_to']);
+        }
+
+        return $query->orderBy('id', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * Cancel appointment with reason.
+     */
+    public function cancelAppointment($id, $reason, $modifiedBy = null)
+    {
+        $appointment = Appointment::findOrFail($id);
+        $oldStatus = $appointment->status;
+        
+        $appointment->update([
+            'status' => 'Đã hủy',
+            'cancellation_reason' => $reason
+        ]);
+
+        // Log status change
+        AppointmentLog::create([
+            'appointment_id' => $appointment->id,
+            'status_from' => $oldStatus,
+            'status_to' => 'Đã hủy',
+            'modified_by' => $modifiedBy ?? auth()->id(),
+        ]);
+
+        return $appointment;
+    }
 }
 
