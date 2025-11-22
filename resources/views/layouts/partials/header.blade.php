@@ -30,7 +30,14 @@
                         <div class="col-xl-2 col-lg-2">
                             <div class="logo-img">
                                 <a href="{{ route('site.home') }}">
-                                    <img src="{{ asset('legacy/images/' . ($setting->logo ?? 'logox.png')) }}" alt="" width="100" height="80">
+                                    @php
+                                        $logoFile = $setting->logo ?? 'logox.png';
+                                        // Remove any leading slashes or legacy/images prefix if already present
+                                        $logoFile = ltrim($logoFile, '/');
+                                        $logoFile = str_replace('legacy/images/', '', $logoFile);
+                                        $logoPath = 'legacy/images/' . $logoFile;
+                                    @endphp
+                                    <img src="{{ asset($logoPath) }}" alt="Logo" width="100" height="80" style="max-width: 100%; height: auto;" onerror="console.error('Logo not found: {{ $logoPath }}'); this.src='{{ asset('legacy/images/logox.png') }}';">
                                 </a>
                             </div>
                         </div>
@@ -81,7 +88,7 @@
                                         <div class="dropdown ml-3" style="position: relative;">
                                             <button type="button" class="btn bg-transparent p-0 text-white d-flex align-items-center" id="userDropdown"
                                                     style="border: none; outline: none; cursor: pointer;">
-                                                <span class="text-uppercase">Administrator</span>
+                                                <span class="text-uppercase">{{ auth()->user()->name }}</span>
                                                 <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px;"></i>
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-right shadow-lg" aria-labelledby="userDropdown"

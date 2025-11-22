@@ -185,89 +185,202 @@ class AppointmentController extends Controller
      */
     public function getAvailableTimeSlots(Request $request)
     {
-        // Handle POST request for getting word_time_id
-        if ($request->isMethod('post') && $request->input('action') === 'get_or_create_word_time') {
-            $time = $request->input('time');
-            if (!$time) {
-                return response()->json(['success' => false, 'message' => 'Time is required'], 400);
+        try {
+            // Handle POST request for getting word_time_id
+            if ($request->isMethod('post') && $request->input('action') === 'get_or_create_word_time') {
+                $time = $request->input('time');
+                if (!$time) {
+                    return response()->json(['success' => false, 'message' => 'Time is required'], 400);
+                }
+                
+                // Find or create word_time record
+                $wordTime = \App\Models\WordTime::firstOrCreate(
+                    ['time' => $time],
+                    ['time' => $time]
+                );
+                
+                return response()->json([
+                    'success' => true,
+                    'word_time_id' => $wordTime->id,
+                ]);
             }
             
-            // Find or create word_time record
-            $wordTime = \App\Models\WordTime::firstOrCreate(
-                ['time' => $time],
-                ['time' => $time]
-            );
-            
-            return response()->json([
-                'success' => true,
-                'word_time_id' => $wordTime->id,
+            // Handle GET request for available time slots
+            $request->validate([
+                'employee_id' => 'nullable|exists:employees,id',
+                'appointment_date' => 'required|date|after_or_equal:today',
             ]);
-        }
-        
-        // Handle GET request for available time slots
-        $request->validate([
-            'employee_id' => 'nullable|exists:employees,id',
-            'appointment_date' => 'required|date|after_or_equal:today',
-        ]);
 
-        $employeeId = $request->input('employee_id');
-        $appointmentDate = Carbon::parse($request->input('appointment_date'));
+            $employeeId = $request->input('employee_id');
+            // Convert empty string to null
+            if ($employeeId === '' || $employeeId === '0') {
+                $employeeId = null;
+            }
+            $appointmentDate = Carbon::parse($request->input('appointment_date'));
 
-        // Generate time slots from 7:00 to 22:00, every 30 minutes
         $timeSlots = [];
-        $startTime = Carbon::parse('07:00');
-        $endTime = Carbon::parse('22:00');
-        
-        $currentTime = $startTime->copy();
-        while ($currentTime->lte($endTime)) {
-            $timeString = $currentTime->format('H:i');
-            
-            // Find or create word_time for this time slot
-            $wordTime = \App\Models\WordTime::firstOrCreate(
-                ['time' => $timeString],
-                ['time' => $timeString]
-            );
-            
-            $timeSlots[] = [
-                'time' => $timeString,
-                'display' => $timeString,
-                'word_time_id' => $wordTime->id,
-            ];
-            $currentTime->addMinutes(30);
-        }
 
-        // If employee is selected, check booked appointments
+        // If employee is selected, get time slots from working schedule
         if ($employeeId) {
+            // Get working schedules for the employee on the selected date
+            // Only get schedules with status 'available'
+            $workingSchedules = \App\Models\WorkingSchedule::with('shift')
+                ->where('employee_id', $employeeId)
+                ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
+                ->where('status', 'available')
+                ->get();
+
+            // Generate time slots from each working schedule's shift
+            foreach ($workingSchedules as $schedule) {
+                if (!$schedule->shift) {
+                    continue;
+                }
+
+                // Get start and end time from shift
+                $startTimeString = $schedule->shift->formatted_start_time;
+                $endTimeString = $schedule->shift->formatted_end_time;
+                
+                if (!$startTimeString || !$endTimeString) {
+                    continue;
+                }
+                
+                // Parse time string (format: H:i)
+                try {
+                    $startTime = Carbon::createFromFormat('H:i', $startTimeString);
+                    $endTime = Carbon::createFromFormat('H:i', $endTimeString);
+                } catch (\Exception $e) {
+                    // If parsing fails, try alternative format
+                    $startTime = Carbon::parse($startTimeString);
+                    $endTime = Carbon::parse($endTimeString);
+                }
+                
+                // Generate time slots every 30 minutes from start to end
+                $currentTime = $startTime->copy();
+                while ($currentTime->lt($endTime)) {
+                    $timeString = $currentTime->format('H:i');
+                    
+                    // Check if this time slot already exists (avoid duplicates)
+                    $exists = false;
+                    foreach ($timeSlots as $slot) {
+                        if ($slot['time'] === $timeString) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$exists) {
+                        // Find or create word_time for this time slot
+                        $wordTime = \App\Models\WordTime::firstOrCreate(
+                            ['time' => $timeString],
+                            ['time' => $timeString]
+                        );
+                        
+                        $timeSlots[] = [
+                            'time' => $timeString,
+                            'display' => $timeString,
+                            'word_time_id' => $wordTime->id,
+                            'available' => true,
+                        ];
+                    }
+                    
+                    $currentTime->addMinutes(30);
+                }
+            }
+
+            // If no working schedules found, use default time slots
+            if (empty($timeSlots)) {
+                // Generate default time slots from 7:00 to 22:00
+                $startTime = Carbon::parse('07:00');
+                $endTime = Carbon::parse('22:00');
+                
+                $currentTime = $startTime->copy();
+                while ($currentTime->lte($endTime)) {
+                    $timeString = $currentTime->format('H:i');
+                    
+                    // Find or create word_time for this time slot
+                    $wordTime = \App\Models\WordTime::firstOrCreate(
+                        ['time' => $timeString],
+                        ['time' => $timeString]
+                    );
+                    
+                    $timeSlots[] = [
+                        'time' => $timeString,
+                        'display' => $timeString,
+                        'word_time_id' => $wordTime->id,
+                        'available' => true,
+                    ];
+                    $currentTime->addMinutes(30);
+                }
+            } else {
+                // Sort time slots by time
+                usort($timeSlots, function($a, $b) {
+                    return strcmp($a['time'], $b['time']);
+                });
+            }
+
+            // Get booked appointments for this employee on this date
             $bookedAppointments = \App\Models\Appointment::where('employee_id', $employeeId)
                 ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
                 ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
                 ->get();
 
             // Mark booked time slots as unavailable
-            // Only mark the exact time slot that matches the appointment start time
             foreach ($bookedAppointments as $appointment) {
+                if (!$appointment->start_at) {
+                    continue;
+                }
+                
                 $appointmentStart = Carbon::parse($appointment->start_at);
                 $appointmentStartTime = $appointmentStart->format('H:i');
                 
+                // Mark unavailable if the slot time exactly matches the appointment start time
                 foreach ($timeSlots as &$slot) {
-                    // Only mark unavailable if the slot time exactly matches the appointment start time
                     if ($slot['time'] === $appointmentStartTime) {
                         $slot['available'] = false;
-                    } else {
-                        $slot['available'] = $slot['available'] ?? true;
                     }
                 }
             }
         } else {
-            // If no employee selected, all slots are available
-            foreach ($timeSlots as &$slot) {
-                $slot['available'] = true;
+            // If no employee selected, generate default time slots from 7:00 to 22:00
+            $startTime = Carbon::parse('07:00');
+            $endTime = Carbon::parse('22:00');
+            
+            $currentTime = $startTime->copy();
+            while ($currentTime->lte($endTime)) {
+                $timeString = $currentTime->format('H:i');
+                
+                // Find or create word_time for this time slot
+                $wordTime = \App\Models\WordTime::firstOrCreate(
+                    ['time' => $timeString],
+                    ['time' => $timeString]
+                );
+                
+                $timeSlots[] = [
+                    'time' => $timeString,
+                    'display' => $timeString,
+                    'word_time_id' => $wordTime->id,
+                    'available' => true,
+                ];
+                $currentTime->addMinutes(30);
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'time_slots' => $timeSlots,
-        ]);
+            return response()->json([
+                'success' => true,
+                'time_slots' => $timeSlots,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error in getAvailableTimeSlots: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi tải khung giờ: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
