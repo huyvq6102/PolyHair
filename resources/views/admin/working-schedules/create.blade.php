@@ -43,8 +43,8 @@
 
             <div class="form-row">
                 <div class="form-group col-md-6">
-                    <label for="employee_ids">Nhân viên <span class="text-danger">*</span> <small class="text-muted">(Giữ Ctrl/Cmd để chọn nhiều)</small></label>
-                    <select name="employee_ids[]" id="employee_ids" class="form-control @error('employee_ids') is-invalid @enderror @error('employee_ids.*') is-invalid @enderror" multiple size="6" required>
+                    <label for="employee_ids">Nhân viên <span class="text-danger">*</span></label>
+                    <select name="employee_ids[]" id="employee_ids" class="form-control select2-multiple @error('employee_ids') is-invalid @enderror @error('employee_ids.*') is-invalid @enderror" multiple required>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" {{ (old('employee_ids') && in_array($employee->id, old('employee_ids'))) ? 'selected' : '' }}>
                                 {{ $employee->user->name ?? 'N/A' }} - {{ $employee->position ?? 'N/A' }}
@@ -52,13 +52,12 @@
                         @endforeach
                     </select>
                     @error('employee_ids')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @elseif($errors->has('employee_ids.*'))
-                        <div class="invalid-feedback">{{ $errors->first('employee_ids.*') }}</div>
+                        <div class="invalid-feedback d-block">{{ $errors->first('employee_ids.*') }}</div>
                     @else
                         <div class="invalid-feedback">Vui lòng chọn ít nhất một nhân viên</div>
                     @enderror
-                    <small class="form-text text-muted">Đã chọn: <span id="selected-employees">0</span> nhân viên</small>
                 </div>
                 <div class="form-group col-md-6">
                     <label for="work_date">Ngày làm việc <span class="text-danger">*</span></label>
@@ -73,8 +72,8 @@
 
             <div class="form-row">
                 <div class="form-group col-md-6">
-                    <label for="shift_ids">Ca làm việc <span class="text-danger">*</span> <small class="text-muted">(Giữ Ctrl/Cmd để chọn nhiều)</small></label>
-                    <select name="shift_ids[]" id="shift_ids" class="form-control @error('shift_ids') is-invalid @enderror @error('shift_ids.*') is-invalid @enderror" multiple size="6" required>
+                    <label for="shift_ids">Ca làm việc <span class="text-danger">*</span></label>
+                    <select name="shift_ids[]" id="shift_ids" class="form-control select2-multiple @error('shift_ids') is-invalid @enderror @error('shift_ids.*') is-invalid @enderror" multiple required>
                         @foreach($shifts as $shift)
                             <option value="{{ $shift->id }}" {{ (old('shift_ids') && in_array($shift->id, old('shift_ids'))) ? 'selected' : '' }}>
                                 {{ $shift->name }} ({{ $shift->display_time }})
@@ -82,13 +81,12 @@
                         @endforeach
                     </select>
                     @error('shift_ids')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @elseif($errors->has('shift_ids.*'))
-                        <div class="invalid-feedback">{{ $errors->first('shift_ids.*') }}</div>
+                        <div class="invalid-feedback d-block">{{ $errors->first('shift_ids.*') }}</div>
                     @else
                         <div class="invalid-feedback">Vui lòng chọn ít nhất một ca làm việc</div>
                     @enderror
-                    <small class="form-text text-muted">Đã chọn: <span id="selected-shifts">0</span> ca làm việc</small>
                 </div>
                 <div class="form-group col-md-6">
                     <label for="status">Trạng thái <span class="text-danger">*</span></label>
@@ -133,53 +131,57 @@
     }, false);
 })();
 
-// Đếm số nhân viên và ca làm việc đã chọn
-document.addEventListener('DOMContentLoaded', function() {
-    const employeeSelect = document.getElementById('employee_ids');
-    const shiftSelect = document.getElementById('shift_ids');
-    const selectedEmployees = document.getElementById('selected-employees');
-    const selectedShifts = document.getElementById('selected-shifts');
-    
-    function updateCounts() {
-        const employeeCount = employeeSelect.selectedOptions.length;
-        const shiftCount = shiftSelect.selectedOptions.length;
+// Khởi tạo Select2 cho multi-select
+$(document).ready(function() {
+    $('#employee_ids').select2({
+        placeholder: 'Chọn nhân viên',
+        allowClear: false,
+        width: '100%',
+        closeOnSelect: false
+    });
+
+    $('#shift_ids').select2({
+        placeholder: 'Chọn ca làm việc',
+        allowClear: false,
+        width: '100%',
+        closeOnSelect: false
+    });
+
+    // Cập nhật validation khi thay đổi
+    $('#employee_ids, #shift_ids').on('change', function() {
+        const employeeCount = $('#employee_ids').val() ? $('#employee_ids').val().length : 0;
+        const shiftCount = $('#shift_ids').val() ? $('#shift_ids').val().length : 0;
         
-        selectedEmployees.textContent = employeeCount;
-        selectedShifts.textContent = shiftCount;
-        
-        // Cập nhật validation
         if (employeeCount > 0) {
-            employeeSelect.setCustomValidity('');
+            $('#employee_ids')[0].setCustomValidity('');
         } else {
-            employeeSelect.setCustomValidity('Vui lòng chọn ít nhất một nhân viên');
+            $('#employee_ids')[0].setCustomValidity('Vui lòng chọn ít nhất một nhân viên');
         }
         
         if (shiftCount > 0) {
-            shiftSelect.setCustomValidity('');
+            $('#shift_ids')[0].setCustomValidity('');
         } else {
-            shiftSelect.setCustomValidity('Vui lòng chọn ít nhất một ca làm việc');
+            $('#shift_ids')[0].setCustomValidity('Vui lòng chọn ít nhất một ca làm việc');
         }
-    }
-    
-    employeeSelect.addEventListener('change', updateCounts);
-    shiftSelect.addEventListener('change', updateCounts);
-    updateCounts(); // Cập nhật lần đầu
+    });
 });
 
 // Xác nhận trước khi submit
 function validateAndConfirm() {
-    const employeeSelect = document.getElementById('employee_ids');
-    const shiftSelect = document.getElementById('shift_ids');
-    const employeeCount = employeeSelect.selectedOptions.length;
-    const shiftCount = shiftSelect.selectedOptions.length;
+    const employeeIds = $('#employee_ids').val();
+    const shiftIds = $('#shift_ids').val();
+    const employeeCount = employeeIds ? employeeIds.length : 0;
+    const shiftCount = shiftIds ? shiftIds.length : 0;
     
     if (employeeCount === 0) {
         alert('Vui lòng chọn ít nhất một nhân viên!');
+        $('#employee_ids').select2('open');
         return false;
     }
     
     if (shiftCount === 0) {
         alert('Vui lòng chọn ít nhất một ca làm việc!');
+        $('#shift_ids').select2('open');
         return false;
     }
     

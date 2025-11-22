@@ -142,16 +142,26 @@ class WorkingScheduleController extends Controller
     public function show(string $id)
     {
         $schedule = WorkingSchedule::with(['employee.user', 'shift'])->findOrFail($id);
+        $workDate = $schedule->work_date;
 
-        $appointments = Appointment::where('employee_id', $schedule->employee_id)
-            ->whereDate('start_at', $schedule->work_date)
-            ->with(['appointmentDetails.serviceVariant.service', 'user'])
-            ->orderBy('start_at')
-            ->get();
+        // Lấy tất cả lịch của ngày đó, nhóm theo ca làm việc
+        $schedulesByShift = WorkingSchedule::whereDate('work_date', $workDate)
+            ->with(['employee.user', 'shift'])
+            ->get()
+            ->groupBy('shift_id')
+            ->map(function ($schedules) {
+                return $schedules->sortBy(function ($schedule) {
+                    return $schedule->employee->user->name ?? '';
+                });
+            });
+
+        // Lấy danh sách ca làm việc đã sắp xếp theo thời gian
+        $shifts = WorkingShift::orderBy('start_time')->get();
 
         return view('admin.working-schedules.show', [
-            'schedule' => $schedule,
-            'appointments' => $appointments,
+            'workDate' => $workDate,
+            'schedulesByShift' => $schedulesByShift,
+            'shifts' => $shifts,
             'statusOptions' => $this->statusOptions,
         ]);
     }
