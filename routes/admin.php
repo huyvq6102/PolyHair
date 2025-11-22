@@ -22,7 +22,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('categories', CategoryController::class);
     Route::resource('types', TypeController::class);
     Route::resource('products', ProductController::class);
+    
+    // Service routes with trash functionality
+    Route::get('services/trash', [ServiceController::class, 'trash'])->name('services.trash');
+    Route::put('services/{id}/restore', [ServiceController::class, 'restore'])->name('services.restore');
+    Route::delete('services/{id}/force-delete', [ServiceController::class, 'forceDelete'])->name('services.force-delete');
     Route::resource('services', ServiceController::class);
+    
     Route::resource('service-categories', ServiceCategoryController::class);
     Route::resource('appointments', AppointmentController::class);
     Route::resource('orders', OrderController::class);

@@ -24,7 +24,7 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.working-schedules.update', $schedule->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate onsubmit="return confirm('Xác nhận cập nhật lịch nhân viên?');">
+        <form action="{{ route('admin.working-schedules.update', $schedule->id) }}" method="POST" class="needs-validation" novalidate onsubmit="return confirm('Xác nhận cập nhật lịch nhân viên?');">
             @csrf
             @method('PUT')
 
@@ -54,20 +54,6 @@
                         <div class="invalid-feedback">Vui lòng chọn ngày làm việc</div>
                     @enderror
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label for="image">Ảnh</label>
-                @if($schedule->image)
-                    <div class="mb-2">
-                        <img src="{{ asset('legacy/images/working-schedules/' . $schedule->image) }}" alt="Ảnh hiện tại" class="img-thumbnail" style="max-width: 120px;">
-                    </div>
-                @endif
-                <input type="file" name="image" id="image" class="form-control-file border @error('image') is-invalid @enderror" accept="image/jpeg,image/png,image/jpg,image/gif">
-                <small class="form-text text-muted">Định dạng: JPG, PNG, GIF (tối đa 2MB). Để trống nếu không muốn thay đổi.</small>
-                @error('image')
-                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                @enderror
             </div>
 
             <div class="form-row">

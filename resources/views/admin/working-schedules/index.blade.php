@@ -53,7 +53,6 @@
                         <th>Thời gian</th>
                         <th>Vị trí</th>
                         <th>Trạng thái</th>
-                        <th>Ảnh</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
@@ -74,13 +73,6 @@
                                 <span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? ucfirst($status ?? 'N/A') }}</span>
                             </td>
                             <td>
-                                @if($schedule->image)
-                                    <img src="{{ asset('legacy/images/working-schedules/' . $schedule->image) }}" alt="Ảnh lịch" class="img-thumbnail" style="max-width: 60px;">
-                                @else
-                                    <span class="text-muted">Không có</span>
-                                @endif
-                            </td>
-                            <td>
                                 <a href="{{ route('admin.working-schedules.show', $schedule->id) }}" class="btn btn-sm btn-info">
                                     <i class="fas fa-eye"></i>
                                 </a>
@@ -98,7 +90,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">Chưa có lịch nào</td>
+                            <td colspan="8" class="text-center">Chưa có lịch nào</td>
                         </tr>
                     @endforelse
                 </tbody>
