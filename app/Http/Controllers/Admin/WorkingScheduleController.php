@@ -71,12 +71,7 @@ class WorkingScheduleController extends Controller
             'work_date' => 'required|date',
             'shift_id' => 'required|exists:working_shifts,id',
             'status' => 'required|in:available,busy,off',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-
-        if ($request->hasFile('image')) {
-            $validated['image'] = $this->storeImage($request->file('image'));
-        }
 
         WorkingSchedule::create($validated);
 
@@ -133,15 +128,7 @@ class WorkingScheduleController extends Controller
             'work_date' => 'required|date',
             'shift_id' => 'required|exists:working_shifts,id',
             'status' => 'required|in:available,busy,off',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-
-        if ($request->hasFile('image')) {
-            if ($schedule->image && file_exists(public_path('legacy/images/working-schedules/'.$schedule->image))) {
-                @unlink(public_path('legacy/images/working-schedules/'.$schedule->image));
-            }
-            $validated['image'] = $this->storeImage($request->file('image'));
-        }
 
         $schedule->update($validated);
 
@@ -201,20 +188,5 @@ class WorkingScheduleController extends Controller
             ->with('success', 'Lịch nhân viên đã được xóa vĩnh viễn!');
     }
 
-    /**
-     * Store uploaded image and return file name.
-     */
-    protected function storeImage($image): string
-    {
-        $directory = public_path('legacy/images/working-schedules');
-        if (!is_dir($directory)) {
-            mkdir($directory, 0777, true);
-        }
-
-        $imageName = time().'_'.$image->getClientOriginalName();
-        $image->move($directory, $imageName);
-
-        return $imageName;
-    }
 }
 

@@ -1,6 +1,6 @@
 @extends('layouts.site')
 
-@section('title', 'Lịch đặt')
+@section('title', 'Lịch hẹn')
 
 @push('styles')
 <style>
@@ -10,262 +10,243 @@
         min-height: 70vh;
     }
     
-    .cart-header {
+    .cart-container {
+        display: block;
+    }
+    
+    .cart-left {
+        width: 100%;
         background: #fff;
-        padding: 30px;
         border-radius: 10px;
-        margin-bottom: 30px;
+        padding: 30px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
     .cart-title {
-        font-size: 32px;
-        font-weight: 600;
-        color: #4A3600;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    
-    .cart-title i {
-        color: #BC9321;
-    }
-    
-    .cart-items {
-        background: #fff;
-        border-radius: 10px;
-        padding: 30px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        margin-bottom: 30px;
-    }
-    
-    .cart-item {
-        display: flex;
-        padding: 25px;
-        border-bottom: 2px solid #f0f0f0;
-        transition: all 0.3s;
-    }
-    
-    .cart-item:last-child {
-        border-bottom: none;
-    }
-    
-    .cart-item:hover {
-        background: #f8f9fa;
-    }
-    
-    .item-icon {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, #4A3600 0%, #5a4a00 100%);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 20px;
-        flex-shrink: 0;
-    }
-    
-    .item-icon i {
-        color: #fff;
         font-size: 24px;
-    }
-    
-    .item-content {
-        flex: 1;
-    }
-    
-    .item-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 10px;
-    }
-    
-    .item-name {
-        font-size: 18px;
         font-weight: 600;
         color: #333;
-        margin: 0 0 5px 0;
-    }
-    
-    .item-type-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        background: #4A3600;
-        color: #fff;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-        margin-left: 10px;
-    }
-    
-    .item-details {
-        color: #666;
-        font-size: 14px;
-        line-height: 1.6;
-        margin-bottom: 10px;
-    }
-    
-    .item-detail-row {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 5px;
-    }
-    
-    .item-detail-label {
-        font-weight: 500;
-        color: #4A3600;
-        min-width: 100px;
-    }
-    
-    .item-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 15px;
-    }
-    
-    .item-price {
-        font-size: 20px;
-        font-weight: 600;
-        color: #BC9321;
-    }
-    
-    .item-actions {
-        display: flex;
-        gap: 10px;
-    }
-    
-    .btn-action {
-        padding: 8px 15px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.3s;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-    
-    .btn-remove {
-        background: #dc3545;
-        color: #fff;
-    }
-    
-    .btn-remove:hover {
-        background: #c82333;
-        transform: translateY(-2px);
-    }
-    
-    .btn-view {
-        background: #4A3600;
-        color: #fff;
-    }
-    
-    .btn-view:hover {
-        background: #5a4a00;
-        transform: translateY(-2px);
-    }
-    
-    .cart-summary {
-        background: #fff;
-        border-radius: 10px;
-        padding: 30px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        position: sticky;
-        top: 100px;
-    }
-    
-    .summary-title {
-        font-size: 20px;
-        font-weight: 600;
-        color: #4A3600;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
         padding-bottom: 15px;
         border-bottom: 2px solid #f0f0f0;
     }
     
-    .summary-row {
+    .cart-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .cart-table td {
+        padding: 15px;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+        font-size: 14px;
+    }
+    
+    .cart-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .cart-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .product-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .product-name {
+        font-size: 14px;
+        color: #333;
+        line-height: 1.5;
+        max-width: 400px;
+    }
+    
+    .quantity-control {
         display: flex;
-        justify-content: space-between;
-        margin-bottom: 15px;
-        font-size: 16px;
+        align-items: center;
+        gap: 10px;
     }
     
-    .summary-label {
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #ddd;
+        background: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
         color: #666;
+        transition: all 0.3s;
     }
     
-    .summary-value {
+    .quantity-btn:hover {
+        background: #f0f0f0;
+        border-color: #4A3600;
+        color: #4A3600;
+    }
+    
+    .quantity-input {
+        width: 60px;
+        height: 30px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .product-price {
+        font-size: 16px;
         font-weight: 600;
         color: #333;
     }
     
-    .summary-total {
-        display: flex;
-        justify-content: space-between;
+    .delete-btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        background: #f0f0f0;
+        border: none;
+        cursor: pointer;
+        color: #666;
+        transition: all 0.3s;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    .delete-btn:hover {
+        background: #dc3545;
+        color: #fff;
+    }
+    
+    .cart-total {
         margin-top: 20px;
         padding-top: 20px;
         border-top: 2px solid #f0f0f0;
-        font-size: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
-    .summary-total-label {
+    .total-label {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .total-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #dc3545;
+    }
+    
+    .appointment-details {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        border-left: 4px solid #4A3600;
+    }
+    
+    .appointment-details-title {
+        font-size: 16px;
         font-weight: 600;
         color: #4A3600;
-    }
-    
-    .summary-total-value {
-        font-weight: 700;
-        color: #BC9321;
-        font-size: 24px;
-    }
-    
-    .cart-actions {
-        margin-top: 25px;
+        margin-bottom: 15px;
         display: flex;
-        flex-direction: column;
-        gap: 15px;
+        align-items: center;
+        gap: 10px;
     }
     
-    .btn-cart {
-        width: 100%;
+    .appointment-details-title i {
+        color: #BC9321;
+    }
+    
+    .appointment-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .info-item-box {
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
         padding: 15px;
+        border-left: 3px solid #4A3600;
+    }
+    
+    .info-item-label {
+        font-size: 12px;
+        color: #666;
+        font-weight: 500;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+    }
+    
+    .info-item-value {
+        font-size: 14px;
+        color: #333;
+        font-weight: 600;
+    }
+    
+    .info-item-value.status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .service-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .service-list li {
+        padding: 5px 0;
+        font-size: 13px;
+        color: #555;
+    }
+    
+    .service-list li:before {
+        content: "• ";
+        color: #BC9321;
+        font-weight: bold;
+        margin-right: 5px;
+    }
+    
+    .checkout-btn {
+        padding: 15px 40px;
+        background: #ff6600;
+        color: #fff;
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s;
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
         gap: 10px;
-        text-decoration: none;
     }
     
-    .btn-continue {
-        background: #6c757d;
-        color: #fff;
-    }
-    
-    .btn-continue:hover {
-        background: #5a6268;
+    .checkout-btn:hover {
+        background: #e55a00;
         transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 102, 0, 0.3);
     }
     
-    .btn-checkout {
-        background: linear-gradient(135deg, #4A3600 0%, #5a4a00 100%);
-        color: #fff;
-    }
-    
-    .btn-checkout:hover {
-        background: linear-gradient(135deg, #5a4a00 0%, #4A3600 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 20px rgba(74, 54, 0, 0.3);
+    .checkout-btn i {
+        font-size: 18px;
     }
     
     .empty-cart {
@@ -305,211 +286,117 @@
         margin-bottom: 30px;
     }
     
-    .status-badge {
-        display: inline-block;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-    
-    .status-pending {
-        background: #fff3cd;
-        color: #856404;
-    }
-    
-    .status-confirmed {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .status-processing {
-        background: #cfe2ff;
-        color: #084298;
-    }
-    
-    .status-completed {
-        background: #d1e7dd;
-        color: #0f5132;
-    }
-    
-    @media (max-width: 767px) {
-        .cart-section {
-            padding: 100px 0 40px;
-        }
-        
-        .cart-item {
-            flex-direction: column;
-        }
-        
-        .item-icon {
-            margin-bottom: 15px;
-        }
-        
-        .item-header {
-            flex-direction: column;
-        }
-        
-        .item-footer {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 15px;
-        }
-        
-        .cart-summary {
-            position: relative;
-            top: 0;
-            margin-top: 30px;
-        }
-    }
 </style>
 @endpush
 
 @section('content')
 <div class="cart-section">
     <div class="container">
-        <div class="cart-header">
-            <h1 class="cart-title">
-                <i class="fa fa-shopping-bag"></i>
-                Lịch đặt của tôi
-            </h1>
-        </div>
-        
         @if(isset($items) && count($items) > 0)
-        <div class="row">
-            <div class="col-xl-8 col-lg-8">
-                <div class="cart-items">
-                    @foreach($items as $index => $item)
-                        <div class="cart-item" data-key="{{ $item['key'] ?? (($item['type'] === 'appointment' ? 'appointment_' : 'service_variant_') . $item['id']) }}">
-                            <div class="item-icon">
+        <div class="cart-container">
+            <!-- Left: Cart Items -->
+            <div class="cart-left">
+                <h2 class="cart-title">LỊCH HẸN CỦA BẠN</h2>
+                
+                <table class="cart-table">
+                    <tbody>
+                        @foreach($items as $item)
+                        <tr data-key="{{ $item['key'] }}">
+                            <td>
                                 @if($item['type'] === 'appointment')
-                                    <i class="fa fa-calendar-check-o"></i>
+                                    <img src="{{ asset('legacy/images/about/about_lft.png') }}" alt="Đặt lịch" class="product-image">
                                 @else
-                                    <i class="fa fa-scissors"></i>
+                                    <img src="{{ asset('legacy/images/products/' . ($item['variant']->service->image ?? 'default.jpg')) }}" alt="{{ $item['name'] }}" class="product-image">
                                 @endif
-                            </div>
-                            
-                            <div class="item-content">
-                                <div class="item-header">
-                                    <div>
-                                        <h3 class="item-name">
-                                            {{ $item['name'] }}
-                                            <span class="item-type-badge">
-                                                @if($item['type'] === 'appointment')
-                                                    Đặt lịch
+                            </td>
+                            <td>
+                                <div class="product-name">{{ $item['name'] }}</div>
+                                @if($item['type'] === 'appointment' && isset($item['appointment']))
+                                <div class="appointment-details">
+                                    <h4 class="appointment-details-title">
+                                        <i class="fa fa-calendar"></i>
+                                        Chi tiết lịch hẹn
+                                    </h4>
+                                    <div class="appointment-info-grid">
+                                        <div class="info-item-box">
+                                            <div class="info-item-label">Mã lịch hẹn</div>
+                                            <div class="info-item-value">#{{ str_pad($item['appointment']->id, 6, '0', STR_PAD_LEFT) }}</div>
+                                        </div>
+                                        <div class="info-item-box">
+                                            <div class="info-item-label">Ngày đặt</div>
+                                            <div class="info-item-value">{{ $item['appointment_date'] ?? 'N/A' }}</div>
+                                        </div>
+                                        <div class="info-item-box">
+                                            <div class="info-item-label">Giờ đặt</div>
+                                            <div class="info-item-value">{{ $item['appointment_time'] ?? 'N/A' }}</div>
+                                        </div>
+                                        <div class="info-item-box">
+                                            <div class="info-item-label">Nhân viên</div>
+                                            <div class="info-item-value">{{ $item['employee_name'] ?? 'Chưa xác định' }}</div>
+                                        </div>
+                                        <div class="info-item-box" style="grid-column: span 2;">
+                                            <div class="info-item-label">Dịch vụ</div>
+                                            <div class="info-item-value">
+                                                @if(isset($item['appointment']->appointmentDetails) && $item['appointment']->appointmentDetails->count() > 0)
+                                                    <ul class="service-list">
+                                                        @foreach($item['appointment']->appointmentDetails as $detail)
+                                                            @if($detail->serviceVariant)
+                                                                <li>{{ $detail->serviceVariant->name }} - {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ ({{ $detail->duration ?? 60 }} phút)</li>
+                                                            @endif
+                                                        @endforeach
+                                                    </ul>
                                                 @else
-                                                    Dịch vụ
+                                                    {{ $item['services'] ?? 'N/A' }}
                                                 @endif
-                                            </span>
-                                        </h3>
-                                    </div>
-                                </div>
-                                
-                                <div class="item-details">
-                                    @if($item['type'] === 'appointment')
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Dịch vụ:</span>
-                                            <span>{{ $item['services'] ?? 'N/A' }}</span>
+                                            </div>
                                         </div>
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Ngày:</span>
-                                            <span>{{ $item['appointment_date'] ?? 'N/A' }}</span>
-                                        </div>
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Giờ:</span>
-                                            <span>{{ $item['appointment_time'] ?? 'N/A' }}</span>
-                                        </div>
-                                        @if(isset($item['employee_name']))
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Nhân viên:</span>
-                                            <span>{{ $item['employee_name'] }}</span>
+                                        @if(isset($item['appointment']->note) && $item['appointment']->note)
+                                        <div class="info-item-box" style="grid-column: span 2;">
+                                            <div class="info-item-label">Ghi chú</div>
+                                            <div class="info-item-value">{{ $item['appointment']->note }}</div>
                                         </div>
                                         @endif
-                                        @if(isset($item['status']))
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Trạng thái:</span>
-                                            <span class="status-badge status-{{ strtolower(str_replace(' ', '-', $item['status'])) }}">
-                                                {{ $item['status'] }}
-                                            </span>
+                                        <div class="info-item-box" style="grid-column: span 2; background: #fff3cd; border-left-color: #ffc107;">
+                                            <div class="info-item-label">Tổng tiền</div>
+                                            <div class="info-item-value" style="font-size: 18px; color: #dc3545;">{{ number_format($item['subtotal'] ?? 0, 0, ',', '.') }}đ</div>
                                         </div>
-                                        @endif
-                                    @else
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Danh mục:</span>
-                                            <span>{{ $item['service_name'] ?? 'Dịch vụ' }}</span>
-                                        </div>
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Thời lượng:</span>
-                                            <span>{{ $item['duration'] ?? 60 }} phút</span>
-                                        </div>
-                                        <div class="item-detail-row">
-                                            <span class="item-detail-label">Số lượng:</span>
-                                            <span>{{ $item['quantity'] ?? 1 }}</span>
-                                        </div>
-                                    @endif
-                                </div>
-                                
-                                <div class="item-footer">
-                                    <div class="item-price">
-                                        {{ number_format($item['subtotal'] ?? 0, 0, ',', '.') }}đ
-                                    </div>
-                                    <div class="item-actions">
-                                        @if($item['type'] === 'appointment')
-                                            <a href="{{ route('site.appointment.show', $item['id']) }}" class="btn-action btn-view">
-                                                <i class="fa fa-eye"></i> Xem chi tiết
-                                            </a>
-                                        @endif
-                                        <button type="button" class="btn-action btn-remove" onclick="removeItem('{{ $item['key'] ?? (($item['type'] === 'appointment' ? 'appointment_' : 'service_variant_') . $item['id']) }}')">
-                                            <i class="fa fa-trash"></i> Xóa
-                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    @endforeach
+                                @endif
+                            </td>
+                            <td style="text-align: right;">
+                                <button type="button" class="delete-btn" onclick="removeItem('{{ $item['key'] }}', '{{ $item['type'] ?? '' }}')" title="{{ $item['type'] === 'appointment' ? 'Hủy lịch hẹn' : 'Xóa' }}">
+                                    {{ $item['type'] === 'appointment' ? 'Hủy lịch hẹn' : 'Xóa' }}
+                                </button>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                
+                <div class="cart-total">
+                    <span class="total-label">Tổng tiền:</span>
+                    <span class="total-value">{{ number_format($total ?? 0, 0, ',', '.') }}đ</span>
+                </div>
+                
+                <div style="margin-top: 30px; text-align: right;">
+                    <button type="button" class="checkout-btn" onclick="checkout()" style="width: auto; padding: 15px 40px; display: inline-block;">
+                        <i class="fa fa-credit-card"></i> THANH TOÁN
+                    </button>
                 </div>
             </div>
             
-            <div class="col-xl-4 col-lg-4">
-                <div class="cart-summary">
-                    <h3 class="summary-title">Tóm tắt đơn hàng</h3>
-                    
-                    <div class="summary-row">
-                        <span class="summary-label">Số lượng:</span>
-                        <span class="summary-value">{{ isset($items) ? count($items) : 0 }} mục</span>
-                    </div>
-                    
-                    <div class="summary-total">
-                        <span class="summary-total-label">Tổng cộng:</span>
-                        <span class="summary-total-value">{{ number_format($total ?? 0, 0, ',', '.') }}đ</span>
-                    </div>
-                    
-                    <div class="cart-actions">
-                        <a href="{{ route('site.home') }}" class="btn-cart btn-continue">
-                            <i class="fa fa-arrow-left"></i> Tiếp tục đặt lịch
-                        </a>
-                        <button type="button" class="btn-cart btn-checkout" onclick="checkout()">
-                            <i class="fa fa-check"></i> Thanh toán
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
         @else
         <div class="empty-cart">
             <div class="empty-cart-icon">
                 <i class="fa fa-shopping-bag"></i>
             </div>
-            <h2 class="empty-cart-title">Lịch đặt trống</h2>
-            <p class="empty-cart-message">Bạn chưa có sản phẩm nào trong lịch đặt. Hãy đặt lịch hoặc thêm dịch vụ vào lịch đặt!</p>
-            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
-                <a href="{{ route('site.cart.seed-fake-data') }}" class="btn-cart btn-checkout" style="background: #BC9321; border-color: #BC9321;">
-                    <i class="fa fa-plus"></i> Thêm dữ liệu mẫu
-                </a>
-                <a href="{{ route('site.home') }}" class="btn-cart btn-checkout">
-                    <i class="fa fa-arrow-left"></i> Về trang chủ
-                </a>
-            </div>
+            <h2 class="empty-cart-title">Lịch hẹn trống</h2>
+            <p class="empty-cart-message">Bạn chưa có lịch hẹn nào. Hãy đặt lịch hoặc thêm dịch vụ vào lịch hẹn!</p>
+            <a href="{{ route('site.home') }}" class="checkout-btn" style="display: inline-block; text-decoration: none; width: auto; padding: 12px 30px;">
+                <i class="fa fa-arrow-left"></i> Về trang chủ
+            </a>
         </div>
         @endif
     </div>
@@ -518,8 +405,15 @@
 
 @push('scripts')
 <script>
-    function removeItem(key) {
-        if (!confirm('Bạn có chắc chắn muốn xóa mục này khỏi lịch đặt?')) {
+    function removeItem(key, type) {
+        var message = '';
+        if (type === 'appointment') {
+            message = 'Bạn có chắc chắn muốn hủy lịch hẹn này?';
+        } else {
+            message = 'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?';
+        }
+        
+        if (!confirm(message)) {
             return;
         }
         
@@ -531,55 +425,43 @@
             },
             success: function(response) {
                 if (response.success) {
-                    // Remove item from DOM
-                    $('.cart-item[data-key="' + key + '"]').fadeOut(300, function() {
-                        $(this).remove();
-                        // Check if cart is empty
-                        if ($('.cart-item').length <= 1) {
-                            location.reload();
-                        } else {
-                            // Reload page to update cart
-                            location.reload();
-                        }
-                    });
-                    
-                    // Update cart count in header
-                    updateCartCount();
-                    
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(response.message);
-                    }
+                    location.reload();
                 }
             },
             error: function() {
-                if (typeof toastr !== 'undefined') {
-                    toastr.error('Có lỗi xảy ra. Vui lòng thử lại.');
-                } else {
-                    alert('Có lỗi xảy ra. Vui lòng thử lại.');
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
+            }
+        });
+    }
+    
+    function updateQuantity(key, quantity) {
+        if (quantity < 1) {
+            quantity = 1;
+        }
+        
+        $.ajax({
+            url: '{{ route("site.cart.update", ":key") }}'.replace(':key', key),
+            method: 'PUT',
+            data: {
+                quantity: quantity
+            },
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
                 }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
             }
         });
     }
     
     function checkout() {
-        // Redirect to checkout page or show payment form
+        // TODO: Implement checkout logic
         alert('Tính năng thanh toán đang được phát triển. Vui lòng liên hệ với chúng tôi để hoàn tất đơn hàng.');
     }
-    
-    function updateCartCount() {
-        $.ajax({
-            url: '{{ route("site.cart.count") }}',
-            method: 'GET',
-            success: function(response) {
-                $('.cart-icon .bag').text(response.count);
-            }
-        });
-    }
-    
-    // Update cart count on page load
-    $(document).ready(function() {
-        updateCartCount();
-    });
 </script>
 @endpush
-
