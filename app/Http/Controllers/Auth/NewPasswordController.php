@@ -20,6 +20,11 @@ class NewPasswordController extends Controller
      */
     public function create(Request $request): View
     {
+        if (!session('password_reset_verified')) {
+            return redirect()->route('password.request')
+                ->withErrors(['login' => 'Vui lòng xác nhận mã OTP trước.']);
+        }
+
         return view('auth.reset-password', ['request' => $request]);
     }
 
@@ -30,33 +35,44 @@ class NewPasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (!session('password_reset_verified')) {
+            return redirect()->route('password.request')
+                ->withErrors(['login' => 'Vui lòng xác nhận mã OTP trước.']);
+        }
+
         $request->validate([
-            'token' => ['required'],
-            'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user) use ($request) {
-                $user->forceFill([
-                    'password' => Hash::make($request->password),
-                    'remember_token' => Str::random(60),
-                ])->save();
+        $login = session('password_reset_login');
+        $email = session('password_reset_email');
+        $phone = session('password_reset_phone');
 
-                event(new PasswordReset($user));
-            }
-        );
+        // Find user
+        $user = null;
+        if ($email) {
+            $user = User::where('email', $email)->first();
+        } elseif ($phone) {
+            $user = User::where('phone', $phone)->first();
+        }
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
-        return $status == Password::PASSWORD_RESET
-                    ? redirect()->route('login')->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if (!$user) {
+            return redirect()->route('password.request')
+                ->withErrors(['login' => 'Không tìm thấy tài khoản.']);
+        }
+
+        // Reset password
+        $user->forceFill([
+            'password' => Hash::make($request->password),
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        event(new PasswordReset($user));
+
+        // Clear session
+        session()->forget(['password_reset_login', 'password_reset_email', 'password_reset_phone', 'password_reset_verified']);
+
+        return redirect()->route('login')
+            ->with('status', 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập.');
     }
 }

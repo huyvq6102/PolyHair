@@ -33,37 +33,6 @@
             }
         });
 
-        // Xử lý nút xóa tài khoản
-        $('#deleteAccountBtn').on('click', function() {
-            $('#deleteAccountModal').modal('show');
-        });
-
-        // Đảm bảo modal hoạt động đúng khi mở
-        $('#deleteAccountModal').on('shown.bs.modal', function() {
-            // Force enable pointer events
-            $(this).css({
-                'z-index': '9999',
-                'pointer-events': 'auto'
-            });
-            $(this).find('.modal-dialog').css({
-                'z-index': '10000',
-                'pointer-events': 'auto'
-            });
-            $(this).find('.modal-content').css({
-                'z-index': '10001',
-                'pointer-events': 'auto'
-            });
-            $(this).find('input, button, select, textarea, form').css({
-                'pointer-events': 'auto',
-                'cursor': 'auto'
-            });
-            $('#delete_password').css('cursor', 'text').focus();
-        });
-
-        // Fix backdrop
-        $(document).on('show.bs.modal', '.modal', function() {
-            $('.modal-backdrop').css('z-index', '9998');
-        });
     });
 </script>
 @endpush
@@ -106,15 +75,8 @@
                 <div class="profile-section">
                     @include('profile.partials.update-password-form')
                 </div>
-
-                <div class="profile-section">
-                    @include('profile.partials.delete-user-form')
-                </div>
             </div>
         </div>
     </div>
 </section>
-
-<!-- Modal xóa tài khoản - Đặt ở ngoài section để tránh bị chặn -->
-@include('profile.partials.delete-user-modal')
 @endsection

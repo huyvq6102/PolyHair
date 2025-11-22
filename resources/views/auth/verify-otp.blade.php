@@ -1,6 +1,6 @@
 @extends('layouts.site')
 
-@section('title', 'Quên mật khẩu')
+@section('title', 'Xác nhận mã OTP')
 
 @section('content')
 @push('styles')
@@ -11,15 +11,15 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6 mb-5 mb-lg-0">
-                <span class="text-uppercase" style="letter-spacing:4px;">Khôi phục tài khoản</span>
-                <h1 class="mt-3 mb-4">Quên mật khẩu?<br>Không sao cả!</h1>
+                <span class="text-uppercase" style="letter-spacing:4px;">Xác thực tài khoản</span>
+                <h1 class="mt-3 mb-4">Nhập mã xác nhận<br>để tiếp tục</h1>
                 <p>
-                    Nhập email hoặc số điện thoại của bạn, chúng tôi sẽ gửi mã xác nhận để bạn có thể đặt lại mật khẩu mới.
+                    Chúng tôi đã gửi mã xác nhận 6 chữ số đến email của bạn. Vui lòng kiểm tra hộp thư và nhập mã để đặt lại mật khẩu.
                 </p>
             </div>
             <div class="col-lg-5 ml-auto">
                 <div class="auth-form-wrapper">
-                    <h3 class="text-center text-white mb-4">Quên mật khẩu</h3>
+                    <h3 class="text-center text-white mb-4">Xác nhận mã OTP</h3>
                         
                     @if(session('status'))
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -40,26 +40,27 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('password.email') }}">
+                    <form method="POST" action="{{ route('password.verify-otp.store') }}">
                         @csrf
 
                         <div class="form-group">
-                            <label for="login">Email hoặc Số điện thoại <span class="text-danger">*</span></label>
-                            <input type="text" name="login" id="login" class="form-control @error('login') is-invalid @enderror" 
-                                   value="{{ old('login') }}" required autofocus 
-                                   placeholder="Nhập email hoặc số điện thoại">
-                            @error('login')
+                            <label for="otp">Mã xác nhận (6 chữ số) <span class="text-danger">*</span></label>
+                            <input type="text" name="otp" id="otp" class="form-control @error('otp') is-invalid @enderror text-center" 
+                                   value="{{ old('otp') }}" required autofocus maxlength="6" 
+                                   placeholder="000000" style="font-size: 24px; letter-spacing: 8px;">
+                            @error('otp')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="form-text text-muted mt-2">Mã xác nhận có hiệu lực trong 10 phút</small>
                         </div>
 
                         <div class="form-group text-center mt-4">
-                            <button type="submit" class="boxed-btn3">Gửi mã xác nhận</button>
+                            <button type="submit" class="boxed-btn3">Xác nhận</button>
                         </div>
 
                         <div class="text-center mt-3">
+                            <p><a href="{{ route('password.request') }}">Gửi lại mã xác nhận</a></p>
                             <p><a href="{{ route('login') }}">Quay lại đăng nhập</a></p>
-                            <p>Chưa có tài khoản? <a href="{{ route('register') }}">Đăng ký ngay</a></p>
                         </div>
                     </form>
                 </div>
@@ -67,4 +68,14 @@
         </div>
     </div>
 </section>
+
+@push('scripts')
+<script>
+    // Auto focus and move to next input (if using multiple inputs)
+    document.getElementById('otp').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+</script>
+@endpush
 @endsection
+
