@@ -85,9 +85,13 @@ class CartController extends Controller
                 }
             }
 
+            // Get user info if logged in
+            $user = auth()->user();
+            
             return view('site.cart.index', [
                 'items' => $items ?? [],
-                'total' => $total ?? 0
+                'total' => $total ?? 0,
+                'user' => $user
             ]);
         } catch (\Exception $e) {
             // Log error for debugging
