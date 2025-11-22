@@ -67,29 +67,73 @@ class WorkingScheduleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_ids' => 'required|array|min:1',
+            'employee_ids.*' => 'required|exists:employees,id',
             'work_date' => 'required|date',
-            'shift_id' => 'required|exists:working_shifts,id',
+            'shift_ids' => 'required|array|min:1',
+            'shift_ids.*' => 'required|exists:working_shifts,id',
             'status' => 'required|in:available,busy,off',
         ]);
 
-        // Kiểm tra trùng lịch
-        $conflict = $this->checkScheduleConflict(
-            $validated['employee_id'],
-            $validated['work_date'],
-            $validated['shift_id']
-        );
+        $employeeIds = $validated['employee_ids'];
+        $shiftIds = $validated['shift_ids'];
+        $workDate = $validated['work_date'];
+        $status = $validated['status'];
 
-        if ($conflict) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['shift_id' => $conflict]);
+        $createdCount = 0;
+        $skippedCount = 0;
+        $conflicts = [];
+
+        // Tạo lịch cho tất cả các tổ hợp nhân viên x ca làm việc
+        foreach ($employeeIds as $employeeId) {
+            foreach ($shiftIds as $shiftId) {
+                // Kiểm tra trùng lịch
+                $conflict = $this->checkScheduleConflict(
+                    $employeeId,
+                    $workDate,
+                    $shiftId
+                );
+
+                if ($conflict) {
+                    $skippedCount++;
+                    $employee = Employee::with('user')->find($employeeId);
+                    $shift = WorkingShift::find($shiftId);
+                    $employeeName = $employee->user->name ?? "ID: {$employeeId}";
+                    $shiftName = $shift->name ?? "ID: {$shiftId}";
+                    $conflicts[] = "{$employeeName} - Ca {$shiftName}: " . $conflict;
+                    continue;
+                }
+
+                // Tạo lịch
+                WorkingSchedule::create([
+                    'employee_id' => $employeeId,
+                    'work_date' => $workDate,
+                    'shift_id' => $shiftId,
+                    'status' => $status,
+                ]);
+
+                $createdCount++;
+            }
         }
 
-        WorkingSchedule::create($validated);
+        // Thông báo kết quả
+        $message = '';
+        if ($createdCount > 0) {
+            $message = "Đã tạo thành công {$createdCount} lịch làm việc!";
+        }
+        if ($skippedCount > 0) {
+            $message .= ($message ? ' ' : '') . "Bỏ qua {$skippedCount} lịch do trùng.";
+        }
 
-        return redirect()->route('admin.working-schedules.index')
-            ->with('success', 'Lịch nhân viên đã được tạo thành công!');
+        if (empty($conflicts)) {
+            return redirect()->route('admin.working-schedules.index')
+                ->with('success', $message ?: 'Lịch nhân viên đã được tạo thành công!');
+        } else {
+            return redirect()->back()
+                ->withInput()
+                ->with('warning', $message)
+                ->with('conflicts', $conflicts);
+        }
     }
 
     /**
@@ -142,20 +186,6 @@ class WorkingScheduleController extends Controller
             'shift_id' => 'required|exists:working_shifts,id',
             'status' => 'required|in:available,busy,off',
         ]);
-
-        // Kiểm tra trùng lịch (loại trừ bản ghi hiện tại)
-        $conflict = $this->checkScheduleConflict(
-            $validated['employee_id'],
-            $validated['work_date'],
-            $validated['shift_id'],
-            $id
-        );
-
-        if ($conflict) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['shift_id' => $conflict]);
-        }
 
         $schedule->update($validated);
 
@@ -255,11 +285,10 @@ class WorkingScheduleController extends Controller
             // Kiểm tra trùng lịch: hai khoảng thời gian trùng nhau nếu
             // start1 < end2 AND start2 < end1
             if ($this->isTimeOverlapping($newStartTime, $newEndTime, $existingStartTime, $existingEndTime)) {
-                $employeeName = $schedule->employee->user->name ?? 'Nhân viên';
                 $shiftName = $schedule->shift->name ?? '';
                 $shiftTime = $schedule->shift->display_time ?? '';
                 
-                return "Lịch này bị trùng với ca '{$shiftName}' ({$shiftTime}) của {$employeeName} trong cùng ngày. Vui lòng chọn ca khác hoặc ngày khác.";
+                return "Trùng với ca '{$shiftName}' ({$shiftTime}) trong cùng ngày.";
             }
         }
 
