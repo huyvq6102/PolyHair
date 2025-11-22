@@ -31,8 +31,8 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('password.store') }}">
-                        @csrf
+    <form method="POST" action="{{ route('password.store') }}">
+        @csrf
 
                         <div class="form-group">
                             <label for="password">Mật khẩu mới <span class="text-danger">*</span></label>
@@ -42,7 +42,7 @@
                             @error('password')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                        </div>
+        </div>
 
                         <div class="form-group">
                             <label for="password_confirmation">Xác nhận mật khẩu <span class="text-danger">*</span></label>
@@ -52,11 +52,11 @@
                             @error('password_confirmation')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                        </div>
+        </div>
 
                         <div class="form-group text-center mt-4">
                             <button type="submit" class="boxed-btn3">Đặt lại mật khẩu</button>
-                        </div>
+        </div>
 
                         <div class="text-center mt-3">
                             <p><a href="{{ route('login') }}">Quay lại đăng nhập</a></p>

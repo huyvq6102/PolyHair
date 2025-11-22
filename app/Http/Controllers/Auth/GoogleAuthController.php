@@ -124,14 +124,15 @@ class GoogleAuthController extends Controller
         $user = User::where('email', $googleUser['email'])->first();
 
         if (!$user) {
-            // Create new user
+            // Create new user with customer role (not employee)
+            // Only admin can set user as employee later
             $user = User::create([
                 'name' => $googleUser['name'] ?? $googleUser['email'],
                 'email' => $googleUser['email'],
                 'password' => bcrypt(Str::random(32)), // Random password since using OAuth
                 'avatar' => $googleUser['picture'] ?? null,
                 'status' => 'Hoạt động', // Use Vietnamese enum value
-                'role_id' => 2, // Default role (adjust as needed)
+                'role_id' => 3, // Default to "Khách hàng" (Customer) role
             ]);
         } else {
             // Update user info from Google

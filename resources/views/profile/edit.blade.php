@@ -59,9 +59,9 @@
                     </div>
                 @endif
 
-                @if(session('status') === 'password-updated')
+                @if(session('status') === 'password-updated' || (session('status') && session('status') !== 'profile-updated'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        Mật khẩu đã được cập nhật thành công!
+                        {{ session('status') === 'password-updated' ? 'Mật khẩu đã được cập nhật thành công!' : session('status') }}
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>

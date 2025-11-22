@@ -16,7 +16,7 @@
                 <p>
                     Nhập email hoặc số điện thoại của bạn, chúng tôi sẽ gửi mã xác nhận để bạn có thể đặt lại mật khẩu mới.
                 </p>
-            </div>
+    </div>
             <div class="col-lg-5 ml-auto">
                 <div class="auth-form-wrapper">
                     <h3 class="text-center text-white mb-4">Quên mật khẩu</h3>
@@ -40,8 +40,8 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('password.email') }}">
-                        @csrf
+    <form method="POST" action="{{ route('password.email') }}">
+        @csrf
 
                         <div class="form-group">
                             <label for="login">Email hoặc Số điện thoại <span class="text-danger">*</span></label>
@@ -55,7 +55,7 @@
 
                         <div class="form-group text-center mt-4">
                             <button type="submit" class="boxed-btn3">Gửi mã xác nhận</button>
-                        </div>
+        </div>
 
                         <div class="text-center mt-3">
                             <p><a href="{{ route('login') }}">Quay lại đăng nhập</a></p>

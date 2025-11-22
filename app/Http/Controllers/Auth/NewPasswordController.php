@@ -62,12 +62,12 @@ class NewPasswordController extends Controller
         }
 
         // Reset password
-        $user->forceFill([
-            'password' => Hash::make($request->password),
-            'remember_token' => Str::random(60),
-        ])->save();
+                $user->forceFill([
+                    'password' => Hash::make($request->password),
+                    'remember_token' => Str::random(60),
+                ])->save();
 
-        event(new PasswordReset($user));
+                event(new PasswordReset($user));
 
         // Clear session
         session()->forget(['password_reset_login', 'password_reset_email', 'password_reset_phone', 'password_reset_verified']);
