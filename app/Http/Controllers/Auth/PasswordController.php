@@ -22,16 +22,20 @@ class PasswordController extends Controller
         ]);
 
         $user = $request->user();
+        $userEmail = $user->email;
 
         $user->update([
             'password' => Hash::make($validated['password']),
         ]);
 
-        // Keep user logged in - no logout
-        // Regenerate session token for security
-        $request->session()->regenerate();
+        // Logout user
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-        // Redirect back to profile with success message
-        return back()->with('status', 'Mật khẩu đã được cập nhật thành công!');
+        // Redirect to login with email pre-filled
+        return redirect()->route('login')
+            ->with('success', 'Đổi mật khẩu thành công! Vui lòng đăng nhập lại bằng mật khẩu mới.')
+            ->with('email', $userEmail);
     }
 }

@@ -56,27 +56,6 @@ class ServiceController extends Controller
     }
 
     /**
-     * Show service detail for modal
-     */
-    public function showDetail(Request $request, $id)
-    {
-        $type = $request->get('type', 'service');
-
-        if ($type === 'combo') {
-            $combo = Combo::with(['category', 'comboItems.service.serviceVariants'])->findOrFail($id);
-            $html = view('admin.services.partials.combo_detail', compact('combo'))->render();
-        } else {
-            $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
-            $html = view('admin.services.partials.service_detail', compact('service'))->render();
-        }
-
-        return response()->json([
-            'success' => true,
-            'html' => $html
-        ]);
-    }
-
-    /**
      * Show the form for creating a new resource.
      */
     public function create()
@@ -86,13 +65,7 @@ class ServiceController extends Controller
             ->whereDoesntHave('serviceVariants')
             ->get();
         
-        // Lấy cả dịch vụ có biến thể để có thể chọn biến thể
-        $variantServices = Service::whereNull('deleted_at')
-            ->whereHas('serviceVariants')
-            ->with('serviceVariants')
-            ->get();
-        
-        return view('admin.services.create', compact('categories', 'singleServices', 'variantServices'));
+        return view('admin.services.create', compact('categories', 'singleServices'));
     }
 
     /**
@@ -120,6 +93,7 @@ class ServiceController extends Controller
     protected function storeSingleService(Request $request)
     {
         $request->validate([
+            'service_code' => 'nullable|string|max:50|unique:services,service_code',
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:service_categories,id',
             'base_price' => 'required|numeric|min:0',
@@ -129,6 +103,7 @@ class ServiceController extends Controller
         ]);
 
         $data = $request->only([
+            'service_code',
             'name',
             'category_id',
             'base_price',
@@ -136,8 +111,9 @@ class ServiceController extends Controller
             'description',
         ]);
 
-        // Tự động tạo mã dịch vụ
-        $data['service_code'] = 'DV' . str_pad(Service::max('id') + 1, 6, '0', STR_PAD_LEFT);
+        if (!$data['service_code']) {
+            $data['service_code'] = 'DV' . str_pad(Service::max('id') + 1, 6, '0', STR_PAD_LEFT);
+        }
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
@@ -162,79 +138,23 @@ class ServiceController extends Controller
     protected function storeVariant(Request $request)
     {
         $request->validate([
-            'service_name' => 'required|string|max:255',
-            'category_id' => 'required|exists:service_categories,id',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'variants' => 'required|array|min:1',
-            'variants.*.name' => 'required|string|max:255',
-            'variants.*.price' => 'required|numeric|min:0',
-            'variants.*.duration' => 'required|integer|min:0',
-            'variants.*.is_active' => 'nullable|boolean',
-            'variants.*.notes' => 'nullable|string',
-            'variants.*.attributes' => 'nullable|array',
-            'variants.*.attributes.*.name' => 'required_with:variants.*.attributes|string|max:100',
-            'variants.*.attributes.*.value' => 'required_with:variants.*.attributes|string|max:100',
+            'service_id' => 'required|exists:services,id',
+            'variant_name' => 'required|string|max:255',
+            'variant_price' => 'required|numeric|min:0',
+            'variant_duration' => 'required|integer|min:0',
         ]);
 
-        DB::beginTransaction();
-        try {
-            // Tạo dịch vụ chính
-            $serviceData = [
-                'name' => $request->input('service_name'),
-                'category_id' => $request->input('category_id'),
-                'description' => $request->input('description'),
-                'status' => 'Hoạt động',
-            ];
+        ServiceVariant::create([
+            'service_id' => $request->input('service_id'),
+            'name' => $request->input('variant_name'),
+            'price' => $request->input('variant_price'),
+            'duration' => $request->input('variant_duration'),
+            'is_default' => $request->input('is_default', false),
+            'is_active' => $request->input('is_active', true),
+        ]);
 
-            // Tự động tạo mã dịch vụ
-            $serviceData['service_code'] = 'DV' . str_pad(Service::max('id') + 1, 6, '0', STR_PAD_LEFT);
-
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imageName = time() . '_' . $image->getClientOriginalName();
-                $image->move(public_path('legacy/images/products'), $imageName);
-                $serviceData['image'] = $imageName;
-            }
-
-            $service = Service::create($serviceData);
-
-            // Tạo các biến thể
-            $variants = $request->input('variants', []);
-            foreach ($variants as $variantData) {
-                $variant = ServiceVariant::create([
-                    'service_id' => $service->id,
-                    'name' => $variantData['name'],
-                    'price' => $variantData['price'],
-                    'duration' => $variantData['duration'],
-                    'is_default' => false,
-                    'is_active' => isset($variantData['is_active']) && $variantData['is_active'] == '1',
-                    'notes' => $variantData['notes'] ?? null,
-                ]);
-
-                // Tạo các thuộc tính cho biến thể
-                if (isset($variantData['attributes']) && is_array($variantData['attributes'])) {
-                    foreach ($variantData['attributes'] as $attrData) {
-                        if (!empty($attrData['name']) && !empty($attrData['value'])) {
-                            \App\Models\VariantAttribute::create([
-                                'service_variant_id' => $variant->id,
-                                'attribute_name' => $attrData['name'],
-                                'attribute_value' => $attrData['value'],
-                            ]);
-                        }
-                    }
-                }
-            }
-
-            DB::commit();
-            return redirect()->route('admin.services.index')
-                ->with('success', 'Dịch vụ biến thể đã được thêm thành công!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
-        }
+        return redirect()->route('admin.services.index')
+            ->with('success', 'Biến thể dịch vụ đã được thêm thành công!');
     }
 
     /**
@@ -246,9 +166,8 @@ class ServiceController extends Controller
             'combo_name' => 'required|string|max:255',
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
-            'combo_items' => 'required|array|min:1',
-            'combo_items.*.service_id' => 'required|exists:services,id',
-            'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
+            'service_ids' => 'required|array|min:1',
+            'service_ids.*' => 'exists:services,id',
             'combo_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'combo_status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'combo_description' => 'nullable|string',
@@ -272,12 +191,14 @@ class ServiceController extends Controller
                 $combo->save();
             }
 
-            $comboItems = $request->input('combo_items', []);
-            foreach ($comboItems as $item) {
-                if (!empty($item['service_id'])) {
+            $serviceIds = $request->input('service_ids');
+            foreach ($serviceIds as $serviceId) {
+                $service = Service::find($serviceId);
+                if ($service) {
+                    $variant = $service->serviceVariants()->first();
                     $combo->comboItems()->create([
-                        'service_id' => $item['service_id'],
-                        'service_variant_id' => !empty($item['service_variant_id']) ? $item['service_variant_id'] : null,
+                        'service_id' => $serviceId,
+                        'service_variant_id' => $variant ? $variant->id : null,
                         'quantity' => 1,
                     ]);
                 }
@@ -302,43 +223,23 @@ class ServiceController extends Controller
             $singleServices = Service::whereNull('deleted_at')
                 ->whereDoesntHave('serviceVariants')
                 ->get();
-            
-            // Lấy cả dịch vụ có biến thể
-            $variantServices = Service::whereNull('deleted_at')
-                ->whereHas('serviceVariants')
-                ->with('serviceVariants')
-                ->get();
-            
-            $combo->load('comboItems.service.serviceVariants');
-            return view('admin.services.edit', compact('combo', 'categories', 'singleServices', 'variantServices'))->with('service_type', 'combo');
+            $combo->load('comboItems.service');
+            return view('admin.services.edit', compact('combo', 'categories', 'singleServices'))->with('service_type', 'combo');
         }
 
-        // Check if it's a variant (single variant edit)
+        // Check if it's a variant
         if ($type === 'variant') {
-            // Kiểm tra xem $id có phải là ServiceVariant ID không
-            $variant = ServiceVariant::find($id);
-            if ($variant) {
-                // Đây là edit một variant đơn lẻ
-                $variant->load('service');
-                $categories = $this->serviceCategoryService->getAll();
-                $singleServices = Service::whereNull('deleted_at')
-                    ->whereDoesntHave('serviceVariants')
-                    ->get();
-                return view('admin.services.edit', compact('variant', 'categories', 'singleServices'))->with('service_type', 'variant');
-            } else {
-                // Đây là edit service có variants
-                $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
-                $categories = $this->serviceCategoryService->getAll();
-                $singleServices = Service::whereNull('deleted_at')
-                    ->whereDoesntHave('serviceVariants')
-                    ->get();
-                $serviceType = 'variant';
-                return view('admin.services.edit', compact('service', 'categories', 'singleServices', 'serviceType'));
-            }
+            $variant = ServiceVariant::findOrFail($id);
+            $variant->load('service');
+            $categories = $this->serviceCategoryService->getAll();
+            $singleServices = Service::whereNull('deleted_at')
+                ->whereDoesntHave('serviceVariants')
+                ->get();
+            return view('admin.services.edit', compact('variant', 'categories', 'singleServices'))->with('service_type', 'variant');
         }
 
         // It's a service
-        $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
+        $service = Service::with(['category', 'serviceVariants'])->findOrFail($id);
         $categories = $this->serviceCategoryService->getAll();
         $singleServices = Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
@@ -364,11 +265,6 @@ class ServiceController extends Controller
             case 'single':
                 return $this->updateSingleService($request, $id);
             case 'variant':
-                // Nếu là dịch vụ biến thể (service có variants), xử lý khác
-                $service = Service::findOrFail($id);
-                if ($service->serviceVariants->count() > 0) {
-                    return $this->updateVariantService($request, $id);
-                }
                 return $this->updateVariant($request, $id);
             case 'combo':
                 return $this->updateCombo($request, $id);
@@ -420,7 +316,7 @@ class ServiceController extends Controller
     }
 
     /**
-     * Update variant service (single variant)
+     * Update variant service
      */
     protected function updateVariant(Request $request, $id)
     {
@@ -445,132 +341,6 @@ class ServiceController extends Controller
     }
 
     /**
-     * Update variant service (service with multiple variants)
-     */
-    protected function updateVariantService(Request $request, $id)
-    {
-        $service = Service::with('serviceVariants.variantAttributes')->findOrFail($id);
-
-        $request->validate([
-            'service_code' => 'nullable|string|max:50|unique:services,service_code,' . $id,
-            'service_name' => 'required|string|max:255',
-            'category_id' => 'required|exists:service_categories,id',
-            'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'variants' => 'required|array|min:1',
-            'variants.*.name' => 'required|string|max:255',
-            'variants.*.price' => 'required|numeric|min:0',
-            'variants.*.duration' => 'required|integer|min:0',
-            'variants.*.is_active' => 'nullable|boolean',
-            'variants.*.notes' => 'nullable|string',
-            'variants.*.attributes' => 'nullable|array',
-            'variants.*.attributes.*.name' => 'required_with:variants.*.attributes|string|max:100',
-            'variants.*.attributes.*.value' => 'required_with:variants.*.attributes|string|max:100',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            // Cập nhật thông tin dịch vụ chính
-            $serviceData = [
-                'service_code' => $request->input('service_code'),
-                'name' => $request->input('service_name'),
-                'category_id' => $request->input('category_id'),
-                'description' => $request->input('description'),
-            ];
-
-            if ($request->hasFile('image')) {
-                if ($service->image && file_exists(public_path('legacy/images/products/' . $service->image))) {
-                    unlink(public_path('legacy/images/products/' . $service->image));
-                }
-                $image = $request->file('image');
-                $imageName = time() . '_' . $image->getClientOriginalName();
-                $image->move(public_path('legacy/images/products'), $imageName);
-                $serviceData['image'] = $imageName;
-            }
-
-            $service->update($serviceData);
-
-            // Lấy danh sách ID biến thể hiện tại và mới
-            $existingVariantIds = $service->serviceVariants->pluck('id')->toArray();
-            $newVariantIds = [];
-            $variants = $request->input('variants', []);
-
-            // Cập nhật hoặc tạo mới các biến thể
-            foreach ($variants as $variantData) {
-                if (isset($variantData['id']) && in_array($variantData['id'], $existingVariantIds)) {
-                    // Cập nhật biến thể hiện có
-                    $variant = ServiceVariant::find($variantData['id']);
-                    if ($variant) {
-                        $variant->update([
-                            'name' => $variantData['name'],
-                            'price' => $variantData['price'],
-                            'duration' => $variantData['duration'],
-                            'is_default' => false,
-                            'is_active' => isset($variantData['is_active']) && $variantData['is_active'] == '1',
-                            'notes' => $variantData['notes'] ?? null,
-                        ]);
-                        $newVariantIds[] = $variant->id;
-
-                        // Xóa các thuộc tính cũ và tạo mới
-                        $variant->variantAttributes()->delete();
-                        if (isset($variantData['attributes']) && is_array($variantData['attributes'])) {
-                            foreach ($variantData['attributes'] as $attrData) {
-                                if (!empty($attrData['name']) && !empty($attrData['value'])) {
-                                    \App\Models\VariantAttribute::create([
-                                        'service_variant_id' => $variant->id,
-                                        'attribute_name' => $attrData['name'],
-                                        'attribute_value' => $attrData['value'],
-                                    ]);
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // Tạo biến thể mới
-                    $variant = ServiceVariant::create([
-                        'service_id' => $service->id,
-                        'name' => $variantData['name'],
-                        'price' => $variantData['price'],
-                        'duration' => $variantData['duration'],
-                        'is_default' => false,
-                        'is_active' => isset($variantData['is_active']) && $variantData['is_active'] == '1',
-                        'notes' => $variantData['notes'] ?? null,
-                    ]);
-                    $newVariantIds[] = $variant->id;
-
-                    // Tạo các thuộc tính cho biến thể mới
-                    if (isset($variantData['attributes']) && is_array($variantData['attributes'])) {
-                        foreach ($variantData['attributes'] as $attrData) {
-                            if (!empty($attrData['name']) && !empty($attrData['value'])) {
-                                \App\Models\VariantAttribute::create([
-                                    'service_variant_id' => $variant->id,
-                                    'attribute_name' => $attrData['name'],
-                                    'attribute_value' => $attrData['value'],
-                                ]);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Xóa các biến thể không còn trong danh sách
-            $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
-            if (!empty($variantsToDelete)) {
-                ServiceVariant::whereIn('id', $variantsToDelete)->delete();
-            }
-
-            DB::commit();
-            return redirect()->route('admin.services.index')
-                ->with('success', 'Dịch vụ biến thể đã được cập nhật thành công!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
-        }
-    }
-
-    /**
      * Update combo service
      */
     protected function updateCombo(Request $request, $id)
@@ -581,9 +351,8 @@ class ServiceController extends Controller
             'combo_name' => 'required|string|max:255',
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
-            'combo_items' => 'required|array|min:1',
-            'combo_items.*.service_id' => 'required|exists:services,id',
-            'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
+            'service_ids' => 'required|array|min:1',
+            'service_ids.*' => 'exists:services,id',
             'combo_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'combo_status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'combo_description' => 'nullable|string',
@@ -609,16 +378,15 @@ class ServiceController extends Controller
                 $combo->save();
             }
 
-            // Xóa tất cả combo items cũ
             $combo->comboItems()->delete();
-            
-            // Tạo lại combo items mới
-            $comboItems = $request->input('combo_items', []);
-            foreach ($comboItems as $item) {
-                if (!empty($item['service_id'])) {
+            $serviceIds = $request->input('service_ids');
+            foreach ($serviceIds as $serviceId) {
+                $service = Service::find($serviceId);
+                if ($service) {
+                    $variant = $service->serviceVariants()->first();
                     $combo->comboItems()->create([
-                        'service_id' => $item['service_id'],
-                        'service_variant_id' => !empty($item['service_variant_id']) ? $item['service_variant_id'] : null,
+                        'service_id' => $serviceId,
+                        'service_variant_id' => $variant ? $variant->id : null,
                         'quantity' => 1,
                     ]);
                 }

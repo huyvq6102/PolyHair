@@ -66,13 +66,11 @@ class AppointmentService
         foreach ($serviceVariantData as $variantData) {
             AppointmentDetail::create([
                 'appointment_id' => $appointment->id,
-                'service_variant_id' => $variantData['service_variant_id'] ?? null,
-                'combo_id' => $variantData['combo_id'] ?? null, // Store combo_id if present
+                'service_variant_id' => $variantData['service_variant_id'],
                 'employee_id' => $variantData['employee_id'] ?? $data['employee_id'] ?? null,
                 'price_snapshot' => $variantData['price_snapshot'] ?? null,
                 'duration' => $variantData['duration'] ?? null,
                 'status' => $variantData['status'] ?? 'Chờ',
-                'notes' => $variantData['notes'] ?? null, // Store service/combo name when no variant
             ]);
         }
 
