@@ -9,30 +9,9 @@ use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\AppointmentController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Site\CheckoutController;
-use App\Http\Controllers\Site\CustomerController;
 
 // Site Routes
 Route::get('/', [HomeController::class, 'index'])->name('site.home');
-
-
-Route::prefix('khach-hang')->name('site.customers.')->group(function () {
-
-    Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
-
-});
-
-
-
-// Thanh toán
-Route::prefix('thanh-toan')->name('site.payments.')->group(function () {
-
-    Route::get('/', [CheckoutController::class, 'checkout'])->name('checkout');
-    Route::post('/process', [CheckoutController::class, 'processPayment'])->name('process');
-    Route::get('/success/{appointmentId}', [CheckoutController::class, 'paymentSuccess'])->name('success');
-
-});
-
 
 Route::prefix('products')->name('site.products.')->group(function () {
     Route::get('/', [ProductController::class, 'index'])->name('index');
@@ -67,10 +46,12 @@ Route::prefix('cart')->name('site.cart.')->group(function () {
 });
 
 Route::prefix('appointment')->name('site.appointment.')->group(function () {
+    Route::get('/', [AppointmentController::class, 'create'])->name('create');
     Route::post('/', [AppointmentController::class, 'store'])->name('store');
     Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
-    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
+    Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
+    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
 });
 
 // Auth Routes
@@ -81,7 +62,6 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';

@@ -7,9 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    // TẮT timestamps vì bảng không có created_at, updated_at
-    public $timestamps = false;
-
     protected $fillable = [
         'user_id',
         'appointment_id',
@@ -42,3 +39,4 @@ class Payment extends Model
         return $this->belongsTo(Appointment::class);
     }
 }
+

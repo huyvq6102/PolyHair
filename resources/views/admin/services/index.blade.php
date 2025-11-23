@@ -16,15 +16,6 @@
     </div>
 </div>
 
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-        </button>
-    </div>
-@endif
-
 <!-- Search -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
@@ -59,6 +50,7 @@
                     <tr>
                         <th>Mã dịch vụ</th>
                         <th>Tên dịch vụ</th>
+                        <th>Loại</th>
                         <th>Giá</th>
                         <th>Hình ảnh</th>
                         <th>Nhóm dịch vụ</th>
@@ -73,8 +65,16 @@
                             <td>{{ $service->service_code ?? 'N/A' }}</td>
                             <td>
                                 <strong>{{ $service->name }}</strong>
+                            </td>
+                            <td>
                                 @if($service->serviceVariants->count() > 0)
-                                    <br><small class="text-muted">(Có {{ $service->serviceVariants->count() }} biến thể)</small>
+                                    <span class="badge badge-info">
+                                        <i class="fas fa-layer-group"></i> Biến thể ({{ $service->serviceVariants->count() }})
+                                    </span>
+                                @else
+                                    <span class="badge badge-primary">
+                                        <i class="fas fa-tag"></i> Đơn
+                                    </span>
                                 @endif
                             </td>
                             <td>
@@ -113,9 +113,18 @@
                                 </div>
                             </td>
                             <td>
-                                <a href="{{ route('admin.services.edit', $service->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Sửa
-                                </a>
+                                <button type="button" class="btn btn-sm btn-info view-detail-btn" data-id="{{ $service->id }}" data-type="service">
+                                    <i class="fas fa-eye"></i> Xem
+                                </button>
+                                @if($service->serviceVariants->count() > 0)
+                                    <a href="{{ route('admin.services.edit', $service->id) }}?type=variant" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i> Sửa
+                                    </a>
+                                @else
+                                    <a href="{{ route('admin.services.edit', $service->id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i> Sửa
+                                    </a>
+                                @endif
                                 <form action="{{ route('admin.services.destroy', $service->id) }}" method="POST" class="d-inline delete-form">
                                     @csrf
                                     @method('DELETE')
@@ -125,46 +134,9 @@
                                 </form>
                             </td>
                         </tr>
-                        @if($service->serviceVariants->count() > 0)
-                            @foreach($service->serviceVariants as $variant)
-                                <tr class="table-light">
-                                    <td></td>
-                                    <td>
-                                        <i class="fas fa-arrow-right text-muted mr-2"></i>
-                                        <span class="text-muted">{{ $variant->name }}</span>
-                                    </td>
-                                    <td>{{ number_format($variant->price, 0, ',', '.') }} đ</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td>
-                                        <span class="badge badge-{{ $variant->is_active ? 'success' : 'secondary' }}">
-                                            {{ $variant->is_active ? 'Hoạt động' : 'Vô hiệu hóa' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $variant->notes ?? '' }}">
-                                            {{ Str::limit($variant->notes ?? '', 50) }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('admin.services.edit', $variant->id) }}?type=variant" class="btn btn-sm btn-info">
-                                            <i class="fas fa-edit"></i> Sửa biến thể
-                                        </a>
-                                        <form action="{{ route('admin.services.destroy', $variant->id) }}" method="POST" class="d-inline delete-form" data-type="variant">
-                                            @csrf
-                                            @method('DELETE')
-                                            <input type="hidden" name="type" value="variant">
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i> Xóa
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @endif
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center">Chưa có dịch vụ nào</td>
+                            <td colspan="9" class="text-center">Chưa có dịch vụ nào</td>
                         </tr>
                     @endforelse
                     
@@ -174,7 +146,11 @@
                                 <td>COMBO-{{ $combo->id }}</td>
                                 <td>
                                     <strong>{{ $combo->name }}</strong>
-                                    <br><small class="text-muted">(Combo - {{ $combo->comboItems->count() }} dịch vụ)</small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-warning">
+                                        <i class="fas fa-box"></i> Combo ({{ $combo->comboItems->count() }})
+                                    </span>
                                 </td>
                                 <td>{{ number_format($combo->price, 0, ',', '.') }} đ</td>
                                 <td>
@@ -196,6 +172,9 @@
                                     </div>
                                 </td>
                                 <td>
+                                    <button type="button" class="btn btn-sm btn-info view-detail-btn" data-id="{{ $combo->id }}" data-type="combo">
+                                        <i class="fas fa-eye"></i> Xem
+                                    </button>
                                     <a href="{{ route('admin.services.edit', $combo->id) }}?type=combo" class="btn btn-sm btn-primary">
                                         <i class="fas fa-edit"></i> Sửa
                                     </a>
@@ -221,6 +200,30 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Xem chi tiết dịch vụ -->
+<div class="modal fade" id="serviceDetailModal" tabindex="-1" role="dialog" aria-labelledby="serviceDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="serviceDetailModalLabel">Chi tiết dịch vụ</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="serviceDetailContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -235,6 +238,49 @@
                 }
             });
         });
+
+        // Xử lý nút xem chi tiết
+        const viewDetailBtns = document.querySelectorAll('.view-detail-btn');
+        viewDetailBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const type = this.getAttribute('data-type');
+                loadServiceDetail(id, type);
+            });
+        });
+
+        function loadServiceDetail(id, type) {
+            const modal = $('#serviceDetailModal');
+            const content = $('#serviceDetailContent');
+            
+            // Hiển thị loading
+            content.html('<div class="text-center"><div class="spinner-border" role="status"><span class="sr-only">Loading...</span></div></div>');
+            modal.modal('show');
+
+            // Lấy dữ liệu từ server
+            const url = type === 'combo' 
+                ? `{{ route('admin.services.detail', ':id') }}?type=combo`.replace(':id', id)
+                : `{{ route('admin.services.detail', ':id') }}?type=service`.replace(':id', id);
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    content.html(data.html);
+                } else {
+                    content.html('<div class="alert alert-danger">Không thể tải chi tiết dịch vụ</div>');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                content.html('<div class="alert alert-danger">Đã xảy ra lỗi khi tải dữ liệu</div>');
+            });
+        }
     });
 </script>
 @endpush

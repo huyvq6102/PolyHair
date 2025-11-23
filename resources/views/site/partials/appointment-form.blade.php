@@ -817,12 +817,7 @@
         $('#appointmentForm').on('submit', function(e) {
             e.preventDefault();
             
-            // Validate service variants
-            const serviceVariants = $('input[name="service_variants[]"]:checked');
-            if (serviceVariants.length === 0) {
-                alert('Vui lòng chọn ít nhất một dịch vụ!');
-                return false;
-            }
+
             
             // Remove previous messages
             $('.success-message, .error-message').remove();
@@ -850,11 +845,9 @@
                             $('#appointmentForm')[0].reset();
                             $('#time_slot').prop('disabled', true).html('<option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>');
                             $.magnificPopup.close();
-                            // Show toast notification if available
+                            // Show toast notification if available (no alert popup)
                             if (typeof toastr !== 'undefined') {
                                 toastr.success(response.message);
-                            } else {
-                                alert(response.message);
                             }
                         }, 2000);
                     }
