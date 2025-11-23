@@ -104,8 +104,12 @@
                     @php $groupedVariants = $serviceVariants->groupBy('service_id'); @endphp
 
                     @foreach($groupedVariants as $serviceId => $variants)
-                        @php $service = $variants->first()->service; @endphp
+                        @php 
+                            $firstVariant = $variants->first();
+                            $service = $firstVariant ? $firstVariant->service : null;
+                        @endphp
 
+                        @if($service)
                         <div class="card mb-3 shadow-sm">
                             <div class="card-header fw-bold">
                                 {{ $service->name }}
@@ -131,6 +135,7 @@
                                 @endforeach
                             </div>
                         </div>
+                        @endif
 
                     @endforeach
                 </div>

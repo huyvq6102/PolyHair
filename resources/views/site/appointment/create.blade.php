@@ -602,12 +602,12 @@
                 return;
             }
             
-            // Format price for display (same as service)
+            // Format price for display (for selected list only)
             const formattedPrice = parseFloat(comboPrice).toLocaleString('vi-VN');
             const displayText = comboName + ' - ' + formattedPrice + 'đ (' + comboDuration + ' phút)';
             
-            // Update combo select box with full info (same format as service)
-            $('#combo-select-wrapper .custom-select-text').text(displayText);
+            // Update combo select box with combo name only
+            $('#combo-select-wrapper .custom-select-text').text(comboName);
             $('#selected-combo-id').val(comboId);
             $('#combo-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
             $option.addClass('selected');
@@ -739,9 +739,21 @@
                         $dropdown.html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn dịch vụ</div>');
                         
                         response.services.forEach(function(service) {
-                            const formattedPrice = parseFloat(service.base_price || 0).toLocaleString('vi-VN');
-                            const displayText = service.name + ' - ' + formattedPrice + 'đ (' + (service.base_duration || 60) + ' phút)';
-                            const $option = $('<div class="custom-select-option service-option" data-value="' + service.id + '" data-service-name="' + service.name + '" data-base-price="' + (service.base_price || 0) + '" data-base-duration="' + (service.base_duration || 60) + '" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">' + displayText + '</div>');
+                            // Check if service has variants
+                            const hasVariants = service.variants && service.variants.length > 0;
+                            
+                            // If service has variants, only show name. If no variants, show name + price + duration
+                            let displayText;
+                            if (hasVariants) {
+                                // Service with variants: only show name
+                                displayText = service.name;
+                            } else {
+                                // Service without variants (single service): show name + price + duration
+                                const formattedPrice = parseFloat(service.base_price || 0).toLocaleString('vi-VN');
+                                displayText = service.name + ' - ' + formattedPrice + 'đ (' + (service.base_duration || 60) + ' phút)';
+                            }
+                            
+                            const $option = $('<div class="custom-select-option service-option" data-value="' + service.id + '" data-service-name="' + service.name + '" data-base-price="' + (service.base_price || 0) + '" data-base-duration="' + (service.base_duration || 60) + '" data-has-variants="' + (hasVariants ? '1' : '0') + '" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">' + displayText + '</div>');
                             $dropdown.append($option);
                         });
                         
@@ -778,12 +790,12 @@
                 return;
             }
             
-            // Format price for display
+            // Format price for display (for selected list only)
             const formattedPrice = parseFloat(basePrice).toLocaleString('vi-VN');
             const displayText = serviceName + ' - ' + formattedPrice + 'đ (' + baseDuration + ' phút)';
             
-            // Update service select box with full info
-            $('#service-select-wrapper .custom-select-text').text(displayText);
+            // Update service select box with service name only
+            $('#service-select-wrapper .custom-select-text').text(serviceName);
             $('#selected-service-id').val(serviceId);
             $('#service-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
             $option.addClass('selected');
