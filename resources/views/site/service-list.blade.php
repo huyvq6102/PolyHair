@@ -4,52 +4,107 @@
 
 @section('content')
 
+    @php
+        $sliders = [
+            [
+                'name' => 'Dịch vụ của chúng tôi',
+                'images' => 'banner_service.png',
+                'description' => 'Danh sách tất cả dịch vụ chăm sóc tóc và làm đẹp'
+            ]
+        ];
+    @endphp
+    @include('site.partials.slider')
+
     <!-- service_area_start -->
-    <div style="padding-top: 120px;"></div>
-    <section class="service-section py-5">
-  <div class="container">
-    <div class="d-flex align-items-start mb-3">
-      <span class="bar mr-2"></span>
-      <div>
-        <h3 class="title ba-title mb-0">MẪU TÓC HOT</h3>
-        <p class="desc">
-            Chào mừng Quý khách hàng đến với Traky Hair Salon,
-            nơi mang đến cho bạn trải nghiệm làm đẹp tinh tế và độc đáo.
-            Dưới đây là bộ sưu tập những mẫu tóc đẹp nhất năm 2024 giúp nâng tầm vẻ đẹp của bạn lên một tầm cao mới.
-        </p>
-      </div>
-    </div>
-  </div>
-  <div class="container service-wrapper">
-    <div class="service_right">
+    <div style="padding: 60px 0; margin-bottom: 100px;">
 
-      <div class="service-grid">
-        @foreach([
-          ['name'=>'NỐI TÓC','price'=>'15.000vnđ','link'=>'#','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/375-x-500-5-7605.png'],
-          ['name'=>'PHỤC HỒI','price'=>'300.000vnđ','link'=>'#','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/375-x-500-3-4269.png'],
-          ['name'=>'CẮT TÓC','price'=>'200.000vnđ','link'=>'#','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/375-x-500-2-2717.png'],
-          ['name'=>'CẮT TÓC','price'=>'200.000vnđ','link'=>'#','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/375-x-500-2-2717.png'],
-        ] as $svc)
-        <div class="svc-card">
-          <a class="svc-img" href="{{ $svc['link'] }}"><img src="{{ $svc['img'] }}" alt="{{ $svc['name'] }}"></a>
-          <div class="svc-body">
-            <div class="svc-left">
-              <h4 class="svc-name">{{ $svc['name'] }}</h4>
-              <div class="svc-price">Giá từ: <span>{{ $svc['price'] }}</span></div>
+        <div class="container">
+            @if($types->count() > 0)
+            <div class="row mb-4">
+                <div class="col-xl-12">
+                    <div class="text-center mb-4">
+                        <a href="{{ route('site.services.index') }}" class="boxed-btn3 service-list-filter {{ !$typeId ? 'active' : '' }}">
+                            Tất cả
+                        </a>
+                        @foreach($types as $type)
+                            <a href="{{ route('site.services.index', ['type' => $type->id]) }}" class="boxed-btn3 service-list-filter {{ $typeId == $type->id ? 'active' : '' }}">
+                                {{ $type->name }}
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
             </div>
-            <div class="svc-right">
-              <span class="svc-rating">5 ★ Đánh giá</span>
-              <a class="svc-book" href="{{ $svc['link'] }}">Đặt lịch ngay</a>
+            @endif
+
+            <div class="row">
+                <div class="col-xl-12">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover service-table">
+                            <thead>
+                                <tr>
+                                    <th class="stt-col">STT</th>
+                                    <th>Tên dịch vụ</th>
+                                    <th>Danh mục</th>
+                                    <th>Mô tả</th>
+                                    <th class="price-col">Giá</th>
+                                    <th class="action-col">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($services as $index => $service)
+                                    <tr>
+                                        <td class="text-center">{{ $index + 1 }}</td>
+                                        <td>
+                                            <strong class="service-name">{{ $service->name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="service-category-badge">
+                                                {{ $service->category->name ?? 'Chưa phân loại' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <p class="service-description">
+                                                {{ Str::limit($service->description ?? 'Chưa có mô tả', 100) }}
+                                            </p>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($service->serviceVariants && $service->serviceVariants->count() > 0)
+                                                @php
+                                                    $minPrice = $service->serviceVariants->min('price');
+                                                    $maxPrice = $service->serviceVariants->max('price');
+                                                @endphp
+                                                <strong class="service-price">
+                                                    @if($minPrice == $maxPrice)
+                                                        {{ number_format($minPrice, 0, ',', '.') }}đ
+                                                    @else
+                                                        {{ number_format($minPrice, 0, ',', '.') }}đ - {{ number_format($maxPrice, 0, ',', '.') }}đ
+                                                    @endif
+                                                </strong>
+                                            @else
+                                                <span class="service-price-contact">Liên hệ</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ route('site.services.show', $service->id) }}" class="boxed-btn3 service-detail-btn">
+                                                Xem chi tiết
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="service-empty">
+                                            <h3>Không có dịch vụ nào</h3>
+                                            <p>Hiện tại chưa có dịch vụ nào trong danh mục này.</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-        @endforeach
-      </div>
-    
     </div>
-  </div>
-</section>
-
     <!-- service_area_end -->
 @endsection
 

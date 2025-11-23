@@ -61,6 +61,14 @@
             @csrf
             <input type="hidden" name="service_type" value="single">
             <div class="form-group">
+                <label for="service_code">Mã dịch vụ</label>
+                <input type="text" name="service_code" id="service_code" class="form-control @error('service_code') is-invalid @enderror" 
+                       value="{{ old('service_code') }}" placeholder="Để trống sẽ tự động tạo">
+                @error('service_code')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="form-group">
                 <label for="name">Tên dịch vụ <span class="text-danger">*</span></label>
                 <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" 
                        value="{{ old('name') }}" required>
@@ -128,154 +136,71 @@
 <!-- Form for Variant Service -->
 <div id="variant-form" class="card shadow mb-4" style="display: none;">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Thêm dịch vụ biến thể</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Thêm biến thể dịch vụ</h6>
     </div>
     <div class="card-body">
-        <form action="{{ route('admin.services.store') }}" method="POST" enctype="multipart/form-data" id="variantForm">
+        <form action="{{ route('admin.services.store') }}" method="POST" id="variantForm">
             @csrf
             <input type="hidden" name="service_type" value="variant">
-            
-            <!-- Thông tin dịch vụ chính -->
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h6 class="m-0 font-weight-bold">Thông tin dịch vụ</h6>
+            <div class="form-group">
+                <label for="service_id">Dịch vụ đơn <span class="text-danger">*</span></label>
+                <select name="service_id" id="service_id" class="form-control @error('service_id') is-invalid @enderror" required>
+                    <option value="">-- Chọn dịch vụ đơn --</option>
+                    @foreach($singleServices as $singleService)
+                        <option value="{{ $singleService->id }}" {{ old('service_id') == $singleService->id ? 'selected' : '' }}>
+                            {{ $singleService->name }} ({{ $singleService->service_code ?? 'N/A' }})
+                        </option>
+                    @endforeach
+                </select>
+                @error('service_id')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="variant_name">Tên biến thể <span class="text-danger">*</span></label>
+                    <input type="text" name="variant_name" id="variant_name" class="form-control @error('variant_name') is-invalid @enderror" 
+                           value="{{ old('variant_name') }}" required>
+                    @error('variant_name')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label for="variant_service_name">Tên dịch vụ biến thể <span class="text-danger">*</span></label>
-                        <input type="text" name="service_name" id="variant_service_name" class="form-control @error('service_name') is-invalid @enderror" 
-                               value="{{ old('service_name') }}" required>
-                        @error('service_name')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label for="variant_category_id">Nhóm dịch vụ <span class="text-danger">*</span></label>
-                            <select name="category_id" id="variant_category_id" class="form-control @error('category_id') is-invalid @enderror" required>
-                                <option value="">-- Chọn nhóm dịch vụ --</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('category_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label for="variant_image">Hình ảnh</label>
-                            <input type="file" name="image" id="variant_image" class="form-control-file @error('image') is-invalid @enderror" accept="image/*">
-                            @error('image')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="variant_description">Mô tả</label>
-                        <textarea name="description" id="variant_description" rows="3" class="form-control @error('description') is-invalid @enderror">{{ old('description') }}</textarea>
-                        @error('description')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                <div class="form-group col-md-4">
+                    <label for="variant_price">Giá <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" name="variant_price" id="variant_price" class="form-control @error('variant_price') is-invalid @enderror" 
+                           value="{{ old('variant_price') }}" required>
+                    @error('variant_price')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="variant_duration">Thời lượng (phút) <span class="text-danger">*</span></label>
+                    <input type="number" name="variant_duration" id="variant_duration" class="form-control @error('variant_duration') is-invalid @enderror" 
+                           value="{{ old('variant_duration') }}" required>
+                    @error('variant_duration')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
             </div>
-
-            <!-- Danh sách biến thể -->
-            <div class="card mb-4">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold">Biến thể dịch vụ</h6>
-                    <button type="button" class="btn btn-sm btn-primary" id="addVariantBtn">
-                        <i class="fas fa-plus"></i> Thêm biến thể
-                    </button>
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" name="is_default" id="is_default" class="form-check-input" value="1" {{ old('is_default') ? 'checked' : '' }}>
+                    <label class="form-check-label" for="is_default">Mặc định</label>
                 </div>
-                <div class="card-body">
-                    <div id="variantsContainer">
-                        <!-- Biến thể sẽ được thêm vào đây bằng JavaScript -->
-                    </div>
+                <div class="form-check">
+                    <input type="checkbox" name="is_active" id="is_active" class="form-check-input" value="1" {{ old('is_active', true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="is_active">Hoạt động</label>
                 </div>
             </div>
-
             <div class="form-group">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Lưu dịch vụ biến thể
+                    <i class="fas fa-save"></i> Lưu biến thể
                 </button>
                 <a href="{{ route('admin.services.index') }}" class="btn btn-secondary">Hủy</a>
             </div>
         </form>
     </div>
 </div>
-
-<!-- Template cho biến thể -->
-<template id="variantTemplate">
-    <div class="variant-item border rounded p-3 mb-3" data-variant-index="__INDEX__">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="m-0 font-weight-bold">Biến thể <span class="variant-number"></span></h6>
-            <button type="button" class="btn btn-sm btn-danger remove-variant-btn">
-                <i class="fas fa-times"></i> Xóa
-            </button>
-        </div>
-        <div class="form-row">
-            <div class="form-group col-md-4">
-                <label>Tên biến thể <span class="text-danger">*</span></label>
-                <input type="text" name="variants[__INDEX__][name]" class="form-control" required>
-            </div>
-            <div class="form-group col-md-3">
-                <label>Giá (VNĐ) <span class="text-danger">*</span></label>
-                <input type="number" step="0.01" name="variants[__INDEX__][price]" class="form-control" required>
-            </div>
-            <div class="form-group col-md-3">
-                <label>Thời lượng (phút) <span class="text-danger">*</span></label>
-                <input type="number" name="variants[__INDEX__][duration]" class="form-control" required>
-            </div>
-            <div class="form-group col-md-2">
-                <label>Kích hoạt</label>
-                <div class="custom-control custom-switch mt-2">
-                    <input type="hidden" name="variants[__INDEX__][is_active]" value="0">
-                    <input type="checkbox" class="custom-control-input" name="variants[__INDEX__][is_active]" value="1" id="variant_active___INDEX__" checked>
-                    <label class="custom-control-label" for="variant_active___INDEX__">Kích hoạt</label>
-                </div>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Ghi chú</label>
-            <textarea name="variants[__INDEX__][notes]" class="form-control" rows="2"></textarea>
-        </div>
-        <div class="form-group">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <label class="mb-0">Thuộc tính biến thể</label>
-                <button type="button" class="btn btn-sm btn-outline-primary add-attribute-btn" data-variant-index="__INDEX__">
-                    <i class="fas fa-plus"></i> Thêm thuộc tính
-                </button>
-            </div>
-            <div class="attributes-container" data-variant-index="__INDEX__">
-                <!-- Thuộc tính sẽ được thêm vào đây -->
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- Template cho thuộc tính -->
-<template id="attributeTemplate">
-    <div class="attribute-item border rounded p-2 mb-2" data-attribute-index="__ATTR_INDEX__">
-        <div class="form-row align-items-end">
-            <div class="form-group col-md-5 mb-0">
-                <label>Tên thuộc tính <span class="text-danger">*</span></label>
-                <input type="text" name="variants[__VARIANT_INDEX__][attributes][__ATTR_INDEX__][name]" class="form-control" required>
-            </div>
-            <div class="form-group col-md-5 mb-0">
-                <label>Giá trị <span class="text-danger">*</span></label>
-                <input type="text" name="variants[__VARIANT_INDEX__][attributes][__ATTR_INDEX__][value]" class="form-control" required>
-            </div>
-            <div class="form-group col-md-2 mb-0">
-                <button type="button" class="btn btn-sm btn-danger remove-attribute-btn w-100">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</template>
 
 <!-- Form for Combo Service -->
 <div id="combo-form" class="card shadow mb-4" style="display: none;">
@@ -342,80 +267,22 @@
                 @enderror
             </div>
             <div class="form-group">
-                <label>Chọn dịch vụ và biến thể <span class="text-danger">*</span></label>
-                <div class="border rounded p-2" style="max-height: 400px; overflow-y: auto; background-color: #fff; border-color: #ced4da !important;">
-                    @if($singleServices->count() > 0)
-                        <h6 class="mb-2 text-primary"><i class="fas fa-tag"></i> Dịch vụ đơn</h6>
-                        @foreach($singleServices as $singleService)
-                            <div class="form-check ml-3 mb-2">
-                                <input type="checkbox" name="combo_items[{{ $singleService->id }}][service_id]" 
-                                       id="service_{{ $singleService->id }}" 
-                                       class="form-check-input combo-service-checkbox" 
-                                       value="{{ $singleService->id }}" 
-                                       data-service-id="{{ $singleService->id }}"
-                                       {{ in_array($singleService->id, old('service_ids', [])) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="service_{{ $singleService->id }}" style="cursor: pointer; width: 100%;">
-                                    <strong>{{ $singleService->name }}</strong> 
-                                    ({{ $singleService->service_code ?? 'N/A' }}) - 
-                                    <span class="text-primary">{{ number_format($singleService->base_price ?? 0, 0, ',', '.') }} đ</span>
-                                </label>
-                                <input type="hidden" name="combo_items[{{ $singleService->id }}][service_variant_id]" value="">
-                            </div>
-                        @endforeach
-                    @endif
-
-                    @if(isset($variantServices) && $variantServices->count() > 0)
-                        <hr class="my-3">
-                        <h6 class="mb-2 text-info"><i class="fas fa-layer-group"></i> Dịch vụ biến thể</h6>
-                        @foreach($variantServices as $variantService)
-                            <div class="mb-3 ml-3">
-                                <div class="form-check">
-                                    <input type="checkbox" 
-                                           id="variant_service_{{ $variantService->id }}" 
-                                           class="form-check-input variant-service-checkbox" 
-                                           data-service-id="{{ $variantService->id }}"
-                                           {{ in_array($variantService->id, old('service_ids', [])) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="variant_service_{{ $variantService->id }}" style="cursor: pointer;">
-                                        <strong>{{ $variantService->name }}</strong> 
-                                        ({{ $variantService->service_code ?? 'N/A' }})
-                                        <span class="badge badge-info ml-2">{{ $variantService->serviceVariants->count() }} biến thể</span>
-                                    </label>
-                                </div>
-                                <div class="ml-4 mt-2 variant-options" id="variants_{{ $variantService->id }}" style="display: none;">
-                                    @foreach($variantService->serviceVariants as $variant)
-                                        <div class="form-check mb-1">
-                                            <input type="radio" 
-                                                   name="combo_items[{{ $variantService->id }}][service_variant_id]" 
-                                                   id="variant_{{ $variant->id }}" 
-                                                   class="form-check-input" 
-                                                   value="{{ $variant->id }}"
-                                                   data-service-id="{{ $variantService->id }}"
-                                                   {{ old("combo_items.{$variantService->id}.service_variant_id") == $variant->id ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="variant_{{ $variant->id }}" style="cursor: pointer; font-size: 0.9em;">
-                                                {{ $variant->name }} - 
-                                                <span class="text-primary">{{ number_format($variant->price, 0, ',', '.') }} đ</span>
-                                                @if($variant->is_active)
-                                                    <span class="badge badge-success badge-sm">Hoạt động</span>
-                                                @else
-                                                    <span class="badge badge-secondary badge-sm">Vô hiệu hóa</span>
-                                                @endif
-                                            </label>
-                                        </div>
-                                    @endforeach
-                                    <input type="hidden" name="combo_items[{{ $variantService->id }}][service_id]" value="{{ $variantService->id }}">
-                                </div>
-                            </div>
-                        @endforeach
-                    @endif
-
-                    @if($singleServices->count() == 0 && (!isset($variantServices) || $variantServices->count() == 0))
-                        <p class="text-muted mb-0">Chưa có dịch vụ nào. Vui lòng thêm dịch vụ trước.</p>
-                    @endif
+                <label>Chọn dịch vụ đơn <span class="text-danger">*</span></label>
+                <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto; background-color: #fff; border-color: #ced4da !important;">
+                    @forelse($singleServices as $singleService)
+                        <div class="form-check">
+                            <input type="checkbox" name="service_ids[]" id="service_{{ $singleService->id }}" 
+                                   class="form-check-input" value="{{ $singleService->id }}" 
+                                   {{ in_array($singleService->id, old('service_ids', [])) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="service_{{ $singleService->id }}" style="cursor: pointer; width: 100%;">
+                                {{ $singleService->name }} ({{ $singleService->service_code ?? 'N/A' }}) - {{ number_format($singleService->base_price ?? 0, 0, ',', '.') }} đ
+                            </label>
+                        </div>
+                    @empty
+                        <p class="text-muted mb-0">Chưa có dịch vụ đơn nào. Vui lòng thêm dịch vụ đơn trước.</p>
+                    @endforelse
                 </div>
                 @error('service_ids')
-                    <div class="text-danger mt-1">{{ $message }}</div>
-                @enderror
-                @error('combo_items')
                     <div class="text-danger mt-1">{{ $message }}</div>
                 @enderror
             </div>
@@ -438,9 +305,6 @@
         const variantForm = document.getElementById('variant-form');
         const comboForm = document.getElementById('combo-form');
 
-        let variantIndex = 0;
-        let attributeIndexes = {};
-
         function showForm(type) {
             singleForm.style.display = 'none';
             variantForm.style.display = 'none';
@@ -450,10 +314,6 @@
                 singleForm.style.display = 'block';
             } else if (type === 'variant') {
                 variantForm.style.display = 'block';
-                // Thêm biến thể đầu tiên khi hiển thị form
-                if (document.querySelectorAll('.variant-item').length === 0) {
-                    addVariant();
-                }
             } else if (type === 'combo') {
                 comboForm.style.display = 'block';
             }
@@ -468,136 +328,6 @@
         if (selectedType) {
             showForm(selectedType);
         }
-
-        // Xử lý chọn dịch vụ biến thể
-        document.querySelectorAll('.variant-service-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const serviceId = this.getAttribute('data-service-id');
-                const variantOptions = document.getElementById('variants_' + serviceId);
-                if (variantOptions) {
-                    if (this.checked) {
-                        variantOptions.style.display = 'block';
-                        // Tự động chọn biến thể đầu tiên nếu chưa có biến thể nào được chọn
-                        const firstVariant = variantOptions.querySelector('input[type="radio"]');
-                        if (firstVariant && !variantOptions.querySelector('input[type="radio"]:checked')) {
-                            firstVariant.checked = true;
-                        }
-                    } else {
-                        variantOptions.style.display = 'none';
-                        // Bỏ chọn tất cả biến thể
-                        variantOptions.querySelectorAll('input[type="radio"]').forEach(radio => {
-                            radio.checked = false;
-                        });
-                    }
-                }
-            });
-        });
-
-        // Khởi tạo hiển thị cho các dịch vụ biến thể đã được chọn (khi có old input)
-        document.querySelectorAll('.variant-service-checkbox:checked').forEach(checkbox => {
-            checkbox.dispatchEvent(new Event('change'));
-        });
-
-        // Xử lý thêm biến thể
-        function addVariant() {
-            const template = document.getElementById('variantTemplate');
-            const container = document.getElementById('variantsContainer');
-            const variantHtml = template.innerHTML.replace(/__INDEX__/g, variantIndex);
-            
-            const variantDiv = document.createElement('div');
-            variantDiv.innerHTML = variantHtml;
-            variantDiv.querySelector('.variant-item').setAttribute('data-variant-index', variantIndex);
-            variantDiv.querySelector('.variant-number').textContent = variantIndex + 1;
-            
-            container.appendChild(variantDiv);
-            
-            // Khởi tạo chỉ số thuộc tính cho biến thể này
-            attributeIndexes[variantIndex] = 0;
-            
-            // Gắn sự kiện cho nút xóa biến thể
-            variantDiv.querySelector('.remove-variant-btn').addEventListener('click', function() {
-                if (container.querySelectorAll('.variant-item').length > 1) {
-                    variantDiv.remove();
-                    updateVariantNumbers();
-                } else {
-                    alert('Phải có ít nhất một biến thể!');
-                }
-            });
-            
-            // Gắn sự kiện cho nút thêm thuộc tính
-            const addAttrBtn = variantDiv.querySelector('.add-attribute-btn');
-            if (addAttrBtn) {
-                // Lưu variantIndex vào closure
-                const currentVariantIndex = variantIndex;
-                addAttrBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    addAttribute(currentVariantIndex);
-                });
-            }
-            
-            variantIndex++;
-            updateVariantNumbers();
-        }
-
-        // Xử lý thêm thuộc tính
-        function addAttribute(variantIndex) {
-            if (attributeIndexes[variantIndex] === undefined) {
-                attributeIndexes[variantIndex] = 0;
-            }
-            
-            const template = document.getElementById('attributeTemplate');
-            if (!template) {
-                console.error('Template attributeTemplate not found');
-                return;
-            }
-            
-            const container = document.querySelector(`.attributes-container[data-variant-index="${variantIndex}"]`);
-            if (!container) {
-                console.error('Container not found for variant index:', variantIndex);
-                return;
-            }
-            
-            const attrIndex = attributeIndexes[variantIndex];
-            
-            const attrHtml = template.innerHTML
-                .replace(/__VARIANT_INDEX__/g, variantIndex)
-                .replace(/__ATTR_INDEX__/g, attrIndex);
-            
-            const attrDiv = document.createElement('div');
-            attrDiv.innerHTML = attrHtml;
-            const attrItem = attrDiv.querySelector('.attribute-item');
-            if (attrItem) {
-                attrItem.setAttribute('data-attribute-index', attrIndex);
-            }
-            
-            container.appendChild(attrDiv);
-            
-            // Gắn sự kiện cho nút xóa thuộc tính
-            const removeBtn = attrDiv.querySelector('.remove-attribute-btn');
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function() {
-                    attrDiv.remove();
-                });
-            }
-            
-            attributeIndexes[variantIndex]++;
-        }
-
-        // Cập nhật số thứ tự biến thể
-        function updateVariantNumbers() {
-            const variants = document.querySelectorAll('.variant-item');
-            variants.forEach((variant, index) => {
-                variant.querySelector('.variant-number').textContent = index + 1;
-            });
-        }
-
-        // Gắn sự kiện cho nút thêm biến thể
-        const addVariantBtn = document.getElementById('addVariantBtn');
-        if (addVariantBtn) {
-            addVariantBtn.addEventListener('click', addVariant);
-        }
-
     });
 </script>
 @endpush
-

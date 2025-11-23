@@ -32,11 +32,11 @@ class Employee extends Model
     }
 
     /**
-     * Get all services (chuyên môn) for the employee.
+     * Get all skills for the employee.
      */
-    public function services(): BelongsToMany
+    public function skills(): BelongsToMany
     {
-        return $this->belongsToMany(Service::class, 'employee_skills', 'employee_id', 'service_id');
+        return $this->belongsToMany(Skill::class, 'employee_skills');
     }
 
     /**

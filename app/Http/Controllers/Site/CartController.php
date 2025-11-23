@@ -17,36 +17,8 @@ class CartController extends Controller
     {
         try {
             $cart = Session::get('cart', []);
-            
-            // Remove duplicate appointments (same appointment ID but different keys)
-            $seenAppointmentIds = [];
-            $cleanedCart = [];
-            foreach ($cart as $cartKey => $item) {
-                if (isset($item['type']) && $item['type'] === 'appointment') {
-                    $appointmentId = $item['id'] ?? null;
-                    if ($appointmentId && !in_array($appointmentId, $seenAppointmentIds)) {
-                        $seenAppointmentIds[] = $appointmentId;
-                        $cleanedCart[$cartKey] = $item;
-                    } elseif ($appointmentId && in_array($appointmentId, $seenAppointmentIds)) {
-                        // Skip duplicate appointment
-                        continue;
-                    } else {
-                        $cleanedCart[$cartKey] = $item;
-                    }
-                } else {
-                    $cleanedCart[$cartKey] = $item;
-                }
-            }
-            
-            // Update cart if duplicates were removed
-            if (count($cleanedCart) !== count($cart)) {
-                Session::put('cart', $cleanedCart);
-            }
-            
-            $cart = $cleanedCart;
             $total = 0;
             $items = [];
-            $processedAppointmentIds = []; // Track processed appointment IDs to prevent duplicates
 
             foreach ($cart as $cartKey => $item) {
                 try {
@@ -72,36 +44,17 @@ class CartController extends Controller
                         }
                     } elseif (isset($item['type']) && $item['type'] === 'appointment') {
                         // Appointment items (from booking)
-                        $appointmentId = $item['id'] ?? null;
-                        
-                        // Skip if this appointment ID has already been processed
-                        if ($appointmentId && in_array($appointmentId, $processedAppointmentIds)) {
-                            continue;
-                        }
-                        
-                        $appointment = \App\Models\Appointment::with(['appointmentDetails.serviceVariant.service', 'appointmentDetails.combo', 'employee.user'])
-                            ->find($appointmentId);
+                        $appointment = \App\Models\Appointment::with(['appointmentDetails.serviceVariant.service', 'employee.user'])
+                            ->find($item['id']);
                         
                         if ($appointment) {
-                            // Mark this appointment ID as processed
-                            $processedAppointmentIds[] = $appointmentId;
                             $appointmentTotal = 0;
                             $serviceNames = [];
                             
                             foreach ($appointment->appointmentDetails as $detail) {
                                 if ($detail->serviceVariant) {
-                                    // Has variant - use variant info
                                     $appointmentTotal += $detail->price_snapshot ?? ($detail->serviceVariant->price ?? 0);
                                     $serviceNames[] = $detail->serviceVariant->name ?? 'Dịch vụ';
-                                } elseif ($detail->combo_id && $detail->combo) {
-                                    // Has combo - use combo info
-                                    $appointmentTotal += $detail->price_snapshot ?? ($detail->combo->price ?? 0);
-                                    $serviceNames[] = 'Combo: ' . ($detail->combo->name ?? 'Combo');
-                                } else {
-                                    // No variant/combo - use service info from notes and price_snapshot
-                                    $appointmentTotal += $detail->price_snapshot ?? 0;
-                                    $serviceName = $detail->notes ?? 'Dịch vụ đơn';
-                                    $serviceNames[] = $serviceName;
                                 }
                             }
                             

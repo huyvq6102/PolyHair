@@ -1,80 +1,113 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Chi tiết lịch làm việc')
+@section('title', 'Chi tiết lịch nhân viên')
 
 @section('content')
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0" style="color: #4e73df; font-weight: bold; font-size: 1.75rem;">
-        Chi tiết lịch làm việc - {{ optional($workDate)->format('d/m/Y') ?? 'N/A' }}
-    </h1>
+    <h1 class="h3 mb-0 text-gray-800">Chi tiết lịch nhân viên</h1>
     <a href="{{ route('admin.working-schedules.index') }}" class="btn btn-secondary">
-        ← Quay lại
+        <i class="fas fa-arrow-left"></i> Quay lại
     </a>
 </div>
 
-@php
-    $hasAnySchedule = false;
-    foreach($shifts as $shift) {
-        if($schedulesByShift->get($shift->id, collect())->isNotEmpty()) {
-            $hasAnySchedule = true;
-            break;
-        }
-    }
-@endphp
-
-@if($hasAnySchedule)
-    @foreach($shifts as $shift)
-        @php
-            $shiftSchedules = $schedulesByShift->get($shift->id, collect());
-        @endphp
-        
-        @if($shiftSchedules->isNotEmpty())
-            <div class="card shadow mb-4">
-                <div class="card-header py-3" style="background-color: #4e73df; color: white;">
-                    <h6 class="m-0 font-weight-bold" style="font-size: 1rem;">
-                        {{ $shift->name }} ({{ $shift->formatted_start_time ?? '--:--' }} - {{ $shift->formatted_end_time ?? '--:--' }})
-                    </h6>
-                </div>
-                <div class="card-body">
-                    @foreach($shiftSchedules as $schedule)
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Thông tin lịch</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Nhân viên:</th>
+                        <td>{{ $schedule->employee->user->name ?? 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Vị trí:</th>
+                        <td>{{ $schedule->employee->position ?? 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Ngày làm việc:</th>
+                        <td>{{ optional($schedule->work_date)->format('d/m/Y') ?? 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Trạng thái:</th>
                         @php
-                            $employee = $schedule->employee;
-                            $user = $employee->user ?? null;
                             $status = $schedule->status;
-                            $statusLabel = $statusOptions[$status] ?? ucfirst($status ?? 'N/A');
+                            $badge = $status === 'available' ? 'success' : ($status === 'busy' ? 'warning' : 'secondary');
                         @endphp
-                        <div class="mb-3 pb-3 {{ !$loop->last ? 'border-bottom' : '' }}">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 font-weight-bold" style="color: #5a5c69; font-size: 1rem;">
-                                        {{ $user->name ?? 'N/A' }}
-                                    </h6>
-                                    <p class="mb-1 text-muted small" style="font-size: 0.875rem;">
-                                        {{ $user->email ?? 'N/A' }}
-                                    </p>
-                                    <p class="mb-0 text-muted small" style="font-size: 0.875rem;">
-                                        Trạng thái: <span class="font-weight-normal">{{ $statusLabel }}</span>
-                                        @if($employee->level)
-                                            • Level: <span class="font-weight-normal">{{ strtolower($employee->level) }}</span>
-                                        @endif
-                                        @if($employee->experience_years)
-                                            • Kinh nghiệm: <span class="font-weight-normal">{{ $employee->experience_years }}</span>
-                                        @endif
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
+                        <td><span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? ucfirst($status ?? 'N/A') }}</span></td>
+                    </tr>
+                </table>
             </div>
-        @endif
-    @endforeach
-@else
-    <div class="card shadow mb-4">
-        <div class="card-body text-center py-5">
-            <p class="text-muted mb-0">Không có lịch làm việc nào trong ngày này</p>
+            <div class="col-md-6">
+                <h5 class="mb-3">Giờ làm việc</h5>
+                @if($schedule->shift)
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Ca:</th>
+                            <td>{{ $schedule->shift->name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Bắt đầu:</th>
+                            <td>{{ $schedule->shift->formatted_start_time ?? '--:--' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Kết thúc:</th>
+                            <td>{{ $schedule->shift->formatted_end_time ?? '--:--' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Khung giờ:</th>
+                            <td>{{ $schedule->shift->display_time ?? 'Chưa xác định' }}</td>
+                        </tr>
+                    </table>
+                @else
+                    <p class="text-muted">Chưa xác định ca làm việc</p>
+                @endif
+            </div>
         </div>
     </div>
-@endif
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Lịch hẹn trong ngày</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Thời gian</th>
+                        <th>Khách hàng</th>
+                        <th>Dịch vụ</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($appointments as $appointment)
+                        <tr>
+                            <td>
+                                {{ optional($appointment->start_at)->format('H:i') }} -
+                                {{ optional($appointment->end_at)->format('H:i') }}
+                            </td>
+                            <td>{{ $appointment->user->name ?? 'N/A' }}</td>
+                            <td>
+                                @foreach($appointment->appointmentDetails as $detail)
+                                    {{ $detail->serviceVariant->service->name ?? 'N/A' }}<br>
+                                @endforeach
+                            </td>
+                            <td>{{ $appointment->status }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="text-center">Không có lịch hẹn nào</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 @endsection
 

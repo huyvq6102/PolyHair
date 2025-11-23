@@ -33,60 +33,6 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Show the appointment booking form page.
-     */
-    public function create()
-    {
-        // Lấy tất cả nhân viên từ database
-        $allEmployees = \App\Models\Employee::with(['user.role'])
-            ->whereNotNull('user_id')
-            ->orderBy('id', 'desc')
-            ->get();
-        
-        // Lọc nhân viên: loại trừ admin và nhân viên bị vô hiệu hóa
-        $employees = $allEmployees->filter(function($employee) {
-            // Bỏ qua nếu không có user
-            if (!$employee->user) {
-                return false;
-            }
-            
-            // Loại trừ admin - kiểm tra role_id
-            if ($employee->user->role_id == 1) {
-                return false;
-            }
-            
-            // Kiểm tra role name nếu có
-            if ($employee->user->role) {
-                $roleName = strtolower(trim($employee->user->role->name ?? ''));
-                if (in_array($roleName, ['admin', 'administrator'])) {
-                    return false;
-                }
-            }
-            
-            // Loại trừ nhân viên bị vô hiệu hóa
-            if ($employee->status === 'Vô hiệu hóa') {
-                return false;
-            }
-            
-            return true;
-        })->values();
-        
-        $wordTimes = $this->wordTimeService->getAll();
-        $serviceCategories = \App\Models\ServiceCategory::whereNull('deleted_at')
-            ->orderBy('name')
-            ->get();
-        
-        // Lấy các combo từ bảng combos
-        $combos = \App\Models\Combo::with('comboItems.serviceVariant')
-            ->whereNull('deleted_at')
-            ->where('status', 'Hoạt động')
-            ->orderBy('name')
-            ->get();
-        
-        return view('site.appointment.create', compact('employees', 'wordTimes', 'serviceCategories', 'combos'));
-    }
-
-    /**
      * Store a new appointment.
      */
     public function store(Request $request)
@@ -95,18 +41,13 @@ class AppointmentController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'email' => 'nullable|email|max:255',
-            'service_variants' => 'nullable|array',
+            'service_variants' => 'required|array|min:1',
             'service_variants.*' => 'exists:service_variants,id',
-            'service_id' => 'nullable|exists:services,id',
-            'combo_id' => 'nullable|exists:combos,id',
             'employee_id' => 'nullable|exists:employees,id',
             'appointment_date' => 'required|date|after_or_equal:today',
             'word_time_id' => 'required|exists:word_time,id',
             'note' => 'nullable|string|max:1000',
         ]);
-        
-        // Allow appointment without service (optional service selection)
-        // No validation required - service can be added later
 
         try {
             DB::beginTransaction();
@@ -145,107 +86,50 @@ class AppointmentController extends Controller
             $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
             $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
             
-            // Calculate total duration from selected service variants, service, or combo
+            // Calculate total duration from selected service variants
             $totalDuration = 0;
             $serviceVariantData = [];
             
-            // Process service variants if selected (priority: variants over service/combo)
-            if (!empty($validated['service_variants'])) {
-                foreach ($validated['service_variants'] as $variantId) {
-                    $variant = \App\Models\ServiceVariant::findOrFail($variantId);
-                    $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
-                    
-                    $serviceVariantData[] = [
-                        'service_variant_id' => $variantId,
-                        'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $variant->price,
-                        'duration' => $variant->duration ?? 60,
-                        'status' => 'Chờ',
-                    ];
-                }
-            } elseif (!empty($validated['combo_id'])) {
-                // Process combo if selected
-                $combo = \App\Models\Combo::with('comboItems.serviceVariant')->findOrFail($validated['combo_id']);
-                
-                // Calculate duration from combo items
-                $comboDuration = 60; // Default
-                if ($combo->comboItems && $combo->comboItems->count() > 0) {
-                    $comboDuration = $combo->comboItems->sum(function($item) {
-                        return $item->serviceVariant->duration ?? 60;
-                    });
-                }
-                $totalDuration += $comboDuration;
+            foreach ($validated['service_variants'] as $variantId) {
+                $variant = \App\Models\ServiceVariant::findOrFail($variantId);
+                $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
                 
                 $serviceVariantData[] = [
-                    'service_variant_id' => null,
-                    'combo_id' => $combo->id,
+                    'service_variant_id' => $variantId,
                     'employee_id' => $validated['employee_id'] ?? null,
-                    'price_snapshot' => $combo->price ?? 0,
-                    'duration' => $comboDuration,
+                    'price_snapshot' => $variant->price,
+                    'duration' => $variant->duration ?? 60,
                     'status' => 'Chờ',
-                    'notes' => $combo->name, // Store combo name in notes for display
                 ];
-            } elseif (!empty($validated['service_id'])) {
-                // Process service if no variants/combo selected (only service is selected)
-                $service = \App\Models\Service::findOrFail($validated['service_id']);
-                $totalDuration += $service->base_duration ?? 60; // Default 60 minutes if not set
-                
-                $serviceVariantData[] = [
-                    'service_variant_id' => null, // No variant selected
-                    'employee_id' => $validated['employee_id'] ?? null,
-                    'price_snapshot' => $service->base_price ?? 0,
-                    'duration' => $service->base_duration ?? 60,
-                    'status' => 'Chờ',
-                    'notes' => $service->name, // Store service name in notes for display
-                ];
-            } else {
-                // No service selected - use default duration
-                $totalDuration = 60; // Default 60 minutes
             }
             
             $endAt = $startAt->copy()->addMinutes($totalDuration);
 
-            // Check for duplicate appointment (same user, same date, same time)
-            $existingAppointment = \App\Models\Appointment::where('user_id', $user->id)
-                ->where('start_at', $startAt)
-                ->where('employee_id', $validated['employee_id'] ?? null)
-                ->where('status', '!=', 'Đã hủy')
-                ->first();
-            
-            if ($existingAppointment) {
-                // Appointment already exists, use it instead of creating new one
-                $appointment = $existingAppointment;
-            } else {
-                // Create appointment
-                $appointment = $this->appointmentService->create([
+            // Create appointment
+            $appointment = $this->appointmentService->create([
                 'user_id' => $user->id,
                 'employee_id' => $validated['employee_id'] ?? null,
                 'status' => 'Chờ xử lý',
                 'start_at' => $startAt,
                 'end_at' => $endAt,
                 'note' => $validated['note'] ?? null,
-                ], $serviceVariantData);
-            }
+            ], $serviceVariantData);
 
-            // Add appointment to cart (check if already exists to prevent duplicates)
+            // Add appointment to cart
             $cart = Session::get('cart', []);
             $cartKey = 'appointment_' . $appointment->id;
-            
-            // Only add if not already in cart
-            if (!isset($cart[$cartKey])) {
-                $cart[$cartKey] = [
-                    'type' => 'appointment',
-                    'id' => $appointment->id,
-                    'quantity' => 1,
-                ];
-                Session::put('cart', $cart);
-            }
+            $cart[$cartKey] = [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1,
+            ];
+            Session::put('cart', $cart);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng. Vui lòng thanh toán để hoàn tất đặt lịch.',
+                'message' => 'Đặt lịch thành công! Đã thêm vào lịch đặt.',
                 'appointment_id' => $appointment->id,
                 'redirect_url' => route('site.cart.index'),
                 'cart_count' => count($cart),
@@ -403,8 +287,32 @@ class AppointmentController extends Controller
                 }
             }
 
-            // Sort time slots by time if we have any
-            if (!empty($timeSlots)) {
+            // If no working schedules found, use default time slots
+            if (empty($timeSlots)) {
+                // Generate default time slots from 7:00 to 22:00
+                $startTime = Carbon::parse('07:00');
+                $endTime = Carbon::parse('22:00');
+                
+                $currentTime = $startTime->copy();
+                while ($currentTime->lte($endTime)) {
+                    $timeString = $currentTime->format('H:i');
+                    
+                    // Find or create word_time for this time slot
+                    $wordTime = \App\Models\WordTime::firstOrCreate(
+                        ['time' => $timeString],
+                        ['time' => $timeString]
+                    );
+                    
+                    $timeSlots[] = [
+                        'time' => $timeString,
+                        'display' => $timeString,
+                        'word_time_id' => $wordTime->id,
+                        'available' => true,
+                    ];
+                    $currentTime->addMinutes(30);
+                }
+            } else {
+                // Sort time slots by time
                 usort($timeSlots, function($a, $b) {
                     return strcmp($a['time'], $b['time']);
                 });
@@ -472,50 +380,6 @@ class AppointmentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Có lỗi xảy ra khi tải khung giờ: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get services by category ID (AJAX).
-     */
-    public function getServicesByCategory(Request $request)
-    {
-        try {
-            $request->validate([
-                'category_id' => 'required|exists:service_categories,id',
-            ]);
-
-            $categoryId = $request->input('category_id');
-            $services = \App\Models\Service::with('serviceVariants')
-                ->where('category_id', $categoryId)
-                ->whereNull('deleted_at')
-                ->orderBy('name')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'services' => $services->map(function($service) {
-                    return [
-                        'id' => $service->id,
-                        'name' => $service->name,
-                        'base_price' => $service->base_price ?? 0,
-                        'base_duration' => $service->base_duration ?? 60,
-                        'variants' => $service->serviceVariants->map(function($variant) {
-                            return [
-                                'id' => $variant->id,
-                                'name' => $variant->name,
-                                'price' => $variant->price,
-                                'duration' => $variant->duration,
-                            ];
-                        }),
-                    ];
-                }),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Có lỗi xảy ra: ' . $e->getMessage(),
             ], 500);
         }
     }
