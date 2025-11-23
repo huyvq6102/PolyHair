@@ -341,7 +341,14 @@
                                                     <ul class="service-list">
                                                         @foreach($item['appointment']->appointmentDetails as $detail)
                                                             @if($detail->serviceVariant)
+                                                                {{-- Has variant - display variant info --}}
                                                                 <li>{{ $detail->serviceVariant->name }} - {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ ({{ $detail->duration ?? 60 }} phút)</li>
+                                                            @elseif($detail->combo_id && $detail->combo)
+                                                                {{-- Has combo - display combo info --}}
+                                                                <li><strong>Combo:</strong> {{ $detail->combo->name ?? ($detail->notes ?? 'Combo') }} - {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ ({{ $detail->duration ?? 60 }} phút)</li>
+                                                            @else
+                                                                {{-- No variant/combo - display service info from notes --}}
+                                                                <li><strong>Dịch vụ đơn:</strong> {{ $detail->notes ?? 'Dịch vụ' }} - {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ ({{ $detail->duration ?? 60 }} phút)</li>
                                                             @endif
                                                         @endforeach
                                                     </ul>

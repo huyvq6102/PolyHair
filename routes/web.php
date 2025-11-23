@@ -46,10 +46,12 @@ Route::prefix('cart')->name('site.cart.')->group(function () {
 });
 
 Route::prefix('appointment')->name('site.appointment.')->group(function () {
+    Route::get('/', [AppointmentController::class, 'create'])->name('create');
     Route::post('/', [AppointmentController::class, 'store'])->name('store');
     Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
-    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
+    Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
+    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
 });
 
 // Auth Routes

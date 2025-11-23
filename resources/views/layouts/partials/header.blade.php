@@ -71,7 +71,7 @@
                                                         <a href="{{ route('login') }}">Đăng nhập</a>
                                                     </li>
                                                     <li class="d-lg-none book-btn-mobile">
-                                                        <a class="popup-with-form" href="#test-form">Đặt lịch ngay</a>
+                                                        <a href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
                                                     </li>
                                             </ul>
                                         </nav>
@@ -86,10 +86,10 @@
 
                                     @auth
                                         <div class="dropdown ml-3" style="position: relative;">
-                                            <button type="button" class="btn bg-transparent p-0 text-white d-flex align-items-center" id="userDropdown"
-                                                    style="border: none; outline: none; cursor: pointer;">
-                                                <span class="text-uppercase">{{ auth()->user()->name }}</span>
-                                                <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px;"></i>
+                                            <button type="button" class="btn bg-transparent p-0 d-flex align-items-center" id="userDropdown"
+                                                    style="border: none; outline: none; cursor: pointer; color: #000;">
+                                                <span class="text-uppercase" style="color: #000;">{{ auth()->user()->name ?? 'User' }}</span>
+                                                <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px; color: #000;"></i>
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-right shadow-lg" aria-labelledby="userDropdown"
                                                 style="min-width: 220px; border-radius: 8px; border: none; margin-top: 10px; padding: 0; display: none; position: absolute; right: 0; top: 100%; z-index: 1050;">
@@ -129,8 +129,7 @@
 
                                     <div class="book_room">
                                         <div class="book_btn">
-                                            <a class="popup-with-form"href="#test-form"
-                                            >Đặt lịch ngay</a>
+                                            <a href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
                                         </div>
                                     </div>
                                 </div>
