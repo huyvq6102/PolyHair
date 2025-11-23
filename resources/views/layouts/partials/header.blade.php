@@ -73,7 +73,7 @@
                                         <div class="dropdown ml-3" style="position: relative;">
                                             <button type="button" class="btn bg-transparent p-0 text-white d-flex align-items-center" id="userDropdown" 
                                                     style="border: none; outline: none; cursor: pointer;">
-                                                <span class="text-uppercase">Administrator</span>
+                                                <span class="text-uppercase">{{ auth()->user()->name }}</span>
                                                 <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px;"></i>
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-right shadow-lg" aria-labelledby="userDropdown" 
