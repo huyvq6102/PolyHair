@@ -90,6 +90,9 @@
 </footer>
 <!-- footer-end -->
 
+<!-- Appointment Form Popup -->
+@include('site.partials.appointment-form')
+
 <!-- JS here -->
 <script src="{{ asset('legacy/content/js/vendor/modernizr-3.5.0.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/vendor/jquery-2.1.3.min.js') }}"></script>
@@ -107,8 +110,10 @@
 <script src="{{ asset('legacy/content/js/nice-select.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.slicknav.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.magnific-popup.min.js') }}"></script>
+<script src="{{ asset('legacy/content/js/pgwslideshow.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/plugins.js') }}"></script>
 <script src="{{ asset('legacy/content/js/gijgo.min.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script src="{{ asset('legacy/content/js/main.js') }}"></script>
 @stack('scripts')
 
@@ -135,3 +140,6 @@
         });
     });
 </script>
+
+<!-- Appointment Booking Form -->
+@include('site.partials.appointment-form')

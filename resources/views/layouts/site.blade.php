@@ -1,12 +1,22 @@
 @php
-    $setting = app(\App\Services\SettingService::class)->getFirst();
-    $types = app(\App\Services\TypeService::class)->getAll();
-    $employees = app(\App\Services\EmployeeService::class)->getAll();
-    $services = app(\App\Services\ServiceService::class)->getAll();
-    $wordTimes = app(\App\Services\WordTimeService::class)->getAll();
-    $currentRoute = request()->route()->getName() ?? '';
-    // Backward compatibility
-    $barbers = $employees;
+    try {
+        $setting = app(\App\Services\SettingService::class)->getFirst();
+        $types = app(\App\Services\TypeService::class)->getAll();
+        $employees = app(\App\Services\EmployeeService::class)->getAll();
+        $services = app(\App\Services\ServiceService::class)->getAll();
+        $wordTimes = app(\App\Services\WordTimeService::class)->getAll();
+        $currentRoute = request()->route()->getName() ?? '';
+        // Backward compatibility
+        $barbers = $employees;
+    } catch (\Exception $e) {
+        $setting = null;
+        $types = collect([]);
+        $employees = collect([]);
+        $services = collect([]);
+        $wordTimes = collect([]);
+        $currentRoute = '';
+        $barbers = collect([]);
+    }
 @endphp
 
 <!DOCTYPE html>

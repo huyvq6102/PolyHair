@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
-use App\Models\Skill;
+use App\Models\Service;
 use Illuminate\Http\Request;
 
 class EmployeeSkillController extends Controller
@@ -14,7 +14,7 @@ class EmployeeSkillController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Employee::with(['user', 'skills']);
+        $query = Employee::with(['user', 'services']);
 
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
@@ -23,10 +23,10 @@ class EmployeeSkillController extends Controller
             });
         }
 
-        if ($request->filled('skill_id')) {
-            $skillId = $request->skill_id;
-            $query->whereHas('skills', function ($q) use ($skillId) {
-                $q->where('skills.id', $skillId);
+        if ($request->filled('service_id')) {
+            $serviceId = $request->service_id;
+            $query->whereHas('services', function ($q) use ($serviceId) {
+                $q->where('services.id', $serviceId);
             });
         }
 
@@ -34,12 +34,12 @@ class EmployeeSkillController extends Controller
             ->paginate(15)
             ->appends($request->query());
 
-        $skills = Skill::orderBy('name')->get();
+        $services = Service::orderBy('name')->get();
 
         return view('admin.employee-skills.index', [
             'employees' => $employees,
-            'skills' => $skills,
-            'filters' => $request->only('keyword', 'skill_id'),
+            'services' => $services,
+            'filters' => $request->only('keyword', 'service_id'),
         ]);
     }
 
@@ -48,12 +48,12 @@ class EmployeeSkillController extends Controller
      */
     public function edit(string $id)
     {
-        $employee = Employee::with(['user', 'skills'])->findOrFail($id);
-        $skills = Skill::orderBy('name')->get();
+        $employee = Employee::with(['user', 'services'])->findOrFail($id);
+        $services = Service::with('category')->orderBy('name')->get();
 
         return view('admin.employee-skills.edit', [
             'employee' => $employee,
-            'skills' => $skills,
+            'services' => $services,
         ]);
     }
 
@@ -65,30 +65,16 @@ class EmployeeSkillController extends Controller
         $employee = Employee::findOrFail($id);
 
         $validated = $request->validate([
-            'skills' => 'nullable|array',
-            'skills.*' => 'exists:skills,id',
-            'new_skills' => 'nullable|string|max:500',
+            'services' => 'nullable|array',
+            'services.*' => 'exists:services,id',
         ]);
 
-        $skillIds = $validated['skills'] ?? [];
+        $serviceIds = $validated['services'] ?? [];
+        $serviceIds = array_unique(array_filter($serviceIds));
 
-        if (!empty($validated['new_skills'])) {
-            $names = preg_split('/[,;\n]+/', $validated['new_skills']);
-            foreach ($names as $name) {
-                $name = trim($name);
-                if ($name === '') {
-                    continue;
-                }
-                $skill = Skill::firstOrCreate(['name' => $name]);
-                $skillIds[] = $skill->id;
-            }
-        }
+        $employee->services()->sync($serviceIds);
 
-        $skillIds = array_unique(array_filter($skillIds));
-
-        $employee->skills()->sync($skillIds);
-
-        return redirect()->route('admin.skills.index', ['tab' => 'employees'])
+        return redirect()->route('admin.employee-skills.index')
             ->with('success', 'Chuyên môn của nhân viên đã được cập nhật!');
     }
 }

@@ -12,7 +12,7 @@ class EmployeeService
      */
     public function getAll()
     {
-        return Employee::with('user')->orderBy('id', 'desc')->get();
+        return Employee::with(['user.role'])->orderBy('id', 'desc')->get();
     }
 
     /**

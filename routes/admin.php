@@ -10,7 +10,6 @@ use App\Http\Controllers\Admin\AppointmentController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\EmployeeController;
-use App\Http\Controllers\Admin\SkillController;
 use App\Http\Controllers\Admin\EmployeeSkillController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\WorkingScheduleController;
@@ -23,13 +22,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('categories', CategoryController::class);
     Route::resource('types', TypeController::class);
     Route::resource('products', ProductController::class);
+    
+    // Service routes with trash functionality
+    Route::get('services/trash', [ServiceController::class, 'trash'])->name('services.trash');
+    Route::get('services/{id}/detail', [ServiceController::class, 'showDetail'])->name('services.detail');
+    Route::put('services/{id}/restore', [ServiceController::class, 'restore'])->name('services.restore');
+    Route::delete('services/{id}/force-delete', [ServiceController::class, 'forceDelete'])->name('services.force-delete');
     Route::resource('services', ServiceController::class);
+    
     Route::resource('service-categories', ServiceCategoryController::class);
     Route::resource('appointments', AppointmentController::class);
     Route::resource('orders', OrderController::class);
     Route::resource('users', UserController::class);
     Route::resource('employees', EmployeeController::class);
-    Route::resource('skills', SkillController::class);
     Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
     Route::get('employee-skills/{employee}/edit', [EmployeeSkillController::class, 'edit'])->name('employee-skills.edit');
     Route::put('employee-skills/{employee}', [EmployeeSkillController::class, 'update'])->name('employee-skills.update');
@@ -43,5 +48,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+});
+
+// Employee appointment routes (accessible by employees)
+Route::prefix('admin/employee')->name('employee.')->middleware(['auth'])->group(function () {
+    Route::get('appointments', [EmployeeAppointmentController::class, 'index'])->name('appointments.index');
+    Route::get('appointments/{id}', [EmployeeAppointmentController::class, 'show'])->name('appointments.show');
+    Route::post('appointments/{id}/confirm', [EmployeeAppointmentController::class, 'confirm'])->name('appointments.confirm');
+    Route::post('appointments/{id}/start', [EmployeeAppointmentController::class, 'start'])->name('appointments.start');
+    Route::post('appointments/{id}/complete', [EmployeeAppointmentController::class, 'complete'])->name('appointments.complete');
+    Route::post('appointments/{id}/cancel', [EmployeeAppointmentController::class, 'cancel'])->name('appointments.cancel');
 });
 

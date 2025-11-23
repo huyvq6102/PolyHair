@@ -736,18 +736,22 @@ h3 {
   margin-left: 30px;
 }
 .header-area .main-header-area .book_room .book_btn a {
-  background: transparent;
-  font-size: 15px;
-  font-weight: 400;
-  border: 1px solid #fff;
-  color: #fff;
-  padding: 14px 20px;
+    font-size: 15px;
+    font-weight: 400;
+    padding: 14px 20px;
+    color: #000 !important;
+    border: 1px solid transparent !important;
+    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
 }
+
 .header-area .main-header-area .book_room .book_btn a:hover {
-  background: #fff;
-  color: #000 !important;
-  border: 1px solid #fff;
+    background: linear-gradient(135deg, #5a9b3c 0%, #09d335 100%) !important;
+    color: #fff !important;
+    fill: #fff !important;
+    border-color: transparent !important;
+
 }
+
 .header-area .main-header-area .main-menu {
   text-align: center;
   padding: 12px 0;
@@ -770,9 +774,10 @@ h3 {
 .header-area .main-header-area .main-menu ul li a {
   color: #fff;
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 400;   /* đổi từ 400 */
+  line-height: 48px;  /* thêm để ngang hàng login + nút */
   display: inline-block;
-  padding: 0px 0px 10px 0px;
+  padding: 0 0 10px 0;
   font-family: "Roboto", sans-serif;
   position: relative;
   text-transform: uppercase;
@@ -1941,7 +1946,7 @@ h3 {
   font-size: 22px;
   color: #1F1F1F;
   margin-bottom: 46px;
-  
+
 }
 .popup_box .boxed-btn3 {
   width: 100%;
@@ -4628,7 +4633,7 @@ border-radius: 0;
     -webkit-appearance: none;
     margin: 0;
   }
-  
+
   /* Firefox */
   input[type=number] {
     -moz-appearance: textfield;
@@ -4701,7 +4706,7 @@ border-radius: 0;
   border: 2px solid #000000;
   background-color: #fff;
   color: #000000;
-}  
+}
 .add-cart .boxed-btn{
   padding: 19px 30px;
   font-size: 20px;
@@ -5103,7 +5108,7 @@ label.error {
   .flip {
     -webkit-perspective: 1500;
   perspective: 1500;
-  
+
       position: relative;
    /* text-align: center; */
   }
@@ -5112,7 +5117,7 @@ label.error {
       transform: rotatey(-180deg);
   }
   .flip .card {
-  
+
     height: 100%;
     -webkit-transform-style: preserve-3d;
     -webkit-transition: 0.5s;
@@ -5120,17 +5125,17 @@ label.error {
       transition: 0.5s;
   }
   .flip .card .face {
-  
+
     -webkit-backface-visibility: hidden ;
       backface-visibility: hidden ;
     z-index: 2;
-     
+
   }
   .flip .card .front {
     position: absolute;
      width: 100%;
     z-index: 1;
-  
+
   }
   .flip .card .back {
     -webkit-transform: rotatey(-180deg);
@@ -5138,4 +5143,633 @@ label.error {
   }
     .inner{margin:0px !important;}
 
-    
+
+/* Hot Hair Gallery Section */
+/* Gradient chữ + thanh dọc */
+.hot-hair-section .hot-hair-bar {
+    display: inline-block;
+    width: 8px;
+    height: 26px;
+    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+    margin-top: 4px;
+}
+.hot-hair-section h3 {
+    letter-spacing: 0.02em;
+}
+
+.hot-gallery .hair-card {
+    position: relative;
+    overflow: hidden;
+    border: 8px solid #f2e8d7;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.hot-gallery .hair-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+}
+
+.hot-gallery .hair-card .frame {
+    position: relative;
+    padding: 12px;
+    background: linear-gradient(135deg, #c59d62 0%, #b68a4f 40%, #f7dba5 100%);
+}
+.hot-gallery .hair-card img {
+    width: 100%;
+    display: block;
+    border: 6px solid #f7f4ef;
+    background: #fff;
+}
+
+.hot-gallery .hair-card .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.hot-gallery .hair-card:hover .overlay {
+    opacity: 1;
+}
+
+.hot-gallery .btn-view {
+    background: #000;
+    color: #e6c684;
+    border: 1px solid #e6c684;
+    padding: 10px 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+.hot-gallery .btn-view:hover {
+    background: #e6c684;
+    color: #000;
+}
+
+/* Khoảng cách cho block MẪU TÓC HOT */
+.hot-hair-section {
+    margin-top: 40px;   /* tách khỏi phần trên */
+    margin-bottom: 12px; /* sát xuống gallery */
+}
+
+/* Khoảng cách giữa mô tả và gallery */
+.hot-gallery {
+    margin-top: 12px;   /* nhỏ sát với đoạn mô tả */
+    margin-bottom: 40px; /* tùy chỉnh khoảng dưới */
+}
+
+
+/* =====================================Dịch vụ của chúng tôi====================================*/
+.service-section {
+    position: relative;
+    overflow: hidden;
+    padding-top: 40px;
+    padding-bottom: 40px;
+}
+.service-section .service-wrapper {
+    display: flex;
+    gap: 32px;
+    align-items: stretch;
+}
+
+.service-section .service_left {
+    position: relative;
+    flex: 0 0 38%;
+    padding: 48px 32px;
+    background: #fdfdfd;
+    border: 1px solid #e5e5e5;
+    overflow: hidden;
+}
+.service-section .service_left::before {
+    content: "D";
+    position: absolute;
+    right: -20%;
+    top: -10%;
+    font-size: 520px;
+    font-weight: 800;
+    color: #e8e8e8;
+    line-height: 1;
+    pointer-events: none;
+}
+.service-section .service-left-inner {
+    position: relative;
+    max-width: 360px;
+    z-index: 1;
+}
+.service-section .service-bar {
+    display: inline-block;
+    width: 10px;
+    height: 32px;
+    background: linear-gradient(135deg, #f6d17a 0%, #d8b26a 50%, #8b5a2b 100%);
+    margin-right: 10px;
+    vertical-align: middle;
+}
+.service-section .service-title {
+    display: inline-block;
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #f6d17a 0%, #e8c46e 40%, #d8b26a 60%, #8b5a2b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.service-section .service-desc {
+    margin-top: 18px;
+    color: #4a4a4a;
+    line-height: 1.7;
+}
+
+.service-section .service_right {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* giữ grid và nút giữa màn hình */
+}
+.service-section .service-grid {
+    width: 100%;
+    max-width: 950px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 28px;
+}
+.service-section .service-card {
+    border: 1px solid #eee;
+    padding: 12px;
+    background: #fff;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+}
+.service-section .service-frame {
+    padding: 12px;
+    background: #f5efe6;
+    border: 6px solid #efe9dd;
+}
+.service-section .service-frame img {
+    width: 100%;
+    display: block;
+    border: 6px solid #faf7f2;
+    background: #fff;
+}
+.service-section .service-meta h5 {
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+.service-section .service-meta .rating {
+    font-size: 14px;
+    color: #a67832;
+}
+.service-section .service-meta .rating i { color: #d6a02d; }
+.service-section .service-meta .rating a { color: #a67832; }
+.service-section .btn-book {
+    display: inline-block;
+    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+    color: #000;
+    padding: 10px 18px;
+    font-weight: 700;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+.service-section .btn-book:hover { color: #000; opacity: 0.9; }
+
+.service-section .btn-view-all {
+    display: inline-block;
+    padding: 12px 26px;
+    background: #000;
+    color: #e6c684;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+.service-section .btn-view-all:hover { color: #e6c684; opacity: 0.9; }
+
+@media (max-width: 767px) {
+    .service-section .service-wrapper { flex-direction: column; }
+    .service-section .service_left { flex: 1 1 0; padding: 32px 24px; }
+    .service-section .service_left::before { font-size: 360px; right: -30%; top: -15%; }
+    .service-section .service-grid { max-width: 100%; }
+}
+/* =====================================End Dịch vụ của chúng tôi====================================*/
+/* =====================================Khuyến Mãi====================================*/
+/* Promo section */
+.promo-section { background: #f9f9f9; }
+.promo-bar { display: inline-block; width: 10px; height: 28px;
+    background: linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%); }
+.promo-title { font-size: 24px; font-weight: 800; text-transform: uppercase;
+    margin-left: 8px;
+    background: linear-gradient(135deg,#f6d17a 0%,#e8c46e 40%,#d8b26a 60%,#8b5a2b 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+.promo-slider { position: relative; display: flex; align-items: center; }
+.promo-viewport { overflow: hidden; width: 100%; }
+.promo-track {
+    display: flex;
+    gap: 28px;
+    transition: transform 0.3s ease;
+}
+.promo-card { flex:0 0 320px; max-width:340px; }
+/* mobile: 1 card */
+@media(max-width:991px){ .promo-card{ flex:0 0 100%; max-width:100%; } }
+
+.promo-thumb img { width: 100%; display: block; }
+.promo-body { padding: 16px 18px 14px; }
+.promo-heading { font-size: 15px; font-weight: 800; text-transform: uppercase; line-height: 1.45; margin-bottom: 8px; }
+.promo-desc { font-size: 14px; color: #444; line-height: 1.6; margin-bottom: 12px; }
+.promo-footer { display: flex; align-items: center; gap: 10px; color: #000; }
+.promo-link { color: #000; font-size: 13px; text-decoration: none; }
+.promo-link:hover { text-decoration: underline; }
+.promo-plus { display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; background: #000; color: #e6c684;
+    font-weight: 700; font-size: 14px; line-height: 1; }
+
+.promo-nav {
+    width: 42px; height: 42px; border-radius: 50%; border: none;
+    background: #b3b3b3; color: #fff; font-size: 24px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: opacity 0.2s ease;
+}
+.promo-nav:hover { opacity: 0.85; }
+.promo-nav.prev { margin-right: 14px; }
+.promo-nav.next { margin-left: 14px; }
+
+@media (max-width: 991px) {
+    .promo-track { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+}
+
+/* =====================================End Khuyến Mãi====================================*/
+
+/* ==================================== FEEDBACK KHÁCH HÀNG ================================ */
+
+.feedback-section { background:#fff; }
+.feedback-bar { display:inline-block; width:10px; height:28px;
+    background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%); }
+.feedback-title { font-size:24px; font-weight:800; text-transform:uppercase;
+    margin-left:8px;
+    background:linear-gradient(135deg,#f6d17a 0%,#e8c46e 40%,#d8b26a 60%,#8b5a2b 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+.feedback-slider { position:relative; display:flex; align-items:center; }
+.fb-viewport { overflow:hidden; width:100%; }
+.fb-track { display:flex; gap:20px; transition:transform .3s ease; }
+.fb-card { flex:0 0 48%; max-width:48%; }
+.fb-card img { width:100%; display:block; border-radius:16px; object-fit:cover; }
+
+.fb-nav {
+    width:42px; height:42px; border-radius:50%; border:none;
+    background:#b3b3b3; color:#fff; font-size:24px; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:opacity .2s ease;
+}
+.fb-nav:hover { opacity:.85; }
+.fb-nav.prev { margin-right:12px; }
+.fb-nav.next { margin-left:12px; }
+
+.btn-view-all {
+    display:inline-block; padding:12px 26px;
+    background:#000; color:#e6c684;
+    text-transform:uppercase; letter-spacing:.05em; font-weight:700;
+}
+.btn-view-all:hover { color:#e6c684; opacity:.9; }
+
+@media (max-width:991px){
+    .fb-card { flex:0 0 100%; max-width:100%; }
+}
+/* ==================================== End FEEDBACK KHÁCH HÀNG ================================ */
+
+/* ==================================== BEFORE & AFTER ================================ */
+
+.before-after-section { background:#fff; }
+.ba-bar { display:inline-block; width:10px; height:28px;
+    background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%); }
+.ba-title { font-size:24px; font-weight:800; text-transform:uppercase;
+    margin-left:8px;
+    background:linear-gradient(135deg,#f6d17a 0%,#e8c46e 40%,#d8b26a 60%,#8b5a2b 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+.ba-slider { position:relative; display:flex; align-items:center; }
+.ba-viewport { overflow:hidden; width:100%; }
+.ba-track { display:flex; gap:16px; transition:transform .3s ease; }
+.ba-card { flex:0 0 48%; max-width:48%; cursor:pointer; }
+.ba-img img { width:100%; display:block; border-radius:16px; object-fit:cover; }
+.ba-name { margin-top:8px; font-weight:700; text-align:center; }
+
+.ba-nav {
+    width:42px; height:42px; border-radius:50%; border:none;
+    background:#b3b3b3; color:#fff; font-size:24px; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:opacity .2s ease;
+}
+.ba-nav:hover { opacity:.85; }
+.ba-nav.prev { margin-right:12px; }
+.ba-nav.next { margin-left:12px; }
+
+.btn-view-all {
+    display:inline-block; padding:12px 26px;
+    background:#000; color:#e6c684;
+    text-transform:uppercase; letter-spacing:.05em; font-weight:700;
+}
+.btn-view-all:hover { color:#e6c684; opacity:.9; }
+
+@media (max-width:991px){
+    .ba-card { flex:0 0 100%; max-width:100%; }
+}
+
+/* ==================================== End BEFORE & AFTER ================================ */
+/* ==================================== TRAKY’S STYLIST ================================ */
+.stylist-section { background:#fff; }
+.stylist-wrapper {
+    display:flex;
+    gap:32px;
+    align-items:flex-start;
+}
+.stylist-left {
+    position:relative;
+    flex:0 0 35%;
+    padding:32px 24px;
+    border:1px solid #e5e5e5;
+    background:#fdfdfd;
+    overflow:hidden;
+}
+.stylist-letter {
+    position:absolute;
+    right:-18%;
+    top:-10%;
+    font-size:420px;
+    font-weight:800;
+    color:#e8e8e8;
+    line-height:1;
+    pointer-events:none;
+}
+.stylist-title {
+    font-size:24px;
+    font-weight:800;
+    text-transform:uppercase;
+    margin:0 0 12px 0;
+}
+.stylist-desc { color:#4a4a4a; line-height:1.7; position:relative; z-index:1; }
+
+.stylist-right { flex:1 1 0; }
+.stylist-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:18px;
+}
+.stylist-card {
+    border:1px solid #eee;
+    box-shadow:0 6px 14px rgba(0,0,0,0.06);
+    background:#fff;
+    overflow:hidden;
+}
+.stylist-img img { width:100%; display:block; object-fit:cover; }
+.stylist-meta { padding:12px 14px; display:flex; justify-content:space-between; align-items:center; }
+.stylist-name { font-size:16px; font-weight:800; margin:0; }
+.stylist-book {
+    padding:8px 12px;
+    background:linear-gradient(135deg,#d8b26a 0%,#8b5a2b 100%);
+    color:#000; font-weight:700; border-radius:999px; text-transform:uppercase; font-size:12px;
+}
+.stylist-book:hover { color:#000; opacity:0.9; }
+.btn-view-all {
+    display:inline-block; padding:12px 26px; background:#000; color:#e6c684;
+    text-transform:uppercase; letter-spacing:.05em; font-weight:700;
+}
+.btn-view-all:hover { color:#e6c684; opacity:.9; }
+
+@media (max-width:991px){
+    .stylist-wrapper { flex-direction:column; }
+    .stylist-letter { font-size:320px; right:-30%; top:-20%; }
+}
+/* ==================================== End TRAKY’S STYLIST ================================ */
+/* ==================================== Mẫu tóc hot================================ */
+.bar{width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
+.title{font-size:24px;font-weight:800;text-transform:uppercase;margin:0;}
+.desc{color:#444;line-height:1.6;margin-top:6px;}
+.btn-view-all{display:inline-block;padding:12px 26px;background:#000;color:#e6c684;text-transform:uppercase;font-weight:700;letter-spacing:.05em;}
+.btn-view-all:hover{opacity:.9;color:#e6c684;}
+
+.album-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;}
+.album-card{border:1px solid #eee;box-shadow:0 6px 12px rgba(0,0,0,0.06);background:#fff;padding:10px;text-align:center;}
+.album-img img{width:100%;display:block;object-fit:cover;}
+.album-name{font-weight:700;margin:8px 0;}
+.album-link{color:#000;font-weight:600;text-decoration:none;}
+.album-link:hover{text-decoration:underline;}
+
+.service-wrapper{display:flex;gap:24px;align-items:flex-start;}
+.service_left{position:relative;flex:0 0 32%;padding:32px 24px;border:1px solid #e5e5e5;background:#fdfdfd;overflow:hidden;}
+.service_letter{position:absolute;right:-20%;top:-10%;font-size:420px;font-weight:800;color:#e8e8e8;line-height:1;pointer-events:none;}
+.service_title{font-size:24px;font-weight:800;text-transform:uppercase;margin:0 0 10px 0;}
+.service_desc{color:#4a4a4a;line-height:1.7;position:relative;z-index:1;}
+
+.service_right{flex:1 1 0;}
+.service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;}
+.svc-card {
+    border: 1px solid #eee;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+    background: #fff;
+    display: flex;          /* thêm */
+    flex-direction: column; /* thêm */
+}
+.svc-img img{width:100%;display:block;object-fit:cover;}
+/* thay nguyên block .svc-body cũ */
+.svc-body {
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: auto;       /* thêm để đẩy body xuống đáy */
+}
+/* bổ sung/đổi block .svc-name */
+.svc-name {
+    margin: 0;
+    font-weight: 800;
+    min-height: 40px;       /* giữ chiều cao tên để tên dài không đẩy nút lệch */
+}
+.svc-price span{color:#c08a3f;font-weight:700;}
+.svc-rating{font-size:13px;color:#a67832;}
+.svc-book{display:inline-block;padding:8px 12px;background:linear-gradient(135deg,#d8b26a 0%,#8b5a2b 100%);color:#000;font-weight:700;border-radius:999px;text-transform:uppercase;font-size:12px;}
+.svc-book:hover{opacity:.9;color:#000;}
+
+@media(max-width:991px){
+  .service-wrapper{flex-direction:column;}
+  .service_letter{font-size:320px;right:-30%;top:-20%;}
+}
+/* ==================================== End Mẫu tóc hot================================ */
+
+
+/* ==================================== Khuyến mãi================================ */
+.promo-bar{display:inline-block;width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
+.promo-title{font-size:24px;font-weight:800;text-transform:uppercase;margin-left:8px;
+  background:linear-gradient(135deg,#f6d17a 0%,#e8c46e 40%,#d8b26a 60%,#8b5a2b 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.promo-slider{position:relative;display:flex;align-items:center;}
+.promo-viewport{overflow:hidden;width:100%;}
+.promo-track{display:flex;gap:16px;transition:transform .3s ease;}
+.promo-card{flex:0 0 48%;max-width:48%;border:1px solid #eee;box-shadow:0 6px 12px rgba(0,0,0,0.06);background:#fff;display:flex;flex-direction:column;}
+.promo-img img{width:100%;display:block;object-fit:cover;}
+.promo-body{padding:12px 14px;}
+.promo-heading{font-weight:800;text-transform:uppercase;font-size:15px;line-height:1.4;margin:0 0 6px;}
+.news__desc span{color:#444;}
+.promo-nav{width:42px;height:42px;border-radius:50%;border:none;background:#b3b3b3;color:#fff;font-size:24px;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s;}
+.promo-nav:hover{opacity:.85;}
+.promo-nav.prev{margin-right:12px;}
+.promo-nav.next{margin-left:12px;}
+@media(max-width:991px){.promo-card{flex:0 0 100%;max-width:100%;}}
+/* ==================================== End Khuyến mãi================================ */
+/* ==================================== sản phẩm chăm sóc tóc================================ */
+.prod-bar{width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
+.prod-title{font-size:24px;font-weight:800;text-transform:uppercase;}
+.prod-desc{color:#444;line-height:1.6;}
+
+.prod-criteria{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.tc-card{display:flex;gap:10px;padding:10px;border:1px solid #eee;background:#fafafa;}
+.tc-img img{width:50px;height:50px;object-fit:contain;}
+.tc-name{font-weight:700;}
+.tc-desc{font-size:13px;color:#555;line-height:1.4;}
+
+@media(max-width:767px){
+  .prod-criteria{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));}
+}
+
+/* ==================================== End sản phẩm chăm sóc tóc================================ */
+
+/* ==================================== hệ thống salon================================ */
+.salon-bar{width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
+.salon-title{font-size:24px;font-weight:800;text-transform:uppercase;}
+.salon-desc{color:#444;line-height:1.6;}
+
+.salon-slider{position:relative;display:flex;align-items:center;}
+.salon-viewport{overflow:hidden;width:100%;}
+.salon-track{display:flex;gap:14px;transition:transform .3s ease;}
+.salon-card{flex:0 0 240px;max-width:260px;border:1px solid #eee;box-shadow:0 6px 12px rgba(0,0,0,0.06);background:#fff;text-decoration:none;color:#000;}
+.salon-img img{width:100%;display:block;object-fit:cover;}
+.salon-txt{padding:10px 12px;}
+.salon-name{font-weight:800;}
+.salon-desc2{color:#555;font-size:13px;}
+
+.salon-nav{width:42px;height:42px;border-radius:50%;border:none;background:#b3b3b3;color:#fff;font-size:24px;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s;}
+.salon-nav:hover{opacity:.85;}
+.salon-nav.prev{margin-right:10px;}
+.salon-nav.next{margin-left:10px;}
+
+@media(max-width:991px){
+  .salon-card{flex:0 0 70%;max-width:70%;}
+}
+@media(max-width:767px){
+  .salon-card{flex:0 0 100%;max-width:100%;}
+}
+/* ==================================== End hệ thống salon================================ */
+/* ==================================== Đối tác================================ */
+.partner-bar{width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
+.partner-title{font-size:24px;font-weight:800;text-transform:uppercase;}
+
+.partner-slider{position:relative;display:flex;align-items:center;}
+.partner-viewport{overflow:hidden;width:100%;}
+.partner-track{display:flex;gap:14px;transition:transform .3s ease;}
+.partner-card{flex:0 0 240px;max-width:260px;border:1px solid #eee;box-shadow:0 6px 12px rgba(0,0,0,0.06);background:#fff;text-decoration:none;color:#000;padding:10px;}
+.partner-img img{width:100%;display:block;object-fit:contain;}
+.partner-name{margin:8px 0 4px;font-weight:800;}
+.partner-desc{font-size:13px;color:#555;line-height:1.4;}
+
+.partner-nav{width:42px;height:42px;border-radius:50%;border:none;background:#b3b3b3;color:#fff;font-size:24px;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s;}
+.partner-nav:hover{opacity:.85;}
+.partner-nav.prev{margin-right:10px;}
+.partner-nav.next{margin-left:10px;}
+
+@media(max-width:991px){.partner-card{flex:0 0 70%;max-width:70%;}}
+@media(max-width:767px){.partner-card{flex:0 0 100%;max-width:100%;}}
+/* ==================================== End Đối tác================================ */
+/* ==================================== Cộng đồng ================================ */
+
+.community-section { background:#fff; }
+.comm-viewport { overflow-x:auto; scrollbar-width:none; }
+.comm-viewport::-webkit-scrollbar { display:none; }
+.comm-track { display:flex; gap:16px; padding:4px 0; }
+.comm-card { min-width:200px; border:1px solid #eee; background:#fafafa; text-align:center; padding:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05); }
+.comm-img img { width:60px; height:60px; object-fit:contain; }
+.comm-desc { margin-top:8px; font-weight:700; color:#000; }
+/* ==================================== End Cộng đồng ================================ */
+/* ==================================== feedback khách hàng ================================ */
+
+.fb-bar{width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
+.fb-title{font-size:24px;font-weight:800;text-transform:uppercase;}
+.fb-desc{color:#444;line-height:1.6;}
+
+.fb-slider{position:relative;display:flex;align-items:center;}
+.fb-viewport{overflow:hidden;width:100%;}
+.fb-track{display:flex;gap:16px;transition:transform .3s ease;}
+.fb-card{flex:0 0 48%;max-width:48%;display:block;}
+.fb-img img{width:100%;display:block;object-fit:cover;border-radius:12px;}
+
+.fb-nav{width:42px;height:42px;border-radius:50%;border:none;background:#b3b3b3;color:#fff;font-size:24px;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s;}
+.fb-nav:hover{opacity:.85;}
+.fb-nav.prev{margin-right:12px;}
+.fb-nav.next{margin-left:12px;}
+
+.btn-view-all{display:inline-block;padding:12px 26px;background:#000;color:#e6c684;
+  text-transform:uppercase;font-weight:700;letter-spacing:.05em;}
+.btn-view-all:hover{opacity:.9;color:#e6c684;}
+
+@media(max-width:991px){.fb-card{flex:0 0 100%;max-width:100%;}}
+/* ==================================== End feedback khách hàng ================================ */
+
+/* Hiển thị rõ icon menu 3 gạch trên mobile và bo viền các lựa chọn */
+.slicknav_menu .slicknav_icon-bar {
+    background: #8b5a2b !important; /* chọn màu đậm để nhìn rõ */
+}
+.slicknav_btn {
+    background: transparent; /* nếu muốn có nền thì đổi thành #fff */
+    border: none;
+    padding: 10px;
+}
+.slicknav_nav {
+    background: #fff; /* nền menu xổ xuống, đổi nếu cần */
+}
+/* Viền bo cho menu mobile (slicknav) */
+.slicknav_nav {
+    background: #fff; /* nền menu xổ xuống */
+    padding: 8px;
+}
+.slicknav_nav > li > a {
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    color: #000;
+    background: #fff;
+}
+.slicknav_nav > li:last-child > a {
+    margin-bottom: 0;
+}
+/* nếu có dấu + mở submenu là button, bo viền tương tự */
+.slicknav_nav .slicknav_item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #fff;
+}
+.slicknav_nav .slicknav_arrow {
+    display: none !important;
+}
+.slicknav_nav .bag {
+    display: inline-block;
+    min-width: 18px;
+    padding: 2px 6px;
+    margin-left: 6px;
+    border-radius: 10px;
+    background: #e7ab3c;
+    color: #fff;
+    font-size: 12px;
+    text-align: center;
+}

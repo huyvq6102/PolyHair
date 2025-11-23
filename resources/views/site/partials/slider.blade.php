@@ -17,7 +17,7 @@
 
 @if(count($sliders) > 0)
 <!-- slider_area_start -->
-<div class="slider_area">
+<div class="slider_area" style="margin-top: 80px;">
     <div class="container-fluid p-0">
         <div id="carouselExampleControls" class="carousel slide" data-ride="carousel">
             <div class="carousel-inner">

@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Service;
+use App\Models\ServiceCategory;
+use App\Models\ServiceVariant;
+use App\Models\Combo;
 use App\Services\ServiceCategoryService;
 use App\Services\ServiceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class ServiceController extends Controller
 {
@@ -26,14 +30,50 @@ class ServiceController extends Controller
     public function index(Request $request)
     {
         $keyword = $request->get('keyword');
+        $perPage = $request->get('per_page', 15);
+
+        // Get all services (single services and services with variants)
+        $query = Service::with(['category', 'serviceVariants'])
+            ->whereNull('deleted_at');
 
         if ($keyword) {
-            $services = $this->serviceService->search($keyword);
-        } else {
-            $services = $this->serviceService->getAll();
+            $query->where('name', 'like', "%{$keyword}%");
         }
 
-        return view('admin.services.index', compact('services', 'keyword'));
+        $services = $query->orderBy('id', 'desc')->paginate($perPage);
+
+        // Get all combos
+        $combosQuery = Combo::with(['category', 'comboItems.service'])
+            ->whereNull('deleted_at');
+
+        if ($keyword) {
+            $combosQuery->where('name', 'like', "%{$keyword}%");
+        }
+
+        $combos = $combosQuery->orderBy('id', 'desc')->get();
+
+        return view('admin.services.index', compact('services', 'combos', 'keyword'));
+    }
+
+    /**
+     * Show service detail for modal
+     */
+    public function showDetail(Request $request, $id)
+    {
+        $type = $request->get('type', 'service');
+
+        if ($type === 'combo') {
+            $combo = Combo::with(['category', 'comboItems.service.serviceVariants'])->findOrFail($id);
+            $html = view('admin.services.partials.combo_detail', compact('combo'))->render();
+        } else {
+            $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
+            $html = view('admin.services.partials.service_detail', compact('service'))->render();
+        }
+
+        return response()->json([
+            'success' => true,
+            'html' => $html
+        ]);
     }
 
     /**
@@ -42,8 +82,17 @@ class ServiceController extends Controller
     public function create()
     {
         $categories = $this->serviceCategoryService->getAll();
-        $service = null;
-        return view('admin.services.create', compact('categories', 'service'));
+        $singleServices = Service::whereNull('deleted_at')
+            ->whereDoesntHave('serviceVariants')
+            ->get();
+        
+        // Lấy cả dịch vụ có biến thể để có thể chọn biến thể
+        $variantServices = Service::whereNull('deleted_at')
+            ->whereHas('serviceVariants')
+            ->with('serviceVariants')
+            ->get();
+        
+        return view('admin.services.create', compact('categories', 'singleServices', 'variantServices'));
     }
 
     /**
@@ -51,128 +100,673 @@ class ServiceController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $this->validateServiceRequest($request);
+        $serviceType = $request->input('service_type');
 
-        $serviceData = $this->extractServiceData($validated, $request);
-        $variants = $validated['variants'] ?? [];
-        $combos = $validated['combos'] ?? [];
-
-        $this->serviceService->create($serviceData, $variants, $combos);
-
-        return redirect()->route('admin.services.index')
-            ->with('success', 'Dịch vụ đã được tạo thành công!');
+        switch ($serviceType) {
+            case 'single':
+                return $this->storeSingleService($request);
+            case 'variant':
+                return $this->storeVariant($request);
+            case 'combo':
+                return $this->storeCombo($request);
+            default:
+                return redirect()->back()->with('error', 'Vui lòng chọn loại dịch vụ');
+        }
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Store single service
      */
-    public function edit(string $id)
+    protected function storeSingleService(Request $request)
     {
-        $service = $this->serviceService->getOne($id);
-        $categories = $this->serviceCategoryService->getAll();
-
-        return view('admin.services.edit', compact('service', 'categories'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        $service = $this->serviceService->getOne($id);
-        $validated = $this->validateServiceRequest($request, true);
-
-        $serviceData = $this->extractServiceData($validated, $request, $service);
-        $variants = $validated['variants'] ?? [];
-        $combos = $validated['combos'] ?? [];
-
-        $this->serviceService->update($service->id, $serviceData, $variants, $combos);
-
-        return redirect()->route('admin.services.index')
-            ->with('success', 'Dịch vụ đã được cập nhật thành công!');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        $this->serviceService->delete($id);
-
-        return redirect()->route('admin.services.index')
-            ->with('success', 'Dịch vụ đã được xóa thành công!');
-    }
-
-    /**
-     * Validate incoming request for store/update.
-     */
-    protected function validateServiceRequest(Request $request, bool $isUpdate = false): array
-    {
-        $imageRule = $isUpdate ? 'nullable' : 'required';
-
-        return $request->validate([
+        $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => [$imageRule, 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'category_id' => 'required|exists:service_categories,id',
+            'base_price' => 'required|numeric|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
-            'base_price' => 'nullable|numeric|min:0',
-            'base_duration' => 'nullable|integer|min:0',
-            'variants' => 'required|array|min:1',
-            'variants.*.id' => 'nullable|exists:service_variants,id',
-            'variants.*.name' => 'required|string|max:255',
-            'variants.*.price' => 'required|numeric|min:0',
-            'variants.*.duration' => 'required|integer|min:0',
-            'variants.*.is_default' => 'nullable|boolean',
-            'variants.*.is_active' => 'nullable|boolean',
-            'variants.*.notes' => 'nullable|string',
-            'variants.*.attributes' => 'nullable|array',
-            'variants.*.attributes.*.name' => 'nullable|string|max:100',
-            'variants.*.attributes.*.value' => 'nullable|string|max:100',
-            'combos' => 'nullable|array',
-            'combos.*.id' => 'nullable|exists:combos,id',
-            'combos.*.name' => 'nullable|string|max:255',
-            'combos.*.slug' => 'nullable|string|max:255',
-            'combos.*.description' => 'nullable|string',
-            'combos.*.price' => 'nullable|numeric|min:0',
-            'combos.*.status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
-            'combos.*.sort_order' => 'nullable|integer|min:0',
-            'combos.*.variant_uids' => 'nullable|array|min:1',
-            'combos.*.variant_uids.*' => 'nullable|string',
+            'description' => 'nullable|string',
         ]);
-    }
 
-    /**
-     * Extract service data and handle image upload.
-     */
-    protected function extractServiceData(array $validated, Request $request, ?Service $service = null): array
-    {
-        $data = Arr::only($validated, [
+        $data = $request->only([
             'name',
-            'description',
             'category_id',
-            'status',
             'base_price',
-            'base_duration',
+            'status',
+            'description',
         ]);
+
+        // Tự động tạo mã dịch vụ
+        $data['service_code'] = 'DV' . str_pad(Service::max('id') + 1, 6, '0', STR_PAD_LEFT);
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $image->move(public_path('legacy/images/products'), $imageName);
             $data['image'] = $imageName;
-
-            if ($service && $service->image && file_exists(public_path('legacy/images/products/' . $service->image))) {
-                unlink(public_path('legacy/images/products/' . $service->image));
-            }
-        } elseif ($service) {
-            $data['image'] = $service->image;
         }
 
         if (empty($data['status'])) {
             $data['status'] = 'Hoạt động';
         }
 
-        return $data;
+        Service::create($data);
+
+        return redirect()->route('admin.services.index')
+            ->with('success', 'Dịch vụ đơn đã được thêm thành công!');
+    }
+
+    /**
+     * Store variant service
+     */
+    protected function storeVariant(Request $request)
+    {
+        $request->validate([
+            'service_name' => 'required|string|max:255',
+            'category_id' => 'required|exists:service_categories,id',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'variants' => 'required|array|min:1',
+            'variants.*.name' => 'required|string|max:255',
+            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.duration' => 'required|integer|min:0',
+            'variants.*.is_active' => 'nullable|boolean',
+            'variants.*.notes' => 'nullable|string',
+            'variants.*.attributes' => 'nullable|array',
+            'variants.*.attributes.*.name' => 'required_with:variants.*.attributes|string|max:100',
+            'variants.*.attributes.*.value' => 'required_with:variants.*.attributes|string|max:100',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Tạo dịch vụ chính
+            $serviceData = [
+                'name' => $request->input('service_name'),
+                'category_id' => $request->input('category_id'),
+                'description' => $request->input('description'),
+                'status' => 'Hoạt động',
+            ];
+
+            // Tự động tạo mã dịch vụ
+            $serviceData['service_code'] = 'DV' . str_pad(Service::max('id') + 1, 6, '0', STR_PAD_LEFT);
+
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $image->move(public_path('legacy/images/products'), $imageName);
+                $serviceData['image'] = $imageName;
+            }
+
+            $service = Service::create($serviceData);
+
+            // Tạo các biến thể
+            $variants = $request->input('variants', []);
+            foreach ($variants as $variantData) {
+                $variant = ServiceVariant::create([
+                    'service_id' => $service->id,
+                    'name' => $variantData['name'],
+                    'price' => $variantData['price'],
+                    'duration' => $variantData['duration'],
+                    'is_default' => false,
+                    'is_active' => isset($variantData['is_active']) && $variantData['is_active'] == '1',
+                    'notes' => $variantData['notes'] ?? null,
+                ]);
+
+                // Tạo các thuộc tính cho biến thể
+                if (isset($variantData['attributes']) && is_array($variantData['attributes'])) {
+                    foreach ($variantData['attributes'] as $attrData) {
+                        if (!empty($attrData['name']) && !empty($attrData['value'])) {
+                            \App\Models\VariantAttribute::create([
+                                'service_variant_id' => $variant->id,
+                                'attribute_name' => $attrData['name'],
+                                'attribute_value' => $attrData['value'],
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('admin.services.index')
+                ->with('success', 'Dịch vụ biến thể đã được thêm thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store combo service
+     */
+    protected function storeCombo(Request $request)
+    {
+        $request->validate([
+            'combo_name' => 'required|string|max:255',
+            'category_id' => 'required|exists:service_categories,id',
+            'combo_price' => 'required|numeric|min:0',
+            'combo_items' => 'required|array|min:1',
+            'combo_items.*.service_id' => 'required|exists:services,id',
+            'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
+            'combo_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'combo_status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
+            'combo_description' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($request) {
+            $combo = Combo::create([
+                'name' => $request->input('combo_name'),
+                'slug' => Str::slug($request->input('combo_name')) . '-' . uniqid(),
+                'category_id' => $request->input('category_id'),
+                'price' => $request->input('combo_price'),
+                'status' => $request->input('combo_status', 'Hoạt động'),
+                'description' => $request->input('combo_description'),
+            ]);
+
+            if ($request->hasFile('combo_image')) {
+                $image = $request->file('combo_image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $image->move(public_path('legacy/images/products'), $imageName);
+                $combo->image = $imageName;
+                $combo->save();
+            }
+
+            $comboItems = $request->input('combo_items', []);
+            foreach ($comboItems as $item) {
+                if (!empty($item['service_id'])) {
+                    $combo->comboItems()->create([
+                        'service_id' => $item['service_id'],
+                        'service_variant_id' => !empty($item['service_variant_id']) ? $item['service_variant_id'] : null,
+                        'quantity' => 1,
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('admin.services.index')
+            ->with('success', 'Combo dịch vụ đã được thêm thành công!');
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Request $request, $id)
+    {
+        $type = $request->get('type');
+
+        // Check if it's a combo
+        if ($type === 'combo') {
+            $combo = Combo::findOrFail($id);
+            $categories = $this->serviceCategoryService->getAll();
+            $singleServices = Service::whereNull('deleted_at')
+                ->whereDoesntHave('serviceVariants')
+                ->get();
+            
+            // Lấy cả dịch vụ có biến thể
+            $variantServices = Service::whereNull('deleted_at')
+                ->whereHas('serviceVariants')
+                ->with('serviceVariants')
+                ->get();
+            
+            $combo->load('comboItems.service.serviceVariants');
+            return view('admin.services.edit', compact('combo', 'categories', 'singleServices', 'variantServices'))->with('service_type', 'combo');
+        }
+
+        // Check if it's a variant (single variant edit)
+        if ($type === 'variant') {
+            // Kiểm tra xem $id có phải là ServiceVariant ID không
+            $variant = ServiceVariant::find($id);
+            if ($variant) {
+                // Đây là edit một variant đơn lẻ
+                $variant->load('service');
+                $categories = $this->serviceCategoryService->getAll();
+                $singleServices = Service::whereNull('deleted_at')
+                    ->whereDoesntHave('serviceVariants')
+                    ->get();
+                return view('admin.services.edit', compact('variant', 'categories', 'singleServices'))->with('service_type', 'variant');
+            } else {
+                // Đây là edit service có variants
+                $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
+                $categories = $this->serviceCategoryService->getAll();
+                $singleServices = Service::whereNull('deleted_at')
+                    ->whereDoesntHave('serviceVariants')
+                    ->get();
+                $serviceType = 'variant';
+                return view('admin.services.edit', compact('service', 'categories', 'singleServices', 'serviceType'));
+            }
+        }
+
+        // It's a service
+        $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
+        $categories = $this->serviceCategoryService->getAll();
+        $singleServices = Service::whereNull('deleted_at')
+            ->whereDoesntHave('serviceVariants')
+            ->get();
+
+        // Determine service type
+        $serviceType = 'single';
+        if ($service->serviceVariants->count() > 0) {
+            $serviceType = 'variant';
+        }
+
+        return view('admin.services.edit', compact('service', 'categories', 'singleServices', 'serviceType'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        $serviceType = $request->input('service_type');
+
+        switch ($serviceType) {
+            case 'single':
+                return $this->updateSingleService($request, $id);
+            case 'variant':
+                // Nếu là dịch vụ biến thể (service có variants), xử lý khác
+                $service = Service::findOrFail($id);
+                if ($service->serviceVariants->count() > 0) {
+                    return $this->updateVariantService($request, $id);
+                }
+                return $this->updateVariant($request, $id);
+            case 'combo':
+                return $this->updateCombo($request, $id);
+            default:
+                return redirect()->back()->with('error', 'Vui lòng chọn loại dịch vụ');
+        }
+    }
+
+    /**
+     * Update single service
+     */
+    protected function updateSingleService(Request $request, $id)
+    {
+        $service = Service::findOrFail($id);
+
+        $request->validate([
+            'service_code' => 'nullable|string|max:50|unique:services,service_code,' . $id,
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:service_categories,id',
+            'base_price' => 'required|numeric|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
+            'description' => 'nullable|string',
+        ]);
+
+        $data = $request->only([
+            'service_code',
+            'name',
+            'category_id',
+            'base_price',
+            'status',
+            'description',
+        ]);
+
+        if ($request->hasFile('image')) {
+            if ($service->image && file_exists(public_path('legacy/images/products/' . $service->image))) {
+                unlink(public_path('legacy/images/products/' . $service->image));
+            }
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('legacy/images/products'), $imageName);
+            $data['image'] = $imageName;
+        }
+
+        $service->update($data);
+
+        return redirect()->route('admin.services.index')
+            ->with('success', 'Dịch vụ đơn đã được cập nhật thành công!');
+    }
+
+    /**
+     * Update variant service (single variant)
+     */
+    protected function updateVariant(Request $request, $id)
+    {
+        $variant = ServiceVariant::findOrFail($id);
+
+        $request->validate([
+            'variant_name' => 'required|string|max:255',
+            'variant_price' => 'required|numeric|min:0',
+            'variant_duration' => 'required|integer|min:0',
+        ]);
+
+        $variant->update([
+            'name' => $request->input('variant_name'),
+            'price' => $request->input('variant_price'),
+            'duration' => $request->input('variant_duration'),
+            'is_default' => $request->input('is_default', false),
+            'is_active' => $request->input('is_active', true),
+        ]);
+
+        return redirect()->route('admin.services.index')
+            ->with('success', 'Biến thể dịch vụ đã được cập nhật thành công!');
+    }
+
+    /**
+     * Update variant service (service with multiple variants)
+     */
+    protected function updateVariantService(Request $request, $id)
+    {
+        $service = Service::with('serviceVariants.variantAttributes')->findOrFail($id);
+
+        $request->validate([
+            'service_code' => 'nullable|string|max:50|unique:services,service_code,' . $id,
+            'service_name' => 'required|string|max:255',
+            'category_id' => 'required|exists:service_categories,id',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'variants' => 'required|array|min:1',
+            'variants.*.name' => 'required|string|max:255',
+            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.duration' => 'required|integer|min:0',
+            'variants.*.is_active' => 'nullable|boolean',
+            'variants.*.notes' => 'nullable|string',
+            'variants.*.attributes' => 'nullable|array',
+            'variants.*.attributes.*.name' => 'required_with:variants.*.attributes|string|max:100',
+            'variants.*.attributes.*.value' => 'required_with:variants.*.attributes|string|max:100',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Cập nhật thông tin dịch vụ chính
+            $serviceData = [
+                'service_code' => $request->input('service_code'),
+                'name' => $request->input('service_name'),
+                'category_id' => $request->input('category_id'),
+                'description' => $request->input('description'),
+            ];
+
+            if ($request->hasFile('image')) {
+                if ($service->image && file_exists(public_path('legacy/images/products/' . $service->image))) {
+                    unlink(public_path('legacy/images/products/' . $service->image));
+                }
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $image->move(public_path('legacy/images/products'), $imageName);
+                $serviceData['image'] = $imageName;
+            }
+
+            $service->update($serviceData);
+
+            // Lấy danh sách ID biến thể hiện tại và mới
+            $existingVariantIds = $service->serviceVariants->pluck('id')->toArray();
+            $newVariantIds = [];
+            $variants = $request->input('variants', []);
+
+            // Cập nhật hoặc tạo mới các biến thể
+            foreach ($variants as $variantData) {
+                if (isset($variantData['id']) && in_array($variantData['id'], $existingVariantIds)) {
+                    // Cập nhật biến thể hiện có
+                    $variant = ServiceVariant::find($variantData['id']);
+                    if ($variant) {
+                        $variant->update([
+                            'name' => $variantData['name'],
+                            'price' => $variantData['price'],
+                            'duration' => $variantData['duration'],
+                            'is_default' => false,
+                            'is_active' => isset($variantData['is_active']) && $variantData['is_active'] == '1',
+                            'notes' => $variantData['notes'] ?? null,
+                        ]);
+                        $newVariantIds[] = $variant->id;
+
+                        // Xóa các thuộc tính cũ và tạo mới
+                        $variant->variantAttributes()->delete();
+                        if (isset($variantData['attributes']) && is_array($variantData['attributes'])) {
+                            foreach ($variantData['attributes'] as $attrData) {
+                                if (!empty($attrData['name']) && !empty($attrData['value'])) {
+                                    \App\Models\VariantAttribute::create([
+                                        'service_variant_id' => $variant->id,
+                                        'attribute_name' => $attrData['name'],
+                                        'attribute_value' => $attrData['value'],
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Tạo biến thể mới
+                    $variant = ServiceVariant::create([
+                        'service_id' => $service->id,
+                        'name' => $variantData['name'],
+                        'price' => $variantData['price'],
+                        'duration' => $variantData['duration'],
+                        'is_default' => false,
+                        'is_active' => isset($variantData['is_active']) && $variantData['is_active'] == '1',
+                        'notes' => $variantData['notes'] ?? null,
+                    ]);
+                    $newVariantIds[] = $variant->id;
+
+                    // Tạo các thuộc tính cho biến thể mới
+                    if (isset($variantData['attributes']) && is_array($variantData['attributes'])) {
+                        foreach ($variantData['attributes'] as $attrData) {
+                            if (!empty($attrData['name']) && !empty($attrData['value'])) {
+                                \App\Models\VariantAttribute::create([
+                                    'service_variant_id' => $variant->id,
+                                    'attribute_name' => $attrData['name'],
+                                    'attribute_value' => $attrData['value'],
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Xóa các biến thể không còn trong danh sách
+            $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
+            if (!empty($variantsToDelete)) {
+                ServiceVariant::whereIn('id', $variantsToDelete)->delete();
+            }
+
+            DB::commit();
+            return redirect()->route('admin.services.index')
+                ->with('success', 'Dịch vụ biến thể đã được cập nhật thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update combo service
+     */
+    protected function updateCombo(Request $request, $id)
+    {
+        $combo = Combo::findOrFail($id);
+
+        $request->validate([
+            'combo_name' => 'required|string|max:255',
+            'category_id' => 'required|exists:service_categories,id',
+            'combo_price' => 'required|numeric|min:0',
+            'combo_items' => 'required|array|min:1',
+            'combo_items.*.service_id' => 'required|exists:services,id',
+            'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
+            'combo_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'combo_status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
+            'combo_description' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($request, $combo) {
+            $combo->update([
+                'name' => $request->input('combo_name'),
+                'category_id' => $request->input('category_id'),
+                'price' => $request->input('combo_price'),
+                'status' => $request->input('combo_status', 'Hoạt động'),
+                'description' => $request->input('combo_description'),
+            ]);
+
+            if ($request->hasFile('combo_image')) {
+                if ($combo->image && file_exists(public_path('legacy/images/products/' . $combo->image))) {
+                    unlink(public_path('legacy/images/products/' . $combo->image));
+                }
+                $image = $request->file('combo_image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $image->move(public_path('legacy/images/products'), $imageName);
+                $combo->image = $imageName;
+                $combo->save();
+            }
+
+            // Xóa tất cả combo items cũ
+            $combo->comboItems()->delete();
+            
+            // Tạo lại combo items mới
+            $comboItems = $request->input('combo_items', []);
+            foreach ($comboItems as $item) {
+                if (!empty($item['service_id'])) {
+                    $combo->comboItems()->create([
+                        'service_id' => $item['service_id'],
+                        'service_variant_id' => !empty($item['service_variant_id']) ? $item['service_variant_id'] : null,
+                        'quantity' => 1,
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('admin.services.index')
+            ->with('success', 'Combo dịch vụ đã được cập nhật thành công!');
+    }
+
+    /**
+     * Remove the specified resource from storage (soft delete).
+     */
+    public function destroy(Request $request, $id)
+    {
+        $type = $request->input('type');
+
+        // Check if it's a combo
+        if ($type === 'combo') {
+            $combo = Combo::findOrFail($id);
+            $combo->delete();
+            return redirect()->route('admin.services.trash')
+                ->with('success', 'Combo dịch vụ đã được xóa tạm thời!');
+        }
+
+        // Check if it's a variant
+        if ($type === 'variant') {
+            $variant = ServiceVariant::findOrFail($id);
+            $variant->delete();
+            return redirect()->route('admin.services.trash')
+                ->with('success', 'Biến thể dịch vụ đã được xóa tạm thời!');
+        }
+
+        // It's a service
+        $service = Service::findOrFail($id);
+        $service->delete();
+
+        return redirect()->route('admin.services.trash')
+            ->with('success', 'Dịch vụ đã được xóa tạm thời!');
+    }
+
+    /**
+     * Display trash page
+     */
+    public function trash(Request $request)
+    {
+        $keyword = $request->get('keyword');
+        $perPage = $request->get('per_page', 15);
+
+        // Get deleted services
+        $servicesQuery = Service::with(['category', 'serviceVariants'])
+            ->onlyTrashed();
+
+        if ($keyword) {
+            $servicesQuery->where('name', 'like', "%{$keyword}%");
+        }
+
+        $services = $servicesQuery->orderBy('deleted_at', 'desc')->paginate($perPage);
+
+        // Get deleted combos
+        $combosQuery = Combo::with(['category', 'comboItems.service'])
+            ->onlyTrashed();
+
+        if ($keyword) {
+            $combosQuery->where('name', 'like', "%{$keyword}%");
+        }
+
+        $combos = $combosQuery->orderBy('deleted_at', 'desc')->get();
+
+        // Get deleted variants
+        $variantsQuery = ServiceVariant::with('service')->onlyTrashed();
+
+        if ($keyword) {
+            $variantsQuery->where('name', 'like', "%{$keyword}%");
+        }
+
+        $variants = $variantsQuery->orderBy('deleted_at', 'desc')->get();
+
+        return view('admin.services.trash', compact('services', 'combos', 'variants', 'keyword'));
+    }
+
+    /**
+     * Restore a soft deleted service
+     */
+    public function restore(Request $request, $id)
+    {
+        $type = $request->input('type');
+
+        // Check if it's a combo
+        if ($type === 'combo') {
+            $combo = Combo::onlyTrashed()->findOrFail($id);
+            $combo->restore();
+            return redirect()->route('admin.services.trash')
+                ->with('success', 'Combo dịch vụ đã được khôi phục thành công!');
+        }
+
+        // Check if it's a variant
+        if ($type === 'variant') {
+            $variant = ServiceVariant::onlyTrashed()->findOrFail($id);
+            $variant->restore();
+            return redirect()->route('admin.services.trash')
+                ->with('success', 'Biến thể dịch vụ đã được khôi phục thành công!');
+        }
+
+        // It's a service
+        $service = Service::onlyTrashed()->findOrFail($id);
+        $service->restore();
+
+        return redirect()->route('admin.services.trash')
+            ->with('success', 'Dịch vụ đã được khôi phục thành công!');
+    }
+
+    /**
+     * Permanently delete a service
+     */
+    public function forceDelete(Request $request, $id)
+    {
+        $type = $request->input('type');
+
+        // Check if it's a combo
+        if ($type === 'combo') {
+            $combo = Combo::onlyTrashed()->findOrFail($id);
+            if ($combo->image && file_exists(public_path('legacy/images/products/' . $combo->image))) {
+                unlink(public_path('legacy/images/products/' . $combo->image));
+            }
+            $combo->forceDelete();
+            return redirect()->route('admin.services.trash')
+                ->with('success', 'Combo dịch vụ đã được xóa vĩnh viễn!');
+        }
+
+        // Check if it's a variant
+        if ($type === 'variant') {
+            $variant = ServiceVariant::onlyTrashed()->findOrFail($id);
+            $variant->forceDelete();
+            return redirect()->route('admin.services.trash')
+                ->with('success', 'Biến thể dịch vụ đã được xóa vĩnh viễn!');
+        }
+
+        // It's a service
+        $service = Service::onlyTrashed()->findOrFail($id);
+        
+        if ($service->image && file_exists(public_path('legacy/images/products/' . $service->image))) {
+            unlink(public_path('legacy/images/products/' . $service->image));
+        }
+
+        $service->forceDelete();
+
+        return redirect()->route('admin.services.trash')
+            ->with('success', 'Dịch vụ đã được xóa vĩnh viễn!');
     }
 }

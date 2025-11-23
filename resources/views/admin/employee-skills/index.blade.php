@@ -23,12 +23,12 @@
                     value="{{ $filters['keyword'] ?? '' }}">
             </div>
             <div class="form-group col-md-4">
-                <label for="skill_id">Chuyên môn</label>
-                <select name="skill_id" id="skill_id" class="form-control">
-                    <option value="">-- Tất cả chuyên môn --</option>
-                    @foreach($skills as $skill)
-                        <option value="{{ $skill->id }}" {{ ($filters['skill_id'] ?? '') == $skill->id ? 'selected' : '' }}>
-                            {{ $skill->name }}
+                <label for="service_id">Dịch vụ (Chuyên môn)</label>
+                <select name="service_id" id="service_id" class="form-control">
+                    <option value="">-- Tất cả dịch vụ --</option>
+                    @foreach($services as $service)
+                        <option value="{{ $service->id }}" {{ ($filters['service_id'] ?? '') == $service->id ? 'selected' : '' }}>
+                            {{ $service->name }}
                         </option>
                     @endforeach
                 </select>
@@ -65,11 +65,11 @@
                             <td>{{ $employee->user->name ?? 'N/A' }}</td>
                             <td>{{ $employee->position ?? 'N/A' }}</td>
                             <td>
-                                @if($employee->skills->isEmpty())
+                                @if($employee->services->isEmpty())
                                     <span class="text-muted">Chưa thiết lập</span>
                                 @else
-                                    @foreach($employee->skills as $skill)
-                                        <span class="badge badge-info">{{ $skill->name }}</span>
+                                    @foreach($employee->services as $service)
+                                        <span class="badge badge-info">{{ $service->name }}</span>
                                     @endforeach
                                 @endif
                             </td>

@@ -6,6 +6,8 @@ use App\Http\Controllers\Site\ProductController;
 use App\Http\Controllers\Site\ServiceController;
 use App\Http\Controllers\Site\BlogController;
 use App\Http\Controllers\Site\ContactController;
+use App\Http\Controllers\Site\CartController;
+use App\Http\Controllers\Site\AppointmentController;
 use Illuminate\Support\Facades\Route;
 
 // Site Routes
@@ -33,6 +35,23 @@ Route::prefix('contact')->name('site.contact.')->group(function () {
     Route::post('/', [ContactController::class, 'store'])->name('store');
 });
 
+Route::prefix('cart')->name('site.cart.')->group(function () {
+    Route::get('/', [CartController::class, 'index'])->name('index');
+    Route::post('/add', [CartController::class, 'add'])->name('add');
+    Route::put('/update/{key}', [CartController::class, 'update'])->name('update');
+    Route::delete('/remove/{key}', [CartController::class, 'remove'])->name('remove');
+    Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
+    Route::get('/count', [CartController::class, 'count'])->name('count');
+    Route::get('/seed-fake-data', [CartController::class, 'seedFakeData'])->name('seed-fake-data');
+});
+
+Route::prefix('appointment')->name('site.appointment.')->group(function () {
+    Route::post('/', [AppointmentController::class, 'store'])->name('store');
+    Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
+    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
+    Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
+});
+
 // Auth Routes
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -41,7 +60,6 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';
