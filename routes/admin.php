@@ -25,6 +25,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     // Service routes with trash functionality
     Route::get('services/trash', [ServiceController::class, 'trash'])->name('services.trash');
+    Route::get('services/{id}/detail', [ServiceController::class, 'showDetail'])->name('services.detail');
     Route::put('services/{id}/restore', [ServiceController::class, 'restore'])->name('services.restore');
     Route::delete('services/{id}/force-delete', [ServiceController::class, 'forceDelete'])->name('services.force-delete');
     Route::resource('services', ServiceController::class);
