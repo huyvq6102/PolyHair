@@ -3,18 +3,17 @@
 @section('title', 'Đặt lịch ngay')
 
 @section('content')
-<div class="appointment-page" style="padding: 100px 0 50px; background: #f8f9fa; min-height: 100vh;">
+<div class="appointment-page" style="padding: 30px 0 10px; background: #f8f9fa; min-height: 100vh;">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-lg-10 col-xl-8">
-                <div class="appointment-form-container" style="background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); padding: 40px; margin-bottom: 30px;">
+            <div class="col-lg-6 col-xl-5">
+                <div class="appointment-form-container" style="background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 15px; margin-bottom: 10px; margin-top: 120px;">
                     
                     <!-- Header -->
-                    <div class="text-center mb-5" style="margin-top: 30px;">
-                        <h2 class="fw-bold mb-2" style="color: #000; font-size: 32px;">
+                    <div class="text-center mb-2" style="margin-top: 5px;">
+                        <h2 class="fw-bold mb-1" style="color: #000; font-size: 18px;">
                             <i class="fa fa-calendar-check-o"></i> ĐẶT LỊCH NGAY
                         </h2>
-                        <p class="text-muted" style="font-size: 16px; color: #000;">Hãy liên hệ ngay với chúng tôi để được tư vấn sớm nhất về các mẫu tóc hot nhất hiện nay!</p>
                     </div>
 
                     @if(session('success'))
@@ -37,205 +36,193 @@
 
                     <form action="{{ route('site.appointment.store') }}" method="POST" id="appointmentForm">
                         @csrf
+                        
+                        @if(request('service_id'))
+                            <input type="hidden" name="service_id" value="{{ request('service_id') }}">
+                        @endif
+
+                        @if(request('service_variants'))
+                            @foreach(request('service_variants') as $variantId)
+                                <input type="hidden" name="service_variants[]" value="{{ $variantId }}">
+                            @endforeach
+                        @endif
+
+                        @if(request('combo_id'))
+                            <input type="hidden" name="combo_id" value="{{ request('combo_id') }}">
+                        @endif
 
                         <!-- Thông tin khách hàng -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
                                 <i class="fa fa-user"></i> Thông tin khách hàng
                             </h5>
 
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
+                                <div class="col-md-6 mb-1">
+                                    <label class="form-label" style="font-size: 12px;">
                                         <i class="fa fa-user-circle"></i> Họ và tên <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" 
                                            name="name"
                                            class="form-control"
+                                           style="font-size: 12px; padding: 5px 8px;"
                                            placeholder="Nhập họ và tên"
                                            value="{{ old('name', auth()->user()->name ?? '') }}"
                                            required>
                                 </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
+                                <div class="col-md-6 mb-1">
+                                    <label class="form-label" style="font-size: 12px;">
                                         <i class="fa fa-phone"></i> Số điện thoại <span class="text-danger">*</span>
                                     </label>
                                     <input type="tel" 
                                            name="phone"
                                            class="form-control"
+                                           style="font-size: 12px; padding: 5px 8px;"
                                            placeholder="Nhập số điện thoại"
                                            value="{{ old('phone', auth()->user()->phone ?? '') }}"
                                            required>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">
+                            <div class="mb-1">
+                                <label class="form-label" style="font-size: 12px;">
                                     <i class="fa fa-envelope"></i> Email
                                 </label>
                                 <input type="email" 
                                        name="email"
                                        class="form-control"
+                                       style="font-size: 12px; padding: 5px 8px;"
                                        placeholder="Nhập email (tùy chọn)"
                                        value="{{ old('email', auth()->user()->email ?? '') }}">
                             </div>
                         </div>
 
                         <!-- Chọn dịch vụ -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
                                 <i class="fa fa-scissors"></i> DỊCH VỤ <span class="text-danger">*</span>
                             </h5>
 
-                            <!-- Select box 1: Chọn danh mục dịch vụ -->
-                            <div class="mb-3 custom-select-wrapper" id="category-select-wrapper">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn danh mục dịch vụ</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn danh mục dịch vụ
-                                    </div>
-                                    @foreach($serviceCategories as $category)
-                                        <div class="custom-select-option category-option" 
-                                             data-value="{{ $category->id }}"
-                                             data-category-name="{{ $category->name }}"
-                                             style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                            {{ $category->name }}
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <input type="hidden" id="selected-category-id" value="">
-                            </div>
-
-                            <!-- Select box 2: Hiển thị tên danh mục đã chọn, dropdown hiển thị các dịch vụ -->
-                            <div class="mb-3 custom-select-wrapper" id="service-select-wrapper" style="display: none;">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn dịch vụ</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" id="service-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn dịch vụ
-                                    </div>
-                                </div>
-                                <input type="hidden" id="selected-service-id" value="">
-                            </div>
-
-                            <!-- Select box 3: Hiển thị tên dịch vụ đã chọn, dropdown hiển thị các biến thể -->
-                            <div class="mb-3 custom-select-wrapper" id="variant-select-wrapper" style="display: none;">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn biến thể</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" id="variant-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn biến thể
-                                    </div>
-                                </div>
-                                <input type="hidden" id="selected-variant-id" value="">
-                            </div>
-
-                            <!-- Danh sách các biến thể đã chọn -->
-                            <div class="selected-variants-list" id="selected-variants-list">
-                            </div>
-                        </div>
-
-                        <!-- Chọn combo -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
-                                <i class="fa fa-scissors"></i> COMBO
-                            </h5>
-
-                            <!-- Select box chọn combo -->
-                            <div class="mb-3 custom-select-wrapper" id="combo-select-wrapper">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn combo</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" id="combo-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn combo
-                                    </div>
-                                    @forelse($combos as $combo)
-                                        @php
-                                            // Combo model có price, không có base_price
-                                            $formattedPrice = number_format($combo->price ?? 0, 0, ',', '.');
-                                            // Tính duration từ combo items hoặc dùng mặc định
-                                            $duration = 60; // Default duration
-                                            if ($combo->comboItems && $combo->comboItems->count() > 0) {
-                                                $duration = $combo->comboItems->sum(function($item) {
-                                                    return $item->serviceVariant->duration ?? 60;
-                                                });
-                                            }
-                                            $displayText = $combo->name . ' - ' . $formattedPrice . 'đ (' . $duration . ' phút)';
-                                        @endphp
-                                        <div class="custom-select-option combo-option" 
-                                             data-value="{{ $combo->id }}"
-                                             data-combo-name="{{ $combo->name }}"
-                                             data-combo-price="{{ $combo->price ?? 0 }}"
-                                             data-combo-duration="{{ $duration }}"
-                                             data-description="{{ $combo->description ?? '' }}"
-                                             style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                            {{ $displayText }}
-                                        </div>
-                                    @empty
-                                        <div class="custom-select-option" style="padding: 10px 15px; color: #999; font-style: italic; border-bottom: 1px solid #f0f0f0;">
-                                            Không có combo nào
-                                        </div>
-                                    @endforelse
-                                </div>
-                                <input type="hidden" id="selected-combo-id" value="">
-                            </div>
-
-                            <!-- Danh sách combo đã chọn -->
-                            <div class="selected-combos-list" id="selected-combos-list">
-                                @if(old('combo_id'))
-                                    @php
-                                        $oldCombo = \App\Models\Combo::find(old('combo_id'));
-                                    @endphp
-                                    @if($oldCombo)
-                                        @php
-                                            $formattedPrice = number_format($oldCombo->price ?? 0, 0, ',', '.');
-                                            $duration = 60; // Default duration
-                                            if ($oldCombo->comboItems && $oldCombo->comboItems->count() > 0) {
-                                                $duration = $oldCombo->comboItems->sum(function($item) {
-                                                    return $item->serviceVariant->duration ?? 60;
-                                                });
-                                            }
-                                            $displayText = $oldCombo->name . ' - ' . $formattedPrice . 'đ (' . $duration . ' phút)';
-                                        @endphp
-                                        <div class="mb-2 selected-combo-item" data-combo-id="{{ $oldCombo->id }}">
-                                            <input type="hidden" name="combo_id" value="{{ $oldCombo->id }}">
-                                            <div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">
-                                                <span style="color: #000;"><strong>Combo:</strong> {{ $displayText }}</span>
-                                                <button type="button" class="btn btn-sm btn-link text-danger remove-combo" data-combo-id="{{ $oldCombo->id }}">
-                                                    <i class="fa fa-times"></i>
-                                                </button>
+                            @if(request('service_id'))
+                                @php
+                                    $selectedService = \App\Models\Service::find(request('service_id'));
+                                @endphp
+                                @if($selectedService)
+                                    <div class="selected-service-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div style="flex: 1;">
+                                                <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                    <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $selectedService->name }}
+                                                </div>
+                                                <div style="color: #666; font-size: 11px;">
+                                                    <span style="margin-right: 15px;">
+                                                        <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($selectedService->base_price ?? 0, 0, ',', '.') }}vnđ</strong>
+                                                    </span>
+                                                    <span>
+                                                        <i class="fa fa-clock-o"></i> <strong>{{ $selectedService->base_duration ?? 60 }} phút</strong>
+                                                    </span>
+                                                </div>
                                             </div>
+                                            <a href="{{ route('site.appointment.create') }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; margin-left: 10px;">
+                                                <i class="fa fa-times"></i> Đổi
+                                            </a>
                                         </div>
-                                    @endif
+                                    </div>
                                 @endif
-                            </div>
+                            @elseif(request('service_variants'))
+                                @php
+                                    $selectedVariants = \App\Models\ServiceVariant::whereIn('id', request('service_variants'))->with('service')->get();
+                                @endphp
+                                @if($selectedVariants->count() > 0)
+                                    <div class="selected-variants-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+                                        <div class="d-flex align-items-start justify-content-between">
+                                            <div style="flex: 1;">
+                                                <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 6px;">
+                                                    <i class="fa fa-check-circle" style="color: #28a745;"></i> Biến thể đã chọn:
+                                                </div>
+                                                @foreach($selectedVariants as $variant)
+                                                    <div style="color: #000; font-size: 11px; margin-bottom: 5px; padding: 6px; background: #fff; border-radius: 6px; border-left: 3px solid #000;">
+                                                        <div style="font-weight: 600; margin-bottom: 3px;">
+                                                            {{ $variant->name }}
+                                                            @if($variant->service)
+                                                                <span style="color: #666; font-size: 10px; font-weight: 400;">({{ $variant->service->name }})</span>
+                                                            @endif
+                                                        </div>
+                                                        <div style="color: #666; font-size: 10px;">
+                                                            <span style="margin-right: 15px;">
+                                                                <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($variant->price ?? 0, 0, ',', '.') }}vnđ</strong>
+                                                            </span>
+                                                            <span>
+                                                                <i class="fa fa-clock-o"></i> <strong>{{ $variant->duration ?? 60 }} phút</strong>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            <a href="{{ route('site.appointment.create') }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; margin-left: 10px;">
+                                                <i class="fa fa-times"></i> Đổi
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endif
+                            @elseif(request('combo_id'))
+                                @php
+                                    $selectedCombo = \App\Models\Combo::with('comboItems.serviceVariant')->find(request('combo_id'));
+                                @endphp
+                                @if($selectedCombo)
+                                    @php
+                                        $comboDuration = 60;
+                                        if ($selectedCombo->comboItems && $selectedCombo->comboItems->count() > 0) {
+                                            $comboDuration = $selectedCombo->comboItems->sum(function($item) {
+                                                return $item->serviceVariant->duration ?? 60;
+                                            });
+                                        }
+                                    @endphp
+                                    <div class="selected-combo-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div style="flex: 1;">
+                                                <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                    <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $selectedCombo->name }}
+                                                    <span style="color: #666; font-size: 10px; font-weight: 400; margin-left: 5px;">(COMBO)</span>
+                                                </div>
+                                                <div style="color: #666; font-size: 11px;">
+                                                    <span style="margin-right: 15px;">
+                                                        <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($selectedCombo->price ?? 0, 0, ',', '.') }}vnđ</strong>
+                                                    </span>
+                                                    <span>
+                                                        <i class="fa fa-clock-o"></i> <strong>{{ $comboDuration }} phút</strong>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <a href="{{ route('site.appointment.create') }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; margin-left: 10px;">
+                                                <i class="fa fa-times"></i> Đổi
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endif
+                            @else
+                                <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 6px 10px; font-size: 12px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center;">
+                                    <i class="fa fa-scissors"></i> Xem tất cả dịch vụ hấp dẫn
+                                </a>
+                            @endif
+                            <style>
+                                .btn-primary:hover {
+                                    background: #FFC107 !important;
+                                    color: #000 !important;
+                                    border: 1px solid #FFC107 !important;
+                                }
+                            </style>
                         </div>
+
 
                         <!-- Kỹ thuật viên -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
                                 <i class="fa fa-users"></i> KỸ THUẬT VIÊN
                             </h5>
 
-                            <select name="employee_id" id="employee_id" class="form-select">
+                            <select name="employee_id" id="employee_id" class="form-select" style="font-size: 12px; padding: 5px 8px;">
                                 <option value="">Hãy chọn kỹ thuật viên</option>
                                 @foreach($employees as $employee)
                                     <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -248,52 +235,61 @@
                         </div>
 
                         <!-- Thời gian -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
                                 <i class="fa fa-clock-o"></i> CHỌN NGÀY GIỜ
                             </h5>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        <i class="fa fa-calendar"></i> Ngày đặt lịch <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="date"
-                                           name="appointment_date"
-                                           id="appointment_date"
-                                           class="form-control"
-                                           value="{{ old('appointment_date') }}"
-                                           min="{{ date('Y-m-d') }}"
-                                           required>
-                                </div>
+                            <div class="mb-1">
+                                <label class="form-label" style="font-size: 12px;">
+                                    <i class="fa fa-calendar"></i> Ngày đặt lịch <span class="text-danger">*</span>
+                                </label>
+                                <input type="date"
+                                       name="appointment_date"
+                                       id="appointment_date"
+                                       class="form-control"
+                                       style="font-size: 12px; padding: 5px 8px;"
+                                       value="{{ old('appointment_date') }}"
+                                       min="{{ date('Y-m-d') }}"
+                                       required>
+                            </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        <i class="fa fa-clock-o"></i> Chọn giờ <span class="text-danger">*</span>
-                                    </label>
-                                    <div id="time_slot_grid" class="time-slot-grid" style="display: none;">
-                                        <!-- Time slots will be rendered here -->
+                            <div class="mb-1">
+                                <label class="form-label" style="font-size: 12px;">
+                                    <i class="fa fa-clock-o"></i> Chọn giờ <span class="text-danger">*</span>
+                                </label>
+                                <div class="time-slot-container" style="position: relative; display: none;">
+                                    <button type="button" class="time-slot-nav-btn time-slot-prev" style="position: absolute; left: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa fa-chevron-left"></i>
+                                    </button>
+                                    <div id="time_slot_grid" class="time-slot-grid" style="overflow: hidden;">
+                                        <div class="time-slot-slider" style="transition: transform 0.3s ease;">
+                                            <!-- Time slots will be rendered here -->
+                                        </div>
                                     </div>
-                                    <div id="time_slot_message" class="text-muted" style="padding: 10px; color: #000;">
-                                        Vui lòng chọn kỹ thuật viên và ngày trước
-                                    </div>
-                                    <input type="hidden" name="time_slot" id="time_slot" value="">
-                                    <input type="hidden" name="word_time_id" id="word_time_id" value="">
+                                    <button type="button" class="time-slot-nav-btn time-slot-next" style="position: absolute; right: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa fa-chevron-right"></i>
+                                    </button>
                                 </div>
+                                <div id="time_slot_message" class="text-muted" style="padding: 6px; color: #000; font-size: 11px;">
+                                    Vui lòng chọn kỹ thuật viên và ngày trước
+                                </div>
+                                <input type="hidden" name="time_slot" id="time_slot" value="">
+                                <input type="hidden" name="word_time_id" id="word_time_id" value="">
                             </div>
                         </div>
 
                         <!-- Ghi chú -->
-                        <div class="mb-4">
-                            <label class="form-label">
+                        <div class="mb-2">
+                            <label class="form-label" style="font-size: 12px;">
                                 <i class="fa fa-comment-o"></i> Ghi chú
                             </label>
-                            <textarea name="note" class="form-control" rows="3" placeholder="Nhập ghi chú...">{{ old('note') }}</textarea>
+                            <textarea name="note" class="form-control" style="font-size: 12px; padding: 5px 8px;" rows="2" placeholder="Nhập ghi chú (tùy chọn)">{{ old('note') }}</textarea>
                         </div>
 
                         <!-- Submit -->
-                        <div class="text-center mt-4">
-                            <button type="submit" class="btn btn-primary px-5 py-3 submit-appointment-btn" style="background: #000; border: none; font-size: 16px; font-weight: 600; min-width: 200px; color: #fff; transition: all 0.3s ease;">
+                        <div class="text-center mt-2">
+                            <button type="submit" class="btn btn-primary px-3 py-2 submit-appointment-btn" style="background: #000; border: none; font-size: 13px; font-weight: 600; min-width: 160px; color: #fff; transition: all 0.3s ease;">
                                 <i class="fa fa-calendar-check-o"></i> GỬI ĐẶT LỊCH
                             </button>
                         </div>
@@ -503,51 +499,87 @@
         background-color: #0056b3;
     }
 
+    /* Time Slot Container */
+    .time-slot-container {
+        margin-top: 8px;
+        padding: 0 40px;
+    }
+
     /* Time Slot Grid */
     .time-slot-grid {
+        width: 100%;
+        position: relative;
+    }
+
+    .time-slot-slider {
+        display: flex;
+        gap: 0;
+        width: max-content;
+    }
+
+    .time-slot-page {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(3, auto);
         gap: 10px;
-        margin-top: 10px;
+        width: 100%;
+        flex-shrink: 0;
+        box-sizing: border-box;
+    }
+
+    .time-slot-nav-btn {
+        transition: all 0.3s ease;
+    }
+
+    .time-slot-nav-btn:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+    }
+
+    .time-slot-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
     .time-slot-btn {
-        padding: 10px 15px;
+        padding: 12px 15px;
         border: 1px solid #000;
-        border-radius: 8px;
+        border-radius: 6px;
         background: #fff;
         color: #000;
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         text-align: center;
-        min-width: 80px;
+        min-width: 0;
     }
 
-    .time-slot-btn:hover {
-        background: #f5f5f5;
-        transform: translateY(-2px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .time-slot-btn:hover:not(.unavailable) {
+        background: #f8f8f8;
+        border-color: #333;
     }
 
     .time-slot-btn.selected {
         background: #000;
         color: #fff;
         border-color: #000;
+        font-weight: 600;
     }
 
     .time-slot-btn.unavailable {
-        background: #e0e0e0;
-        color: #9e9e9e;
-        border: none;
+        background: #e8e8e8;
+        color: #b0b0b0;
+        border: 1px solid #e0e0e0;
         cursor: not-allowed;
+        opacity: 0.6;
     }
 
     .time-slot-btn.unavailable:hover {
-        background: #e0e0e0;
+        background: #e8e8e8;
         transform: none;
         box-shadow: none;
+        border-color: #e0e0e0;
     }
 
     @media (max-width: 768px) {
@@ -569,445 +601,66 @@
         const today = new Date().toISOString().split('T')[0];
         $('#appointment_date').attr('min', today);
         
-        // Combo Select Box functionality
-        $('#combo-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const $dropdown = $('#combo-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // Close other dropdowns
-            $('.custom-select-dropdown').not($dropdown).hide();
-            $('.custom-select-input').not($input).removeClass('active');
-            
-            // Toggle current dropdown
-            $dropdown.toggle();
-            $input.toggleClass('active');
-        });
+        // Load employees by service on page load
+        loadEmployeesByService();
         
-        // Handle combo option click
-        $(document).on('click', '#combo-select-wrapper .combo-option', function() {
-            const $option = $(this);
-            const comboId = $option.data('value');
-            const comboName = $option.data('combo-name');
-            const comboPrice = $option.data('combo-price') || 0;
-            const comboDuration = $option.data('combo-duration') || 60;
-            const description = $option.data('description') || '';
+        // Function to load employees by service
+        function loadEmployeesByService() {
+            const serviceId = $('input[name="service_id"]').val();
+            const serviceVariants = [];
+            $('input[name="service_variants[]"]').each(function() {
+                serviceVariants.push($(this).val());
+            });
+            const comboId = $('input[name="combo_id"]').val();
             
-            if (!comboId) {
-                // Reset
-                $('#combo-select-wrapper .custom-select-text').text('Chọn combo');
-                $('#selected-combo-id').val('');
-                $('#selected-combos-list').empty();
-                $('#selected-combo-id-input').remove();
+            // Only load if there's a service selected
+            if (!serviceId && serviceVariants.length === 0 && !comboId) {
                 return;
             }
             
-            // Format price for display (for selected list only)
-            const formattedPrice = parseFloat(comboPrice).toLocaleString('vi-VN');
-            const displayText = comboName + ' - ' + formattedPrice + 'đ (' + comboDuration + ' phút)';
-            
-            // Update combo select box with combo name only
-            $('#combo-select-wrapper .custom-select-text').text(comboName);
-            $('#selected-combo-id').val(comboId);
-            $('#combo-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#combo-select-wrapper .custom-select-dropdown').hide();
-            $('#combo-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Add hidden input for combo_id
-            $('#selected-combo-id-input').remove();
-            $('#appointmentForm').append('<input type="hidden" id="selected-combo-id-input" name="combo_id" value="' + comboId + '">');
-            
-            // Add combo to selected list (same format as service)
-            const $list = $('#selected-combos-list');
-            // Remove any existing combo item
-            $list.find('.selected-combo-item').remove();
-            
-            // Add combo item (same style as service item)
-            const $comboItem = $('<div class="mb-2 selected-combo-item" data-combo-id="' + comboId + '">' +
-                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                '<span style="color: #000;"><strong>Combo:</strong> ' + displayText + '</span>' +
-                '<button type="button" class="btn btn-sm btn-link text-danger remove-combo" data-combo-id="' + comboId + '">' +
-                '<i class="fa fa-times"></i>' +
-                '</button>' +
-                '</div>' +
-                '</div>');
-            $list.append($comboItem);
-        });
-        
-        // Handle remove combo
-        $(document).on('click', '.remove-combo', function() {
-            const $btn = $(this);
-            const comboId = $btn.data('combo-id');
-            $btn.closest('.selected-combo-item').remove();
-            $('#selected-combo-id-input').remove();
-            
-            // Reset combo select
-            $('#combo-select-wrapper .custom-select-text').text('Chọn combo');
-            $('#selected-combo-id').val('');
-        });
-        
-        // Custom Select Box functionality - Category Select
-        $('#category-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const $dropdown = $('#category-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // Close other dropdowns
-            $('.custom-select-dropdown').not($dropdown).hide();
-            $('.custom-select-input').not($input).removeClass('active');
-            
-            // Toggle current dropdown
-            $dropdown.toggle();
-            $input.toggleClass('active');
-        });
-        
-        // Handle category option click
-        $(document).on('click', '#category-select-wrapper .category-option', function() {
-            const $option = $(this);
-            const categoryId = $option.data('value');
-            const categoryName = $option.data('category-name');
-            
-            if (!categoryId) {
-                // Reset
-                $('#category-select-wrapper .custom-select-text').text('Chọn danh mục dịch vụ');
-                $('#selected-category-id').val('');
-                $('#service-select-wrapper').hide();
-                $('#variant-select-wrapper').hide();
-                $('#service-select-wrapper .custom-select-text').text('Chọn dịch vụ');
-                $('#variant-select-wrapper .custom-select-text').text('Chọn biến thể');
-                $('#selected-service-id').val('');
-                $('#selected-variant-id').val('');
-                $('#selected-variants-list').empty();
-                return;
-            }
-            
-            // Update category select box
-            $('#category-select-wrapper .custom-select-text').text(categoryName);
-            $('#selected-category-id').val(categoryId);
-            $('#category-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#category-select-wrapper .custom-select-dropdown').hide();
-            $('#category-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Show service select box with category name
-            $('#service-select-wrapper').show();
-            $('#service-select-wrapper .custom-select-text').text(categoryName);
-            
-            // Reset service and variant selects
-            $('#variant-select-wrapper').hide();
-            $('#service-select-wrapper .custom-select-dropdown').html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn dịch vụ</div>');
-            $('#variant-select-wrapper .custom-select-dropdown').html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn biến thể</div>');
-            $('#selected-service-id').val('');
-            $('#selected-variant-id').val('');
-            $('#selected-variants-list').empty();
-            $('#selected-service-id-input').remove();
-        });
-        
-        // Service Select Box - Click to load services
-        $('#service-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const categoryId = $('#selected-category-id').val();
-            
-            if (!categoryId) {
-                // Silently return - user should select category first
-                return;
-            }
-            
-            const $dropdown = $('#service-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // If dropdown already has services, just toggle
-            if ($dropdown.find('.service-option').length > 0) {
-                $('.custom-select-dropdown').not($dropdown).hide();
-                $('.custom-select-input').not($input).removeClass('active');
-                $dropdown.toggle();
-                $input.toggleClass('active');
-                return;
-            }
-            
-            // Load services via AJAX
             $.ajax({
-                url: '{{ route("site.appointment.services-by-category") }}',
+                url: '{{ route("site.appointment.employees-by-service") }}',
                 method: 'GET',
-                data: { category_id: categoryId },
+                data: {
+                    service_id: serviceId || '',
+                    service_variants: serviceVariants,
+                    combo_id: comboId || ''
+                },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function(response) {
-                    if (response.services) {
-                        $dropdown.html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn dịch vụ</div>');
+                    if (response.success && response.employees) {
+                        const $select = $('#employee_id');
+                        const currentValue = $select.val();
                         
-                        response.services.forEach(function(service) {
-                            // Check if service has variants
-                            const hasVariants = service.variants && service.variants.length > 0;
-                            
-                            // If service has variants, only show name. If no variants, show name + price + duration
-                            let displayText;
-                            if (hasVariants) {
-                                // Service with variants: only show name
-                                displayText = service.name;
-                            } else {
-                                // Service without variants (single service): show name + price + duration
-                                const formattedPrice = parseFloat(service.base_price || 0).toLocaleString('vi-VN');
-                                displayText = service.name + ' - ' + formattedPrice + 'đ (' + (service.base_duration || 60) + ' phút)';
-                            }
-                            
-                            const $option = $('<div class="custom-select-option service-option" data-value="' + service.id + '" data-service-name="' + service.name + '" data-base-price="' + (service.base_price || 0) + '" data-base-duration="' + (service.base_duration || 60) + '" data-has-variants="' + (hasVariants ? '1' : '0') + '" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">' + displayText + '</div>');
-                            $dropdown.append($option);
-                        });
+                        // Clear existing options except the first one
+                        $select.find('option:not(:first)').remove();
                         
-                        // Show dropdown
-                        $('.custom-select-dropdown').not($dropdown).hide();
-                        $('.custom-select-input').not($input).removeClass('active');
-                        $dropdown.show();
-                        $input.addClass('active');
+                        // Add new options
+                        if (response.employees.length > 0) {
+                            response.employees.forEach(function(employee) {
+                                const $option = $('<option></option>')
+                                    .attr('value', employee.id)
+                                    .text(employee.display_name);
+                                
+                                if (currentValue == employee.id) {
+                                    $option.attr('selected', 'selected');
+                                }
+                                
+                                $select.append($option);
+                            });
+                        } else {
+                            // No employees found
+                            $select.append($('<option></option>').text('Không có nhân viên phù hợp'));
+                        }
                     }
                 },
                 error: function(xhr) {
-                    // Silently handle error - services may not be available
-                    console.error('Error loading services:', xhr);
+                    console.error('Error loading employees:', xhr);
                 }
             });
-        });
-        
-        // Handle service option click
-        $(document).on('click', '#service-select-wrapper .service-option', function() {
-            const $option = $(this);
-            const serviceId = $option.data('value');
-            const serviceName = $option.data('service-name');
-            const basePrice = $option.data('base-price') || 0;
-            const baseDuration = $option.data('base-duration') || 60;
-            
-            if (!serviceId) {
-                // Reset
-                const categoryName = $('#category-select-wrapper .custom-select-text').text();
-                $('#service-select-wrapper .custom-select-text').text(categoryName);
-                $('#selected-service-id').val('');
-                $('#variant-select-wrapper').hide();
-                $('#selected-variants-list').empty();
-                $('#selected-service-id-input').remove();
-                return;
-            }
-            
-            // Format price for display (for selected list only)
-            const formattedPrice = parseFloat(basePrice).toLocaleString('vi-VN');
-            const displayText = serviceName + ' - ' + formattedPrice + 'đ (' + baseDuration + ' phút)';
-            
-            // Update service select box with service name only
-            $('#service-select-wrapper .custom-select-text').text(serviceName);
-            $('#selected-service-id').val(serviceId);
-            $('#service-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#service-select-wrapper .custom-select-dropdown').hide();
-            $('#service-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Remove any existing variants first (service takes priority when selected)
-            $('#selected-variants-list').find('.selected-variant-item').remove();
-            $('input[name="service_variants[]"]').remove();
-            
-            // Add hidden input for service_id (always create new to ensure it exists)
-            $('#selected-service-id-input').remove();
-            $('#appointmentForm').append('<input type="hidden" id="selected-service-id-input" name="service_id" value="' + serviceId + '">');
-            
-            // Add service to selected list (dịch vụ đơn)
-            const $list = $('#selected-variants-list');
-            // Remove any existing service item
-            $list.find('.selected-service-item').remove();
-            
-            // Add service item
-            const $serviceItem = $('<div class="mb-2 selected-service-item" data-service-id="' + serviceId + '">' +
-                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                '<span style="color: #000;"><strong>Dịch vụ đơn:</strong> ' + displayText + '</span>' +
-                '<button type="button" class="btn btn-sm btn-link text-danger remove-service" data-service-id="' + serviceId + '">' +
-                '<i class="fa fa-times"></i>' +
-                '</button>' +
-                '</div>' +
-                '</div>');
-            $list.append($serviceItem);
-            
-            // Show variant select box with service name (optional)
-            $('#variant-select-wrapper').show();
-            $('#variant-select-wrapper .custom-select-text').text(serviceName);
-            
-            // Load variants for this service
-            const categoryId = $('#selected-category-id').val();
-            $.ajax({
-                url: '{{ route("site.appointment.services-by-category") }}',
-                method: 'GET',
-                data: { category_id: categoryId },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.services) {
-                        const service = response.services.find(s => s.id == serviceId);
-                        if (service && service.variants && service.variants.length > 0) {
-                            const $variantDropdown = $('#variant-select-wrapper .custom-select-dropdown');
-                            $variantDropdown.html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn biến thể</div>');
-                            
-                            service.variants.forEach(function(variant) {
-                                const formattedPrice = parseFloat(variant.price).toLocaleString('vi-VN');
-                                const $option = $('<div class="custom-select-option variant-option" data-value="' + variant.id + '" data-variant-id="' + variant.id + '" data-price="' + variant.price + '" data-duration="' + variant.duration + '" data-variant-name="' + variant.name + '" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">' + variant.name + ' - ' + formattedPrice + 'đ (' + variant.duration + ' phút)</div>');
-                                $variantDropdown.append($option);
-                            });
-                        } else {
-                            // No variants, hide variant select box but keep service_id
-                            $('#variant-select-wrapper').hide();
-                        }
-                    }
-                }
-            });
-        });
-        
-        // Variant Select Box - Click to show variants
-        $('#variant-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const serviceId = $('#selected-service-id').val();
-            
-            if (!serviceId) {
-                // Silently return - user should select service first
-                return;
-            }
-            
-            const $dropdown = $('#variant-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // Close other dropdowns
-            $('.custom-select-dropdown').not($dropdown).hide();
-            $('.custom-select-input').not($input).removeClass('active');
-            
-            // Toggle current dropdown
-            $dropdown.toggle();
-            $input.toggleClass('active');
-        });
-        
-        // Handle variant option click
-        $(document).on('click', '#variant-select-wrapper .variant-option', function() {
-            const $option = $(this);
-            const variantId = $option.data('variant-id');
-            const variantName = $option.data('variant-name');
-            const price = $option.data('price');
-            const duration = $option.data('duration');
-            
-            if (!variantId) {
-                // Reset
-                const serviceName = $('#service-select-wrapper .custom-select-text').text();
-                $('#variant-select-wrapper .custom-select-text').text(serviceName);
-                $('#selected-variant-id').val('');
-                return;
-            }
-            
-            // Check if variant already selected
-            const $list = $('#selected-variants-list');
-            if ($list.find('.selected-variant-item[data-variant-id="' + variantId + '"]').length > 0) {
-                // Variant already selected - silently return
-                return;
-            }
-            
-            // Update variant select box
-            $('#variant-select-wrapper .custom-select-text').text(variantName);
-            $('#selected-variant-id').val(variantId);
-            $('#variant-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#variant-select-wrapper .custom-select-dropdown').hide();
-            $('#variant-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Remove service item if variant is selected (variants take priority)
-            const serviceId = $('#selected-service-id').val();
-            if (serviceId) {
-                $('#selected-variants-list').find('.selected-service-item[data-service-id="' + serviceId + '"]').remove();
-                $('#selected-service-id-input').remove();
-            }
-            
-            // Add to selected variants list
-            const formattedPrice = parseFloat(price).toLocaleString('vi-VN');
-            const $item = $('<div class="mb-2 selected-variant-item" data-variant-id="' + variantId + '">' +
-                '<input type="hidden" name="service_variants[]" value="' + variantId + '">' +
-                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                '<span style="color: #000;">' + variantName + ' - ' + formattedPrice + 'đ (' + duration + ' phút)</span>' +
-                '<button type="button" class="btn btn-sm btn-link text-danger remove-variant" data-variant-id="' + variantId + '">' +
-                '<i class="fa fa-times"></i>' +
-                '</button>' +
-                '</div>' +
-                '</div>');
-            
-            $list.append($item);
-            
-            // Reset variant select box after adding
-            setTimeout(function() {
-                const serviceName = $('#service-select-wrapper .custom-select-text').text();
-                $('#variant-select-wrapper .custom-select-text').text(serviceName);
-                $('#selected-variant-id').val('');
-                $('#variant-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            }, 100);
-        });
-        
-        // Close dropdown when clicking outside
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.custom-select-wrapper').length) {
-                $('.custom-select-dropdown').hide();
-                $('.custom-select-input').removeClass('active');
-            }
-        });
-        
-        // Handle remove variant
-        $(document).on('click', '.remove-variant', function() {
-            const $btn = $(this);
-            const variantId = $btn.data('variant-id');
-            $btn.closest('.selected-variant-item').remove();
-            
-            // If no variants left, restore service item if service is still selected
-            const remainingVariants = $('input[name="service_variants[]"]').length;
-            if (remainingVariants === 0) {
-                const serviceId = $('#selected-service-id').val();
-                if (serviceId) {
-                    // Get service info from the selected option
-                    const $serviceOption = $('#service-select-wrapper .service-option[data-value="' + serviceId + '"]');
-                    if ($serviceOption.length > 0) {
-                        const serviceName = $serviceOption.data('service-name');
-                        const basePrice = $serviceOption.data('base-price') || 0;
-                        const baseDuration = $serviceOption.data('base-duration') || 60;
-                        const formattedPrice = parseFloat(basePrice).toLocaleString('vi-VN');
-                        const displayText = serviceName + ' - ' + formattedPrice + 'đ (' + baseDuration + ' phút)';
-                        
-                        // Restore service_id input
-                        if ($('#selected-service-id-input').length === 0) {
-                            $('#appointmentForm').append('<input type="hidden" id="selected-service-id-input" name="service_id" value="' + serviceId + '">');
-                        } else {
-                            $('#selected-service-id-input').val(serviceId);
-                        }
-                        
-                        // Restore service item
-                        if ($('#selected-variants-list').find('.selected-service-item[data-service-id="' + serviceId + '"]').length === 0) {
-                            const $serviceItem = $('<div class="mb-2 selected-service-item" data-service-id="' + serviceId + '">' +
-                                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                                '<span style="color: #000;"><strong>Dịch vụ đơn:</strong> ' + displayText + '</span>' +
-                                '<button type="button" class="btn btn-sm btn-link text-danger remove-service" data-service-id="' + serviceId + '">' +
-                                '<i class="fa fa-times"></i>' +
-                                '</button>' +
-                                '</div>' +
-                                '</div>');
-                            $('#selected-variants-list').append($serviceItem);
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Handle remove service
-        $(document).on('click', '.remove-service', function() {
-            const $btn = $(this);
-            const serviceId = $btn.data('service-id');
-            $btn.closest('.selected-service-item').remove();
-            $('#selected-service-id-input').remove();
-            
-            // Reset service select
-            const categoryName = $('#category-select-wrapper .custom-select-text').text();
-            $('#service-select-wrapper .custom-select-text').text(categoryName);
-            $('#selected-service-id').val('');
-            $('#variant-select-wrapper').hide();
-        });
+        }
         
         // Format time from HH:MM to HHhMM
         function formatTimeSlot(time) {
@@ -1024,7 +677,8 @@
             const wordTimeIdInput = $('#word_time_id');
             
             // Reset
-            timeSlotGrid.hide().empty();
+            $('.time-slot-container').hide();
+            $('.time-slot-slider').empty();
             timeSlotMessage.show();
             timeSlotHidden.val('');
             wordTimeIdInput.val('');
@@ -1059,8 +713,21 @@
                             return a.time.localeCompare(b.time);
                         });
                         
-                        // Render grid
+                        const $slider = $('.time-slot-slider');
+                        $slider.empty();
+                        
+                        // Render grid (3 rows x 5 columns = 15 slots per page)
+                        const slotsPerPage = 15;
+                        let currentPage = null;
+                        let slotIndex = 0;
+                        
                         sortedSlots.forEach(function(slot) {
+                            // Create new page if needed
+                            if (slotIndex % slotsPerPage === 0) {
+                                currentPage = $('<div></div>').addClass('time-slot-page');
+                                $slider.append(currentPage);
+                            }
+                            
                             const isAvailable = slot.available !== false;
                             const formattedTime = formatTimeSlot(slot.time);
                             const isSelected = currentlySelectedTime === slot.time;
@@ -1083,23 +750,25 @@
                                 }
                             }
                             
-                            timeSlotGrid.append(btn);
+                            currentPage.append(btn);
+                            slotIndex++;
                         });
                         
                         if (availableCount === 0) {
-                            timeSlotGrid.hide();
+                            $('.time-slot-container').hide();
                             if (employeeId) {
                                 timeSlotMessage.text('Không còn khung giờ trống trong ca làm việc của nhân viên này');
                             } else {
                                 timeSlotMessage.text('Không còn khung giờ trống');
                             }
                         } else {
-                            timeSlotGrid.show();
+                            $('.time-slot-container').show();
                             timeSlotMessage.hide();
+                            updateNavigationButtons();
                         }
                     } else {
                         // No time slots available
-                        timeSlotGrid.hide();
+                        $('.time-slot-container').hide();
                         if (employeeId) {
                             timeSlotMessage.text('Nhân viên này không có ca làm việc vào ngày đã chọn');
                         } else {
@@ -1108,7 +777,7 @@
                     }
                 },
                 error: function(xhr) {
-                    timeSlotGrid.hide();
+                    $('.time-slot-container').hide();
                     let errorMessage = 'Có lỗi xảy ra khi tải khung giờ';
                     
                     if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -1119,6 +788,70 @@
                 }
             });
         }
+
+        // Update navigation buttons state
+        function updateNavigationButtons() {
+            const $slider = $('.time-slot-slider');
+            const $container = $('.time-slot-container');
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            // Parse current transform
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            // Show/hide buttons based on scroll position
+            $('.time-slot-prev').prop('disabled', currentX >= 0);
+            $('.time-slot-next').prop('disabled', Math.abs(currentX) >= sliderWidth - containerWidth - 10);
+        }
+
+        // Navigation button handlers
+        $(document).on('click', '.time-slot-prev', function() {
+            const $slider = $('.time-slot-slider');
+            const containerWidth = $('.time-slot-container').width();
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const newX = Math.min(0, currentX + containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            setTimeout(updateNavigationButtons, 300);
+        });
+
+        $(document).on('click', '.time-slot-next', function() {
+            const $slider = $('.time-slot-slider');
+            const $container = $('.time-slot-container');
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const maxX = -(sliderWidth - containerWidth);
+            const newX = Math.max(maxX, currentX - containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            setTimeout(updateNavigationButtons, 300);
+        });
         
         // Handle time slot button click
         $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
@@ -1155,28 +888,6 @@
             // Prevent multiple submissions
             if (isSubmitting) {
                 return false;
-            }
-            
-            // Prepare service_id input if service item exists
-            const serviceVariants = $('input[name="service_variants[]"]');
-            const serviceIdInput = $('#selected-service-id-input');
-            const hasServiceItem = $('.selected-service-item').length > 0;
-            
-            // If no service_id input but has service item, create it from the item
-            if (serviceVariants.length === 0 && hasServiceItem) {
-                const serviceIdFromItem = $('.selected-service-item').first().data('service-id');
-                if (serviceIdFromItem) {
-                    // Remove old input if exists
-                    $('#selected-service-id-input').remove();
-                    // Create new input
-                    $('#appointmentForm').append('<input type="hidden" id="selected-service-id-input" name="service_id" value="' + serviceIdFromItem + '">');
-                }
-            }
-            
-            // If variants are selected, remove service_id to avoid confusion
-            if (serviceVariants.length > 0) {
-                $('#selected-service-id-input').remove();
-                $('.selected-service-item').remove();
             }
             
             // Validate time slot
