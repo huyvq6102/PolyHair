@@ -9,6 +9,7 @@ use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\AppointmentController;
 use Illuminate\Support\Facades\Route;
+use  App\Http\Controllers\Site\CustomerController;
 
 // Site Routes
 Route::get('/', [HomeController::class, 'index'])->name('site.home');
@@ -54,6 +55,11 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::get('/employees-by-service', [AppointmentController::class, 'getEmployeesByService'])->name('employees-by-service');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
     Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
+});
+
+// Customer Routes
+Route::prefix('customer')->name('site.customers.')->group(function () {
+    Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
 });
 
 // Auth Routes
