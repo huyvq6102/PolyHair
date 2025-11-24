@@ -47,9 +47,11 @@ Route::prefix('cart')->name('site.cart.')->group(function () {
 
 Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::get('/', [AppointmentController::class, 'create'])->name('create');
+    Route::get('/select-services', [AppointmentController::class, 'selectServices'])->name('select-services');
     Route::post('/', [AppointmentController::class, 'store'])->name('store');
     Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
     Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');
+    Route::get('/employees-by-service', [AppointmentController::class, 'getEmployeesByService'])->name('employees-by-service');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
     Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
 });

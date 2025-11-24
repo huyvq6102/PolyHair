@@ -33,6 +33,35 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Show the service selection page.
+     */
+    public function selectServices()
+    {
+        // Lấy tất cả danh mục có dịch vụ, sắp xếp theo bảng chữ cái
+        $categories = \App\Models\ServiceCategory::with(['services' => function($query) {
+                $query->whereNull('deleted_at')
+                    ->where('status', 'Hoạt động')
+                    ->with('serviceVariants')
+                    ->orderBy('name', 'asc'); // Sắp xếp dịch vụ theo bảng chữ cái
+            }])
+            ->whereHas('services', function($query) {
+                $query->whereNull('deleted_at')
+                    ->where('status', 'Hoạt động');
+            })
+            ->orderBy('name', 'asc') // Sắp xếp danh mục theo bảng chữ cái
+            ->get();
+
+        // Lấy tất cả combo, sắp xếp theo bảng chữ cái
+        $combos = \App\Models\Combo::with('comboItems.serviceVariant')
+            ->whereNull('deleted_at')
+            ->where('status', 'Hoạt động')
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return view('site.appointment.select-services', compact('categories', 'combos'));
+    }
+
+    /**
      * Show the appointment booking form page.
      */
     public function create()
@@ -509,6 +538,108 @@ class AppointmentController extends Controller
                                 'duration' => $variant->duration,
                             ];
                         }),
+                    ];
+                }),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get employees by service (chuyên môn).
+     */
+    public function getEmployeesByService(Request $request)
+    {
+        try {
+            $serviceId = $request->input('service_id');
+            $variantIds = $request->input('service_variants', []);
+            $comboId = $request->input('combo_id');
+
+            // Lấy tất cả nhân viên từ database
+            $allEmployees = \App\Models\Employee::with(['user.role', 'services'])
+                ->whereNotNull('user_id')
+                ->orderBy('id', 'desc')
+                ->get();
+            
+            // Lọc nhân viên: loại trừ admin và nhân viên bị vô hiệu hóa
+            $employees = $allEmployees->filter(function($employee) {
+                // Bỏ qua nếu không có user
+                if (!$employee->user) {
+                    return false;
+                }
+                
+                // Loại trừ admin - kiểm tra role_id
+                if ($employee->user->role_id == 1) {
+                    return false;
+                }
+                
+                // Kiểm tra role name nếu có
+                if ($employee->user->role) {
+                    $roleName = strtolower(trim($employee->user->role->name ?? ''));
+                    if (in_array($roleName, ['admin', 'administrator'])) {
+                        return false;
+                    }
+                }
+                
+                // Loại trừ nhân viên bị vô hiệu hóa
+                if ($employee->status === 'Vô hiệu hóa') {
+                    return false;
+                }
+                
+                return true;
+            });
+
+            // Filter by service expertise
+            if ($serviceId) {
+                // Lọc nhân viên có chuyên môn với service này
+                $employees = $employees->filter(function($employee) use ($serviceId) {
+                    return $employee->services->contains('id', $serviceId);
+                });
+            } elseif (!empty($variantIds)) {
+                // Lấy service_id từ các variant
+                $variants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->get();
+                $serviceIds = $variants->pluck('service_id')->unique()->toArray();
+                
+                // Lọc nhân viên có chuyên môn với bất kỳ service nào trong danh sách
+                $employees = $employees->filter(function($employee) use ($serviceIds) {
+                    return $employee->services->whereIn('id', $serviceIds)->count() > 0;
+                });
+            } elseif ($comboId) {
+                // Lấy các service từ combo
+                $combo = \App\Models\Combo::with('comboItems.serviceVariant.service')->find($comboId);
+                if ($combo && $combo->comboItems) {
+                    $serviceIds = [];
+                    foreach ($combo->comboItems as $item) {
+                        if ($item->serviceVariant && $item->serviceVariant->service) {
+                            $serviceIds[] = $item->serviceVariant->service->id;
+                        }
+                    }
+                    $serviceIds = array_unique($serviceIds);
+                    
+                    // Lọc nhân viên có chuyên môn với bất kỳ service nào trong combo
+                    $employees = $employees->filter(function($employee) use ($serviceIds) {
+                        return $employee->services->whereIn('id', $serviceIds)->count() > 0;
+                    });
+                }
+            }
+
+            $employees = $employees->values();
+
+            return response()->json([
+                'success' => true,
+                'employees' => $employees->map(function($employee) {
+                    return [
+                        'id' => $employee->id,
+                        'name' => $employee->user->name,
+                        'position' => $employee->position,
+                        'level' => $employee->level,
+                        'display_name' => $employee->user->name . 
+                            ($employee->position ? ' - ' . $employee->position : '') . 
+                            ($employee->level ? ' (' . $employee->level . ')' : ''),
                     ];
                 }),
             ]);
