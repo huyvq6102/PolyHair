@@ -106,10 +106,17 @@
                             <div class="list-group">
                                 @foreach($user->appointments as $appointment)
                                     @if($appointment->status == 'Đã thanh toán' && $appointment->status != 'Đã hủy')
+
                                     <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
                                         <div>
                                             <h6 class="mb-1">Cắt tóc tạo kiểu</h6>
-                                            <small class="text-muted">{{ $appointment->employee->user->name}} - {{$appointment->start_at}}</small>
+                                          @if (!empty($appointment->employee))
+                                            <small class="text-muted">
+                                                {{ $appointment->employee->user->name }} - {{ $appointment->start_at }}
+                                            </small>
+                                          @else
+                                            <small class="text-muted">{{ $appointment->start_at }}</small>
+                                          @endif
                                         </div>
                                         <span class="badge bg-success">{{ $appointment->status }}</span>
                                     </div>
