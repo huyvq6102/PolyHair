@@ -387,9 +387,10 @@
                 </div>
                 
                 <div style="margin-top: 30px; text-align: right;">
-                    <button type="button" class="checkout-btn" onclick="checkout()" style="width: auto; padding: 15px 40px; display: inline-block;">
+                     <a href="{{ route('site.payments.checkout') }}" class="checkout-btn"
+                    style="width: auto; padding: 15px 40px; display: inline-block;">
                         <i class="fa fa-credit-card"></i> THANH TOÁN
-                    </button>
+                    </a>
                 </div>
             </div>
             
