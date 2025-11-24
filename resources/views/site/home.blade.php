@@ -44,7 +44,7 @@
     <div class="d-flex align-items-start mb-3">
       <span class="bar mr-2"></span>
       <div>
-        <h3 class="title ba-title mb-0">DỊCH VỤ TÓC</h3>
+        <h3 class="title ba-title mb-0">DỊCH VỤ TÓC & COMBO</h3>
         <p class="desc">
           Một số dịch vụ làm tóc bên salon chúng tôi hiện nay mà bạn quan tâm
         </p>
@@ -55,26 +55,45 @@
     <div class="service_right">
 
       <div class="service-grid">
-        @foreach([
-          ['name'=>'NỐI TÓC','price'=>'15.000vnđ','link'=>'#','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/375-x-500-5-7605.png'],
-          ['name'=>'PHỤC HỒI','price'=>'300.000vnđ','link'=>'#','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/375-x-500-3-4269.png'],
-          ['name'=>'CẮT TÓC','price'=>'200.000vnđ','link'=>'#','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/375-x-500-2-2717.png'],
-          
-        ] as $svc)
-        <div class="svc-card">
-          <a class="svc-img" href="{{ $svc['link'] }}"><img src="{{ $svc['img'] }}" alt="{{ $svc['name'] }}"></a>
-          <div class="svc-body">
-            <div class="svc-left">
-              <h4 class="svc-name">{{ $svc['name'] }}</h4>
-              <div class="svc-price">Giá từ: <span>{{ $svc['price'] }}</span></div>
-            </div>
-            <div class="svc-right">
-              <span class="svc-rating">5 ★ Đánh giá</span>
-              <a class="svc-book" href="{{ $svc['link'] }}">Đặt lịch ngay</a>
+        @forelse($services as $service)
+          @php
+            // Lấy giá từ variant đầu tiên hoặc base_price
+            $price = $service->serviceVariants->where('is_active', true)->min('price') 
+                     ?? $service->serviceVariants->min('price') 
+                     ?? $service->base_price 
+                     ?? 0;
+            
+            // Format giá tiền
+            $formattedPrice = number_format($price, 0, ',', '.') . 'vnđ';
+            
+            // Đường dẫn ảnh
+            $imagePath = $service->image 
+                ? asset('legacy/images/products/' . $service->image)
+                : asset('legacy/images/products/default.jpg');
+            
+            // Link đến trang chi tiết
+            $serviceLink = route('site.services.show', $service->id);
+          @endphp
+          <div class="svc-card">
+            <a class="svc-img" href="{{ $serviceLink }}">
+              <img src="{{ $imagePath }}" alt="{{ $service->name }}">
+            </a>
+            <div class="svc-body">
+              <div class="svc-left">
+                <h4 class="svc-name">{{ $service->name }}</h4>
+                <div class="svc-price">Giá từ: <span>{{ $formattedPrice }}</span></div>
+              </div>
+              <div class="svc-right">
+                <span class="svc-rating">5 ★ Đánh giá</span>
+                <a class="svc-book" href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
+              </div>
             </div>
           </div>
-        </div>
-        @endforeach
+        @empty
+          <div class="col-12 text-center py-5">
+            <p>Chưa có dịch vụ nào.</p>
+          </div>
+        @endforelse
       </div>
       <div class="text-center mt-3"><a class="btn-view-all" href="{{ route('site.services.index') }}">Xem tất cả</a></div>
     </div>
@@ -261,7 +280,7 @@
                     </div>
                     <div class="stylist-meta">
                         <h3 class="stylist-name">{{ $sty['name'] }}</h3>
-                        <a href="#" class="stylist-book">Đặt lịch ngay</a>
+                        <a href="{{ route('site.appointment.create') }}" class="stylist-book">Đặt lịch ngay</a>
                     </div>
                 </div>
                 @endforeach
