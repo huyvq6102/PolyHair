@@ -43,12 +43,6 @@
                         <p class="form-control-plaintext">{{ $appointment->start_at ? $appointment->start_at->format('d/m/Y H:i') : 'N/A' }}</p>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Thời gian kết thúc:</label>
-                        <p class="form-control-plaintext">{{ $appointment->end_at ? $appointment->end_at->format('d/m/Y H:i') : 'N/A' }}</p>
-                    </div>
-                </div>
             </div>
 
             <div class="form-group">
@@ -111,10 +105,26 @@
                 <tbody>
                     @forelse($appointment->appointmentDetails as $detail)
                         <tr>
-                            <td>{{ $detail->serviceVariant->service->name ?? 'N/A' }}</td>
-                            <td>{{ $detail->serviceVariant->name ?? 'N/A' }}</td>
+                            <td>
+                                @if($detail->combo_id)
+                                    {{ $detail->combo->name ?? ($detail->notes ?? 'Combo') }}
+                                @elseif($detail->serviceVariant)
+                                    {{ $detail->serviceVariant->service->name ?? 'N/A' }}
+                                @else
+                                    {{ $detail->notes ?? 'Dịch vụ đơn' }}
+                                @endif
+                            </td>
+                            <td>
+                                @if($detail->combo_id)
+                                    <span class="badge badge-secondary">Combo</span>
+                                @elseif($detail->serviceVariant)
+                                    {{ $detail->serviceVariant->name ?? 'N/A' }}
+                                @else
+                                    <span class="badge badge-primary">Dịch vụ đơn</span>
+                                @endif
+                            </td>
                             <td>{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} đ</td>
-                            <td>{{ $detail->duration ?? 'N/A' }}</td>
+                            <td>{{ $detail->duration ?? 0 }}</td>
                             <td>
                                 <span class="badge badge-info">{{ $detail->status ?? 'N/A' }}</span>
                             </td>

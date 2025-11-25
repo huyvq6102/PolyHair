@@ -34,6 +34,9 @@
 @endif
 
 @php
+    // Kiểm tra type từ URL parameter
+    $urlType = request()->get('type', '');
+    
     // Ưu tiên serviceType từ controller, sau đó mới đến session
     if (isset($combo)) {
         $serviceType = 'combo';
@@ -43,14 +46,34 @@
         // Nếu có serviceType từ controller thì dùng, không thì kiểm tra service có variants không
         if (isset($serviceType) && $serviceType == 'variant') {
             // Giữ nguyên variant
-        } elseif ($service->serviceVariants->count() > 0) {
+        } elseif (isset($serviceType) && $serviceType == 'single') {
+            // Giữ nguyên single
+        } elseif ($urlType === 'variant') {
+            // Ưu tiên type từ URL
+            $serviceType = 'variant';
+        } elseif ($service->serviceVariants && $service->serviceVariants->count() > 0) {
             $serviceType = 'variant';
         } else {
             $serviceType = $serviceType ?? 'single';
         }
     } else {
-        $serviceType = session('service_type', 'single');
+        // Nếu có type trong URL, ưu tiên dùng nó
+        if ($urlType) {
+            $serviceType = $urlType;
+        } else {
+            $serviceType = session('service_type', 'single');
+        }
     }
+    
+    // Debug: Log để kiểm tra
+    \Log::info('Service Edit Debug', [
+        'hasService' => isset($service),
+        'hasVariant' => isset($variant),
+        'hasCombo' => isset($combo),
+        'urlType' => $urlType,
+        'serviceType' => $serviceType,
+        'variantCount' => isset($service) && $service->serviceVariants ? $service->serviceVariants->count() : 0
+    ]);
 @endphp
 
 <!-- Service Type Selection -->
@@ -72,7 +95,7 @@
 </div>
 
 <!-- Form for Single Service -->
-@if(isset($service) && $serviceType == 'single')
+@if(isset($service) && ($serviceType ?? '') == 'single' && ($service->serviceVariants->count() ?? 0) == 0)
 <div id="single-form" class="card shadow mb-4">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Sửa dịch vụ đơn</h6>
@@ -162,8 +185,42 @@
 @endif
 
 <!-- Form for Variant Service (Service with variants) -->
-@if(isset($service) && $serviceType == 'variant')
-<div id="variant-service-form" class="card shadow mb-4">
+@php
+    $shouldShowVariantForm = false;
+    
+    // Kiểm tra serviceType từ nhiều nguồn
+    $currentServiceType = $serviceType ?? ($service_type ?? '');
+    
+    // Kiểm tra từ URL parameter (lấy lại từ request)
+    $urlTypeParam = request()->get('type', '');
+    if ($urlTypeParam === 'variant') {
+        $currentServiceType = 'variant';
+    }
+    
+    if (isset($service)) {
+        $variantCount = 0;
+        if ($service->relationLoaded('serviceVariants')) {
+            $variantCount = $service->serviceVariants->count();
+        } elseif (method_exists($service, 'serviceVariants')) {
+            $variantCount = $service->serviceVariants()->count();
+        }
+        // Hiển thị form nếu: type là variant HOẶC có variants
+        $shouldShowVariantForm = ($currentServiceType == 'variant' || $variantCount > 0);
+    }
+    
+    // Debug: Log để kiểm tra
+    \Log::info('Variant Form Debug', [
+        'hasService' => isset($service),
+        'serviceType' => $serviceType ?? 'not set',
+        'service_type' => $service_type ?? 'not set',
+        'urlTypeParam' => $urlTypeParam,
+        'currentServiceType' => $currentServiceType,
+        'variantCount' => $variantCount ?? 0,
+        'shouldShow' => $shouldShowVariantForm
+    ]);
+@endphp
+@if($shouldShowVariantForm && isset($service))
+<div id="variant-service-form" class="card shadow mb-4" style="display: block !important; visibility: visible !important; opacity: 1 !important;">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Sửa dịch vụ biến thể</h6>
     </div>
@@ -394,73 +451,6 @@
 </template>
 @endif
 
-<!-- Form for Variant Service (Single variant edit) -->
-@if(isset($variant))
-<div id="variant-form" class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Sửa biến thể dịch vụ</h6>
-    </div>
-    <div class="card-body">
-        <form action="{{ route('admin.services.update', $variant->id) }}" method="POST" id="variantForm">
-            @csrf
-            @method('PUT')
-            <input type="hidden" name="service_type" value="variant">
-            <div class="form-group">
-                <label for="service_id">Dịch vụ đơn <span class="text-danger">*</span></label>
-                <select name="service_id" id="service_id" class="form-control @error('service_id') is-invalid @enderror" required disabled>
-                    <option value="{{ $variant->service_id }}">{{ $variant->service->name }} ({{ $variant->service->service_code ?? 'N/A' }})</option>
-                </select>
-                <input type="hidden" name="service_id" value="{{ $variant->service_id }}">
-                @error('service_id')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-            <div class="form-row">
-                <div class="form-group col-md-4">
-                    <label for="variant_name">Tên biến thể <span class="text-danger">*</span></label>
-                    <input type="text" name="variant_name" id="variant_name" class="form-control @error('variant_name') is-invalid @enderror" 
-                           value="{{ old('variant_name', $variant->name) }}" required>
-                    @error('variant_name')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-                <div class="form-group col-md-4">
-                    <label for="variant_price">Giá <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" name="variant_price" id="variant_price" class="form-control @error('variant_price') is-invalid @enderror" 
-                           value="{{ old('variant_price', $variant->price) }}" required>
-                    @error('variant_price')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-                <div class="form-group col-md-4">
-                    <label for="variant_duration">Thời lượng (phút) <span class="text-danger">*</span></label>
-                    <input type="number" name="variant_duration" id="variant_duration" class="form-control @error('variant_duration') is-invalid @enderror" 
-                           value="{{ old('variant_duration', $variant->duration) }}" required>
-                    @error('variant_duration')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-            </div>
-            <div class="form-group">
-                <div class="form-check">
-                    <input type="checkbox" name="is_default" id="is_default" class="form-check-input" value="1" {{ old('is_default', $variant->is_default) ? 'checked' : '' }}>
-                    <label class="form-check-label" for="is_default">Mặc định</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" name="is_active" id="is_active" class="form-check-input" value="1" {{ old('is_active', $variant->is_active ?? true) ? 'checked' : '' }}>
-                    <label class="form-check-label" for="is_active">Hoạt động</label>
-                </div>
-            </div>
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Lưu biến thể
-                </button>
-                <a href="{{ route('admin.services.index') }}" class="btn btn-secondary">Hủy</a>
-            </div>
-        </form>
-    </div>
-</div>
-@endif
 
 <!-- Form for Combo Service -->
 @if(isset($combo))
@@ -641,26 +631,94 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('=== DOM CONTENT LOADED ===');
         const serviceTypeSelect = document.getElementById('service_type');
         const singleForm = document.getElementById('single-form');
-        const variantForm = document.getElementById('variant-form');
         const variantServiceForm = document.getElementById('variant-service-form');
         const comboForm = document.getElementById('combo-form');
+        
+        console.log('serviceTypeSelect:', !!serviceTypeSelect);
+        console.log('singleForm:', !!singleForm);
+        console.log('variantServiceForm:', !!variantServiceForm);
+        console.log('comboForm:', !!comboForm);
+        
+        if (variantServiceForm) {
+            console.log('variantServiceForm display:', variantServiceForm.style.display);
+            console.log('variantServiceForm offsetParent:', variantServiceForm.offsetParent !== null);
+            console.log('variantServiceForm computed display:', window.getComputedStyle(variantServiceForm).display);
+            
+            // Đảm bảo form được hiển thị nếu đang ở trang variant
+            var currentType = serviceTypeSelect ? serviceTypeSelect.value : '';
+            if (currentType === 'variant') {
+                console.log('Type là variant, force hiển thị form...');
+                variantServiceForm.style.setProperty('display', 'block', 'important');
+                variantServiceForm.style.setProperty('visibility', 'visible', 'important');
+                variantServiceForm.style.setProperty('opacity', '1', 'important');
+                variantServiceForm.style.setProperty('height', 'auto', 'important');
+            } else if (variantServiceForm.offsetParent !== null) {
+                console.log('Form variant đang hiển thị, đảm bảo nó visible...');
+                variantServiceForm.style.setProperty('display', 'block', 'important');
+                variantServiceForm.style.setProperty('visibility', 'visible', 'important');
+                variantServiceForm.style.setProperty('opacity', '1', 'important');
+            }
+        }
 
         function showForm(type) {
-            if (singleForm) singleForm.style.display = 'none';
-            if (variantForm) variantForm.style.display = 'none';
-            if (variantServiceForm) variantServiceForm.style.display = 'none';
-            if (comboForm) comboForm.style.display = 'none';
+            console.log('showForm được gọi với type:', type);
+            // Chỉ ẩn các form khác, không ẩn form đang cần hiển thị
+            if (type !== 'single' && singleForm) {
+                singleForm.style.display = 'none';
+            }
+            if (type !== 'variant' && variantServiceForm) {
+                console.log('Ẩn variantServiceForm vì type không phải variant');
+                variantServiceForm.style.display = 'none';
+            } else if (type === 'variant' && variantServiceForm) {
+                // Đảm bảo form variant luôn được hiển thị
+                console.log('Đảm bảo form variant được hiển thị');
+                variantServiceForm.style.display = 'block';
+                variantServiceForm.style.visibility = 'visible';
+                variantServiceForm.style.opacity = '1';
+            }
+            if (type !== 'combo' && comboForm) {
+                comboForm.style.display = 'none';
+            }
 
             if (type === 'single' && singleForm) {
                 singleForm.style.display = 'block';
             } else if (type === 'variant') {
+                console.log('Type là variant, kiểm tra variantServiceForm...');
                 if (variantServiceForm) {
+                    console.log('✅ variantServiceForm tồn tại, hiển thị form...');
+                    // Đảm bảo form được hiển thị
                     variantServiceForm.style.display = 'block';
-                    initVariantServiceForm();
-                } else if (variantForm) {
-                variantForm.style.display = 'block';
+                    variantServiceForm.style.visibility = 'visible';
+                    console.log('Form variant đã được hiển thị, kiểm tra container...');
+                    console.log('Form display:', variantServiceForm.style.display);
+                    console.log('Form offsetParent:', variantServiceForm.offsetParent !== null);
+                    
+                    // Đợi một chút để DOM render xong, đặc biệt khi có nhiều dữ liệu
+                    setTimeout(function() {
+                        try {
+                            console.log('Bắt đầu khởi tạo form variant...');
+                            var container = document.getElementById('variantsContainer');
+                            console.log('Container tìm thấy:', !!container);
+                            if (container) {
+                                var variantCount = container.querySelectorAll('.variant-item').length;
+                                console.log('Số biến thể trong container:', variantCount);
+                                if (variantCount > 0) {
+                                    console.log('Có', variantCount, 'biến thể, bắt đầu khởi tạo...');
+                                }
+                            } else {
+                                console.error('❌ Không tìm thấy variantsContainer!');
+                            }
+                            initVariantServiceForm();
+                        } catch (e) {
+                            console.error('❌ Lỗi khi khởi tạo form trong showForm:', e);
+                            console.error('Stack trace:', e.stack);
+                        }
+                    }, 300); // Tăng thời gian chờ khi có nhiều dữ liệu
+                } else {
+                    console.error('❌ variantServiceForm không tồn tại!');
                 }
             } else if (type === 'combo' && comboForm) {
                 comboForm.style.display = 'block';
@@ -669,160 +727,401 @@
 
         if (serviceTypeSelect) {
             serviceTypeSelect.addEventListener('change', function() {
+                console.log('Dropdown thay đổi, giá trị mới:', this.value);
                 showForm(this.value);
             });
 
             // Show form based on current type
             const selectedType = serviceTypeSelect.value;
+            console.log('Service type từ dropdown:', selectedType);
             if (selectedType) {
+                console.log('Gọi showForm với type:', selectedType);
                 showForm(selectedType);
+            } else {
+                // Nếu không có type từ dropdown, kiểm tra xem form variant có đang hiển thị không
+                if (variantServiceForm && variantServiceForm.offsetParent !== null) {
+                    console.log('Form variant đang hiển thị, khởi tạo...');
+                    setTimeout(function() {
+                        try {
+                            initVariantServiceForm();
+                        } catch (e) {
+                            console.error('Lỗi khi khởi tạo form variant (fallback):', e);
+                        }
+                    }, 200);
+                }
             }
+        } else {
+            console.warn('Không tìm thấy serviceTypeSelect');
         }
 
         // Khởi tạo form dịch vụ biến thể
+        var variantFormData = {
+            initialized: false,
+            container: null,
+            variantIndex: 0,
+            attributeIndexes: {},
+            attributeClickHandler: null  // Lưu handler để có thể xóa sau
+        };
+        
         function initVariantServiceForm() {
-            const container = document.getElementById('variantsContainer');
-            if (!container) return;
+            console.log('=== BẮT ĐẦU KHỞI TẠO FORM VARIANT ===');
+            var container = document.getElementById('variantsContainer');
+            if (!container) {
+                console.error('❌ Không tìm thấy variantsContainer');
+                console.log('Đang tìm lại container sau 500ms...');
+                setTimeout(function() {
+                    container = document.getElementById('variantsContainer');
+                    if (container) {
+                        console.log('✅ Tìm thấy container sau delay');
+                        initVariantServiceForm();
+                    } else {
+                        console.error('❌ Vẫn không tìm thấy container');
+                    }
+                }, 500);
+                return;
+            }
 
-            let variantIndex = container.querySelectorAll('.variant-item').length;
-            let attributeIndexes = {};
+            console.log('✅ Tìm thấy variantsContainer');
+
+            // Nếu đã khởi tạo rồi, không khởi tạo lại để tránh gắn event listener nhiều lần
+            if (variantFormData.initialized) {
+                console.log('⚠️ Form đã được khởi tạo, bỏ qua khởi tạo lại...');
+                return;
+            }
+
+            variantFormData.container = container;
+            
+            // Đếm số biến thể hiện có và set variantIndex = số lượng đó (để biến thể tiếp theo sẽ có index đúng)
+            var existingVariants = container.querySelectorAll('.variant-item');
+            variantFormData.variantIndex = existingVariants.length;
+            variantFormData.attributeIndexes = {};
+            
+            console.log('📊 Khởi tạo form variant service, số biến thể hiện có:', existingVariants.length);
+            console.log('📊 variantIndex được set thành:', variantFormData.variantIndex);
 
             // Khởi tạo chỉ số thuộc tính cho các biến thể hiện có
-            container.querySelectorAll('.variant-item').forEach((variantItem, index) {
-                const variantIdx = variantItem.getAttribute('data-variant-index');
-                const attrContainer = variantItem.querySelector('.attributes-container');
-                if (attrContainer) {
-                    const attrCount = attrContainer.querySelectorAll('.attribute-item').length;
-                    attributeIndexes[variantIdx] = attrCount;
-                } else {
-                    attributeIndexes[variantIdx] = 0;
-                }
-            });
+            try {
+                container.querySelectorAll('.variant-item').forEach(function(variantItem, index) {
+                    try {
+                        var variantIdx = variantItem.getAttribute('data-variant-index');
+                        if (variantIdx === null || variantIdx === undefined || variantIdx === '') {
+                            // Nếu không có data-variant-index, set lại dựa trên index trong DOM
+                            variantIdx = index.toString();
+                            variantItem.setAttribute('data-variant-index', variantIdx);
+                        }
+                        var attrContainer = variantItem.querySelector('.attributes-container');
+                        if (attrContainer) {
+                            var attrCount = attrContainer.querySelectorAll('.attribute-item').length;
+                            variantFormData.attributeIndexes[variantIdx] = attrCount;
+                        } else {
+                            variantFormData.attributeIndexes[variantIdx] = 0;
+                        }
+                        console.log('✅ Khởi tạo variant:', variantIdx, 'số thuộc tính:', variantFormData.attributeIndexes[variantIdx]);
+                    } catch (e) {
+                        console.error('Lỗi khi khởi tạo variant tại index', index, ':', e);
+                    }
+                });
+            } catch (e) {
+                console.error('Lỗi khi khởi tạo các variant:', e);
+            }
+            
+            // Đảm bảo variantIndex >= số lượng biến thể hiện có
+            if (variantFormData.variantIndex < existingVariants.length) {
+                variantFormData.variantIndex = existingVariants.length;
+                console.log('Cập nhật variantIndex thành:', variantFormData.variantIndex);
+            }
 
             // Xử lý thêm biến thể
-            function addVariant() {
-                const template = document.getElementById('variantTemplate');
-                if (!template) return;
+            window.addVariant = function() {
+                var template = document.getElementById('variantTemplate');
+                if (!template) {
+                    console.error('Không tìm thấy variantTemplate');
+                    return;
+                }
 
-                const variantHtml = template.innerHTML.replace(/__INDEX__/g, variantIndex);
-                const variantDiv = document.createElement('div');
+                var container = variantFormData.container;
+                var variantIndex = variantFormData.variantIndex;
+                var variantHtml = template.innerHTML.replace(/__INDEX__/g, variantIndex);
+                var variantDiv = document.createElement('div');
                 variantDiv.innerHTML = variantHtml;
-                variantDiv.querySelector('.variant-item').setAttribute('data-variant-index', variantIndex);
-                variantDiv.querySelector('.variant-number').textContent = container.querySelectorAll('.variant-item').length + 1;
+                var variantItem = variantDiv.querySelector('.variant-item');
+                if (variantItem) {
+                    variantItem.setAttribute('data-variant-index', variantIndex);
+                }
+                var variantNumber = variantDiv.querySelector('.variant-number');
+                if (variantNumber) {
+                    variantNumber.textContent = container.querySelectorAll('.variant-item').length + 1;
+                }
                 
                 container.appendChild(variantDiv);
                 
                 // Khởi tạo chỉ số thuộc tính cho biến thể này
-                attributeIndexes[variantIndex] = 0;
+                variantFormData.attributeIndexes[variantIndex] = 0;
                 
                 // Gắn sự kiện cho nút xóa biến thể
-                variantDiv.querySelector('.remove-variant-btn').addEventListener('click', function() {
-                    if (container.querySelectorAll('.variant-item').length > 1) {
-                        variantDiv.remove();
-                        updateVariantNumbers();
-                    } else {
-                        alert('Phải có ít nhất một biến thể!');
-                    }
-                });
-                
-                // Gắn sự kiện cho nút thêm thuộc tính
-                const addAttrBtn = variantDiv.querySelector('.add-attribute-btn');
-                if (addAttrBtn) {
-                    const currentVariantIndex = variantIndex;
-                    addAttrBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        addAttribute(currentVariantIndex);
+                var removeBtn = variantDiv.querySelector('.remove-variant-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        if (container.querySelectorAll('.variant-item').length > 1) {
+                            if (confirm('Bạn có chắc muốn xóa biến thể này không?')) {
+                                variantDiv.remove();
+                                updateVariantNumbers();
+                            }
+                        } else {
+                            alert('Phải có ít nhất một biến thể!');
+                        }
                     });
                 }
                 
-                variantIndex++;
+                variantFormData.variantIndex++;
                 updateVariantNumbers();
-            }
+            };
 
             // Xử lý thêm thuộc tính
-            function addAttribute(variantIndex) {
-                const template = document.getElementById('attributeTemplate');
-                if (!template) return;
+            window.addAttribute = function(variantIndex) {
+                var template = document.getElementById('attributeTemplate');
+                if (!template) {
+                    console.error('Không tìm thấy template attributeTemplate');
+                    return;
+                }
 
-                if (!attributeIndexes[variantIndex]) {
-                    attributeIndexes[variantIndex] = 0;
+                // Đảm bảo có index cho variant này
+                if (variantFormData.attributeIndexes[variantIndex] === undefined || variantFormData.attributeIndexes[variantIndex] === null) {
+                    var variantItem = document.querySelector('.variant-item[data-variant-index="' + variantIndex + '"]');
+                    var attrContainer = variantItem ? variantItem.querySelector('.attributes-container') : null;
+                    variantFormData.attributeIndexes[variantIndex] = attrContainer ? attrContainer.querySelectorAll('.attribute-item').length : 0;
                 }
                 
-                const container = document.querySelector(`.attributes-container[data-variant-index="${variantIndex}"]`);
-                if (!container) return;
+                var container = document.querySelector('.attributes-container[data-variant-index="' + variantIndex + '"]');
+                if (!container) {
+                    console.error('Không tìm thấy container cho variant:', variantIndex);
+                    return;
+                }
 
-                const attrIndex = attributeIndexes[variantIndex];
-                const attrHtml = template.innerHTML
+                var attrIndex = variantFormData.attributeIndexes[variantIndex];
+                var attrHtml = template.innerHTML
                     .replace(/__VARIANT_INDEX__/g, variantIndex)
                     .replace(/__ATTR_INDEX__/g, attrIndex);
                 
-                const attrDiv = document.createElement('div');
+                var attrDiv = document.createElement('div');
                 attrDiv.innerHTML = attrHtml;
-                attrDiv.querySelector('.attribute-item').setAttribute('data-attribute-index', attrIndex);
+                var attrItem = attrDiv.querySelector('.attribute-item');
+                if (attrItem) {
+                    attrItem.setAttribute('data-attribute-index', attrIndex);
+                }
                 
                 container.appendChild(attrDiv);
                 
                 // Gắn sự kiện cho nút xóa thuộc tính
-                attrDiv.querySelector('.remove-attribute-btn').addEventListener('click', function() {
-                    attrDiv.remove();
-                });
+                var removeBtn = attrDiv.querySelector('.remove-attribute-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        if (confirm('Bạn có chắc muốn xóa thuộc tính này không?')) {
+                            attrDiv.remove();
+                        }
+                    });
+                }
                 
-                attributeIndexes[variantIndex]++;
-            }
+                variantFormData.attributeIndexes[variantIndex]++;
+            };
 
             // Cập nhật số thứ tự biến thể
-            function updateVariantNumbers() {
-                const variants = container.querySelectorAll('.variant-item');
-                variants.forEach((variant, index) => {
-                    variant.querySelector('.variant-number').textContent = index + 1;
+            window.updateVariantNumbers = function() {
+                var container = variantFormData.container;
+                if (!container) return;
+                var variants = container.querySelectorAll('.variant-item');
+                variants.forEach(function(variant, index) {
+                    var numberEl = variant.querySelector('.variant-number');
+                    if (numberEl) {
+                        numberEl.textContent = index + 1;
+                    }
                 });
-            }
+            };
 
-            // Gắn sự kiện cho nút thêm biến thể
-            const addVariantBtn = document.getElementById('addVariantBtn');
+            // Gắn sự kiện cho nút thêm biến thể (chỉ gắn một lần)
+            var addVariantBtn = document.getElementById('addVariantBtn');
             if (addVariantBtn) {
-                addVariantBtn.addEventListener('click', addVariant);
+                // Xóa event listener cũ nếu có
+                var newAddVariantBtn = addVariantBtn.cloneNode(true);
+                addVariantBtn.parentNode.replaceChild(newAddVariantBtn, addVariantBtn);
+                addVariantBtn = newAddVariantBtn;
+                
+                addVariantBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Click thêm biến thể');
+                    if (window.addVariant) {
+                        window.addVariant();
+                    }
+                });
+            } else {
+                console.error('Không tìm thấy nút addVariantBtn');
             }
 
             // Gắn sự kiện cho các nút xóa biến thể hiện có
-            container.querySelectorAll('.remove-variant-btn').forEach(btn => {
+            container.querySelectorAll('.remove-variant-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
-                    const variantItem = this.closest('.variant-item');
-                    if (container.querySelectorAll('.variant-item').length > 1) {
-                        variantItem.remove();
-                        updateVariantNumbers();
+                    var variantItem = this.closest('.variant-item');
+                    var container = variantFormData.container;
+                    if (container && container.querySelectorAll('.variant-item').length > 1) {
+                        if (confirm('Bạn có chắc muốn xóa biến thể này không?')) {
+                            variantItem.remove();
+                            if (window.updateVariantNumbers) {
+                                window.updateVariantNumbers();
+                            }
+                        }
                     } else {
                         alert('Phải có ít nhất một biến thể!');
                     }
                 });
             });
 
-            // Gắn sự kiện cho các nút thêm thuộc tính hiện có
-            container.querySelectorAll('.add-attribute-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const variantIndex = this.getAttribute('data-variant-index');
-                    if (attributeIndexes[variantIndex] === undefined) {
-                        const attrContainer = this.closest('.variant-item').querySelector('.attributes-container');
-                        attributeIndexes[variantIndex] = attrContainer ? attrContainer.querySelectorAll('.attribute-item').length : 0;
+            // Sử dụng event delegation để gắn sự kiện cho tất cả nút thêm thuộc tính
+            // Chỉ gắn một lần bằng cách kiểm tra flag
+            if (!variantFormData.attributeClickHandler) {
+                variantFormData.attributeClickHandler = function(e) {
+                    var target = e.target;
+                    // Kiểm tra nếu click vào nút hoặc icon bên trong nút
+                    var btn = target.closest('.add-attribute-btn');
+                    if (!btn && target.classList.contains('add-attribute-btn')) {
+                        btn = target;
                     }
-                    addAttribute(variantIndex);
-                });
-            });
+                    
+                    if (btn) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var variantIdx = btn.getAttribute('data-variant-index');
+                        console.log('Click thêm thuộc tính cho variant:', variantIdx);
+                        
+                        if (!variantIdx) {
+                            console.error('Không tìm thấy variant-index');
+                            return;
+                        }
+                        
+                        // Đảm bảo có index cho variant này
+                        if (variantFormData.attributeIndexes[variantIdx] === undefined || variantFormData.attributeIndexes[variantIdx] === null) {
+                            var variantItem = btn.closest('.variant-item');
+                            var attrContainer = variantItem ? variantItem.querySelector('.attributes-container') : null;
+                            variantFormData.attributeIndexes[variantIdx] = attrContainer ? attrContainer.querySelectorAll('.attribute-item').length : 0;
+                        }
+                        
+                        if (window.addAttribute) {
+                            window.addAttribute(variantIdx);
+                        } else {
+                            console.error('Hàm addAttribute không tồn tại');
+                        }
+                    }
+                };
+                container.addEventListener('click', variantFormData.attributeClickHandler);
+            }
 
-            // Gắn sự kiện cho các nút xóa thuộc tính hiện có
-            container.querySelectorAll('.remove-attribute-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('.attribute-item').remove();
+            // Sử dụng event delegation cho nút xóa thuộc tính (áp dụng cho cả thuộc tính được thêm động)
+            if (!variantFormData.removeAttributeClickHandler) {
+                variantFormData.removeAttributeClickHandler = function(e) {
+                    var target = e.target;
+                    // Kiểm tra nếu click vào nút xóa hoặc icon bên trong nút
+                    var btn = target.closest('.remove-attribute-btn');
+                    if (!btn && target.classList.contains('remove-attribute-btn')) {
+                        btn = target;
+                    }
+                    
+                    if (btn) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (confirm('Bạn có chắc muốn xóa thuộc tính này không?')) {
+                            var attrItem = btn.closest('.attribute-item');
+                            if (attrItem) {
+                                attrItem.remove();
+                            }
+                        }
+                    }
+                };
+                container.addEventListener('click', variantFormData.removeAttributeClickHandler);
+            }
+            
+            // Gắn sự kiện cho các nút xóa thuộc tính hiện có (nếu chưa dùng event delegation)
+            try {
+                container.querySelectorAll('.remove-attribute-btn').forEach(function(btn) {
+                    // Kiểm tra xem đã có event listener chưa
+                    if (!btn.hasAttribute('data-listener-attached')) {
+                        btn.setAttribute('data-listener-attached', 'true');
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (confirm('Bạn có chắc muốn xóa thuộc tính này không?')) {
+                                var attrItem = this.closest('.attribute-item');
+                                if (attrItem) {
+                                    attrItem.remove();
+                                }
+                            }
+                        });
+                    }
                 });
-            });
+            } catch (e) {
+                console.error('Lỗi khi gắn sự kiện cho nút xóa thuộc tính:', e);
+            }
 
+            // Đánh dấu đã khởi tạo
+            variantFormData.initialized = true;
+            console.log('Form variant service đã được khởi tạo thành công!');
         }
 
-        // Khởi tạo form nếu đã có sẵn
-        if (variantServiceForm && variantServiceForm.style.display !== 'none') {
-            initVariantServiceForm();
+        // Khởi tạo form nếu đã có sẵn (khi load trang với type=variant)
+        if (variantServiceForm) {
+            // Kiểm tra nếu form đang hiển thị
+            var isVisible = variantServiceForm.style.display !== 'none' || !variantServiceForm.style.display || variantServiceForm.offsetParent !== null;
+            console.log('Kiểm tra form variant:', {
+                exists: !!variantServiceForm,
+                isVisible: isVisible,
+                display: variantServiceForm.style.display
+            });
+            
+            if (isVisible) {
+                // Đợi một chút để DOM sẵn sàng
+                setTimeout(function() {
+                    try {
+                        console.log('Đang khởi tạo form variant...');
+                        initVariantServiceForm();
+                    } catch (e) {
+                        console.error('Lỗi khi khởi tạo form variant:', e);
+                        console.error(e.stack);
+                    }
+                }, 200);
+            }
         }
+        
+        // Đảm bảo khởi tạo khi form variant được chọn từ dropdown
+        if (serviceTypeSelect) {
+            var currentType = serviceTypeSelect.value;
+            console.log('Service type hiện tại:', currentType);
+            if (currentType === 'variant' && variantServiceForm) {
+                setTimeout(function() {
+                    try {
+                        console.log('Khởi tạo form variant từ dropdown...');
+                        initVariantServiceForm();
+                    } catch (e) {
+                        console.error('Lỗi khi khởi tạo form variant từ dropdown:', e);
+                        console.error(e.stack);
+                    }
+                }, 400);
+            }
+        }
+        
+        // Fallback: Thử khởi tạo lại sau 1 giây nếu chưa được khởi tạo
+        setTimeout(function() {
+            if (variantServiceForm && variantServiceForm.offsetParent !== null) {
+                var container = document.getElementById('variantsContainer');
+                if (container && !variantFormData.initialized) {
+                    console.log('Fallback: Khởi tạo form variant...');
+                    try {
+                        initVariantServiceForm();
+                    } catch (e) {
+                        console.error('Lỗi khi khởi tạo form variant (fallback):', e);
+                        console.error(e.stack);
+                    }
+                }
+            }
+        }, 1000);
 
         // Xử lý chọn dịch vụ biến thể trong form combo
         document.querySelectorAll('.variant-service-checkbox').forEach(checkbox => {
