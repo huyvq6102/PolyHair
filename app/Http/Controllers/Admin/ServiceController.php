@@ -242,6 +242,19 @@ class ServiceController extends Controller
      */
     protected function storeCombo(Request $request)
     {
+        // Lọc bỏ các combo items trống trước khi validate
+        $comboItems = $request->input('combo_items', []);
+        $filteredComboItems = [];
+        foreach ($comboItems as $key => $item) {
+            // Chỉ giữ lại item có service_id
+            if (!empty($item['service_id'])) {
+                $filteredComboItems[$key] = $item;
+            }
+        }
+        
+        // Merge lại vào request để validate
+        $request->merge(['combo_items' => $filteredComboItems]);
+        
         $request->validate([
             'combo_name' => 'required|string|max:255',
             'category_id' => 'required|exists:service_categories,id',
@@ -324,7 +337,10 @@ class ServiceController extends Controller
                 $singleServices = Service::whereNull('deleted_at')
                     ->whereDoesntHave('serviceVariants')
                     ->get();
-                return view('admin.services.edit', compact('variant', 'categories', 'singleServices'))->with('service_type', 'variant');
+                // Truyền cả service_type và serviceType để đảm bảo tương thích
+                return view('admin.services.edit', compact('variant', 'categories', 'singleServices'))
+                    ->with('service_type', 'variant')
+                    ->with('serviceType', 'variant');
             } else {
                 // Đây là edit service có variants
                 $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
@@ -333,7 +349,9 @@ class ServiceController extends Controller
                     ->whereDoesntHave('serviceVariants')
                     ->get();
                 $serviceType = 'variant';
-                return view('admin.services.edit', compact('service', 'categories', 'singleServices', 'serviceType'));
+                // Đảm bảo cả service_type và serviceType đều được truyền
+                return view('admin.services.edit', compact('service', 'categories', 'singleServices', 'serviceType'))
+                    ->with('service_type', 'variant');
             }
         }
 
@@ -576,6 +594,19 @@ class ServiceController extends Controller
     protected function updateCombo(Request $request, $id)
     {
         $combo = Combo::findOrFail($id);
+
+        // Lọc bỏ các combo items trống trước khi validate
+        $comboItems = $request->input('combo_items', []);
+        $filteredComboItems = [];
+        foreach ($comboItems as $key => $item) {
+            // Chỉ giữ lại item có service_id
+            if (!empty($item['service_id'])) {
+                $filteredComboItems[$key] = $item;
+            }
+        }
+        
+        // Merge lại vào request để validate
+        $request->merge(['combo_items' => $filteredComboItems]);
 
         $request->validate([
             'combo_name' => 'required|string|max:255',

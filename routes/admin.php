@@ -31,7 +31,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('services', ServiceController::class);
     
     Route::resource('service-categories', ServiceCategoryController::class);
+    
+    // Appointment routes with additional actions
+    Route::get('appointments/cancelled', [AppointmentController::class, 'cancelled'])->name('appointments.cancelled');
+    Route::get('appointments/employee/{employeeId}/services', [AppointmentController::class, 'getServicesByEmployee'])->name('appointments.employee-services');
+    Route::post('appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
+    Route::post('appointments/{id}/restore', [AppointmentController::class, 'restore'])->name('appointments.restore');
+    Route::delete('appointments/{id}/force-delete', [AppointmentController::class, 'forceDelete'])->name('appointments.force-delete');
     Route::resource('appointments', AppointmentController::class);
+    
     Route::resource('orders', OrderController::class);
     Route::resource('users', UserController::class);
     Route::resource('employees', EmployeeController::class);
