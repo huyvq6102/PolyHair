@@ -51,7 +51,7 @@
                                     <p>{{ $slider['description'] ?? 'Dịch vụ chăm sóc tóc và làm đẹp hàng đầu' }}</p>
                                     <div class="book_room">
                                         <div class="book_btn d-lg-block">
-                                            <a class="popup-with-form" href="#test-form">Đặt lịch ngay</a>
+                                            <a href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
                                         </div>
                                     </div>
                                 </div>
@@ -63,7 +63,7 @@
                                         <p class="text-white">{{ $slider['description'] ?? 'Dịch vụ chăm sóc tóc và làm đẹp hàng đầu' }}</p>
                                         <div class="book_room">
                                             <div class="book_btn d-lg-block">
-                                                <a class="popup-with-form" href="#test-form">Đặt lịch ngay</a>
+                                                <a href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
                                             </div>
                                         </div>
                                     </div>

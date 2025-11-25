@@ -9,7 +9,7 @@
                             Tham gia với chúng tôi
                         </h3>
                         <p class="footer_text doanar">
-                            <a class="popup-with-form" href="#test-form">Đặt lịch hẹn</a>
+                            <a href="{{ route('site.appointment.create') }}">Đặt lịch hẹn</a>
                             <br />
                             <a href="#">+10 378 478 8768</a>
                         </p>

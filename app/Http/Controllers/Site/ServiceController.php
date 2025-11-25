@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Models\Service;
 use App\Services\ServiceService;
 use App\Services\TypeService;
 use Illuminate\Http\Request;
@@ -28,9 +29,14 @@ class ServiceController extends Controller
 
         if ($typeId) {
             // For backward compatibility, map type to category
-            $services = $this->serviceService->getByCategory($typeId);
+            $services = Service::with(['category', 'serviceVariants', 'ownedCombos'])
+                ->where('category_id', $typeId)
+                ->orderBy('id', 'desc')
+                ->paginate(6);
         } else {
-            $services = $this->serviceService->getAll();
+            $services = Service::with(['category', 'serviceVariants', 'ownedCombos'])
+                ->orderBy('id', 'desc')
+                ->paginate(6);
         }
 
         return view('site.service-list', compact('services', 'types', 'typeId'));

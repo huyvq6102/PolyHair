@@ -3,18 +3,17 @@
 @section('title', 'Đặt lịch ngay')
 
 @section('content')
-<div class="appointment-page" style="padding: 100px 0 50px; background: #f8f9fa; min-height: 100vh;">
+<div class="appointment-page" style="padding: 30px 0 10px; background: #f8f9fa; min-height: 100vh;">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-lg-10 col-xl-8">
-                <div class="appointment-form-container" style="background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); padding: 40px; margin-bottom: 30px;">
+            <div class="col-lg-6 col-xl-5">
+                <div class="appointment-form-container" style="background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 15px; margin-bottom: 10px; margin-top: 120px;">
                     
                     <!-- Header -->
-                    <div class="text-center mb-5" style="margin-top: 30px;">
-                        <h2 class="fw-bold mb-2" style="color: #000; font-size: 32px;">
+                    <div class="text-center mb-2" style="margin-top: 5px;">
+                        <h2 class="fw-bold mb-1" style="color: #000; font-size: 18px;">
                             <i class="fa fa-calendar-check-o"></i> ĐẶT LỊCH NGAY
                         </h2>
-                        <p class="text-muted" style="font-size: 16px; color: #000;">Hãy liên hệ ngay với chúng tôi để được tư vấn sớm nhất về các mẫu tóc hot nhất hiện nay!</p>
                     </div>
 
                     @if(session('success'))
@@ -24,218 +23,241 @@
                         </div>
                     @endif
 
-                    @if($errors->any())
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <ul class="mb-0">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    @endif
-
-                    <form action="{{ route('site.appointment.store') }}" method="POST" id="appointmentForm">
+                    <form action="{{ route('site.appointment.store') }}" method="POST" id="appointmentForm" novalidate>
                         @csrf
+                        
+                        @if(request('service_id'))
+                            @php
+                                $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
+                            @endphp
+                            @foreach($serviceIds as $serviceId)
+                                @if(!request('remove_service_id') || request('remove_service_id') != $serviceId)
+                                    <input type="hidden" name="service_id[]" value="{{ $serviceId }}">
+                                @endif
+                            @endforeach
+                        @endif
+
+                        @if(request('service_variants'))
+                            @php
+                                $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
+                            @endphp
+                            @foreach($variantIds as $variantId)
+                                @if(!request('remove_variant_id') || request('remove_variant_id') != $variantId)
+                                    <input type="hidden" name="service_variants[]" value="{{ $variantId }}">
+                                @endif
+                            @endforeach
+                        @endif
+
+                        @if(request('combo_id'))
+                            @php
+                                $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
+                            @endphp
+                            @foreach($comboIds as $comboId)
+                                @if(!request('remove_combo_id') || request('remove_combo_id') != $comboId)
+                                    <input type="hidden" name="combo_id[]" value="{{ $comboId }}">
+                                @endif
+                            @endforeach
+                        @endif
 
                         <!-- Thông tin khách hàng -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
                                 <i class="fa fa-user"></i> Thông tin khách hàng
                             </h5>
 
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
+                                <div class="col-md-6 mb-1">
+                                    <label class="form-label" style="font-size: 12px;">
                                         <i class="fa fa-user-circle"></i> Họ và tên <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" 
                                            name="name"
+                                           id="name"
                                            class="form-control"
+                                           style="font-size: 12px; padding: 5px 8px;"
                                            placeholder="Nhập họ và tên"
-                                           value="{{ old('name', auth()->user()->name ?? '') }}"
-                                           required>
+                                           value="{{ old('name', auth()->user()->name ?? '') }}">
+                                    <div class="field-error" id="name-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
+                                        <i class="fa fa-exclamation-circle"></i> <span></span>
+                                    </div>
                                 </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
+                                <div class="col-md-6 mb-1">
+                                    <label class="form-label" style="font-size: 12px;">
                                         <i class="fa fa-phone"></i> Số điện thoại <span class="text-danger">*</span>
                                     </label>
                                     <input type="tel" 
                                            name="phone"
+                                           id="phone"
                                            class="form-control"
+                                           style="font-size: 12px; padding: 5px 8px;"
                                            placeholder="Nhập số điện thoại"
-                                           value="{{ old('phone', auth()->user()->phone ?? '') }}"
-                                           required>
+                                           value="{{ old('phone', auth()->user()->phone ?? '') }}">
+                                    <div class="field-error" id="phone-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
+                                        <i class="fa fa-exclamation-circle"></i> <span></span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">
+                            <div class="mb-1">
+                                <label class="form-label" style="font-size: 12px;">
                                     <i class="fa fa-envelope"></i> Email
                                 </label>
                                 <input type="email" 
                                        name="email"
                                        class="form-control"
+                                       style="font-size: 12px; padding: 5px 8px;"
                                        placeholder="Nhập email (tùy chọn)"
                                        value="{{ old('email', auth()->user()->email ?? '') }}">
                             </div>
                         </div>
 
                         <!-- Chọn dịch vụ -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
                                 <i class="fa fa-scissors"></i> DỊCH VỤ <span class="text-danger">*</span>
                             </h5>
 
-                            <!-- Select box 1: Chọn danh mục dịch vụ -->
-                            <div class="mb-3 custom-select-wrapper" id="category-select-wrapper">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn danh mục dịch vụ</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn danh mục dịch vụ
-                                    </div>
-                                    @foreach($serviceCategories as $category)
-                                        <div class="custom-select-option category-option" 
-                                             data-value="{{ $category->id }}"
-                                             data-category-name="{{ $category->name }}"
-                                             style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                            {{ $category->name }}
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <input type="hidden" id="selected-category-id" value="">
-                            </div>
-
-                            <!-- Select box 2: Hiển thị tên danh mục đã chọn, dropdown hiển thị các dịch vụ -->
-                            <div class="mb-3 custom-select-wrapper" id="service-select-wrapper" style="display: none;">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn dịch vụ</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" id="service-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn dịch vụ
-                                    </div>
-                                </div>
-                                <input type="hidden" id="selected-service-id" value="">
-                            </div>
-
-                            <!-- Select box 3: Hiển thị tên dịch vụ đã chọn, dropdown hiển thị các biến thể -->
-                            <div class="mb-3 custom-select-wrapper" id="variant-select-wrapper" style="display: none;">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn biến thể</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" id="variant-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn biến thể
-                                    </div>
-                                </div>
-                                <input type="hidden" id="selected-variant-id" value="">
-                            </div>
-
-                            <!-- Danh sách các biến thể đã chọn -->
-                            <div class="selected-variants-list" id="selected-variants-list">
-                            </div>
-                        </div>
-
-                        <!-- Chọn combo -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
-                                <i class="fa fa-scissors"></i> COMBO
-                            </h5>
-
-                            <!-- Select box chọn combo -->
-                            <div class="mb-3 custom-select-wrapper" id="combo-select-wrapper">
-                                <div class="custom-select-input">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="custom-select-text">Chọn combo</span>
-                                        <i class="fa fa-chevron-down" style="font-size: 12px;"></i>
-                                    </div>
-                                </div>
-                                <div class="custom-select-dropdown" id="combo-dropdown" style="display: none; position: absolute; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; max-height: 300px; overflow-y: auto; width: 100%; margin-top: 2px;">
-                                    <div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                        Chọn combo
-                                    </div>
-                                    @forelse($combos as $combo)
-                                        @php
-                                            // Combo model có price, không có base_price
-                                            $formattedPrice = number_format($combo->price ?? 0, 0, ',', '.');
-                                            // Tính duration từ combo items hoặc dùng mặc định
-                                            $duration = 60; // Default duration
-                                            if ($combo->comboItems && $combo->comboItems->count() > 0) {
-                                                $duration = $combo->comboItems->sum(function($item) {
-                                                    return $item->serviceVariant->duration ?? 60;
-                                                });
-                                            }
-                                            $displayText = $combo->name . ' - ' . $formattedPrice . 'đ (' . $duration . ' phút)';
-                                        @endphp
-                                        <div class="custom-select-option combo-option" 
-                                             data-value="{{ $combo->id }}"
-                                             data-combo-name="{{ $combo->name }}"
-                                             data-combo-price="{{ $combo->price ?? 0 }}"
-                                             data-combo-duration="{{ $duration }}"
-                                             data-description="{{ $combo->description ?? '' }}"
-                                             style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">
-                                            {{ $displayText }}
-                                        </div>
-                                    @empty
-                                        <div class="custom-select-option" style="padding: 10px 15px; color: #999; font-style: italic; border-bottom: 1px solid #f0f0f0;">
-                                            Không có combo nào
-                                        </div>
-                                    @endforelse
-                                </div>
-                                <input type="hidden" id="selected-combo-id" value="">
-                            </div>
-
-                            <!-- Danh sách combo đã chọn -->
-                            <div class="selected-combos-list" id="selected-combos-list">
-                                @if(old('combo_id'))
-                                    @php
-                                        $oldCombo = \App\Models\Combo::find(old('combo_id'));
-                                    @endphp
-                                    @if($oldCombo)
-                                        @php
-                                            $formattedPrice = number_format($oldCombo->price ?? 0, 0, ',', '.');
-                                            $duration = 60; // Default duration
-                                            if ($oldCombo->comboItems && $oldCombo->comboItems->count() > 0) {
-                                                $duration = $oldCombo->comboItems->sum(function($item) {
-                                                    return $item->serviceVariant->duration ?? 60;
-                                                });
-                                            }
-                                            $displayText = $oldCombo->name . ' - ' . $formattedPrice . 'đ (' . $duration . ' phút)';
-                                        @endphp
-                                        <div class="mb-2 selected-combo-item" data-combo-id="{{ $oldCombo->id }}">
-                                            <input type="hidden" name="combo_id" value="{{ $oldCombo->id }}">
-                                            <div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">
-                                                <span style="color: #000;"><strong>Combo:</strong> {{ $displayText }}</span>
-                                                <button type="button" class="btn btn-sm btn-link text-danger remove-combo" data-combo-id="{{ $oldCombo->id }}">
-                                                    <i class="fa fa-times"></i>
-                                                </button>
+                            @php
+                                $hasAnyService = request('service_id') || request('service_variants') || request('combo_id');
+                            @endphp
+                            
+                            @if(request('service_id'))
+                                @php
+                                    $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
+                                    $selectedServices = \App\Models\Service::whereIn('id', $serviceIds)->get();
+                                @endphp
+                                @if($selectedServices->count() > 0)
+                                    @foreach($selectedServices as $selectedService)
+                                        <div class="selected-service-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div style="flex: 1;">
+                                                    <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                        <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $selectedService->name }}
+                                                    </div>
+                                                    <div style="color: #666; font-size: 11px;">
+                                                        <span style="margin-right: 15px;">
+                                                            <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($selectedService->base_price ?? 0, 0, ',', '.') }}vnđ</strong>
+                                                        </span>
+                                                        <span>
+                                                            <i class="fa fa-clock-o"></i> <strong>{{ $selectedService->base_duration ?? 60 }} phút</strong>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_service_id' => $selectedService->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 4px 8px; font-size: 11px;">
+                                                    <i class="fa fa-times"></i> Xóa
+                                                </a>
                                             </div>
                                         </div>
-                                    @endif
+                                    @endforeach
                                 @endif
+                            @endif
+                            
+                            @if(request('service_variants'))
+                                @php
+                                    $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
+                                    $selectedVariants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->with('service')->get();
+                                @endphp
+                                @if($selectedVariants->count() > 0)
+                                    @foreach($selectedVariants as $variant)
+                                        <div class="selected-variant-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div style="flex: 1;">
+                                                    <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                        <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $variant->name }}
+                                                        @if($variant->service)
+                                                            <span style="color: #666; font-size: 10px; font-weight: 400;">({{ $variant->service->name }})</span>
+                                                        @endif
+                                                    </div>
+                                                    <div style="color: #666; font-size: 11px;">
+                                                        <span style="margin-right: 15px;">
+                                                            <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($variant->price ?? 0, 0, ',', '.') }}vnđ</strong>
+                                                        </span>
+                                                        <span>
+                                                            <i class="fa fa-clock-o"></i> <strong>{{ $variant->duration ?? 60 }} phút</strong>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_variant_id' => $variant->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 4px 8px; font-size: 11px;">
+                                                    <i class="fa fa-times"></i> Xóa
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            @endif
+                            
+                            @if(request('combo_id'))
+                                @php
+                                    $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
+                                    $selectedCombos = \App\Models\Combo::whereIn('id', $comboIds)->with('comboItems.serviceVariant')->get();
+                                @endphp
+                                @if($selectedCombos->count() > 0)
+                                    @foreach($selectedCombos as $selectedCombo)
+                                        @php
+                                            $comboDuration = 60;
+                                            if ($selectedCombo->comboItems && $selectedCombo->comboItems->count() > 0) {
+                                                $comboDuration = $selectedCombo->comboItems->sum(function($item) {
+                                                    return $item->serviceVariant->duration ?? 60;
+                                                });
+                                            }
+                                        @endphp
+                                        <div class="selected-combo-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div style="flex: 1;">
+                                                    <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                        <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $selectedCombo->name }}
+                                                        <span style="color: #666; font-size: 10px; font-weight: 400; margin-left: 5px;">(COMBO)</span>
+                                                    </div>
+                                                    <div style="color: #666; font-size: 11px;">
+                                                        <span style="margin-right: 15px;">
+                                                            <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($selectedCombo->price ?? 0, 0, ',', '.') }}vnđ</strong>
+                                                        </span>
+                                                        <span>
+                                                            <i class="fa fa-clock-o"></i> <strong>{{ $comboDuration }} phút</strong>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_combo_id' => $selectedCombo->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 4px 8px; font-size: 11px;">
+                                                    <i class="fa fa-times"></i> Xóa
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            @endif
+                            
+                            @if($hasAnyService)
+                                <div style="margin-top: 6px;">
+                                    <a href="{{ route('site.appointment.select-services', array_merge(request()->all(), ['add_more' => true])) }}" class="btn btn-sm w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 6px 10px; font-size: 12px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
+                                        <i class="fa fa-plus"></i> Chọn thêm dịch vụ
+                                    </a>
+                                </div>
+                            @else
+                                <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 6px 10px; font-size: 12px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center;">
+                                    <i class="fa fa-scissors"></i> Xem tất cả dịch vụ hấp dẫn
+                                </a>
+                            @endif
+                            <div class="field-error" id="service-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
+                                <i class="fa fa-exclamation-circle"></i> <span></span>
                             </div>
+                            <style>
+                                .btn-primary:hover {
+                                    background: #FFC107 !important;
+                                    color: #000 !important;
+                                    border: 1px solid #FFC107 !important;
+                                }
+                            </style>
                         </div>
 
+
                         <!-- Kỹ thuật viên -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
-                                <i class="fa fa-users"></i> KỸ THUẬT VIÊN
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
+                                <i class="fa fa-users"></i> KỸ THUẬT VIÊN <span class="text-danger">*</span>
                             </h5>
 
-                            <select name="employee_id" id="employee_id" class="form-select">
+                            <select name="employee_id" id="employee_id" class="form-select" style="font-size: 12px; padding: 5px 8px;">
                                 <option value="">Hãy chọn kỹ thuật viên</option>
                                 @foreach($employees as $employee)
                                     <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -245,55 +267,73 @@
                                     </option>
                                 @endforeach
                             </select>
+                            <div class="field-error" id="employee-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
+                                <i class="fa fa-exclamation-circle"></i> <span></span>
+                            </div>
                         </div>
 
                         <!-- Thời gian -->
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3" style="color: #000;">
+                        <div class="mb-2">
+                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
                                 <i class="fa fa-clock-o"></i> CHỌN NGÀY GIỜ
                             </h5>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        <i class="fa fa-calendar"></i> Ngày đặt lịch <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="date"
-                                           name="appointment_date"
-                                           id="appointment_date"
-                                           class="form-control"
-                                           value="{{ old('appointment_date') }}"
-                                           min="{{ date('Y-m-d') }}"
-                                           required>
+                            <div class="mb-1">
+                                <label class="form-label" style="font-size: 12px;">
+                                    <i class="fa fa-calendar"></i> Ngày đặt lịch <span class="text-danger">*</span>
+                                </label>
+                                <input type="date"
+                                       name="appointment_date"
+                                       id="appointment_date"
+                                       class="form-control"
+                                       style="font-size: 12px; padding: 5px 8px;"
+                                       value="{{ old('appointment_date') }}"
+                                       min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}"
+                                       disabled>
+                                <div class="field-error" id="appointment_date-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
+                                    <i class="fa fa-exclamation-circle"></i> <span></span>
                                 </div>
+                            </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        <i class="fa fa-clock-o"></i> Chọn giờ <span class="text-danger">*</span>
-                                    </label>
-                                    <div id="time_slot_grid" class="time-slot-grid" style="display: none;">
-                                        <!-- Time slots will be rendered here -->
+                            <div class="mb-1">
+                                <label class="form-label" style="font-size: 12px;">
+                                    <i class="fa fa-clock-o"></i> Chọn giờ <span class="text-danger">*</span>
+                                </label>
+                                <div class="time-slot-container" style="position: relative; display: none;">
+                                    <button type="button" class="time-slot-nav-btn time-slot-prev" style="position: absolute; left: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa fa-chevron-left"></i>
+                                    </button>
+                                    <div id="time_slot_grid" class="time-slot-grid" style="overflow: hidden;">
+                                        <div class="time-slot-slider" style="transition: transform 0.3s ease;">
+                                            <!-- Time slots will be rendered here -->
+                                        </div>
                                     </div>
-                                    <div id="time_slot_message" class="text-muted" style="padding: 10px; color: #000;">
-                                        Vui lòng chọn kỹ thuật viên và ngày trước
-                                    </div>
-                                    <input type="hidden" name="time_slot" id="time_slot" value="">
-                                    <input type="hidden" name="word_time_id" id="word_time_id" value="">
+                                    <button type="button" class="time-slot-nav-btn time-slot-next" style="position: absolute; right: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                <div id="time_slot_message" class="text-muted" style="padding: 6px; color: #000; font-size: 11px;">
+                                    Vui lòng chọn kỹ thuật viên trước
+                                </div>
+                                <input type="hidden" name="time_slot" id="time_slot" value="">
+                                <input type="hidden" name="word_time_id" id="word_time_id" value="">
+                                <div class="field-error" id="time_slot-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
+                                    <i class="fa fa-exclamation-circle"></i> <span></span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Ghi chú -->
-                        <div class="mb-4">
-                            <label class="form-label">
+                        <div class="mb-2">
+                            <label class="form-label" style="font-size: 12px;">
                                 <i class="fa fa-comment-o"></i> Ghi chú
                             </label>
-                            <textarea name="note" class="form-control" rows="3" placeholder="Nhập ghi chú...">{{ old('note') }}</textarea>
+                            <textarea name="note" class="form-control" style="font-size: 12px; padding: 5px 8px;" rows="2" placeholder="Nhập ghi chú (tùy chọn)">{{ old('note') }}</textarea>
                         </div>
 
                         <!-- Submit -->
-                        <div class="text-center mt-4">
-                            <button type="submit" class="btn btn-primary px-5 py-3 submit-appointment-btn" style="background: #000; border: none; font-size: 16px; font-weight: 600; min-width: 200px; color: #fff; transition: all 0.3s ease;">
+                        <div class="text-center mt-2">
+                            <button type="submit" class="btn btn-primary px-3 py-2 submit-appointment-btn" style="background: #000; border: none; font-size: 13px; font-weight: 600; min-width: 160px; color: #fff; transition: all 0.3s ease;">
                                 <i class="fa fa-calendar-check-o"></i> GỬI ĐẶT LỊCH
                             </button>
                         </div>
@@ -308,6 +348,15 @@
 
 @push('styles')
 <style>
+    /* Ẩn tất cả thông báo lỗi tổng hợp */
+    .alert-danger:not(.field-error),
+    .alert-warning:not(.field-error),
+    .validation-error-alert,
+    .alert.alert-danger ul,
+    .alert.alert-danger li {
+        display: none !important;
+    }
+    
     .appointment-form-container {
         animation: fadeIn 0.5s ease-in;
     }
@@ -340,6 +389,17 @@
     .form-select:focus {
         border-color: #4A3600;
         box-shadow: 0 0 0 0.2rem rgba(74, 54, 0, 0.25);
+    }
+
+    .form-control.is-invalid,
+    .form-select.is-invalid {
+        border-color: #dc3545;
+    }
+
+    .form-control.is-invalid:focus,
+    .form-select.is-invalid:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
     }
 
     .form-select,
@@ -503,51 +563,131 @@
         background-color: #0056b3;
     }
 
+    /* Time Slot Container */
+    .time-slot-container {
+        margin-top: 8px;
+        padding: 0;
+    }
+
     /* Time Slot Grid */
     .time-slot-grid {
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .time-slot-slider {
+        display: flex;
+        gap: 0;
+        width: max-content;
+        transition: transform 0.3s ease;
+    }
+
+    .time-slot-page {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(11, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        grid-auto-flow: column;
+        gap: 8px;
+        width: 100%;
+        min-width: 100%;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        align-items: stretch;
+        justify-items: stretch;
+        overflow: visible;
         margin-top: 10px;
+    }
+    
+    .time-slot-page > * {
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .time-slot-nav-btn {
+        transition: all 0.3s ease;
+    }
+
+    .time-slot-nav-btn:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+    }
+
+    .time-slot-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
     .time-slot-btn {
-        padding: 10px 15px;
+        padding: 10px 6px;
         border: 1px solid #000;
-        border-radius: 8px;
+        border-radius: 6px;
         background: #fff;
         color: #000;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.3s ease;
         text-align: center;
-        min-width: 80px;
+        min-width: 0;
+        min-height: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        overflow: visible;
+        white-space: nowrap;
+        transform: scale(1);
+        z-index: 1;
+        position: relative;
     }
 
-    .time-slot-btn:hover {
-        background: #f5f5f5;
-        transform: translateY(-2px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .time-slot-btn:hover:not(.unavailable) {
+        background: #f8f8f8;
+        border-color: #333;
+        transform: scale(1.1);
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .time-slot-btn.selected {
         background: #000;
         color: #fff;
         border-color: #000;
+        font-weight: 600;
     }
 
     .time-slot-btn.unavailable {
-        background: #e0e0e0;
-        color: #9e9e9e;
-        border: none;
+        background: #e8e8e8;
+        color: #b0b0b0;
+        border: 1px solid #e0e0e0;
         cursor: not-allowed;
+        opacity: 0.6;
     }
 
     .time-slot-btn.unavailable:hover {
-        background: #e0e0e0;
+        background: #e8e8e8;
         transform: none;
         box-shadow: none;
+        border-color: #e0e0e0;
+    }
+
+    .time-slot-btn.empty-slot {
+        visibility: hidden;
+        pointer-events: none;
+        border: none;
+        background: transparent;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 10px 6px;
+        min-width: 0;
+        min-height: 0;
+        box-sizing: border-box;
+        overflow: hidden;
     }
 
     @media (max-width: 768px) {
@@ -565,436 +705,168 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        // Set min date to today
-        const today = new Date().toISOString().split('T')[0];
+        // Xóa tất cả thông báo lỗi tổng hợp khi trang load
+        $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').remove();
+        
+        // Theo dõi và xóa thông báo lỗi tổng hợp mới được thêm vào
+        setInterval(function() {
+            $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').each(function() {
+                if (!$(this).hasClass('field-error') && !$(this).closest('.field-error').length) {
+                    $(this).remove();
+                }
+            });
+        }, 100);
+        // Set min date to today (theo timezone Việt Nam)
+        const now = new Date();
+        // Lấy timezone offset của Việt Nam (UTC+7)
+        const vietnamOffset = 7 * 60; // 7 giờ * 60 phút
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const vietnamTime = new Date(utc + (vietnamOffset * 60000));
+        const today = vietnamTime.toISOString().split('T')[0];
         $('#appointment_date').attr('min', today);
         
-        // Combo Select Box functionality
-        $('#combo-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const $dropdown = $('#combo-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // Close other dropdowns
-            $('.custom-select-dropdown').not($dropdown).hide();
-            $('.custom-select-input').not($input).removeClass('active');
-            
-            // Toggle current dropdown
-            $dropdown.toggle();
-            $input.toggleClass('active');
-        });
+        // Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
+        if (!$('#employee_id').val()) {
+            $('#appointment_date').prop('disabled', true);
+        }
         
-        // Handle combo option click
-        $(document).on('click', '#combo-select-wrapper .combo-option', function() {
-            const $option = $(this);
-            const comboId = $option.data('value');
-            const comboName = $option.data('combo-name');
-            const comboPrice = $option.data('combo-price') || 0;
-            const comboDuration = $option.data('combo-duration') || 60;
-            const description = $option.data('description') || '';
+        // Load employees by service on page load
+        loadEmployeesByService();
+        
+        // Function to load employees by service
+        function loadEmployeesByService() {
+            const serviceId = $('input[name="service_id"]').val();
+            const serviceVariants = [];
+            $('input[name="service_variants[]"]').each(function() {
+                serviceVariants.push($(this).val());
+            });
+            const comboId = $('input[name="combo_id"]').val();
             
-            if (!comboId) {
-                // Reset
-                $('#combo-select-wrapper .custom-select-text').text('Chọn combo');
-                $('#selected-combo-id').val('');
-                $('#selected-combos-list').empty();
-                $('#selected-combo-id-input').remove();
+            // Only load if there's a service selected
+            if (!serviceId && serviceVariants.length === 0 && !comboId) {
                 return;
             }
             
-            // Format price for display (same as service)
-            const formattedPrice = parseFloat(comboPrice).toLocaleString('vi-VN');
-            const displayText = comboName + ' - ' + formattedPrice + 'đ (' + comboDuration + ' phút)';
-            
-            // Update combo select box with full info (same format as service)
-            $('#combo-select-wrapper .custom-select-text').text(displayText);
-            $('#selected-combo-id').val(comboId);
-            $('#combo-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#combo-select-wrapper .custom-select-dropdown').hide();
-            $('#combo-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Add hidden input for combo_id
-            $('#selected-combo-id-input').remove();
-            $('#appointmentForm').append('<input type="hidden" id="selected-combo-id-input" name="combo_id" value="' + comboId + '">');
-            
-            // Add combo to selected list (same format as service)
-            const $list = $('#selected-combos-list');
-            // Remove any existing combo item
-            $list.find('.selected-combo-item').remove();
-            
-            // Add combo item (same style as service item)
-            const $comboItem = $('<div class="mb-2 selected-combo-item" data-combo-id="' + comboId + '">' +
-                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                '<span style="color: #000;"><strong>Combo:</strong> ' + displayText + '</span>' +
-                '<button type="button" class="btn btn-sm btn-link text-danger remove-combo" data-combo-id="' + comboId + '">' +
-                '<i class="fa fa-times"></i>' +
-                '</button>' +
-                '</div>' +
-                '</div>');
-            $list.append($comboItem);
-        });
-        
-        // Handle remove combo
-        $(document).on('click', '.remove-combo', function() {
-            const $btn = $(this);
-            const comboId = $btn.data('combo-id');
-            $btn.closest('.selected-combo-item').remove();
-            $('#selected-combo-id-input').remove();
-            
-            // Reset combo select
-            $('#combo-select-wrapper .custom-select-text').text('Chọn combo');
-            $('#selected-combo-id').val('');
-        });
-        
-        // Custom Select Box functionality - Category Select
-        $('#category-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const $dropdown = $('#category-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // Close other dropdowns
-            $('.custom-select-dropdown').not($dropdown).hide();
-            $('.custom-select-input').not($input).removeClass('active');
-            
-            // Toggle current dropdown
-            $dropdown.toggle();
-            $input.toggleClass('active');
-        });
-        
-        // Handle category option click
-        $(document).on('click', '#category-select-wrapper .category-option', function() {
-            const $option = $(this);
-            const categoryId = $option.data('value');
-            const categoryName = $option.data('category-name');
-            
-            if (!categoryId) {
-                // Reset
-                $('#category-select-wrapper .custom-select-text').text('Chọn danh mục dịch vụ');
-                $('#selected-category-id').val('');
-                $('#service-select-wrapper').hide();
-                $('#variant-select-wrapper').hide();
-                $('#service-select-wrapper .custom-select-text').text('Chọn dịch vụ');
-                $('#variant-select-wrapper .custom-select-text').text('Chọn biến thể');
-                $('#selected-service-id').val('');
-                $('#selected-variant-id').val('');
-                $('#selected-variants-list').empty();
-                return;
-            }
-            
-            // Update category select box
-            $('#category-select-wrapper .custom-select-text').text(categoryName);
-            $('#selected-category-id').val(categoryId);
-            $('#category-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#category-select-wrapper .custom-select-dropdown').hide();
-            $('#category-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Show service select box with category name
-            $('#service-select-wrapper').show();
-            $('#service-select-wrapper .custom-select-text').text(categoryName);
-            
-            // Reset service and variant selects
-            $('#variant-select-wrapper').hide();
-            $('#service-select-wrapper .custom-select-dropdown').html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn dịch vụ</div>');
-            $('#variant-select-wrapper .custom-select-dropdown').html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn biến thể</div>');
-            $('#selected-service-id').val('');
-            $('#selected-variant-id').val('');
-            $('#selected-variants-list').empty();
-            $('#selected-service-id-input').remove();
-        });
-        
-        // Service Select Box - Click to load services
-        $('#service-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const categoryId = $('#selected-category-id').val();
-            
-            if (!categoryId) {
-                // Silently return - user should select category first
-                return;
-            }
-            
-            const $dropdown = $('#service-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // If dropdown already has services, just toggle
-            if ($dropdown.find('.service-option').length > 0) {
-                $('.custom-select-dropdown').not($dropdown).hide();
-                $('.custom-select-input').not($input).removeClass('active');
-                $dropdown.toggle();
-                $input.toggleClass('active');
-                return;
-            }
-            
-            // Load services via AJAX
             $.ajax({
-                url: '{{ route("site.appointment.services-by-category") }}',
+                url: '{{ route("site.appointment.employees-by-service") }}',
                 method: 'GET',
-                data: { category_id: categoryId },
+                data: {
+                    service_id: serviceId || '',
+                    service_variants: serviceVariants,
+                    combo_id: comboId || ''
+                },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function(response) {
-                    if (response.services) {
-                        $dropdown.html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn dịch vụ</div>');
+                    if (response.success && response.employees) {
+                        const $select = $('#employee_id');
+                        const currentValue = $select.val();
                         
-                        response.services.forEach(function(service) {
-                            const formattedPrice = parseFloat(service.base_price || 0).toLocaleString('vi-VN');
-                            const displayText = service.name + ' - ' + formattedPrice + 'đ (' + (service.base_duration || 60) + ' phút)';
-                            const $option = $('<div class="custom-select-option service-option" data-value="' + service.id + '" data-service-name="' + service.name + '" data-base-price="' + (service.base_price || 0) + '" data-base-duration="' + (service.base_duration || 60) + '" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">' + displayText + '</div>');
-                            $dropdown.append($option);
-                        });
+                        // Clear existing options except the first one
+                        $select.find('option:not(:first)').remove();
                         
-                        // Show dropdown
-                        $('.custom-select-dropdown').not($dropdown).hide();
-                        $('.custom-select-input').not($input).removeClass('active');
-                        $dropdown.show();
-                        $input.addClass('active');
+                        // Add new options
+                        if (response.employees.length > 0) {
+                            response.employees.forEach(function(employee) {
+                                const $option = $('<option></option>')
+                                    .attr('value', employee.id)
+                                    .text(employee.display_name);
+                                
+                                if (currentValue == employee.id) {
+                                    $option.attr('selected', 'selected');
+                                }
+                                
+                                $select.append($option);
+                            });
+                        } else {
+                            // No employees found
+                            $select.append($('<option></option>').text('Không có nhân viên phù hợp'));
+                        }
                     }
                 },
                 error: function(xhr) {
-                    // Silently handle error - services may not be available
-                    console.error('Error loading services:', xhr);
+                    console.error('Error loading employees:', xhr);
                 }
             });
+        }
+        
+        // Clear error when user starts typing/selecting (only if field has value)
+        $('input[name="name"]').on('input keyup', function() {
+            if ($(this).val().trim().length > 0) {
+                $('#name-error').hide();
+                $(this).removeClass('is-invalid');
+            }
         });
         
-        // Handle service option click
-        $(document).on('click', '#service-select-wrapper .service-option', function() {
-            const $option = $(this);
-            const serviceId = $option.data('value');
-            const serviceName = $option.data('service-name');
-            const basePrice = $option.data('base-price') || 0;
-            const baseDuration = $option.data('base-duration') || 60;
-            
-            if (!serviceId) {
-                // Reset
-                const categoryName = $('#category-select-wrapper .custom-select-text').text();
-                $('#service-select-wrapper .custom-select-text').text(categoryName);
-                $('#selected-service-id').val('');
-                $('#variant-select-wrapper').hide();
-                $('#selected-variants-list').empty();
-                $('#selected-service-id-input').remove();
-                return;
+        $('input[name="phone"]').on('input keyup', function() {
+            if ($(this).val().trim().length > 0) {
+                $('#phone-error').hide();
+                $(this).removeClass('is-invalid');
             }
+        });
+        
+        $('#employee_id').on('change', function() {
+            const employeeId = $(this).val();
+            const $appointmentDate = $('#appointment_date');
             
-            // Format price for display
-            const formattedPrice = parseFloat(basePrice).toLocaleString('vi-VN');
-            const displayText = serviceName + ' - ' + formattedPrice + 'đ (' + baseDuration + ' phút)';
-            
-            // Update service select box with full info
-            $('#service-select-wrapper .custom-select-text').text(displayText);
-            $('#selected-service-id').val(serviceId);
-            $('#service-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#service-select-wrapper .custom-select-dropdown').hide();
-            $('#service-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Remove any existing variants first (service takes priority when selected)
-            $('#selected-variants-list').find('.selected-variant-item').remove();
-            $('input[name="service_variants[]"]').remove();
-            
-            // Add hidden input for service_id (always create new to ensure it exists)
-            $('#selected-service-id-input').remove();
-            $('#appointmentForm').append('<input type="hidden" id="selected-service-id-input" name="service_id" value="' + serviceId + '">');
-            
-            // Add service to selected list (dịch vụ đơn)
-            const $list = $('#selected-variants-list');
-            // Remove any existing service item
-            $list.find('.selected-service-item').remove();
-            
-            // Add service item
-            const $serviceItem = $('<div class="mb-2 selected-service-item" data-service-id="' + serviceId + '">' +
-                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                '<span style="color: #000;"><strong>Dịch vụ đơn:</strong> ' + displayText + '</span>' +
-                '<button type="button" class="btn btn-sm btn-link text-danger remove-service" data-service-id="' + serviceId + '">' +
-                '<i class="fa fa-times"></i>' +
-                '</button>' +
-                '</div>' +
-                '</div>');
-            $list.append($serviceItem);
-            
-            // Show variant select box with service name (optional)
-            $('#variant-select-wrapper').show();
-            $('#variant-select-wrapper .custom-select-text').text(serviceName);
-            
-            // Load variants for this service
-            const categoryId = $('#selected-category-id').val();
-            $.ajax({
-                url: '{{ route("site.appointment.services-by-category") }}',
-                method: 'GET',
-                data: { category_id: categoryId },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.services) {
-                        const service = response.services.find(s => s.id == serviceId);
-                        if (service && service.variants && service.variants.length > 0) {
-                            const $variantDropdown = $('#variant-select-wrapper .custom-select-dropdown');
-                            $variantDropdown.html('<div class="custom-select-option" data-value="" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">Chọn biến thể</div>');
-                            
-                            service.variants.forEach(function(variant) {
-                                const formattedPrice = parseFloat(variant.price).toLocaleString('vi-VN');
-                                const $option = $('<div class="custom-select-option variant-option" data-value="' + variant.id + '" data-variant-id="' + variant.id + '" data-price="' + variant.price + '" data-duration="' + variant.duration + '" data-variant-name="' + variant.name + '" style="padding: 10px 15px; cursor: pointer; color: #000; border-bottom: 1px solid #f0f0f0;">' + variant.name + ' - ' + formattedPrice + 'đ (' + variant.duration + ' phút)</div>');
-                                $variantDropdown.append($option);
-                            });
-                        } else {
-                            // No variants, hide variant select box but keep service_id
-                            $('#variant-select-wrapper').hide();
-                        }
-                    }
+            if (employeeId) {
+                // Enable input ngày khi đã chọn kỹ thuật viên
+                $('#employee-error').hide();
+                $(this).removeClass('is-invalid');
+                $appointmentDate.prop('disabled', false);
+                
+                // Load time slots nếu đã chọn ngày
+                if ($appointmentDate.val()) {
+                    loadAvailableTimeSlots();
+                } else {
+                    // Reset và hiển thị thông báo
+                    $('.time-slot-container').hide();
+                    $('#time_slot_message').text('Vui lòng chọn ngày trước').show();
+                    $('#time_slot').val('');
+                    $('#word_time_id').val('');
                 }
-            });
-        });
-        
-        // Variant Select Box - Click to show variants
-        $('#variant-select-wrapper .custom-select-input').on('click', function(e) {
-            e.stopPropagation();
-            const serviceId = $('#selected-service-id').val();
-            
-            if (!serviceId) {
-                // Silently return - user should select service first
-                return;
-            }
-            
-            const $dropdown = $('#variant-select-wrapper .custom-select-dropdown');
-            const $input = $(this);
-            
-            // Close other dropdowns
-            $('.custom-select-dropdown').not($dropdown).hide();
-            $('.custom-select-input').not($input).removeClass('active');
-            
-            // Toggle current dropdown
-            $dropdown.toggle();
-            $input.toggleClass('active');
-        });
-        
-        // Handle variant option click
-        $(document).on('click', '#variant-select-wrapper .variant-option', function() {
-            const $option = $(this);
-            const variantId = $option.data('variant-id');
-            const variantName = $option.data('variant-name');
-            const price = $option.data('price');
-            const duration = $option.data('duration');
-            
-            if (!variantId) {
-                // Reset
-                const serviceName = $('#service-select-wrapper .custom-select-text').text();
-                $('#variant-select-wrapper .custom-select-text').text(serviceName);
-                $('#selected-variant-id').val('');
-                return;
-            }
-            
-            // Check if variant already selected
-            const $list = $('#selected-variants-list');
-            if ($list.find('.selected-variant-item[data-variant-id="' + variantId + '"]').length > 0) {
-                // Variant already selected - silently return
-                return;
-            }
-            
-            // Update variant select box
-            $('#variant-select-wrapper .custom-select-text').text(variantName);
-            $('#selected-variant-id').val(variantId);
-            $('#variant-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            $option.addClass('selected');
-            $('#variant-select-wrapper .custom-select-dropdown').hide();
-            $('#variant-select-wrapper .custom-select-input').removeClass('active');
-            
-            // Remove service item if variant is selected (variants take priority)
-            const serviceId = $('#selected-service-id').val();
-            if (serviceId) {
-                $('#selected-variants-list').find('.selected-service-item[data-service-id="' + serviceId + '"]').remove();
-                $('#selected-service-id-input').remove();
-            }
-            
-            // Add to selected variants list
-            const formattedPrice = parseFloat(price).toLocaleString('vi-VN');
-            const $item = $('<div class="mb-2 selected-variant-item" data-variant-id="' + variantId + '">' +
-                '<input type="hidden" name="service_variants[]" value="' + variantId + '">' +
-                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                '<span style="color: #000;">' + variantName + ' - ' + formattedPrice + 'đ (' + duration + ' phút)</span>' +
-                '<button type="button" class="btn btn-sm btn-link text-danger remove-variant" data-variant-id="' + variantId + '">' +
-                '<i class="fa fa-times"></i>' +
-                '</button>' +
-                '</div>' +
-                '</div>');
-            
-            $list.append($item);
-            
-            // Reset variant select box after adding
-            setTimeout(function() {
-                const serviceName = $('#service-select-wrapper .custom-select-text').text();
-                $('#variant-select-wrapper .custom-select-text').text(serviceName);
-                $('#selected-variant-id').val('');
-                $('#variant-select-wrapper .custom-select-dropdown').find('.custom-select-option').removeClass('selected');
-            }, 100);
-        });
-        
-        // Close dropdown when clicking outside
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.custom-select-wrapper').length) {
-                $('.custom-select-dropdown').hide();
-                $('.custom-select-input').removeClass('active');
+            } else {
+                // Disable input ngày và reset khi bỏ chọn kỹ thuật viên
+                $appointmentDate.prop('disabled', true).val('').removeClass('is-invalid');
+                $('#appointment_date-error').hide();
+                
+                // Reset time slots
+                $('.time-slot-container').hide();
+                $('#time_slot_message').text('Vui lòng chọn kỹ thuật viên trước').show();
+                $('#time_slot').val('');
+                $('#word_time_id').val('');
             }
         });
         
-        // Handle remove variant
-        $(document).on('click', '.remove-variant', function() {
-            const $btn = $(this);
-            const variantId = $btn.data('variant-id');
-            $btn.closest('.selected-variant-item').remove();
-            
-            // If no variants left, restore service item if service is still selected
-            const remainingVariants = $('input[name="service_variants[]"]').length;
-            if (remainingVariants === 0) {
-                const serviceId = $('#selected-service-id').val();
-                if (serviceId) {
-                    // Get service info from the selected option
-                    const $serviceOption = $('#service-select-wrapper .service-option[data-value="' + serviceId + '"]');
-                    if ($serviceOption.length > 0) {
-                        const serviceName = $serviceOption.data('service-name');
-                        const basePrice = $serviceOption.data('base-price') || 0;
-                        const baseDuration = $serviceOption.data('base-duration') || 60;
-                        const formattedPrice = parseFloat(basePrice).toLocaleString('vi-VN');
-                        const displayText = serviceName + ' - ' + formattedPrice + 'đ (' + baseDuration + ' phút)';
-                        
-                        // Restore service_id input
-                        if ($('#selected-service-id-input').length === 0) {
-                            $('#appointmentForm').append('<input type="hidden" id="selected-service-id-input" name="service_id" value="' + serviceId + '">');
-                        } else {
-                            $('#selected-service-id-input').val(serviceId);
-                        }
-                        
-                        // Restore service item
-                        if ($('#selected-variants-list').find('.selected-service-item[data-service-id="' + serviceId + '"]').length === 0) {
-                            const $serviceItem = $('<div class="mb-2 selected-service-item" data-service-id="' + serviceId + '">' +
-                                '<div class="d-flex justify-content-between align-items-center border rounded p-2 bg-light">' +
-                                '<span style="color: #000;"><strong>Dịch vụ đơn:</strong> ' + displayText + '</span>' +
-                                '<button type="button" class="btn btn-sm btn-link text-danger remove-service" data-service-id="' + serviceId + '">' +
-                                '<i class="fa fa-times"></i>' +
-                                '</button>' +
-                                '</div>' +
-                                '</div>');
-                            $('#selected-variants-list').append($serviceItem);
-                        }
-                    }
+        $('#appointment_date').on('change', function() {
+            if ($(this).val()) {
+                $('#appointment_date-error').hide();
+                $(this).removeClass('is-invalid');
+                // Chỉ load time slots nếu đã chọn kỹ thuật viên
+                if ($('#employee_id').val()) {
+                    loadAvailableTimeSlots();
                 }
             }
         });
         
-        // Handle remove service
-        $(document).on('click', '.remove-service', function() {
-            const $btn = $(this);
-            const serviceId = $btn.data('service-id');
-            $btn.closest('.selected-service-item').remove();
-            $('#selected-service-id-input').remove();
+        // Clear service error when service is selected (check on page load only)
+        function checkAndClearServiceError() {
+            const serviceId = $('input[name="service_id"]').val();
+            const serviceVariants = $('input[name="service_variants[]"]').length;
+            const comboId = $('input[name="combo_id"]').val();
             
-            // Reset service select
-            const categoryName = $('#category-select-wrapper .custom-select-text').text();
-            $('#service-select-wrapper .custom-select-text').text(categoryName);
-            $('#selected-service-id').val('');
-            $('#variant-select-wrapper').hide();
+            if (serviceId || serviceVariants > 0 || comboId) {
+                $('#service-error').hide();
+            }
+        }
+        
+        // Check on page load only (not continuously)
+        checkAndClearServiceError();
+        
+        // Clear time slot error when a time slot is selected
+        $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
+            $('#time_slot-error').hide();
         });
         
         // Format time from HH:MM to HHhMM
@@ -1012,10 +884,17 @@
             const wordTimeIdInput = $('#word_time_id');
             
             // Reset
-            timeSlotGrid.hide().empty();
+            $('.time-slot-container').hide();
+            $('.time-slot-slider').empty();
             timeSlotMessage.show();
             timeSlotHidden.val('');
             wordTimeIdInput.val('');
+            
+            // Check if employee is selected
+            if (!employeeId) {
+                timeSlotMessage.text('Vui lòng chọn kỹ thuật viên trước');
+                return;
+            }
             
             // Check if date is selected
             if (!appointmentDate) {
@@ -1047,8 +926,35 @@
                             return a.time.localeCompare(b.time);
                         });
                         
-                        // Render grid
+                        const $slider = $('.time-slot-slider');
+                        $slider.empty();
+                        
+                        // Tính toán số cột và hàng dựa trên số lượng slots
+                        // Cố định số cột là 11 để đồng bộ cho tất cả nhân viên
+                        const fixedColumns = 11;
+                        const totalSlots = sortedSlots.length;
+                        // Cố định số hàng là 3 để hiển thị từ 7h-22h (30 slots = 11 cột x 3 hàng)
+                        const fixedRowsPerPage = 3;
+                        const slotsPerPage = fixedColumns * fixedRowsPerPage;
+                        
+                        // Xóa style cũ nếu có
+                        $('#dynamic-time-slot-style').remove();
+                        
+                        // Cập nhật CSS cho grid - cố định 11 cột x 3 hàng để đồng bộ cho tất cả nhân viên
+                        $('<style>').prop('id', 'dynamic-time-slot-style').html(
+                            '.time-slot-page { grid-template-columns: repeat(' + fixedColumns + ', 1fr) !important; grid-template-rows: repeat(' + fixedRowsPerPage + ', 1fr) !important; }'
+                        ).appendTo('head');
+                        
+                        let currentPage = null;
+                        let slotIndex = 0;
+                        
                         sortedSlots.forEach(function(slot) {
+                            // Create new page if needed
+                            if (slotIndex % slotsPerPage === 0) {
+                                currentPage = $('<div></div>').addClass('time-slot-page');
+                                $slider.append(currentPage);
+                            }
+                            
                             const isAvailable = slot.available !== false;
                             const formattedTime = formatTimeSlot(slot.time);
                             const isSelected = currentlySelectedTime === slot.time;
@@ -1071,23 +977,40 @@
                                 }
                             }
                             
-                            timeSlotGrid.append(btn);
+                            currentPage.append(btn);
+                            slotIndex++;
                         });
                         
+                        // Đảm bảo page cuối cùng luôn có đủ slots để layout đồng bộ
+                        if (currentPage && currentPage.children().length < slotsPerPage) {
+                            const remainingSlots = slotsPerPage - currentPage.children().length;
+                            for (let i = 0; i < remainingSlots; i++) {
+                                const emptyBtn = $('<button></button>')
+                                    .attr('type', 'button')
+                                    .addClass('time-slot-btn empty-slot')
+                                    .css({
+                                        'visibility': 'hidden',
+                                        'pointer-events': 'none'
+                                    });
+                                currentPage.append(emptyBtn);
+                            }
+                        }
+                        
                         if (availableCount === 0) {
-                            timeSlotGrid.hide();
+                            $('.time-slot-container').hide();
                             if (employeeId) {
                                 timeSlotMessage.text('Không còn khung giờ trống trong ca làm việc của nhân viên này');
                             } else {
                                 timeSlotMessage.text('Không còn khung giờ trống');
                             }
                         } else {
-                            timeSlotGrid.show();
+                            $('.time-slot-container').show();
                             timeSlotMessage.hide();
+                            updateNavigationButtons();
                         }
                     } else {
                         // No time slots available
-                        timeSlotGrid.hide();
+                        $('.time-slot-container').hide();
                         if (employeeId) {
                             timeSlotMessage.text('Nhân viên này không có ca làm việc vào ngày đã chọn');
                         } else {
@@ -1096,7 +1019,7 @@
                     }
                 },
                 error: function(xhr) {
-                    timeSlotGrid.hide();
+                    $('.time-slot-container').hide();
                     let errorMessage = 'Có lỗi xảy ra khi tải khung giờ';
                     
                     if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -1107,14 +1030,89 @@
                 }
             });
         }
+
+        // Update navigation buttons state
+        function updateNavigationButtons() {
+            const $slider = $('.time-slot-slider');
+            const $container = $('.time-slot-container');
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            // Parse current transform
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            // Show/hide buttons based on scroll position
+            $('.time-slot-prev').prop('disabled', currentX >= 0);
+            $('.time-slot-next').prop('disabled', Math.abs(currentX) >= sliderWidth - containerWidth - 10);
+        }
+
+        // Navigation button handlers
+        $(document).on('click', '.time-slot-prev', function() {
+            const $slider = $('.time-slot-slider');
+            const containerWidth = $('.time-slot-container').width();
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const newX = Math.min(0, currentX + containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            setTimeout(updateNavigationButtons, 300);
+        });
+
+        $(document).on('click', '.time-slot-next', function() {
+            const $slider = $('.time-slot-slider');
+            const $container = $('.time-slot-container');
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const maxX = -(sliderWidth - containerWidth);
+            const newX = Math.max(maxX, currentX - containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            setTimeout(updateNavigationButtons, 300);
+        });
         
         // Handle time slot button click
         $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
+            // Kiểm tra xem đã chọn kỹ thuật viên chưa
+            const employeeId = $('#employee_id').val();
+            if (!employeeId) {
+                $('#time_slot_message').text('Vui lòng chọn kỹ thuật viên trước').show();
+                $('.time-slot-container').hide();
+                return false;
+            }
+            
             // Remove previous selection
             $('.time-slot-btn').removeClass('selected');
             
             // Add selection to clicked button
             $(this).addClass('selected');
+            
+            // Clear time slot error
+            $('#time_slot-error').hide();
             
             // Set hidden inputs
             const time = $(this).data('time');
@@ -1123,70 +1121,128 @@
             $('#word_time_id').val(wordTimeId);
         });
         
-        // Handle employee selection change
-        $('#employee_id').on('change', function() {
-            loadAvailableTimeSlots();
-        });
-        
-        // Handle date selection change
-        $('#appointment_date').on('change', function() {
-            loadAvailableTimeSlots();
-        });
         
         // Flag to prevent multiple submissions
         let isSubmitting = false;
         
+        // Clear all field errors
+        function clearFieldErrors() {
+            $('.field-error').hide().find('span').text('');
+            $('.form-control, .form-select').removeClass('is-invalid');
+            $('.selected-service-display, .selected-variants-display, .selected-combo-display').removeClass('is-invalid');
+        }
+        
+        // Show error for a specific field
+        function showFieldError(fieldId, message) {
+            const $errorDiv = $('#' + fieldId + '-error');
+            if ($errorDiv.length) {
+                $errorDiv.find('span').text(message);
+                $errorDiv.show();
+                const $field = $('#' + fieldId);
+                if ($field.length) {
+                    $field.addClass('is-invalid');
+                }
+            }
+        }
+        
+        // Show error for service section
+        function showServiceError(message) {
+            const $errorDiv = $('#service-error');
+            $errorDiv.find('span').text(message);
+            $errorDiv.show();
+            // Highlight service section
+            $('.selected-service-display, .selected-variants-display, .selected-combo-display, .btn-primary').closest('.mb-2').find('.btn-primary').addClass('is-invalid');
+        }
+        
+        // Validate form before submission
+        function validateForm() {
+            let isValid = true;
+            
+            // Clear previous errors
+            clearFieldErrors();
+            
+            // Check name
+            const name = $('input[name="name"]').val().trim();
+            if (!name) {
+                showFieldError('name', 'Mời anh nhập họ và tên');
+                isValid = false;
+            }
+            
+            // Check phone
+            const phone = $('input[name="phone"]').val().trim();
+            if (!phone) {
+                showFieldError('phone', 'Mời anh nhập số điện thoại');
+                isValid = false;
+            }
+            
+            // Check service (at least one must be selected)
+            const serviceId = $('input[name="service_id"]').val();
+            const serviceVariants = $('input[name="service_variants[]"]').length;
+            const comboId = $('input[name="combo_id"]').val();
+            
+            if (!serviceId && serviceVariants === 0 && !comboId) {
+                const $errorDiv = $('#service-error');
+                if ($errorDiv.length) {
+                    $errorDiv.find('span').text('Mời anh chọn dịch vụ để chọn giờ cắt');
+                    $errorDiv.show();
+                }
+                isValid = false;
+            }
+            
+            // Check employee
+            const employeeId = $('#employee_id').val();
+            if (!employeeId) {
+                showFieldError('employee', 'Mời anh chọn kỹ thuật viên');
+                isValid = false;
+            }
+            
+            // Check appointment date
+            const appointmentDate = $('#appointment_date').val();
+            if (!appointmentDate) {
+                showFieldError('appointment_date', 'Mời anh chọn ngày đặt lịch');
+                isValid = false;
+            }
+            
+            // Check time slot
+            const wordTimeId = $('#word_time_id').val();
+            if (!wordTimeId) {
+                showFieldError('time_slot', 'Mời anh chọn giờ đặt lịch');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
         // Handle form submission via AJAX (remove previous listeners to prevent duplicates)
         $('#appointmentForm').off('submit').on('submit', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             
             // Prevent multiple submissions
             if (isSubmitting) {
                 return false;
             }
             
-            // Prepare service_id input if service item exists
-            const serviceVariants = $('input[name="service_variants[]"]');
-            const serviceIdInput = $('#selected-service-id-input');
-            const hasServiceItem = $('.selected-service-item').length > 0;
+            // Remove ALL previous error messages and alerts
+            $('.validation-error-alert, .alert-danger, .alert-warning').remove();
             
-            // If no service_id input but has service item, create it from the item
-            if (serviceVariants.length === 0 && hasServiceItem) {
-                const serviceIdFromItem = $('.selected-service-item').first().data('service-id');
-                if (serviceIdFromItem) {
-                    // Remove old input if exists
-                    $('#selected-service-id-input').remove();
-                    // Create new input
-                    $('#appointmentForm').append('<input type="hidden" id="selected-service-id-input" name="service_id" value="' + serviceIdFromItem + '">');
+            // Validate form
+            const isValid = validateForm();
+            if (!isValid) {
+                // Scroll to first error
+                const firstError = $('.field-error:visible').first();
+                if (firstError.length) {
+                    $('html, body').animate({
+                        scrollTop: firstError.offset().top - 100
+                    }, 300);
                 }
-            }
-            
-            // If variants are selected, remove service_id to avoid confusion
-            if (serviceVariants.length > 0) {
-                $('#selected-service-id-input').remove();
-                $('.selected-service-item').remove();
-            }
-            
-            // Validate time slot
-            const timeSlot = $('#time_slot').val();
-            if (!timeSlot) {
-                // Remove previous messages
-                $('.alert-danger, .alert-warning').remove();
                 
-                // Show error message on form instead of alert
-                $('#appointmentForm').prepend(
-                    '<div class="alert alert-danger alert-dismissible fade show" role="alert" style="margin-bottom: 20px; border-left: 4px solid #dc3545; background-color: #f8d7da; color: #721c24; padding: 15px 20px; border-radius: 5px;">' +
-                    '<strong><i class="fa fa-exclamation-triangle"></i> Lỗi!</strong><br>' +
-                    'Vui lòng chọn khung giờ trước khi đặt lịch.' +
-                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="float: right; border: none; background: none; font-size: 20px; cursor: pointer; color: #721c24;">&times;</button>' +
-                    '</div>'
-                );
-                
-                // Scroll to top to show message
-                $('html, body').animate({ scrollTop: 0 }, 300);
-                
+                // Prevent form submission
+                isSubmitting = false;
                 return false;
             }
+            
+            // If validation passes, continue with submission
             
             // Remove previous messages
             $('.success-message, .error-message').remove();
@@ -1203,14 +1259,16 @@
             $.ajax({
                 url: $(this).attr('action'),
                 method: 'POST',
-                data: $(this).serialize(),
                 headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
+                data: $(this).serialize(),
                 success: function(response) {
                     if (response.success) {
                         // Remove any previous messages
-                        $('.alert-success, .alert-danger, .alert-warning').remove();
+                        $('.alert-success, .alert-danger, .alert-warning, .validation-error-alert').remove();
                         
                         // Extract only the text message without icon
                         let messageText = response.message.replace(/<i[^>]*>.*?<\/i>/gi, '').trim();
@@ -1248,26 +1306,29 @@
                     // Re-enable button on error
                     isSubmitting = false;
                     $submitBtn.prop('disabled', false).html(originalBtnText);
-                    let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
                     
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                        let errors = '';
+                    // Handle validation errors - display inline errors
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
                         $.each(xhr.responseJSON.errors, function(key, value) {
-                            errors += value[0] + '<br>';
+                            if (value && value.length > 0) {
+                                // Map backend field names to frontend field IDs
+                                let fieldId = key;
+                                if (key === 'employee_id') fieldId = 'employee';
+                                if (key === 'appointment_date') fieldId = 'appointment_date';
+                                if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
+                                
+                                showFieldError(fieldId, value[0]);
+                            }
                         });
-                        errorMessage = errors;
+                        
+                        // Scroll to first error
+                        const firstError = $('.field-error:visible').first();
+                        if (firstError.length) {
+                            $('html, body').animate({
+                                scrollTop: firstError.offset().top - 100
+                            }, 300);
+                        }
                     }
-                    
-                    $('#appointmentForm').prepend(
-                        '<div class="alert alert-danger">' + errorMessage + '</div>'
-                    );
-                    
-                    // Scroll to top to show error
-                    $('html, body').animate({
-                        scrollTop: 0
-                    }, 500);
                 }
             });
         });
