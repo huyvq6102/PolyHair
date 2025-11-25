@@ -402,7 +402,7 @@
                                             </label>
                                         </div>
                                     @endforeach
-                                    <input type="hidden" name="combo_items[{{ $variantService->id }}][service_id]" value="{{ $variantService->id }}">
+                                    <!-- Hidden input chỉ được thêm khi checkbox được check (xử lý bằng JavaScript) -->
                                 </div>
                             </div>
                         @endforeach
@@ -436,7 +436,7 @@
         const serviceTypeSelect = document.getElementById('service_type');
         const singleForm = document.getElementById('single-form');
         const variantForm = document.getElementById('variant-form');
-        const comboForm = document.getElementById('combo-form');
+        const comboFormDiv = document.getElementById('combo-form');
 
         let variantIndex = 0;
         let attributeIndexes = {};
@@ -444,7 +444,7 @@
         function showForm(type) {
             singleForm.style.display = 'none';
             variantForm.style.display = 'none';
-            comboForm.style.display = 'none';
+            comboFormDiv.style.display = 'none';
 
             if (type === 'single') {
                 singleForm.style.display = 'block';
@@ -455,7 +455,7 @@
                     addVariant();
                 }
             } else if (type === 'combo') {
-                comboForm.style.display = 'block';
+                comboFormDiv.style.display = 'block';
             }
         }
 
@@ -475,6 +475,9 @@
                 const serviceId = this.getAttribute('data-service-id');
                 const variantOptions = document.getElementById('variants_' + serviceId);
                 if (variantOptions) {
+                    // Tìm hoặc tạo hidden input cho service_id
+                    let hiddenInput = variantOptions.querySelector('input[type="hidden"][name*="[service_id]"]');
+                    
                     if (this.checked) {
                         variantOptions.style.display = 'block';
                         // Tự động chọn biến thể đầu tiên nếu chưa có biến thể nào được chọn
@@ -482,12 +485,24 @@
                         if (firstVariant && !variantOptions.querySelector('input[type="radio"]:checked')) {
                             firstVariant.checked = true;
                         }
+                        // Thêm hidden input nếu chưa có
+                        if (!hiddenInput) {
+                            hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = 'combo_items[' + serviceId + '][service_id]';
+                            hiddenInput.value = serviceId;
+                            variantOptions.appendChild(hiddenInput);
+                        }
                     } else {
                         variantOptions.style.display = 'none';
                         // Bỏ chọn tất cả biến thể
                         variantOptions.querySelectorAll('input[type="radio"]').forEach(radio => {
                             radio.checked = false;
                         });
+                        // Xóa hidden input
+                        if (hiddenInput) {
+                            hiddenInput.remove();
+                        }
                     }
                 }
             });
@@ -497,6 +512,46 @@
         document.querySelectorAll('.variant-service-checkbox:checked').forEach(checkbox => {
             checkbox.dispatchEvent(new Event('change'));
         });
+        
+        // Xử lý khi form submit - chỉ gửi các combo items đã được chọn
+        const comboFormElement = document.getElementById('comboForm');
+        if (comboFormElement && !comboFormElement.hasAttribute('data-submit-handler')) {
+            comboFormElement.setAttribute('data-submit-handler', 'true');
+            comboFormElement.addEventListener('submit', function(e) {
+                // Xóa tất cả hidden input của dịch vụ đơn không được check
+                document.querySelectorAll('.combo-service-checkbox').forEach(checkbox => {
+                    if (!checkbox.checked) {
+                        // Tìm và xóa hidden input service_variant_id tương ứng
+                        const serviceId = checkbox.value;
+                        const hiddenVariantInput = document.querySelector('input[type="hidden"][name="combo_items[' + serviceId + '][service_variant_id]"]');
+                        if (hiddenVariantInput) {
+                            hiddenVariantInput.remove();
+                        }
+                        // Disable checkbox để không gửi lên
+                        checkbox.disabled = true;
+                    }
+                });
+                
+                // Xóa tất cả hidden input và radio buttons của các dịch vụ biến thể không được check
+                document.querySelectorAll('.variant-service-checkbox').forEach(checkbox => {
+                    if (!checkbox.checked) {
+                        const serviceId = checkbox.getAttribute('data-service-id');
+                        const variantOptions = document.getElementById('variants_' + serviceId);
+                        if (variantOptions) {
+                            // Xóa hidden input service_id
+                            const hiddenInput = variantOptions.querySelector('input[type="hidden"][name*="[service_id]"]');
+                            if (hiddenInput) {
+                                hiddenInput.remove();
+                            }
+                            // Xóa tất cả radio buttons (service_variant_id)
+                            variantOptions.querySelectorAll('input[type="radio"]').forEach(radio => {
+                                radio.remove();
+                            });
+                        }
+                    }
+                });
+            });
+        }
 
         // Xử lý thêm biến thể
         function addVariant() {
