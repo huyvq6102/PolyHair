@@ -2,6 +2,59 @@
 
 @section('title', 'Chọn dịch vụ')
 
+@php
+    // Helper function để merge query parameters khi add_more
+    function buildServiceUrl($newParams = []) {
+        $currentParams = request()->all();
+        $isAddMore = isset($currentParams['add_more']) && $currentParams['add_more'];
+        
+        if ($isAddMore) {
+            // Merge với các dịch vụ đã chọn
+            $mergedParams = $currentParams;
+            
+            // Merge service_id
+            if (isset($newParams['service_id'])) {
+                $existingIds = isset($mergedParams['service_id']) ? (is_array($mergedParams['service_id']) ? $mergedParams['service_id'] : [$mergedParams['service_id']]) : [];
+                $newId = is_array($newParams['service_id']) ? $newParams['service_id'][0] : $newParams['service_id'];
+                if (!in_array($newId, $existingIds)) {
+                    $existingIds[] = $newId;
+                }
+                $mergedParams['service_id'] = $existingIds;
+            }
+            
+            // Merge service_variants
+            if (isset($newParams['service_variants'])) {
+                $existingVariants = isset($mergedParams['service_variants']) ? (is_array($mergedParams['service_variants']) ? $mergedParams['service_variants'] : [$mergedParams['service_variants']]) : [];
+                $newVariants = is_array($newParams['service_variants']) ? $newParams['service_variants'] : [$newParams['service_variants']];
+                foreach ($newVariants as $variant) {
+                    if (!in_array($variant, $existingVariants)) {
+                        $existingVariants[] = $variant;
+                    }
+                }
+                $mergedParams['service_variants'] = $existingVariants;
+            }
+            
+            // Merge combo_id
+            if (isset($newParams['combo_id'])) {
+                $existingCombos = isset($mergedParams['combo_id']) ? (is_array($mergedParams['combo_id']) ? $mergedParams['combo_id'] : [$mergedParams['combo_id']]) : [];
+                $newCombo = is_array($newParams['combo_id']) ? $newParams['combo_id'][0] : $newParams['combo_id'];
+                if (!in_array($newCombo, $existingCombos)) {
+                    $existingCombos[] = $newCombo;
+                }
+                $mergedParams['combo_id'] = $existingCombos;
+            }
+            
+            // Xóa add_more khỏi params
+            unset($mergedParams['add_more']);
+            
+            return route('site.appointment.create', $mergedParams);
+        } else {
+            // Không có add_more, chỉ dùng params mới
+            return route('site.appointment.create', $newParams);
+        }
+    }
+@endphp
+
 @section('content')
 <div class="select-services-page" style="padding: 40px 0 20px; background: #f8f9fa; min-height: 100vh;">
     <div class="container">
@@ -38,7 +91,7 @@
                                     <div class="svc-card service-card-wrapper" 
                                          data-service-id="{{ $service->id }}"
                                          style="border: 1px solid #eee; box-shadow: 0 6px 14px rgba(0,0,0,0.06); background: #fff; display: flex; flex-direction: column; border-radius: 8px; overflow: visible; position: relative;">
-                                        <a class="svc-img" href="{{ route('site.services.show', $service->id) }}" style="overflow: hidden; display: block; height: 250px; background: #f5f5f5;">
+                                        <div class="svc-img" style="overflow: hidden; display: block; height: 250px; background: #f5f5f5; cursor: default;">
                                             @if($imagePath && file_exists(public_path($imagePath)))
                                                 <img src="{{ asset($imagePath) }}" alt="{{ $service->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
                                             @elseif($service->image)
@@ -48,7 +101,7 @@
                                                     <i class="fa fa-image" style="font-size: 48px; color: #ccc;"></i>
                                                 </div>
                                             @endif
-                                        </a>
+                                        </div>
                                         <div class="svc-body" style="padding: 15px; display: flex; flex-direction: column; flex-grow: 1;">
                                             <div class="svc-info" style="flex-grow: 1;">
                                                 <h4 class="svc-name" style="margin: 0 0 10px 0; font-weight: 800; font-size: 16px;">
@@ -81,7 +134,7 @@
                                                         <!-- Header -->
                                                         <div class="tooltip-header" style="background: linear-gradient(135deg, #000 0%, #333 100%); padding: 16px 20px; border-bottom: 2px solid #000;">
                                                             <h5 style="margin: 0; font-size: 15px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">
-                                                                <i class="fa fa-list-ul" style="margin-right: 8px; color: #FFC107;"></i> Biến thể dịch vụ
+                                                                <i class="fa fa-list-ul" style="margin-right: 8px; color: #FFC107;"></i> Các dịch vụ
                                                             </h5>
                                                             <p style="margin: 4px 0 0 0; font-size: 11px; color: #ccc; font-weight: 500;">{{ $service->name }}</p>
                                                         </div>
@@ -92,7 +145,7 @@
                                                                 @php
                                                                     $variantPrice = number_format($variant->price ?? 0, 0, ',', '.');
                                                                 @endphp
-                                                                <a href="{{ route('site.appointment.create') }}?service_variants[]={{ $variant->id }}" 
+                                                                <a href="{{ buildServiceUrl(['service_variants' => [$variant->id]]) }}" 
                                                                    class="variant-item-link" 
                                                                    style="text-decoration: none; display: block;">
                                                                     <div class="variant-item" style="padding: 12px; margin-bottom: 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; transition: all 0.3s ease; cursor: pointer;">
@@ -129,7 +182,7 @@
                                                         <i class="fa fa-check"></i> Chọn
                                                     </button>
                                                 @else
-                                                    <a href="{{ route('site.appointment.create') }}?service_id={{ $service->id }}" 
+                                                    <a href="{{ buildServiceUrl(['service_id' => $service->id]) }}" 
                                                        class="btn btn-primary w-100 select-service-btn" 
                                                        data-has-variants="false"
                                                        style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; position: relative; z-index: 1;">
@@ -176,7 +229,7 @@
                                 <div class="svc-card service-card-wrapper" 
                                      data-combo-id="{{ $combo->id }}"
                                      style="border: 1px solid #eee; box-shadow: 0 6px 14px rgba(0,0,0,0.06); background: #fff; display: flex; flex-direction: column; border-radius: 8px; overflow: visible; position: relative;">
-                                    <a class="svc-img" href="#" style="overflow: hidden; display: block; height: 250px; background: #f5f5f5;">
+                                    <div class="svc-img" style="overflow: hidden; display: block; height: 250px; background: #f5f5f5; cursor: default;">
                                         @if($imagePath && file_exists(public_path($imagePath)))
                                             <img src="{{ asset($imagePath) }}" alt="{{ $combo->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
                                         @elseif($combo->image)
@@ -186,7 +239,7 @@
                                                 <i class="fa fa-image" style="font-size: 48px; color: #ccc;"></i>
                                             </div>
                                         @endif
-                                    </a>
+                                    </div>
                                     <div class="svc-body" style="padding: 15px; display: flex; flex-direction: column; flex-grow: 1;">
                                         <div class="svc-info" style="flex-grow: 1;">
                                             <h4 class="svc-name" style="margin: 0 0 10px 0; font-weight: 800; font-size: 16px;">
@@ -201,7 +254,7 @@
                                             </div>
                                         </div>
                                         <div class="svc-actions" style="margin-top: auto; position: relative;">
-                                            <a href="{{ route('site.appointment.create') }}?combo_id={{ $combo->id }}" 
+                                            <a href="{{ buildServiceUrl(['combo_id' => $combo->id]) }}" 
                                                class="btn btn-primary w-100 select-service-btn" 
                                                data-has-variants="false"
                                                style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; position: relative; z-index: 1;">
