@@ -82,7 +82,8 @@ class ServiceService
      */
     public function getWithLimit($limit = 10, $offset = 0)
     {
-        return Service::orderBy('id', 'desc')
+        return Service::with(['category', 'serviceVariants', 'ownedCombos'])
+            ->orderBy('id', 'desc')
             ->skip($offset)
             ->take($limit)
             ->get();

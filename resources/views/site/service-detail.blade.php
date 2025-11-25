@@ -100,7 +100,7 @@
                                 Đặt lịch hẹn để được phục vụ tốt nhất
                             </p>
                             <div class="text-center">
-                                <a href="#test-form" class="boxed-btn3 popup-with-form" style="display: inline-block; padding: 12px 30px; background: #4A3600; color: #fff; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: 600;">
+                                <a href="{{ route('site.appointment.create') }}" class="boxed-btn3" style="display: inline-block; padding: 12px 30px; background: #4A3600; color: #fff; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: 600;">
                                     Đặt lịch hẹn
                                 </a>
                             </div>
