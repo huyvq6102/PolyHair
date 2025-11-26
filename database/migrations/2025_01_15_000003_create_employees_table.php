@@ -15,12 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->string('avatar', 255)->nullable();
+            $table->enum('gender', ['Nam', 'Nữ', 'Khác'])->nullable();
+            $table->date('dob')->nullable();
             $table->enum('position', ['Stylist', 'Barber', 'Shampooer', 'Receptionist'])->nullable();
             $table->enum('level', ['Intern', 'Junior', 'Middle', 'Senior'])->nullable();
             $table->tinyInteger('experience_years')->nullable();
             $table->text('bio')->nullable();
             $table->enum('status', ['Đang làm việc', 'Nghỉ phép', 'Vô hiệu hóa'])->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

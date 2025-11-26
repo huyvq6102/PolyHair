@@ -3,15 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Employee extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'user_id',
         'avatar',
+        'gender',
+        'dob',
         'position',
         'level',
         'experience_years',
@@ -21,6 +25,7 @@ class Employee extends Model
 
     protected $casts = [
         'experience_years' => 'integer',
+        'dob' => 'date',
     ];
 
     /**
@@ -28,7 +33,7 @@ class Employee extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     /**

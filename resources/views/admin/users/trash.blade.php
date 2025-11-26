@@ -1,61 +1,38 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Quản lý người dùng')
+@section('title', 'Thùng rác người dùng')
 
 @section('content')
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Quản lý người dùng</h1>
-    <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Thêm mới
+    <h1 class="h3 mb-0 text-gray-800">Thùng rác người dùng</h1>
+    <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Quay lại
     </a>
 </div>
 
-<!-- Filter -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary">Bộ lọc người dùng</h6>
-        <a href="{{ route('admin.users.trash') }}" class="btn btn-warning btn-sm">
-            <i class="fas fa-trash"></i> Thùng rác
-        </a>
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
-    <div class="card-body">
-        <form method="GET" action="{{ route('admin.users.index') }}" class="form-inline">
-            <div class="form-group mr-3">
-                <input type="text" name="keyword" class="form-control" placeholder="Tìm kiếm theo tên..." value="{{ request('keyword') }}">
-            </div>
-            <div class="form-group mr-3">
-                <select name="role_id" class="form-control">
-                    <option value="">Tất cả chức vụ</option>
-                    @foreach($roles as $role)
-                        <option value="{{ $role->id }}" {{ request('role_id') == $role->id ? 'selected' : '' }}>
-                            {{ $role->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="form-group mr-3">
-                <select name="status" class="form-control">
-                    <option value="">Tất cả trạng thái</option>
-                    <option value="Hoạt động" {{ request('status') == 'Hoạt động' ? 'selected' : '' }}>Hoạt động</option>
-                    <option value="Vô hiệu hóa" {{ request('status') == 'Vô hiệu hóa' ? 'selected' : '' }}>Vô hiệu hóa</option>
-                    <option value="Cấm" {{ request('status') == 'Cấm' ? 'selected' : '' }}>Cấm</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-filter"></i> Lọc
-            </button>
-            <a href="{{ route('admin.users.index') }}" class="btn btn-secondary ml-2">
-                <i class="fas fa-redo"></i> Làm mới
-            </a>
-        </form>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
-</div>
+@endif
 
 <!-- DataTales Example -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Danh sách người dùng</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Danh sách người dùng đã xóa</h6>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -70,6 +47,7 @@
                         <th>Email</th>
                         <th>Chức vụ</th>
                         <th>Trạng thái</th>
+                        <th>Ngày xóa</th>
                         <th>Thao tác</th>
                     </tr>
                 </thead>
@@ -100,22 +78,26 @@
                                     {{ $user->status ?? 'N/A' }}
                                 </span>
                             </td>
+                            <td>{{ $user->deleted_at ? $user->deleted_at->format('d/m/Y H:i') : 'N/A' }}</td>
                             <td>
-                                <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Sửa
-                                </a>
-                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
+                                <form action="{{ route('admin.users.restore', $user->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Bạn có chắc chắn muốn khôi phục người dùng này?');">
+                                        <i class="fas fa-undo"></i> Khôi phục
+                                    </button>
+                                </form>
+                                <form action="{{ route('admin.users.force-delete', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn người dùng này? Hành động này không thể hoàn tác!');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i> Xóa
+                                        <i class="fas fa-trash-alt"></i> Xóa vĩnh viễn
                                     </button>
                                 </form>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">Chưa có người dùng nào</td>
+                            <td colspan="10" class="text-center">Thùng rác trống</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -143,17 +125,6 @@
             }
         });
     });
-
-    function confirmDelete(userName) {
-        const today = new Date();
-        const dateStr = today.toLocaleDateString('vi-VN', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
-        });
-        return confirm('Bạn có chắc chắn muốn xóa tài khoản người dùng "' + userName + '" vào ngày ' + dateStr + ' hay không?');
-    }
 </script>
 @endpush
-
 
