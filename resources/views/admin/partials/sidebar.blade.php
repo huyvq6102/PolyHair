@@ -17,10 +17,18 @@
     @if($isEmployee)
         <!-- Employee Menu Items -->
         <!-- Nav Item - Employee Appointments -->
-        <li class="nav-item {{ str_contains($currentRoute, 'employee.appointments') ? 'active' : '' }}">
+        <li class="nav-item {{ str_contains($currentRoute, 'employee.appointments') && $currentRoute !== 'employee.appointments.create' ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('employee.appointments.index') }}">
                 <i class="fas fa-fw fa-clipboard-list"></i>
                 <span>Quản lý đơn đặt</span>
+            </a>
+        </li>
+        
+        <!-- Nav Item - Create Appointment -->
+        <li class="nav-item {{ $currentRoute === 'employee.appointments.create' ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('employee.appointments.create') }}">
+                <i class="fas fa-fw fa-calendar-plus"></i>
+                <span>Tạo lịch hẹn</span>
             </a>
         </li>
     @else

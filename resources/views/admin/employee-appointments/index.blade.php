@@ -6,6 +6,9 @@
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý đơn đặt</h1>
+    <a href="{{ route('employee.appointments.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Tạo lịch hẹn mới
+    </a>
 </div>
 
 <!-- Filter -->
@@ -115,6 +118,15 @@
                                 <a href="{{ route('employee.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info">
                                     <i class="fas fa-eye"></i> Xem
                                 </a>
+                                @if(in_array($appointment->status, ['Chờ xử lý', 'Chờ xác nhận']))
+                                    <form action="{{ route('employee.appointments.destroy', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đơn đặt này?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i> Xóa
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
