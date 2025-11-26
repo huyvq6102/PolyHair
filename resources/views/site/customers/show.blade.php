@@ -2,9 +2,7 @@
 
 @section('content')
 
-
-@include('site.partials.slider')
-<div class="container py-5">
+<div class="container py-5" style="margin-top: 120px;">
     <div class="row">
         <!-- Cột thông tin cá nhân và hành động -->
         <div class="col-lg-4 mb-4">

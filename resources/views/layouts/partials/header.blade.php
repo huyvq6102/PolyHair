@@ -162,6 +162,9 @@
     #navigation .submenu li a:hover,
     a.text-white.text-uppercase.ml-3[href="{{ route('login') }}"] {
         color: #000 !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px;
     }
 
     /* Nút Đặt lịch ngay */
