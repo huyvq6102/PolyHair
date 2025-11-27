@@ -220,6 +220,14 @@ class EmployeeController extends Controller
     public function destroy(string $id)
     {
         $employee = $this->employeeService->getOne($id);
+
+        // Update status to Vô hiệu hóa before moving to trash
+        $employee->update(['status' => 'Vô hiệu hóa']);
+
+        if ($employee->user) {
+            $employee->user->update(['status' => 'Vô hiệu hóa']);
+        }
+
         $this->employeeService->delete($id);
 
         return redirect()->route('admin.employees.index')

@@ -163,11 +163,16 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         
+        // Update user status before soft delete
+        $user->status = 'Vô hiệu hóa';
+        $user->save();
+
         // Check if user has associated employee record and soft delete it
         // This ensures that when a user with employee role is deleted,
         // the corresponding employee record is also moved to trash
         $employee = Employee::where('user_id', $user->id)->first();
         if ($employee) {
+            $employee->update(['status' => 'Vô hiệu hóa']);
             $employee->delete(); // Soft delete employee
         }
         
