@@ -5,9 +5,18 @@
 @section('content')
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Thùng rác lịch nhân viên</h1>
-    <a href="{{ route('admin.working-schedules.index') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Quay lại danh sách
-    </a>
+    <div>
+        <form action="{{ route('admin.working-schedules.trash.delete-all') }}" method="POST" class="d-inline" onsubmit="return confirmDeleteAllTrash();">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-danger mr-2">
+                <i class="fas fa-trash-alt"></i> Xóa tất cả vĩnh viễn
+            </button>
+        </form>
+        <a href="{{ route('admin.working-schedules.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Quay lại danh sách
+        </a>
+    </div>
 </div>
 
 <div class="card shadow mb-4">
@@ -38,7 +47,13 @@
                             <td>
                                 @php
                                     $status = $schedule->status;
-                                    $badge = $status === 'available' ? 'success' : ($status === 'busy' ? 'warning' : 'secondary');
+                                    $badge = match($status) {
+                                        'pending' => 'warning',
+                                        'approved' => 'success',
+                                        'cancelled' => 'danger',
+                                        'completed' => 'info',
+                                        default => 'secondary'
+                                    };
                                 @endphp
                                 <span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? ucfirst($status ?? 'N/A') }}</span>
                             </td>
@@ -76,5 +91,13 @@
         @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+function confirmDeleteAllTrash() {
+    return confirm('⚠️ CẢNH BÁO NGHIÊM TRỌNG: Bạn có chắc chắn muốn xóa VĨNH VIỄN TẤT CẢ lịch trong thùng rác?\n\nHành động này sẽ XÓA VĨNH VIỄN và KHÔNG THỂ hoàn tác!\n\nTất cả dữ liệu sẽ bị mất mãi mãi!\n\nNhấn OK để xác nhận xóa vĩnh viễn tất cả.');
+}
+</script>
+@endpush
 @endsection
 

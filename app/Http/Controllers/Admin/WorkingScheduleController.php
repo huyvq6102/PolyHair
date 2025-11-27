@@ -12,9 +12,10 @@ use Illuminate\Http\Request;
 class WorkingScheduleController extends Controller
 {
     protected array $statusOptions = [
-        'available' => 'Rảnh',
-        'busy' => 'Bận',
-        'off' => 'Nghỉ',
+        'pending' => 'Chờ duyệt',
+        'approved' => 'Đã duyệt',
+        'cancelled' => 'Đã hủy',
+        'completed' => 'Hoàn thành',
     ];
 
     /**
@@ -34,13 +35,38 @@ class WorkingScheduleController extends Controller
             $query->whereDate('work_date', $request->work_date);
         }
 
-        $schedules = $query->orderBy('work_date', 'desc')
+        $allSchedules = $query->orderBy('work_date', 'desc')
             ->orderBy('shift_id')
-            ->paginate(15)
-            ->appends($request->query());
+            ->get();
+
+        // Nhóm lịch theo ngày và ca
+        $groupedSchedules = $allSchedules->groupBy(function ($schedule) {
+            return $schedule->work_date->format('Y-m-d') . '_' . $schedule->shift_id;
+        })->map(function ($schedules) {
+            return [
+                'work_date' => $schedules->first()->work_date,
+                'shift' => $schedules->first()->shift,
+                'schedules' => $schedules->groupBy(function ($schedule) {
+                    return $schedule->employee->position ?? 'Other';
+                }),
+            ];
+        })->values();
+
+        // Phân trang thủ công
+        $perPage = 15;
+        $currentPage = $request->get('page', 1);
+        $currentItems = $groupedSchedules->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $total = $groupedSchedules->count();
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $currentItems,
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return view('admin.working-schedules.index', [
-            'schedules' => $schedules,
+            'groupedSchedules' => $paginator,
             'filters' => $request->only('employee_name', 'work_date'),
             'statusOptions' => $this->statusOptions,
         ]);
@@ -51,11 +77,19 @@ class WorkingScheduleController extends Controller
      */
     public function create()
     {
-        $employees = Employee::with('user')->orderBy('id', 'desc')->get();
+        // Lấy nhân viên theo từng vị trí
+        $stylists = Employee::with('user')->where('position', 'Stylist')->orderBy('id', 'desc')->get();
+        $barbers = Employee::with('user')->where('position', 'Barber')->orderBy('id', 'desc')->get();
+        $shampooers = Employee::with('user')->where('position', 'Shampooer')->orderBy('id', 'desc')->get();
+        $receptionists = Employee::with('user')->where('position', 'Receptionist')->orderBy('id', 'desc')->get();
+        
         $shifts = WorkingShift::orderBy('start_time')->get();
 
         return view('admin.working-schedules.create', [
-            'employees' => $employees,
+            'stylists' => $stylists,
+            'barbers' => $barbers,
+            'shampooers' => $shampooers,
+            'receptionists' => $receptionists,
             'shifts' => $shifts,
             'statusOptions' => $this->statusOptions,
         ]);
@@ -67,52 +101,107 @@ class WorkingScheduleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'employee_ids' => 'required|array|min:1',
-            'employee_ids.*' => 'required|exists:employees,id',
-            'work_date' => 'required|date',
+            'schedule_type' => 'required|in:day,week',
+            'stylist_id' => 'required|exists:employees,id',
+            'barber_id' => 'required|exists:employees,id',
+            'shampooer_id' => 'required|exists:employees,id',
+            'receptionist_id' => 'required|exists:employees,id',
+            'work_date' => 'required_if:schedule_type,day|nullable|date',
+            'week_start_date' => 'required_if:schedule_type,week|nullable|date',
             'shift_ids' => 'required|array|min:1',
             'shift_ids.*' => 'required|exists:working_shifts,id',
-            'status' => 'required|in:available,busy,off',
+            'status' => 'required|in:pending,approved,cancelled,completed',
         ]);
 
-        $employeeIds = $validated['employee_ids'];
+        // Kiểm tra nhân viên có đúng vị trí không
+        $stylist = Employee::findOrFail($validated['stylist_id']);
+        $barber = Employee::findOrFail($validated['barber_id']);
+        $shampooer = Employee::findOrFail($validated['shampooer_id']);
+        $receptionist = Employee::findOrFail($validated['receptionist_id']);
+
+        if ($stylist->position !== 'Stylist') {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Nhân viên được chọn cho vị trí Stylist không đúng vị trí.');
+        }
+        if ($barber->position !== 'Barber') {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Nhân viên được chọn cho vị trí Barber không đúng vị trí.');
+        }
+        if ($shampooer->position !== 'Shampooer') {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Nhân viên được chọn cho vị trí Shampooer không đúng vị trí.');
+        }
+        if ($receptionist->position !== 'Receptionist') {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Nhân viên được chọn cho vị trí Receptionist không đúng vị trí.');
+        }
+
+        $employeeIds = [
+            $validated['stylist_id'],
+            $validated['barber_id'],
+            $validated['shampooer_id'],
+            $validated['receptionist_id'],
+        ];
         $shiftIds = $validated['shift_ids'];
-        $workDate = $validated['work_date'];
         $status = $validated['status'];
+        $scheduleType = $validated['schedule_type'];
+
+        // Xác định danh sách ngày cần tạo lịch
+        $workDates = [];
+        if ($scheduleType === 'week') {
+            // Tạo lịch cho cả tuần (7 ngày từ thứ 2 đến chủ nhật)
+            $startDate = \Carbon\Carbon::parse($validated['week_start_date']);
+            // Tìm thứ 2 của tuần
+            $monday = $startDate->copy()->startOfWeek(\Carbon\Carbon::MONDAY);
+            for ($i = 0; $i < 7; $i++) {
+                $workDates[] = $monday->copy()->addDays($i)->format('Y-m-d');
+            }
+        } else {
+            // Chỉ tạo lịch cho 1 ngày
+            $workDates[] = $validated['work_date'];
+        }
 
         $createdCount = 0;
         $skippedCount = 0;
         $conflicts = [];
 
-        // Tạo lịch cho tất cả các tổ hợp nhân viên x ca làm việc
-        foreach ($employeeIds as $employeeId) {
+        // Tạo lịch cho tất cả các tổ hợp: ngày x ca x nhân viên
+        // Mỗi ca sẽ có đủ 4 nhân viên (Stylist, Barber, Shampooer, Receptionist)
+        foreach ($workDates as $workDate) {
             foreach ($shiftIds as $shiftId) {
-                // Kiểm tra trùng lịch
-                $conflict = $this->checkScheduleConflict(
-                    $employeeId,
-                    $workDate,
-                    $shiftId
-                );
+                foreach ($employeeIds as $employeeId) {
+                    // Kiểm tra trùng lịch
+                    $conflict = $this->checkScheduleConflict(
+                        $employeeId,
+                        $workDate,
+                        $shiftId
+                    );
 
-                if ($conflict) {
-                    $skippedCount++;
-                    $employee = Employee::with('user')->find($employeeId);
-                    $shift = WorkingShift::find($shiftId);
-                    $employeeName = $employee->user->name ?? "ID: {$employeeId}";
-                    $shiftName = $shift->name ?? "ID: {$shiftId}";
-                    $conflicts[] = "{$employeeName} - Ca {$shiftName}: " . $conflict;
-                    continue;
+                    if ($conflict) {
+                        $skippedCount++;
+                        $employee = Employee::with('user')->find($employeeId);
+                        $shift = WorkingShift::find($shiftId);
+                        $employeeName = $employee->user->name ?? "ID: {$employeeId}";
+                        $shiftName = $shift->name ?? "ID: {$shiftId}";
+                        $dateLabel = \Carbon\Carbon::parse($workDate)->format('d/m/Y');
+                        $conflicts[] = "{$employeeName} ({$employee->position}) - {$dateLabel} - Ca {$shiftName}: " . $conflict;
+                        continue;
+                    }
+
+                    // Tạo lịch
+                    WorkingSchedule::create([
+                        'employee_id' => $employeeId,
+                        'work_date' => $workDate,
+                        'shift_id' => $shiftId,
+                        'status' => $status,
+                    ]);
+
+                    $createdCount++;
                 }
-
-                // Tạo lịch
-                WorkingSchedule::create([
-                    'employee_id' => $employeeId,
-                    'work_date' => $workDate,
-                    'shift_id' => $shiftId,
-                    'status' => $status,
-                ]);
-
-                $createdCount++;
             }
         }
 
@@ -194,8 +283,22 @@ class WorkingScheduleController extends Controller
             'employee_id' => 'required|exists:employees,id',
             'work_date' => 'required|date',
             'shift_id' => 'required|exists:working_shifts,id',
-            'status' => 'required|in:available,busy,off',
+            'status' => 'required|in:pending,approved,cancelled,completed',
         ]);
+
+        // Kiểm tra trùng lịch (loại trừ lịch hiện tại)
+        $conflict = $this->checkScheduleConflict(
+            $validated['employee_id'],
+            $validated['work_date'],
+            $validated['shift_id'],
+            $id
+        );
+
+        if ($conflict) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Lịch này bị trùng với lịch khác: ' . $conflict);
+        }
 
         $schedule->update($validated);
 
@@ -213,6 +316,24 @@ class WorkingScheduleController extends Controller
 
         return redirect()->route('admin.working-schedules.index')
             ->with('success', 'Lịch nhân viên đã được chuyển vào thùng rác!');
+    }
+
+    /**
+     * Delete all working schedules.
+     */
+    public function deleteAll(Request $request)
+    {
+        $count = WorkingSchedule::count();
+        
+        if ($count === 0) {
+            return redirect()->route('admin.working-schedules.index')
+                ->with('info', 'Không có lịch nào để xóa!');
+        }
+
+        WorkingSchedule::query()->delete();
+
+        return redirect()->route('admin.working-schedules.index')
+            ->with('success', "Đã xóa thành công {$count} lịch làm việc vào thùng rác!");
     }
 
     /**
@@ -253,6 +374,24 @@ class WorkingScheduleController extends Controller
 
         return redirect()->route('admin.working-schedules.trash')
             ->with('success', 'Lịch nhân viên đã được xóa vĩnh viễn!');
+    }
+
+    /**
+     * Permanently delete all trashed working schedules.
+     */
+    public function deleteAllTrash(Request $request)
+    {
+        $count = WorkingSchedule::onlyTrashed()->count();
+        
+        if ($count === 0) {
+            return redirect()->route('admin.working-schedules.trash')
+                ->with('info', 'Thùng rác trống!');
+        }
+
+        WorkingSchedule::onlyTrashed()->forceDelete();
+
+        return redirect()->route('admin.working-schedules.trash')
+            ->with('success', "Đã xóa vĩnh viễn {$count} lịch làm việc! Hành động này không thể hoàn tác.");
     }
 
     /**

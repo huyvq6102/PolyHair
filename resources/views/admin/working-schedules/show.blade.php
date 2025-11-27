@@ -36,33 +36,49 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    @foreach($shiftSchedules as $schedule)
+                    @php
+                        // Nhóm nhân viên theo vị trí
+                        $schedulesByPosition = $shiftSchedules->groupBy(function($schedule) {
+                            return $schedule->employee->position ?? 'Other';
+                        });
+                        $requiredPositions = ['Stylist', 'Barber', 'Shampooer', 'Receptionist'];
+                    @endphp
+                    
+                    @foreach($requiredPositions as $position)
                         @php
-                            $employee = $schedule->employee;
-                            $user = $employee->user ?? null;
-                            $status = $schedule->status;
-                            $statusLabel = $statusOptions[$status] ?? ucfirst($status ?? 'N/A');
+                            $positionSchedules = $schedulesByPosition->get($position, collect());
                         @endphp
                         <div class="mb-3 pb-3 {{ !$loop->last ? 'border-bottom' : '' }}">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 font-weight-bold" style="color: #5a5c69; font-size: 1rem;">
-                                        {{ $user->name ?? 'N/A' }}
-                                    </h6>
-                                    <p class="mb-1 text-muted small" style="font-size: 0.875rem;">
-                                        {{ $user->email ?? 'N/A' }}
-                                    </p>
-                                    <p class="mb-0 text-muted small" style="font-size: 0.875rem;">
-                                        Trạng thái: <span class="font-weight-normal">{{ $statusLabel }}</span>
-                                        @if($employee->level)
-                                            • Level: <span class="font-weight-normal">{{ strtolower($employee->level) }}</span>
-                                        @endif
-                                        @if($employee->experience_years)
-                                            • Kinh nghiệm: <span class="font-weight-normal">{{ $employee->experience_years }}</span>
-                                        @endif
-                                    </p>
+                            <h6 class="mb-2 font-weight-bold" style="color: #4e73df; font-size: 0.95rem;">
+                                <i class="fas fa-user-tag"></i> {{ $position }}
+                            </h6>
+                            @if($positionSchedules->isNotEmpty())
+                                @foreach($positionSchedules as $schedule)
+                                    @php
+                                        $employee = $schedule->employee;
+                                        $user = $employee->user ?? null;
+                                        $status = $schedule->status;
+                                        $statusLabel = $statusOptions[$status] ?? ucfirst($status ?? 'N/A');
+                                    @endphp
+                                    <div class="ml-3 mb-2">
+                                        <strong style="color: #5a5c69;">{{ $user->name ?? 'N/A' }}</strong>
+                                        <span class="text-muted small">
+                                            • {{ $user->email ?? 'N/A' }}
+                                            • Trạng thái: {{ $statusLabel }}
+                                            @if($employee->level)
+                                                • Level: {{ strtolower($employee->level) }}
+                                            @endif
+                                            @if($employee->experience_years)
+                                                • Kinh nghiệm: {{ $employee->experience_years }} năm
+                                            @endif
+                                        </span>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="ml-3 text-danger small">
+                                    <i class="fas fa-exclamation-triangle"></i> Chưa có nhân viên cho vị trí này
                                 </div>
-                            </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
