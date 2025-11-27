@@ -1,6 +1,6 @@
 <!-- footer -->
-<footer class="footer">
-    <div class="footer_top">
+<footer class="footer" style="padding-top: 0;">
+    <div class="footer_top" style="padding-top: 100px; padding-bottom: 90px;">
         <div class="container">
             <div class="row">
                 <div class="col-xl-3 col-md-6 col-lg-3">
@@ -75,7 +75,7 @@
             </div>
         </div>
     </div>
-    <div class="copy-right_text">
+    <div class="copy-right_text" style="padding-bottom: 20px;">
         <div class="container">
             <div class="footer_border"></div>
             <div class="row">

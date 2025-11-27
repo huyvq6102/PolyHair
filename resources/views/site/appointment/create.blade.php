@@ -7,11 +7,11 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-6 col-xl-5">
-                <div class="appointment-form-container" style="background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 15px; margin-bottom: 10px; margin-top: 120px;">
+                <div class="appointment-form-container" style="background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 18px; margin-bottom: 10px; margin-top: 70px;">
                     
                     <!-- Header -->
-                    <div class="text-center mb-2" style="margin-top: 5px;">
-                        <h2 class="fw-bold mb-1" style="color: #000; font-size: 18px;">
+                    <div class="text-center mb-2" style="margin-bottom: 16px;">
+                        <h2 class="fw-bold mb-0" style="color: #000; font-size: 18px;">
                             <i class="fa fa-calendar-check-o"></i> ĐẶT LỊCH NGAY
                         </h2>
                     </div>
@@ -61,61 +61,73 @@
 
                         <!-- Thông tin khách hàng -->
                         <div class="mb-2">
-                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
-                                <i class="fa fa-user"></i> Thông tin khách hàng
-                            </h5>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h5 class="fw-semibold mb-0" style="color: #000; font-size: 14px;">
+                                    1. Thông tin khách hàng
+                                </h5>
+                                @auth
+                                <button type="button" id="fillUserInfoBtn" 
+                                        class="btn btn-sm fill-user-info-btn" 
+                                        style="background: #000; border: 1px solid #000; color: #fff; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease;"
+                                        data-user-name="{{ auth()->user()->name ?? '' }}"
+                                        data-user-phone="{{ auth()->user()->phone ?? '' }}"
+                                        data-user-email="{{ auth()->user()->email ?? '' }}">
+                                    <i class="fa fa-user"></i> Điền từ tài khoản
+                                </button>
+                                @endauth
+                            </div>
 
                             <div class="row">
-                                <div class="col-md-6 mb-1">
-                                    <label class="form-label" style="font-size: 12px;">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label" style="font-size: 13px; margin-bottom: 6px;">
                                         <i class="fa fa-user-circle"></i> Họ và tên <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" 
                                            name="name"
                                            id="name"
                                            class="form-control"
-                                           style="font-size: 12px; padding: 5px 8px;"
+                                           style="font-size: 13px; padding: 7px 10px;"
                                            placeholder="Nhập họ và tên"
-                                           value="{{ old('name', auth()->user()->name ?? '') }}">
+                                           value="{{ old('name', '') }}">
                                     <div class="field-error" id="name-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
                                         <i class="fa fa-exclamation-circle"></i> <span></span>
                                     </div>
                                 </div>
 
-                                <div class="col-md-6 mb-1">
-                                    <label class="form-label" style="font-size: 12px;">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label" style="font-size: 13px; margin-bottom: 6px;">
                                         <i class="fa fa-phone"></i> Số điện thoại <span class="text-danger">*</span>
                                     </label>
                                     <input type="tel" 
                                            name="phone"
                                            id="phone"
                                            class="form-control"
-                                           style="font-size: 12px; padding: 5px 8px;"
+                                           style="font-size: 13px; padding: 7px 10px;"
                                            placeholder="Nhập số điện thoại"
-                                           value="{{ old('phone', auth()->user()->phone ?? '') }}">
+                                           value="{{ old('phone', '') }}">
                                     <div class="field-error" id="phone-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
                                         <i class="fa fa-exclamation-circle"></i> <span></span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="mb-1">
-                                <label class="form-label" style="font-size: 12px;">
+                            <div class="mb-0">
+                                <label class="form-label" style="font-size: 13px; margin-bottom: 6px;">
                                     <i class="fa fa-envelope"></i> Email
                                 </label>
                                 <input type="email" 
                                        name="email"
                                        class="form-control"
-                                       style="font-size: 12px; padding: 5px 8px;"
+                                       style="font-size: 13px; padding: 7px 10px;"
                                        placeholder="Nhập email (tùy chọn)"
-                                       value="{{ old('email', auth()->user()->email ?? '') }}">
+                                       value="{{ old('email', '') }}">
                             </div>
                         </div>
 
                         <!-- Chọn dịch vụ -->
-                        <div class="mb-2">
-                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
-                                <i class="fa fa-scissors"></i> DỊCH VỤ <span class="text-danger">*</span>
+                        <div class="mb-2" style="margin-top: 18px;">
+                            <h5 class="fw-semibold mb-2" style="color: #000; font-size: 14px; margin-bottom: 10px;">
+                                2. DỊCH VỤ <span class="text-danger">*</span>
                             </h5>
 
                             @php
@@ -132,10 +144,10 @@
                                         <div class="selected-service-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                    <div style="color: #000; font-size: 13px; font-weight: 700; margin-bottom: 4px;">
                                                         <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $selectedService->name }}
                                                     </div>
-                                                    <div style="color: #666; font-size: 11px;">
+                                                    <div style="color: #666; font-size: 10px;">
                                                         <span style="margin-right: 15px;">
                                                             <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($selectedService->base_price ?? 0, 0, ',', '.') }}vnđ</strong>
                                                         </span>
@@ -144,7 +156,7 @@
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_service_id' => $selectedService->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 4px 8px; font-size: 11px;">
+                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_service_id' => $selectedService->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 3px 7px; font-size: 10px;">
                                                     <i class="fa fa-times"></i> Xóa
                                                 </a>
                                             </div>
@@ -163,13 +175,13 @@
                                         <div class="selected-variant-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                    <div style="color: #000; font-size: 13px; font-weight: 700; margin-bottom: 4px;">
                                                         <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $variant->name }}
                                                         @if($variant->service)
                                                             <span style="color: #666; font-size: 10px; font-weight: 400;">({{ $variant->service->name }})</span>
                                                         @endif
                                                     </div>
-                                                    <div style="color: #666; font-size: 11px;">
+                                                    <div style="color: #666; font-size: 10px;">
                                                         <span style="margin-right: 15px;">
                                                             <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($variant->price ?? 0, 0, ',', '.') }}vnđ</strong>
                                                         </span>
@@ -178,7 +190,7 @@
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_variant_id' => $variant->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 4px 8px; font-size: 11px;">
+                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_variant_id' => $variant->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 3px 7px; font-size: 10px;">
                                                     <i class="fa fa-times"></i> Xóa
                                                 </a>
                                             </div>
@@ -205,11 +217,11 @@
                                         <div class="selected-combo-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+                                                    <div style="color: #000; font-size: 13px; font-weight: 700; margin-bottom: 4px;">
                                                         <i class="fa fa-check-circle" style="color: #28a745;"></i> {{ $selectedCombo->name }}
                                                         <span style="color: #666; font-size: 10px; font-weight: 400; margin-left: 5px;">(COMBO)</span>
                                                     </div>
-                                                    <div style="color: #666; font-size: 11px;">
+                                                    <div style="color: #666; font-size: 10px;">
                                                         <span style="margin-right: 15px;">
                                                             <i class="fa fa-money"></i> <strong style="color: #c08a3f;">{{ number_format($selectedCombo->price ?? 0, 0, ',', '.') }}vnđ</strong>
                                                         </span>
@@ -218,7 +230,7 @@
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_combo_id' => $selectedCombo->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 4px 8px; font-size: 11px;">
+                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_combo_id' => $selectedCombo->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 3px 7px; font-size: 10px;">
                                                     <i class="fa fa-times"></i> Xóa
                                                 </a>
                                             </div>
@@ -229,12 +241,12 @@
                             
                             @if($hasAnyService)
                                 <div style="margin-top: 6px;">
-                                    <a href="{{ route('site.appointment.select-services', array_merge(request()->all(), ['add_more' => true])) }}" class="btn btn-sm w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 6px 10px; font-size: 12px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
+                                    <a href="{{ route('site.appointment.select-services', array_merge(request()->all(), ['add_more' => true])) }}" class="btn btn-sm w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 7px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
                                         <i class="fa fa-plus"></i> Chọn thêm dịch vụ
                                     </a>
                                 </div>
                             @else
-                                <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 6px 10px; font-size: 12px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center;">
+                                <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 7px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center;">
                                     <i class="fa fa-scissors"></i> Xem tất cả dịch vụ hấp dẫn
                                 </a>
                             @endif
@@ -250,43 +262,67 @@
                             </style>
                         </div>
 
-
-                        <!-- Kỹ thuật viên -->
-                        <div class="mb-2">
-                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
-                                <i class="fa fa-users"></i> KỸ THUẬT VIÊN <span class="text-danger">*</span>
-                            </h5>
-
-                            <select name="employee_id" id="employee_id" class="form-select" style="font-size: 12px; padding: 5px 8px;">
-                                <option value="">Hãy chọn kỹ thuật viên</option>
-                                @foreach($employees as $employee)
-                                    <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
-                                        {{ $employee->user->name }}
-                                        @if($employee->position) - {{ $employee->position }} @endif
-                                        @if($employee->level) ({{ $employee->level }}) @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="field-error" id="employee-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
-                                <i class="fa fa-exclamation-circle"></i> <span></span>
-                            </div>
-                        </div>
-
                         <!-- Thời gian -->
-                        <div class="mb-2">
-                            <h5 class="fw-semibold mb-1" style="color: #000; font-size: 13px;">
-                                <i class="fa fa-clock-o"></i> CHỌN NGÀY GIỜ
+                        <div class="mb-2" style="margin-top: 18px;">
+                            <h5 class="fw-semibold mb-2" style="color: #000; font-size: 14px; margin-bottom: 10px;">
+                                3. Chọn ngày, giờ và stylist
                             </h5>
 
-                            <div class="mb-1">
-                                <label class="form-label" style="font-size: 12px;">
+                            <!-- Kỹ thuật viên -->
+                            <div class="mb-2" style="margin-top: 12px;">
+                                <h6 class="fw-semibold mb-2" style="color: #000; font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;" id="employeeToggleBtn">
+                                    <i class="fa fa-user"></i>
+                                    <span>KỸ THUẬT VIÊN <span class="text-danger">*</span></span>
+                                    <i class="fa fa-chevron-down employee-chevron" style="font-size: 14px; color: #999; transition: transform 0.3s ease; margin-left: auto;"></i>
+                                </h6>
+
+                                <!-- Hidden input để lưu employee_id -->
+                                <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id') }}">
+
+                                <!-- Container hiển thị nhân viên giống time slot -->
+                                <div class="employee-container" id="employeeContainer" style="position: relative; display: none; margin-top: 10px;">
+                                    <button type="button" class="employee-nav-btn employee-nav-prev" style="position: absolute; left: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa fa-chevron-left"></i>
+                                    </button>
+                                    <div id="employee_grid" class="employee-grid" style="overflow: hidden; padding: 5px 0;">
+                                        <div class="employee-slider" style="transition: transform 0.3s ease; display: flex; gap: 15px;">
+                                            @foreach($employees as $employee)
+                                                <div class="employee-item-btn{{ old('employee_id') == $employee->id ? ' selected' : '' }}" data-employee-id="{{ $employee->id }}" data-employee-name="{{ $employee->user->name }}" data-employee-position="{{ $employee->position ?? '' }}" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
+                                                    <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ old('employee_id') == $employee->id ? '#007bff' : '#ddd' }};">
+                                                        @if($employee->avatar)
+                                                            <img src="{{ asset('legacy/images/avatars/' . $employee->avatar) }}" alt="{{ $employee->user->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                                        @else
+                                                            <div style="width: 100%; height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="fa fa-user" style="font-size: 40px; color: #999;"></i>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                    <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">{{ $employee->user->name }}</div>
+                                                @if($employee->position)
+                                                    <div class="employee-position" style="font-size: 11px; color: #666;">{{ $employee->position }}</div>
+                                                @endif
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    <button type="button" class="employee-nav-btn employee-nav-next" style="position: absolute; right: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                <div class="field-error" id="employee-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
+                                    <i class="fa fa-exclamation-circle"></i> <span></span>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label" style="font-size: 13px; margin-bottom: 6px;">
                                     <i class="fa fa-calendar"></i> Ngày đặt lịch <span class="text-danger">*</span>
                                 </label>
                                 <input type="date"
                                        name="appointment_date"
                                        id="appointment_date"
                                        class="form-control"
-                                       style="font-size: 12px; padding: 5px 8px;"
+                                       style="font-size: 13px; padding: 7px 10px;"
                                        value="{{ old('appointment_date') }}"
                                        min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}"
                                        disabled>
@@ -295,8 +331,8 @@
                                 </div>
                             </div>
 
-                            <div class="mb-1">
-                                <label class="form-label" style="font-size: 12px;">
+                            <div class="mb-2">
+                                <label class="form-label" style="font-size: 13px; margin-bottom: 6px;">
                                     <i class="fa fa-clock-o"></i> Chọn giờ <span class="text-danger">*</span>
                                 </label>
                                 <div class="time-slot-container" style="position: relative; display: none;">
@@ -312,7 +348,7 @@
                                         <i class="fa fa-chevron-right"></i>
                                     </button>
                                 </div>
-                                <div id="time_slot_message" class="text-muted" style="padding: 6px; color: #000; font-size: 11px;">
+                                <div id="time_slot_message" class="text-muted" style="padding: 8px; color: #000; font-size: 13px;">
                                     Vui lòng chọn kỹ thuật viên trước
                                 </div>
                                 <input type="hidden" name="time_slot" id="time_slot" value="">
@@ -324,16 +360,16 @@
                         </div>
 
                         <!-- Ghi chú -->
-                        <div class="mb-2">
-                            <label class="form-label" style="font-size: 12px;">
+                        <div class="mb-2" style="margin-top: 18px;">
+                            <label class="form-label" style="font-size: 13px; margin-bottom: 6px;">
                                 <i class="fa fa-comment-o"></i> Ghi chú
                             </label>
-                            <textarea name="note" class="form-control" style="font-size: 12px; padding: 5px 8px;" rows="2" placeholder="Nhập ghi chú (tùy chọn)">{{ old('note') }}</textarea>
+                            <textarea name="note" class="form-control" style="font-size: 13px; padding: 7px 10px;" rows="2" placeholder="Nhập ghi chú (tùy chọn)">{{ old('note') }}</textarea>
                         </div>
 
                         <!-- Submit -->
-                        <div class="text-center mt-2">
-                            <button type="submit" class="btn btn-primary px-3 py-2 submit-appointment-btn" style="background: #000; border: none; font-size: 13px; font-weight: 600; min-width: 160px; color: #fff; transition: all 0.3s ease;">
+                        <div class="text-center mt-2" style="margin-top: 18px;">
+                            <button type="submit" class="btn btn-primary px-4 py-2 submit-appointment-btn" style="background: #000; border: none; font-size: 14px; font-weight: 600; min-width: 160px; color: #fff; transition: all 0.3s ease;">
                                 <i class="fa fa-calendar-check-o"></i> GỬI ĐẶT LỊCH
                             </button>
                         </div>
@@ -359,6 +395,8 @@
     
     .appointment-form-container {
         animation: fadeIn 0.5s ease-in;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
 
     @keyframes fadeIn {
@@ -376,8 +414,8 @@
         display: block;
         font-weight: 500;
         color: #000;
-        margin-bottom: 8px;
-        font-size: 14px;
+        margin-bottom: 6px;
+        font-size: 13px;
     }
 
     .form-label i {
@@ -487,6 +525,19 @@
 
     .submit-appointment-btn:hover i {
         color: #000 !important;
+    }
+
+    /* Fill User Info Button - giống nút Chọn dịch vụ */
+    .fill-user-info-btn {
+        cursor: pointer;
+    }
+
+    .fill-user-info-btn:hover {
+        background: #FFC107 !important;
+        border-color: #FFC107 !important;
+        color: #000 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 
     /* Custom Select Box */
@@ -690,6 +741,185 @@
         overflow: hidden;
     }
 
+    /* Employee Selector Styles */
+    .employee-selector-wrapper {
+        position: relative;
+    }
+
+    .employee-select-btn {
+        transition: all 0.3s ease;
+    }
+
+    .employee-select-btn:hover {
+        background: #f8f9fa !important;
+        border-color: #333 !important;
+    }
+
+    /* Employee Container - giống time slot */
+    .employee-container {
+        margin-top: 10px;
+        padding: 5px 0;
+        overflow: visible;
+    }
+
+    .employee-grid {
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        padding: 5px 0;
+    }
+
+    .employee-slider {
+        display: flex;
+        gap: 15px;
+        transition: transform 0.3s ease;
+    }
+
+    .employee-item-btn {
+        transition: all 0.3s ease;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .employee-item-btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-color: #333;
+        position: relative;
+        z-index: 10;
+    }
+
+    .employee-item-btn {
+        position: relative;
+    }
+
+    .employee-item-btn.selected {
+        background: #fff;
+        border-color: #007bff;
+        border-width: 2px;
+    }
+
+    .employee-item-btn.selected .employee-name,
+    .employee-item-btn.selected .employee-position {
+        color: #000;
+    }
+
+    .employee-item-btn.selected .employee-avatar-wrapper {
+        border-color: #007bff;
+        border-width: 2px;
+    }
+
+    .employee-nav-btn {
+        transition: all 0.3s ease;
+    }
+
+    .employee-nav-btn:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+    }
+
+    .employee-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .employee-carousel .owl-item {
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .employee-carousel .owl-stage-outer {
+        padding: 0;
+    }
+
+    .employee-carousel .owl-stage {
+        display: flex;
+        align-items: center;
+    }
+
+    .employee-item {
+        transition: all 0.3s ease;
+        padding: 10px;
+        margin: 0 auto;
+        width: 100%;
+        max-width: 140px;
+        min-width: 120px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .employee-avatar-wrapper {
+        flex-shrink: 0;
+    }
+
+    .employee-name,
+    .employee-position {
+        width: 100%;
+        text-align: center;
+        word-wrap: break-word;
+    }
+
+    .employee-item:hover {
+        transform: translateY(-5px);
+    }
+
+    .employee-item.selected {
+        opacity: 0.7;
+    }
+
+    .employee-item.selected .employee-avatar-wrapper {
+        border-color: #4A3600;
+        border-width: 3px;
+    }
+
+    .employee-carousel .owl-nav {
+        position: absolute;
+        width: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-top: 0;
+        pointer-events: none;
+        display: flex;
+        justify-content: space-between;
+        padding: 0;
+    }
+
+    .employee-carousel .owl-nav button {
+        pointer-events: all;
+        position: relative;
+        background: #000 !important;
+        color: #fff !important;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        font-size: 18px;
+        border: none;
+    }
+
+    .employee-carousel .owl-nav button.owl-prev {
+        left: -40px;
+    }
+
+    .employee-carousel .owl-nav button.owl-next {
+        right: -40px;
+    }
+
+    .employee-carousel .owl-nav button:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+    }
+
     @media (max-width: 768px) {
         .appointment-form-container {
             padding: 25px !important;
@@ -704,6 +934,16 @@
 
 @push('scripts')
 <script>
+        // Điền thông tin từ tài khoản
+        $('#fillUserInfoBtn').on('click', function() {
+            const userName = $(this).data('user-name') || '';
+            const userPhone = $(this).data('user-phone') || '';
+            const userEmail = $(this).data('user-email') || '';
+            
+            $('#name').val(userName);
+            $('#phone').val(userPhone);
+            $('input[name="email"]').val(userEmail);
+        });
     $(document).ready(function() {
         // Xóa tất cả thông báo lỗi tổng hợp khi trang load
         $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').remove();
@@ -732,8 +972,9 @@
         
         // Load employees by service on page load
         loadEmployeesByService();
+        loadEmployeesForCarousel();
         
-        // Function to load employees by service
+        // Function to load employees by service (for select dropdown - not used anymore but kept for compatibility)
         function loadEmployeesByService() {
             const serviceId = $('input[name="service_id"]').val();
             const serviceVariants = [];
@@ -790,6 +1031,165 @@
                 }
             });
         }
+        
+        // Function to load employees for slider
+        function loadEmployeesForCarousel() {
+            const serviceId = $('input[name="service_id"]').val();
+            const serviceVariants = [];
+            $('input[name="service_variants[]"]').each(function() {
+                serviceVariants.push($(this).val());
+            });
+            const comboId = $('input[name="combo_id"]').val();
+            const currentEmployeeId = $('#employee_id').val();
+            
+            $.ajax({
+                url: '{{ route("site.appointment.employees-by-service") }}',
+                method: 'GET',
+                data: {
+                    service_id: serviceId || '',
+                    service_variants: serviceVariants,
+                    combo_id: comboId || ''
+                },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success && response.employees) {
+                        const $slider = $('.employee-slider');
+                        $slider.empty();
+                        
+                        // Thêm employees vào slider
+                        if (response.employees.length > 0) {
+                            response.employees.forEach(function(employee) {
+                                const avatarUrl = employee.avatar ? '{{ asset("legacy/images/avatars") }}/' + employee.avatar : '';
+                                const isSelected = currentEmployeeId == employee.id;
+                                
+                                let itemHtml = '<div class="employee-item-btn' + (isSelected ? ' selected' : '') + '" data-employee-id="' + employee.id + '" data-employee-name="' + employee.name + '" data-employee-position="' + (employee.position || '') + '" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">';
+                                itemHtml += '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isSelected ? '#007bff' : '#ddd') + ';">';
+                                
+                                if (avatarUrl) {
+                                    itemHtml += '<img src="' + avatarUrl + '" alt="' + employee.name + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                                } else {
+                                    itemHtml += '<div style="width: 100%; height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center;"><i class="fa fa-user" style="font-size: 40px; color: #999;"></i></div>';
+                                }
+                                
+                                itemHtml += '</div>';
+                                itemHtml += '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">' + employee.name + '</div>';
+                                
+                                if (employee.position) {
+                                    itemHtml += '<div class="employee-position" style="font-size: 11px; color: #666;">' + employee.position + '</div>';
+                                }
+                                
+                                itemHtml += '</div>';
+                                $slider.append(itemHtml);
+                            });
+                            
+                            // Nếu employee đã chọn không còn trong danh sách, reset
+                            if (currentEmployeeId && !response.employees.find(e => e.id == currentEmployeeId)) {
+                                $('#employee_id').val('');
+                            }
+                        } else {
+                            // Không có nhân viên phù hợp
+                            $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Không có nhân viên phù hợp với dịch vụ đã chọn</div>');
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error loading employees:', xhr);
+                }
+            });
+        }
+        
+        // Employee Selector - Toggle container
+        $('#employeeToggleBtn').on('click', function(e) {
+            e.stopPropagation();
+            const container = $('#employeeContainer');
+            const chevron = $('.employee-chevron');
+            
+            container.slideToggle(300, function() {
+                if (container.is(':visible')) {
+                    chevron.css('transform', 'rotate(180deg)');
+                    // Load employees nếu chưa có
+                    if ($('.employee-item-btn').length === 0) {
+                        loadEmployeesForCarousel();
+                    }
+                } else {
+                    chevron.css('transform', 'rotate(0deg)');
+                }
+            });
+        });
+        
+        // Xử lý old value nếu có
+        const oldEmployeeId = $('#employee_id').val();
+        if (oldEmployeeId) {
+            const selectedEmployee = $('.employee-item-btn[data-employee-id="' + oldEmployeeId + '"]');
+            if (selectedEmployee.length) {
+                selectedEmployee.addClass('selected');
+                selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
+            }
+        }
+        
+        // Xử lý chọn employee
+        $(document).on('click', '.employee-item-btn', function() {
+            const employeeId = $(this).data('employee-id');
+            const employeeName = $(this).data('employee-name');
+            const employeePosition = $(this).data('employee-position');
+            
+            // Cập nhật hidden input
+            $('#employee_id').val(employeeId);
+            
+            // Xóa selected của tất cả items
+            $('.employee-item-btn').removeClass('selected');
+            $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+            
+            // Thêm selected cho item được chọn
+            $(this).addClass('selected');
+            $(this).find('.employee-avatar-wrapper').css('border-color', '#007bff');
+            
+            // Clear error
+            $('#employee-error').hide();
+            
+            // Trigger change event để load time slots nếu đã chọn ngày
+            $('#employee_id').trigger('change');
+        });
+        
+        // Navigation buttons cho employee slider
+        $(document).on('click', '.employee-nav-prev', function() {
+            const $slider = $('.employee-slider');
+            const containerWidth = $('.employee-grid').width();
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const newX = Math.min(0, currentX + containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+        });
+        
+        $(document).on('click', '.employee-nav-next', function() {
+            const $slider = $('.employee-slider');
+            const $container = $('.employee-grid');
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const maxX = -(sliderWidth - containerWidth);
+            const newX = Math.max(maxX, currentX - containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+        });
         
         // Clear error when user starts typing/selecting (only if field has value)
         $('input[name="name"]').on('input keyup', function() {
@@ -1130,6 +1530,8 @@
             $('.field-error').hide().find('span').text('');
             $('.form-control, .form-select').removeClass('is-invalid');
             $('.selected-service-display, .selected-variants-display, .selected-combo-display').removeClass('is-invalid');
+            // Clear employee error
+            $('#employee-error').hide();
         }
         
         // Show error for a specific field
@@ -1141,6 +1543,10 @@
                 const $field = $('#' + fieldId);
                 if ($field.length) {
                     $field.addClass('is-invalid');
+                }
+                // Xử lý đặc biệt cho employee
+                if (fieldId === 'employee') {
+                    $('#employeeToggleBtn').css('color', '#dc3545');
                 }
             }
         }

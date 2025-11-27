@@ -31,7 +31,7 @@ class CheckoutController extends Controller
             if ($item['type'] === 'service_variant') {
                 $variant = \App\Models\ServiceVariant::with('service')->find($item['id']);
 
-                if ($variant) {
+                if ($variant && $variant->service) {
                     $quantity = $item['quantity'] ?? 1;
                     $price = $variant->price * $quantity;
 
@@ -56,6 +56,10 @@ class CheckoutController extends Controller
                     $appointmentTotal = 0;
 
                     foreach ($appointment->appointmentDetails as $detail) {
+                        if (!$detail->serviceVariant || !$detail->serviceVariant->service) {
+                            continue; // Bỏ qua nếu serviceVariant hoặc service không tồn tại
+                        }
+
                         $price = $detail->price_snapshot 
                             ?? ($detail->serviceVariant->price ?? 0);
 
@@ -121,6 +125,11 @@ class CheckoutController extends Controller
                 // SERVICE VARIANT
                 if ($item['type'] === 'service_variant') {
                     $variant = \App\Models\ServiceVariant::with('service')->find($item['id']);
+                    
+                    if (!$variant || !$variant->service) {
+                        continue; // Bỏ qua nếu variant hoặc service không tồn tại
+                    }
+                    
                     $price = $variant->price * ($item['quantity'] ?? 1);
 
                     $appointment = \App\Models\Appointment::create([
@@ -157,6 +166,10 @@ class CheckoutController extends Controller
                     $appointmentTotal = 0;
 
                     foreach ($appointment->appointmentDetails as $detail) {
+                        if (!$detail->serviceVariant || !$detail->serviceVariant->service) {
+                            continue; // Bỏ qua nếu serviceVariant hoặc service không tồn tại
+                        }
+
                         $price = $detail->price_snapshot ?? $detail->serviceVariant->price;
                         $appointmentTotal += $price;
 

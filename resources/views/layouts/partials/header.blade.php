@@ -24,7 +24,7 @@
 <!-- header-start -->
 <header>
         <div class="header-area" style="position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 999; padding-top: 0;">
-            <div id="sticky-header" class="main-header-area" style="background: #fcfbf9ff; padding: 15px 0;">
+            <div id="sticky-header" class="main-header-area" style="background: #fcfbf9ff; padding: 10px 0;">
                 <div class="container">
                     <div class="row align-items-center">
                         <div class="col-xl-2 col-lg-2">
@@ -37,7 +37,7 @@
                                         $logoFile = str_replace('legacy/images/', '', $logoFile);
                                         $logoPath = 'legacy/images/' . $logoFile;
                                     @endphp
-                                    <img src="{{ asset($logoPath) }}" alt="Logo" width="100" height="80" style="max-width: 100%; height: auto;" onerror="console.error('Logo not found: {{ $logoPath }}'); this.src='{{ asset('legacy/images/logox.png') }}';">
+                                    <img src="{{ asset($logoPath) }}" alt="Logo" width="80" height="64" style="max-width: 100%; height: auto;" onerror="console.error('Logo not found: {{ $logoPath }}'); this.src='{{ asset('legacy/images/logox.png') }}';">
                                 </a>
                             </div>
                         </div>
@@ -162,6 +162,13 @@
     #navigation .submenu li a:hover,
     a.text-white.text-uppercase.ml-3[href="{{ route('login') }}"] {
         color: #000 !important;
+        font-size: 13px !important;
+    }
+
+    /* Logo container */
+    .logo-img img {
+        max-width: 80px !important;
+        height: auto !important;
     }
 
     /* Nút Đặt lịch ngay */
