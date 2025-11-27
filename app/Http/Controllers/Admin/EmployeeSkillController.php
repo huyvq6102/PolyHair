@@ -14,7 +14,7 @@ class EmployeeSkillController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Employee::with(['user', 'services']);
+        $query = Employee::with(['user', 'services:id,name']);
 
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
@@ -34,7 +34,7 @@ class EmployeeSkillController extends Controller
             ->paginate(15)
             ->appends($request->query());
 
-        $services = Service::orderBy('name')->get();
+        $services = Service::select('id', 'name')->orderBy('name')->get();
 
         return view('admin.employee-skills.index', [
             'employees' => $employees,
@@ -48,8 +48,8 @@ class EmployeeSkillController extends Controller
      */
     public function edit(string $id)
     {
-        $employee = Employee::with(['user', 'services'])->findOrFail($id);
-        $services = Service::with('category')->orderBy('name')->get();
+        $employee = Employee::with(['user', 'services:id,name'])->findOrFail($id);
+        $services = Service::select('id', 'name')->orderBy('name')->get();
 
         return view('admin.employee-skills.edit', [
             'employee' => $employee,
