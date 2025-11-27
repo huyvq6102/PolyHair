@@ -14,7 +14,7 @@
       <div>
         <h3 class="title ba-title mb-0">MẪU TÓC HOT</h3>
         <p class="desc">
-            Chào mừng Quý khách hàng đến với Traky Hair Salon,
+            Chào mừng Quý khách hàng đến với POLY HAIR Salon,
             nơi mang đến cho bạn trải nghiệm làm đẹp tinh tế và độc đáo.
             Dưới đây là bộ sưu tập những mẫu tóc đẹp nhất năm 2024 giúp nâng tầm vẻ đẹp của bạn lên một tầm cao mới.
         </p>
@@ -34,7 +34,7 @@
       </div>
       @endforeach
     </div>
-    <div class="text-center mt-3"><a class="btn-view-all" href="#">Xem tất cả</a></div>
+ 
   </div>
 </section>
 
@@ -58,19 +58,19 @@
         @forelse($services as $service)
           @php
             // Lấy giá từ variant đầu tiên hoặc base_price
-            $price = $service->serviceVariants->where('is_active', true)->min('price') 
-                     ?? $service->serviceVariants->min('price') 
-                     ?? $service->base_price 
+            $price = $service->serviceVariants->where('is_active', true)->min('price')
+                     ?? $service->serviceVariants->min('price')
+                     ?? $service->base_price
                      ?? 0;
-            
+
             // Format giá tiền
             $formattedPrice = number_format($price, 0, ',', '.') . 'vnđ';
-            
+
             // Đường dẫn ảnh
-            $imagePath = $service->image 
+            $imagePath = $service->image
                 ? asset('legacy/images/products/' . $service->image)
                 : asset('legacy/images/products/default.jpg');
-            
+
             // Link đến trang chi tiết
             $serviceLink = route('site.services.show', $service->id);
           @endphp
@@ -164,7 +164,6 @@
                             <h3 class="news__name promo-heading"><span>{{ $promo['title'] }}</span></h3>
                             <div class="news__line"></div>
                             <div class="news__desc"><span>{{ $promo['desc'] }}</span></div>
-                            <div class="news__link"><i>/ Xem chi tiết</i><span>+</span></div>
                         </div>
                     </a>
                     @endforeach
@@ -183,35 +182,26 @@
       <span class="fb-bar mr-2"></span>
       <div>
         <h3 class="fb-title mb-1 ba-title mb-0">FEEDBACK KHÁCH HÀNG</h3>
-        <p class="fb-desc mb-0">Dưới đây là những chia sẻ và cảm nhận của khách hàng khi sử dụng dịch vụ của Traky.</p>
+        <p class="fb-desc mb-0">Dưới đây là những chia sẻ và cảm nhận của khách hàng khi sử dụng dịch vụ của POLY HAIR.</p>
       </div>
     </div>
 
-    <div class="fb-slider">
-      <button class="fb-nav prev" aria-label="Prev">‹</button>
-      <div class="fb-viewport">
-        <div class="fb-track">
-          @foreach([
-            'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/4521855211921800244922583292012091870822199n-65270.jpg',
-            'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/45429722539776299825202751161716994539239682n-31370.jpg',
-            'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/46732587315178433255834577210241778246238031n-18140.jpg',
-            'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/4613427028548217134619082361666114740470727n-49950.jpg',
-            'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/46667694715145918325752731143632095580929221n-11060.jpg',
-            'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/1ba9680e30848adad395-66330.jpg',
-          ] as $img)
-          <a class="fb-card" href="#">
-            <div class="fb-img"><img src="{{ $img }}" alt="Feedback"></div>
-          </a>
-          @endforeach
-        </div>
-      </div>
-      <button class="fb-nav next" aria-label="Next">›</button>
+    <div class="fb-grid">
+      @foreach([
+        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/4521855211921800244922583292012091870822199n-65270.jpg',
+        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/45429722539776299825202751161716994539239682n-31370.jpg',
+        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/46732587315178433255834577210241778246238031n-18140.jpg',
+        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/4613427028548217134619082361666114740470727n-49950.jpg',
+        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/46667694715145918325752731143632095580929221n-11060.jpg',
+        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/1ba9680e30848adad395-66330.jpg',
+      ] as $img)
+        <a class="fb-card" href="#">
+          <div class="fb-img"><img src="{{ $img }}" alt="Feedback"></div>
+        </a>
+      @endforeach
     </div>
 
-    <div class="text-center mt-3">
-      <a class="btn-view-all" href="#">Xem tất cả</a>
-    </div>
-  </div>
+
 </section>
 
 <!-- BEFORE & AFTER -->
@@ -226,7 +216,6 @@
         </p>
 
         <div class="ba-slider">
-            <button class="ba-nav prev" aria-label="Prev">‹</button>
             <div class="ba-viewport">
                 <div class="ba-track">
                     @foreach([
@@ -244,12 +233,11 @@
                     @endforeach
                 </div>
             </div>
-            <button class="ba-nav next" aria-label="Next">›</button>
         </div>
 
-        <div class="text-center mt-4">
+        <!-- <div class="text-center mt-4">
             <a href="#" class="btn-view-all">Xem tất cả</a>
-        </div>
+        </div> -->
     </div>
 </section>
 
@@ -258,7 +246,7 @@
     <div class="container stylist-wrapper">
         <div class="stylist-left">
             <!-- <div class="stylist-letter">T</div> -->
-            <h2 class="stylist-title ba-title mb-0">TRAKY’S STYLIST</h2>
+            <h2 class="stylist-title ba-title mb-0"> POLY'S STYLIST</h2>
             <p class="stylist-desc">
                 Chúng tôi tự hào sở hữu một đội ngũ nghệ sĩ tóc tài năng và có kinh nghiệm. Với sự đam mê sáng tạo
                 và kiến thức chuyên sâu về xu hướng làm đẹp, họ không chỉ biến ý tưởng của bạn thành hiện thực
@@ -329,8 +317,8 @@
     <div class="d-flex align-items-start mb-3">
       <span class="salon-bar mr-2"></span>
       <div>
-        <h3 class="salon-title mb-1 ba-title mb-0">HỆ THỐNG TRAKY HAIR SALON</h3>
-        <p class="salon-desc mb-0">Hệ thống TRAKY HAIR SALON, đang có hơn 40 chi nhánh trên toàn quốc!</p>
+        <h3 class="salon-title mb-1 ba-title mb-0">HỆ THỐNG POLY HAIR SALON</h3>
+        <p class="salon-desc mb-0">Hệ thống POLY HAIR SALON, đang có hơn 40 chi nhánh trên toàn quốc!</p>
       </div>
     </div>
 
@@ -463,18 +451,58 @@ document.addEventListener('DOMContentLoaded', () => {
   const gap = parseFloat(getComputedStyle(track).gap || 0);
   const step = () => cards[0].getBoundingClientRect().width + gap;
 
-  document.querySelector('.ba-nav.prev').onclick = () => {
-    viewport.scrollBy({ left: -step(), behavior: 'smooth' });
-  };
-  document.querySelector('.ba-nav.next').onclick = () => {
-    viewport.scrollBy({ left: step(), behavior: 'smooth' });
+  let autoPlayInterval;
+  let isPaused = false;
+
+  const nextSlide = () => {
+    const maxScroll = track.scrollWidth - viewport.clientWidth;
+    const currentScroll = viewport.scrollLeft;
+    
+    if (currentScroll >= maxScroll - 10) {
+      // Nếu đã đến cuối, quay về đầu
+      viewport.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      // Chạy slide tiếp theo
+      viewport.scrollBy({ left: step(), behavior: 'smooth' });
+    }
   };
 
-  // click card mở video (hiện chỉ alert, bạn có thể gắn fancybox hoặc modal)
+  const startAutoPlay = () => {
+    if (autoPlayInterval) clearInterval(autoPlayInterval);
+    autoPlayInterval = setInterval(() => {
+      if (!isPaused) {
+        nextSlide();
+      }
+    }, 4000); // Tự động chạy sau mỗi 4 giây
+  };
+
+  const stopAutoPlay = () => {
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+      autoPlayInterval = null;
+    }
+  };
+
+
+  // Tạm dừng khi hover vào slider
+  const slider = document.querySelector('.ba-slider');
+  if (slider) {
+    slider.addEventListener('mouseenter', () => {
+      isPaused = true;
+    });
+    slider.addEventListener('mouseleave', () => {
+      isPaused = false;
+    });
+  }
+
+  // click card mở video
   cards.forEach(c => c.addEventListener('click', () => {
     const url = c.dataset.video;
     if (url) window.open(url, '_blank');
   }));
+
+  // Bắt đầu auto play
+  startAutoPlay();
 });
 </script>
 <script>

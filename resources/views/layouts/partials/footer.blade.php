@@ -3,85 +3,129 @@
     <div class="footer_top" style="padding-top: 100px; padding-bottom: 90px;">
         <div class="container">
             <div class="row">
-                <div class="col-xl-3 col-md-6 col-lg-3">
-                    <div class="footer_widget">
-                        <h3 class="footer_title">
-                            Tham gia với chúng tôi
-                        </h3>
-                        <p class="footer_text doanar">
-                            <a href="{{ route('site.appointment.create') }}">Đặt lịch hẹn</a>
-                            <br />
-                            <a href="#">+10 378 478 8768</a>
-                        </p>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6 col-lg-3">
-                    <div class="footer_widget">
-                        <h3 class="footer_title">
-                            Địa chỉ
-                        </h3>
-                        <p class="footer_text">
-                            154, Cầu Giấy, Hà Nội <br />
-                            +10 367 267 2678 <br />
-                            <a class="domain" href="#">contact@barbershop.com</a>
-                        </p>
-                        <div class="socail_links">
-                            <ul>
-                                <li>
-                                    <a href="#">
-                                        <i class="fa fa-facebook-square"></i>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#">
-                                        <i class="fa fa-twitter"></i>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#">
-                                        <i class="fa fa-instagram"></i>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+                <!-- Cột 1: TRAKY HAIR SALON -->
                 <div class="col-xl-2 col-md-6 col-lg-2">
                     <div class="footer_widget">
                         <h3 class="footer_title">
-                            Liên kết nhanh
+                            TRAKY HAIR SALON
                         </h3>
                         <ul>
-                            <li><a href="{{ route('site.home') }}">Trang chủ</a></li>
-                            <li><a href="{{ route('site.services.index') }}">Dịch vụ</a></li>
-                            <li><a href="{{ route('site.products.index') }}">Sản phẩm</a></li>
-                            <li><a href="{{ route('site.blog.index') }}">Tin tức</a></li>
+                            <li><a href="#">Những câu hỏi thường gặp</a></li>
+                            <li><a href="#">Chính sách bảo mật</a></li>
+                            <li><a href="#">Chính sách bảo hành</a></li>
+                            <li><a href="#">Chính sách mua hàng</a></li>
+                            <li><a href="#">Chính sách người dùng</a></li>
                             <li><a href="{{ route('site.contact.index') }}">Liên hệ</a></li>
                         </ul>
                     </div>
                 </div>
-                <div class="col-xl-4 col-md-6 col-lg-4">
+
+                <!-- Cột 2: Tổng Đài Hỗ Trợ -->
+                <div class="col-xl-3 col-md-6 col-lg-3">
                     <div class="footer_widget">
                         <h3 class="footer_title">
-                            Giờ hoạt động
+                            Tổng Đài Hỗ Trợ
                         </h3>
-                        <ul class="opening_time">
-                            <li>Thứ 2 - Thứ 6: 08:30 - 20:00</li>
-                            <li>Thứ 7: 09:00 - 17:00</li>
-                            <li>Chủ nhật: Nghỉ</li>
+                        <ul>
+                            <li>Hotline: <a href="tel:1900636883">1900 636 883</a></li>
+                            <li>Giờ mở cửa: 9h00 - 20h00</li>
+                            <li>Trụ sở văn phòng: 159 Đ. Calmette, Phường Nguyễn Thái Bình, Quận 1, Thành phố Hồ Chí Minh</li>
                         </ul>
+                    </div>
+                </div>
+
+                <!-- Cột 3: Thống Kê Truy Cập -->
+                <div class="col-xl-2 col-md-6 col-lg-2">
+                    <div class="footer_widget">
+                        <h3 class="footer_title">
+                            Thống Kê Truy Cập
+                        </h3>
+                        <ul>
+                            <li>Online: <span id="online-count">7</span></li>
+                            <li>Truy cập tuần: <span id="week-count">2053</span></li>
+                            <li>Truy cập tháng: <span id="month-count">37669</span></li>
+                            <li>Tổng truy cập: <span id="total-count">399694</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Cột 4: Mạng Xã Hội -->
+                <div class="col-xl-2 col-md-6 col-lg-2">
+                    <div class="footer_widget">
+                        <h3 class="footer_title">
+                            Mạng Xã Hội
+                        </h3>
+                        <ul class="social-media-list">
+                            <li>
+                                <a href="#" class="social-item">
+                                    <span class="social-icon facebook"><i class="fa fa-facebook"></i></span>
+                                    <span>178K follow</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="social-item">
+                                    <span class="social-icon zalo"><i class="fa fa-comment"></i></span>
+                                    <span>140K follow</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="social-item">
+                                    <span class="social-icon tiktok"><i class="fa fa-music"></i></span>
+                                    <span>650K follow</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="social-item">
+                                    <span class="social-icon instagram"><i class="fa fa-instagram"></i></span>
+                                    <span>140K follow</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Cột 5: Thanh Toán -->
+                <div class="col-xl-3 col-md-6 col-lg-3">
+                    <div class="footer_widget">
+                        <h3 class="footer_title">
+                            Thanh Toán
+                        </h3>
+                        <div class="payment-methods">
+                            <div class="payment-item" style="display: inline-block; margin-right: 15px; margin-bottom: 10px; padding: 8px 12px; background: #fff; border-radius: 4px; font-weight: 700; color: #1a1f71; font-size: 14px;">VISA</div>
+                            <div class="payment-item" style="display: inline-block; margin-right: 15px; margin-bottom: 10px; padding: 8px 12px; background: #fff; border-radius: 4px; font-weight: 700; color: #eb001b; font-size: 14px;">MasterCard</div>
+                            <div class="payment-item" style="display: inline-block; margin-right: 15px; margin-bottom: 10px; padding: 8px 12px; background: #fff; border-radius: 4px; font-weight: 700; color: #0066cc; font-size: 14px;">JCB</div>
+                            <img src="{{ asset('legacy/images/payment/visa.png') }}" alt="VISA" style="height: 30px; margin-right: 10px; margin-bottom: 10px; display: none;" onerror="this.style.display='none';">
+                            <img src="{{ asset('legacy/images/payment/mastercard.png') }}" alt="MasterCard" style="height: 30px; margin-right: 10px; margin-bottom: 10px; display: none;" onerror="this.style.display='none';">
+                            <img src="{{ asset('legacy/images/payment/jcb.png') }}" alt="JCB" style="height: 30px; margin-right: 10px; margin-bottom: 10px; display: none;" onerror="this.style.display='none';">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    <!-- Phần dưới cùng -->
     <div class="copy-right_text" style="padding-bottom: 20px;">
         <div class="container">
             <div class="footer_border"></div>
             <div class="row">
                 <div class="col-xl-12">
-                    <p class="copy_right text-center">
-                        Copyright &copy; {{ date('Y') }} All rights reserved | This template is made with <i class="fa fa-heart-o" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
+                    <p class="copy_right text-center" style="margin-bottom: 10px;">
+                        Copyright &copy; {{ date('Y') }} Name Company. Designed by Nina
+                    </p>
+                    <p class="copy_right text-center" style="margin-bottom: 10px; font-weight: 600;">
+                        CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ ĐÀO TẠO FOLY HAIR VIỆT NAM
+                    </p>
+                    <p class="copy_right text-center" style="margin-bottom: 10px;">
+                        Giấy CNĐKDN số: 0318359961 - Ngày cấp: 20-03-2024 - Sửa đổi lần cuối ngày 24-06-2024
+                    </p>
+                    <p class="copy_right text-center" style="margin-bottom: 10px;">
+                        Cơ quan cấp: Chi cục Thuế Quận Phú Nhuận
+                    </p>
+                    <p class="copy_right text-center" style="margin-bottom: 10px;">
+                        Hotline: <a href="tel:1900636883" style="color: #fff;">1900 63 68 83</a> - Email: <a href="mailto:POLYHAIRR@gmail.com" style="color: #fff;">mkttraky@gmail.com</a>
+                    </p>
+                    <p class="copy_right text-center" style="font-weight: 600;">
+                        POLY HAIR SALON - HỆ THỐNG SALON LÀM TÓC CHUYÊN NGHIỆP HÀNG ĐẦU VIỆT NAM
                     </p>
                 </div>
             </div>
@@ -122,7 +166,7 @@
     $(document).ready(function() {
         // Khởi tạo Bootstrap dropdown
         $('[data-toggle="dropdown"]').dropdown();
-        
+
         // Xử lý click vào user dropdown
         $('#userDropdown').on('click', function(e) {
             e.preventDefault();
@@ -131,7 +175,7 @@
             $('.dropdown-menu').not(menu).hide();
             menu.toggle();
         });
-        
+
         // Đóng dropdown khi click bên ngoài
         $(document).on('click', function(e) {
             if (!$(e.target).closest('.dropdown').length) {
