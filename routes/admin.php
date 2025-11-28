@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
+    // Đặt route export lên trước resource
+    Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
     Route::resource('payments', PaymentController::class)->only(['index', 'show']);
 
     Route::resource('categories', CategoryController::class);
