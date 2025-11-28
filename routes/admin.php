@@ -14,11 +14,14 @@ use App\Http\Controllers\Admin\EmployeeSkillController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\WorkingScheduleController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
+    Route::resource('payments', PaymentController::class)->only(['index', 'show']);
+
     Route::resource('categories', CategoryController::class);
     Route::resource('types', TypeController::class);
     Route::resource('products', ProductController::class);
