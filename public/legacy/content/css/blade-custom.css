@@ -1106,6 +1106,15 @@
 }
 
 /* ============================================
+   STYLIST SECTION - BUTTON POSITION
+   ============================================ */
+.stylist-left-wrapper {
+  flex: 0 0 35%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
    RESPONSIVE STYLES
    ============================================ */
 @media (max-width: 767px) {
@@ -1135,6 +1144,119 @@
   .filter-group {
     margin-bottom: 20px;
     padding-bottom: 16px;
+  }
+}
+
+/* ============================================
+   SCROLL TO TOP BUTTON
+   ============================================ */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 15px rgba(216, 178, 106, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.scroll-to-top-btn:hover {
+  background: linear-gradient(135deg, #e8c46e 0%, #9d6b3a 100%);
+  box-shadow: 0 6px 20px rgba(216, 178, 106, 0.5);
+  transform: translateY(-2px);
+}
+
+.scroll-to-top-btn.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scroll-to-top-btn i {
+  line-height: 1;
+}
+
+/* Social Fixed Buttons (Messenger, Facebook, Zalo) */
+.social-fixed-btn {
+  position: fixed;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 15px rgba(216, 178, 106, 0.4);
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  text-decoration: none;
+}
+
+.social-fixed-btn:hover {
+  background: linear-gradient(135deg, #e8c46e 0%, #9d6b3a 100%);
+  box-shadow: 0 6px 20px rgba(216, 178, 106, 0.5);
+  transform: translateY(-2px);
+  color: #fff;
+  text-decoration: none;
+}
+
+.social-fixed-btn i {
+  line-height: 1;
+}
+
+/* Position các nút xã hội - xếp từ trên xuống */
+.social-btn-messenger {
+  bottom: 150px !important; /* Messenger - trên cùng */
+}
+
+.social-btn-zalo {
+  bottom: 90px !important; /* Zalo */
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .scroll-to-top-btn {
+    width: 45px;
+    height: 45px;
+    bottom: 20px;
+    right: 20px;
+    font-size: 18px;
+  }
+  
+  .social-fixed-btn {
+    width: 45px;
+    height: 45px;
+    right: 20px;
+    font-size: 18px;
+  }
+  
+  .social-btn-messenger {
+    bottom: 135px !important; /* Messenger */
+  }
+  
+  .social-btn-zalo {
+    bottom: 75px !important; /* Zalo */
   }
 }
 

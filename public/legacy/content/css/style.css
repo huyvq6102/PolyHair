@@ -5631,7 +5631,7 @@ label.error {
 .ba-slider { position:relative; display:flex; align-items:center; }
 .ba-viewport { overflow:hidden; width:100%; }
 .ba-track { display:flex; gap:16px; transition:transform .3s ease; }
-.ba-card { flex:0 0 48%; max-width:48%; cursor:pointer; }
+.ba-card { flex:0 0 calc(33.333% - 11px); max-width:calc(33.333% - 11px); cursor:pointer; }
 .ba-img {
   position:relative;
   overflow:hidden;
