@@ -5863,7 +5863,7 @@ label.error {
 }
 
 .service-wrapper{display:flex;gap:24px;align-items:flex-start;}
-.service_left{position:relative;flex:0 0 32%;padding:32px 24px;border:1px solid #e5e5e5;background:#fdfdfd;overflow:hidden;}
+.service_left{position:relative;flex:0 0 280px;padding:0;border:none;background:transparent;overflow:visible;}
 .service_letter{position:absolute;right:-20%;top:-10%;font-size:420px;font-weight:800;color:#e8e8e8;line-height:1;pointer-events:none;}
 .service_title{font-size:24px;font-weight:800;text-transform:uppercase;margin:0 0 10px 0;}
 .service_desc{color:#4a4a4a;line-height:1.7;position:relative;z-index:1;}

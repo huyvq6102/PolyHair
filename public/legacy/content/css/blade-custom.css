@@ -509,51 +509,267 @@
 }
 
 /* ============================================
+   SERVICE FILTER TOP SECTION STYLES
+   ============================================ */
+.filter-section-top {
+  background: #fff;
+  padding: 24px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.filter-form-horizontal {
+  width: 100%;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  align-items: end;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a4a4a;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  font-size: 15px;
+  color: #4a4a4a;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #8b5a2b;
+}
+
+.filter-options-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-option-horizontal {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.filter-option-horizontal:hover {
+  border-color: #8b5a2b;
+  background: #f9f9f9;
+}
+
+.filter-option-horizontal input[type="radio"] {
+  margin-right: 6px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #8b5a2b;
+}
+
+.filter-option-horizontal input[type="radio"]:checked + span {
+  color: #8b5a2b;
+  font-weight: 600;
+}
+
+.filter-option-horizontal:has(input[type="radio"]:checked) {
+  border-color: #8b5a2b;
+  background: #f5f0e8;
+}
+
+.filter-option-horizontal span {
+  font-size: 14px;
+  color: #4a4a4a;
+  user-select: none;
+}
+
+.price-inputs-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-inputs-horizontal .filter-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.price-separator {
+  color: #8b5a2b;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  flex-direction: row;
+}
+
+.filter-buttons .btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-buttons .btn-primary {
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+  color: #fff;
+  border: none;
+}
+
+.filter-buttons .btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.filter-buttons .btn-secondary {
+  background: #f5f5f5;
+  color: #4a4a4a;
+  border: 1px solid #e5e5e5;
+}
+
+.filter-buttons .btn-secondary:hover {
+  background: #e5e5e5;
+  color: #333;
+}
+
+.service-grid-wrapper {
+  width: 100%;
+}
+
+.service-grid-wrapper .service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  justify-content: start;
+}
+
+.service-grid-wrapper .svc-card {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Responsive for filter */
+@media (max-width: 1200px) {
+  .filter-row {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 991px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-options-horizontal {
+    flex-wrap: wrap;
+  }
+  
+  .price-inputs-horizontal {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .price-separator {
+    display: none;
+  }
+  
+  .filter-buttons {
+    flex-direction: column;
+  }
+  
+  .filter-buttons .btn {
+    width: 100%;
+  }
+}
+
+/* ============================================
    SERVICE FILTER SIDEBAR STYLES
    ============================================ */
-/* Sticky sidebar filter */
+/* Override style.css - Remove background and border */
 .service-section .service_left {
   position: sticky;
   top: 120px;
   align-self: flex-start;
-  max-height: calc(100vh - 140px);
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
+  overflow: visible;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.service-section .service_left::before {
+  display: none !important;
 }
 
 .service-section .service-left-inner {
   position: relative;
+  padding: 0;
 }
 
 .filter-group {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .filter-group:last-child {
   border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .filter-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: #4a4a4a;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .filter-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .filter-option {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 6px 0;
   transition: color 0.2s ease;
 }
 
@@ -562,15 +778,15 @@
 }
 
 .filter-option input[type="radio"] {
-  margin-right: 10px;
+  margin-right: 8px;
   cursor: pointer;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   accent-color: #8b5a2b;
 }
 
 .filter-option span {
-  font-size: 15px;
+  font-size: 14px;
   color: #4a4a4a;
   user-select: none;
 }
@@ -581,10 +797,10 @@
 
 .filter-select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #e5e5e5;
   border-radius: 4px;
-  font-size: 15px;
+  font-size: 14px;
   color: #4a4a4a;
   background-color: #fff;
   cursor: pointer;
@@ -596,18 +812,24 @@
   border-color: #8b5a2b;
 }
 
+/* Input text for search */
+.filter-select[type="text"],
+.filter-select[type="number"] {
+  cursor: text;
+}
+
 .price-inputs {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .price-inputs .form-control {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #e5e5e5;
   border-radius: 4px;
-  font-size: 15px;
+  font-size: 14px;
   color: #4a4a4a;
   transition: border-color 0.2s ease;
 }
@@ -618,16 +840,16 @@
 }
 
 .filter-actions {
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .filter-actions .btn {
-  padding: 12px 20px;
-  font-size: 15px;
+  padding: 10px 16px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   transition: all 0.2s ease;
 }
 

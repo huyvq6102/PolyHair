@@ -34,7 +34,7 @@
       </div>
       @endforeach
     </div>
- 
+
   </div>
 </section>
 
@@ -311,78 +311,6 @@
   </div>
 </section>
 <!-- End San phảm chăm sóc tóc -->
- <!-- hệ thống salon -->
-  <section class="salon-section py-5">
-  <div class="container">
-    <div class="d-flex align-items-start mb-3">
-      <span class="salon-bar mr-2"></span>
-      <div>
-        <h3 class="salon-title mb-1 ba-title mb-0">HỆ THỐNG POLY HAIR SALON</h3>
-        <p class="salon-desc mb-0">Hệ thống POLY HAIR SALON, đang có hơn 40 chi nhánh trên toàn quốc!</p>
-      </div>
-    </div>
-
-    <div class="salon-slider">
-      <button class="salon-nav prev" aria-label="Prev">‹</button>
-      <div class="salon-viewport">
-        <div class="salon-track">
-          @foreach([
-            ['name'=>'TP. Hồ Chí Minh','desc'=>'9 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/cn1-3166.jpg','link'=>'#'],
-            ['name'=>'TP. Hà Nội','desc'=>'1 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/cn1-7398.jpg','link'=>'#'],
-            ['name'=>'Kiên Giang','desc'=>'2 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/231201fbc6306d6e34215-2756.jpg','link'=>'#'],
-            ['name'=>'Đà Nẵng','desc'=>'2 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/cn1-3697.jpg','link'=>'#'],
-            ['name'=>'Các thành phố khác','desc'=>'22 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/a6ad6db5aa7e0120586f4-8616.jpg','link'=>'#'],
-          ] as $item)
-            <a class="salon-card" href="{{ $item['link'] }}">
-              <div class="salon-img"><img src="{{ $item['img'] }}" alt="{{ $item['name'] }}"></div>
-              <div class="salon-txt">
-                <div class="salon-name">{{ $item['name'] }}</div>
-                <div class="salon-desc2">{{ $item['desc'] }}</div>
-              </div>
-            </a>
-          @endforeach
-        </div>
-      </div>
-      <button class="salon-nav next" aria-label="Next">›</button>
-    </div>
-  </div>
-</section>
-    <!-- end hệ thống salon -->
-<!-- đối tác -->
- <section class="partner-section py-5">
-  <div class="container">
-    <div class="d-flex align-items-start mb-3">
-      <span class="partner-bar mr-2"></span>
-      <h3 class="partner-title mb-0 ba-title mb-0">ĐỐI TÁC</h3>
-    </div>
-
-    <div class="partner-slider">
-      <button class="partner-nav prev" aria-label="Prev">‹</button>
-      <div class="partner-viewport">
-        <div class="partner-track">
-          @foreach([
-            ['name'=>'OLAPLEX','desc'=>'Olaplex là một trong những thương hiệu chăm sóc tóc lớn nhất...','img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-7253.png'],
-            ['name'=>'MOROCCANOIL','desc'=>'Moroccanoil là thương hiệu chăm sóc tóc nổi tiếng toàn cầu...','img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-1-5586.png'],
-            ['name'=>'B3 BRAZILIAN','desc'=>'B3 Brazillian Bond Builder nổi tiếng hàng đầu tại Mỹ...','img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-2-6250.png'],
-            ['name'=>"L'Oréal",'desc'=>"L'Oréal Paris là thương hiệu mỹ phẩm hàng đầu thế giới...",'img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-3-3370.png'],
-                        ['name'=>"L'Oréal",'desc'=>"L'Oréal Paris là thương hiệu mỹ phẩm hàng đầu thế giới...",'img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-3-3370.png'],
-                        ['name'=>"L'Oréal",'desc'=>"L'Oréal Paris là thương hiệu mỹ phẩm hàng đầu thế giới...",'img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-3-3370.png'],
-          ] as $p)
-          <a class="partner-card" href="#">
-            <div class="partner-img"><img src="{{ $p['img'] }}" alt="{{ $p['name'] }}"></div>
-            <div class="partner-txt">
-              <h4 class="partner-name">{{ $p['name'] }}</h4>
-              <div class="partner-desc">{{ $p['desc'] }}</div>
-            </div>
-          </a>
-          @endforeach
-        </div>
-      </div>
-      <button class="partner-nav next" aria-label="Next">›</button>
-    </div>
-  </div>
-</section>
-    <!-- end đối tác -->
     <!-- cộng đồng -->
      <section class="community-section py-4">
   <div class="container">
@@ -457,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nextSlide = () => {
     const maxScroll = track.scrollWidth - viewport.clientWidth;
     const currentScroll = viewport.scrollLeft;
-    
+
     if (currentScroll >= maxScroll - 10) {
       // Nếu đã đến cuối, quay về đầu
       viewport.scrollTo({ left: 0, behavior: 'smooth' });
