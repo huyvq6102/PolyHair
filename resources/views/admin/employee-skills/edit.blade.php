@@ -33,7 +33,7 @@
                 <select name="services[]" id="services" class="form-control select2 @error('services') is-invalid @enderror" multiple data-placeholder="Chọn dịch vụ">
                     @foreach($services as $service)
                         <option value="{{ $service->id }}" {{ in_array($service->id, old('services', $employee->services->pluck('id')->toArray())) ? 'selected' : '' }}>
-                            {{ $service->name }} @if($service->category) - {{ $service->category->name }} @endif
+                            {{ $service->name }}
                         </option>
                     @endforeach
                 </select>
