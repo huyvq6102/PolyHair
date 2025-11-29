@@ -3,11 +3,11 @@
 @section('title', 'Đặt lịch ngay')
 
 @section('content')
-<div class="appointment-page" style="padding: 30px 0 10px; background: #f8f9fa; min-height: 100vh;">
+<div class="appointment-page" style="padding: 150px 0 20px; background: #f8f9fa; min-height: 100vh;">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-6 col-xl-5">
-                <div class="appointment-form-container" style="background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 18px; margin-bottom: 10px; margin-top: 70px;">
+                <div class="appointment-form-container" style="background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 18px; margin-bottom: 20px; margin-top: 0;">
                     
                     <!-- Header -->
                     <div class="text-center mb-2" style="margin-bottom: 16px;">
@@ -241,12 +241,16 @@
                             
                             @if($hasAnyService)
                                 <div style="margin-top: 6px;">
-                                    <a href="{{ route('site.appointment.select-services', array_merge(request()->all(), ['add_more' => true])) }}" class="btn btn-sm w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 7px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
+                                    <a href="{{ route('site.appointment.select-services', array_merge(request()->all(), ['add_more' => true])) }}" 
+                                       class="btn btn-sm w-100 select-services-link" 
+                                       style="background: #000; border: 1px solid #000; color: #fff; padding: 7px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
                                         <i class="fa fa-plus"></i> Chọn thêm dịch vụ
                                     </a>
                                 </div>
                             @else
-                                <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 7px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center;">
+                                <a href="{{ route('site.appointment.select-services') }}" 
+                                   class="btn btn-primary w-100 select-services-link" 
+                                   style="background: #000; border: 1px solid #000; color: #fff; padding: 7px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center;">
                                     <i class="fa fa-scissors"></i> Xem tất cả dịch vụ hấp dẫn
                                 </a>
                             @endif
@@ -926,7 +930,7 @@
         }
 
         .appointment-page {
-            padding: 80px 0 30px !important;
+            padding: 130px 0 20px !important;
         }
     }
 </style>
@@ -945,6 +949,85 @@
             $('input[name="email"]').val(userEmail);
         });
     $(document).ready(function() {
+        // Khôi phục thông tin từ localStorage nếu có
+        const savedFormData = localStorage.getItem('appointmentFormData');
+        if (savedFormData) {
+            try {
+                const formData = JSON.parse(savedFormData);
+                if (formData.name) {
+                    $('#name').val(formData.name);
+                }
+                if (formData.phone) {
+                    $('#phone').val(formData.phone);
+                }
+                if (formData.email) {
+                    $('input[name="email"]').val(formData.email);
+                }
+                if (formData.note) {
+                    $('textarea[name="note"]').val(formData.note);
+                }
+                if (formData.employee_id) {
+                    $('#employee_id').val(formData.employee_id);
+                }
+                if (formData.appointment_date) {
+                    $('#appointment_date').val(formData.appointment_date);
+                }
+                if (formData.word_time_id) {
+                    $('#word_time_id').val(formData.word_time_id);
+                }
+                if (formData.time_slot) {
+                    $('#time_slot').val(formData.time_slot);
+                }
+            } catch (e) {
+                console.error('Error restoring form data:', e);
+            }
+        }
+        
+        // Lưu thông tin form vào localStorage trước khi chuyển trang chọn dịch vụ
+        $('.select-services-link').on('click', function(e) {
+            const formData = {
+                name: $('#name').val() || '',
+                phone: $('#phone').val() || '',
+                email: $('input[name="email"]').val() || '',
+                note: $('textarea[name="note"]').val() || '',
+                employee_id: $('#employee_id').val() || '',
+                appointment_date: $('#appointment_date').val() || '',
+                word_time_id: $('#word_time_id').val() || '',
+                time_slot: $('#time_slot').val() || ''
+            };
+            localStorage.setItem('appointmentFormData', JSON.stringify(formData));
+        });
+        
+        // Lưu thông tin form khi người dùng nhập (auto-save)
+        $('#name, #phone, input[name="email"], textarea[name="note"]').on('input change', function() {
+            const formData = {
+                name: $('#name').val() || '',
+                phone: $('#phone').val() || '',
+                email: $('input[name="email"]').val() || '',
+                note: $('textarea[name="note"]').val() || '',
+                employee_id: $('#employee_id').val() || '',
+                appointment_date: $('#appointment_date').val() || '',
+                word_time_id: $('#word_time_id').val() || '',
+                time_slot: $('#time_slot').val() || ''
+            };
+            localStorage.setItem('appointmentFormData', JSON.stringify(formData));
+        });
+        
+        // Lưu khi chọn employee, date, time slot
+        $('#employee_id, #appointment_date, #word_time_id, #time_slot').on('change', function() {
+            const formData = {
+                name: $('#name').val() || '',
+                phone: $('#phone').val() || '',
+                email: $('input[name="email"]').val() || '',
+                note: $('textarea[name="note"]').val() || '',
+                employee_id: $('#employee_id').val() || '',
+                appointment_date: $('#appointment_date').val() || '',
+                word_time_id: $('#word_time_id').val() || '',
+                time_slot: $('#time_slot').val() || ''
+            };
+            localStorage.setItem('appointmentFormData', JSON.stringify(formData));
+        });
+        
         // Xóa tất cả thông báo lỗi tổng hợp khi trang load
         $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').remove();
         
@@ -1632,7 +1715,10 @@
             // Remove ALL previous error messages and alerts
             $('.validation-error-alert, .alert-danger, .alert-warning').remove();
             
-            // Validate form
+            // Get form reference
+            const $form = $(this);
+            
+            // Validate form - validation will get values directly from DOM
             const isValid = validateForm();
             if (!isValid) {
                 // Scroll to first error
@@ -1663,16 +1749,19 @@
             
             // Submit form via AJAX
             $.ajax({
-                url: $(this).attr('action'),
+                url: $form.attr('action'),
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json'
                 },
-                data: $(this).serialize(),
+                data: $form.serialize(),
                 success: function(response) {
                     if (response.success) {
+                        // Xóa dữ liệu đã lưu trong localStorage sau khi submit thành công
+                        localStorage.removeItem('appointmentFormData');
+                        
                         // Remove any previous messages
                         $('.alert-success, .alert-danger, .alert-warning, .validation-error-alert').remove();
                         
