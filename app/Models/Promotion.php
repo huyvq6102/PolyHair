@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Promotion extends Model
 {
@@ -32,6 +33,14 @@ class Promotion extends Model
     public function promotionUsages(): HasMany
     {
         return $this->hasMany(PromotionUsage::class);
+    }
+
+    /**
+     * Services that this promotion applies to.
+     */
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class)->withTimestamps();
     }
 }
 
