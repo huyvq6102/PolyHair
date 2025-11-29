@@ -50,92 +50,157 @@
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Danh sách lịch</h6>
     </div>
-    <div class="card-body">
-        @forelse($groupedSchedules as $group)
+    <div class="card-body p-0">
+        @php
+            // Nhóm lại theo ngày trước
+            $schedulesByDate = collect($groupedSchedules->items())->groupBy(function($group) {
+                if (is_array($group) && isset($group['work_date']) && $group['work_date']) {
+                    return $group['work_date']->format('Y-m-d');
+                }
+                return 'unknown';
+            });
+        @endphp
+
+        @forelse($schedulesByDate as $dateKey => $dateGroups)
             @php
-                $workDate = $group['work_date'];
-                $shift = $group['shift'];
-                $schedulesByPosition = $group['schedules'];
+                $firstGroup = $dateGroups->first();
+                if (!is_array($firstGroup) || !isset($firstGroup['work_date'])) {
+                    continue;
+                }
+                $workDate = $firstGroup['work_date'];
                 $requiredPositions = ['Stylist', 'Barber', 'Shampooer', 'Receptionist'];
             @endphp
-            
-            <div class="card mb-3 border-left-primary">
-                <div class="card-body">
-                    <div class="row align-items-center mb-2">
-                        <div class="col-md-4">
-                            <h6 class="mb-0 font-weight-bold text-primary">
-                                <i class="fas fa-calendar"></i> {{ $workDate->format('d/m/Y') }}
-                            </h6>
-                        </div>
-                        <div class="col-md-4">
-                            <h6 class="mb-0">
-                                <i class="fas fa-clock"></i> {{ $shift->name ?? 'N/A' }} ({{ $shift->display_time ?? 'N/A' }})
-                            </h6>
-                        </div>
-                        <div class="col-md-4 text-right">
-                            <a href="{{ route('admin.working-schedules.show', $schedulesByPosition->flatten()->first()->id) }}" class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i> Chi tiết
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        @foreach($requiredPositions as $position)
+
+            <!-- Header ngày -->
+            <div class="schedule-date-header">
+                <div class="d-flex align-items-center justify-content-between p-3 bg-light border-bottom">
+                    <div>
+                        <h5 class="mb-0 font-weight-bold text-primary">
+                            <i class="fas fa-calendar-alt mr-2"></i>
+                            {{ $workDate->format('d/m/Y') }}
                             @php
-                                $positionSchedules = $schedulesByPosition->get($position, collect());
-                                $schedule = $positionSchedules->first();
+                                $dayNames = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+                                $dayName = $dayNames[$workDate->dayOfWeek] ?? '';
                             @endphp
-                            <div class="col-md-3 mb-2">
-                                <div class="border rounded p-2 h-100">
-                                    <small class="text-muted d-block mb-1">
-                                        <strong>{{ $position }}:</strong>
-                                    </small>
-                                    @if($schedule)
-                                        @php
-                                            $employee = $schedule->employee;
-                                            $user = $employee->user ?? null;
-                                            $status = $schedule->status;
-                                            $badge = match($status) {
-                                                'pending' => 'warning',
-                                                'approved' => 'success',
-                                                'cancelled' => 'danger',
-                                                'completed' => 'info',
-                                                default => 'secondary'
-                                            };
-                                        @endphp
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="font-weight-bold">{{ $user->name ?? 'N/A' }}</span>
-                                            <span class="badge badge-{{ $badge }} badge-sm">{{ $statusOptions[$status] ?? 'N/A' }}</span>
-                                        </div>
-                                        <div class="mt-1">
-                                            <a href="{{ route('admin.working-schedules.edit', $schedule->id) }}" class="btn btn-xs btn-primary btn-sm">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <form action="{{ route('admin.working-schedules.destroy', $schedule->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa lịch này?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-xs btn-danger btn-sm">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    @else
-                                        <span class="text-muted small">Chưa có</span>
-                                    @endif
-                                </div>
-                            </div>
-                        @endforeach
+                            <span class="text-muted font-weight-normal ml-2">({{ $dayName }})</span>
+                        </h5>
                     </div>
+                    <div>
+                        <span class="badge badge-info">{{ $dateGroups->count() }} ca</span>
+                    </div>
+                </div>
+
+                <!-- Bảng lịch cho ngày này -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0 schedule-table">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 15%;" class="text-center">Ca làm việc</th>
+                                <th style="width: 21.25%;" class="text-center">Stylist</th>
+                                <th style="width: 21.25%;" class="text-center">Barber</th>
+                                <th style="width: 21.25%;" class="text-center">Shampooer</th>
+                                <th style="width: 21.25%;" class="text-center">Receptionist</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($dateGroups as $group)
+                                @php
+                                    if (!is_array($group) || !isset($group['shift']) || !isset($group['schedules'])) {
+                                        continue;
+                                    }
+                                    $shift = $group['shift'];
+                                    $schedulesByPosition = $group['schedules'];
+                                @endphp
+                                <tr class="schedule-row">
+                                    <td class="align-middle text-center">
+                                        <div class="shift-info">
+                                            <strong class="d-block">{{ $shift->name ?? 'N/A' }}</strong>
+                                            <small class="text-muted">{{ $shift->display_time ?? 'N/A' }}</small>
+                                        </div>
+                                        @php
+                                            $firstSchedule = ($schedulesByPosition instanceof \Illuminate\Support\Collection) 
+                                                ? $schedulesByPosition->flatten()->first() 
+                                                : null;
+                                        @endphp
+                                        @if($firstSchedule)
+                                            <a href="{{ route('admin.working-schedules.show', $firstSchedule->id) }}" 
+                                               class="btn btn-sm btn-info btn-block mt-2" 
+                                               title="Xem chi tiết">
+                                                <i class="fas fa-eye"></i> Chi tiết
+                                            </a>
+                                        @endif
+                                    </td>
+                                    @foreach($requiredPositions as $position)
+                                        @php
+                                            $positionSchedules = ($schedulesByPosition instanceof \Illuminate\Support\Collection) 
+                                                ? $schedulesByPosition->get($position, collect()) 
+                                                : collect();
+                                            $schedule = $positionSchedules instanceof \Illuminate\Support\Collection 
+                                                ? $positionSchedules->first() 
+                                                : null;
+                                        @endphp
+                                        <td class="align-middle position-cell">
+                                            @if($schedule)
+                                                @php
+                                                    $employee = $schedule->employee;
+                                                    $user = $employee->user ?? null;
+                                                    $status = $schedule->status;
+                                                    $badge = match($status) {
+                                                        'pending' => 'warning',
+                                                        'approved' => 'success',
+                                                        'cancelled' => 'danger',
+                                                        'completed' => 'info',
+                                                        default => 'secondary'
+                                                    };
+                                                @endphp
+                                                <div class="employee-info">
+                                                    <div class="employee-name">
+                                                        <strong>{{ $user->name ?? 'N/A' }}</strong>
+                                                    </div>
+                                                    <div class="employee-status mt-1 mb-2">
+                                                        <span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? 'N/A' }}</span>
+                                                    </div>
+                                                    <div class="employee-actions">
+                                                        <a href="{{ route('admin.working-schedules.edit', $schedule->id) }}" 
+                                                           class="btn btn-xs btn-primary" 
+                                                           title="Sửa">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <form action="{{ route('admin.working-schedules.destroy', $schedule->id) }}" 
+                                                              method="POST" 
+                                                              class="d-inline" 
+                                                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa lịch này?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-xs btn-danger" title="Xóa">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="text-center text-muted">
+                                                    <i class="fas fa-user-slash fa-2x mb-2"></i>
+                                                    <div class="small">Chưa có</div>
+                                                </div>
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         @empty
             <div class="text-center py-5">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
                 <p class="text-muted mb-0">Chưa có lịch nào</p>
             </div>
         @endforelse
 
         @if($groupedSchedules->hasPages())
-            <div class="d-flex justify-content-center mt-3">
+            <div class="d-flex justify-content-center p-3 border-top">
                 {{ $groupedSchedules->links() }}
             </div>
         @endif
@@ -143,18 +208,133 @@
 </div>
 
 <style>
-.border-left-primary {
-    border-left: 4px solid #4e73df !important;
+/* Header ngày */
+.schedule-date-header {
+    border-bottom: 2px solid #e3e6f0;
+    margin-bottom: 0;
 }
+
+.schedule-date-header:last-child {
+    border-bottom: none;
+}
+
+/* Bảng lịch */
+.schedule-table {
+    margin-bottom: 0;
+}
+
+.schedule-table thead th {
+    background-color: #f8f9fc;
+    border-bottom: 2px solid #e3e6f0;
+    font-weight: 600;
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
+.schedule-table tbody td {
+    vertical-align: middle;
+    padding: 15px 10px;
+}
+
+.schedule-row {
+    transition: background-color 0.2s;
+}
+
+.schedule-row:hover {
+    background-color: #f8f9fc;
+}
+
+/* Thông tin ca */
+.shift-info {
+    padding: 5px 0;
+}
+
+.shift-info strong {
+    color: #4e73df;
+    font-size: 0.95rem;
+}
+
+.shift-info small {
+    font-size: 0.8rem;
+}
+
+/* Ô vị trí nhân viên */
+.position-cell {
+    min-height: 120px;
+}
+
+.employee-info {
+    text-align: center;
+}
+
+.employee-name {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.employee-name strong {
+    color: #2c3e50;
+    word-break: break-word;
+}
+
+.employee-status {
+    margin: 8px 0;
+}
+
+.employee-actions {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 8px;
+}
+
 .btn-xs {
-    padding: 0.125rem 0.25rem;
+    padding: 0.2rem 0.4rem;
     font-size: 0.75rem;
-    line-height: 1.5;
+    line-height: 1.3;
     border-radius: 0.2rem;
 }
-.badge-sm {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
+
+/* Responsive */
+@media (max-width: 768px) {
+    .schedule-table {
+        font-size: 0.85rem;
+    }
+    
+    .schedule-table thead th,
+    .schedule-table tbody td {
+        padding: 8px 5px;
+    }
+    
+    .employee-name {
+        font-size: 0.8rem;
+    }
+    
+    .btn-xs {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.7rem;
+    }
+}
+
+/* Màu sắc phân biệt cho các vị trí */
+.position-cell:nth-child(2) {
+    background-color: #fff5f5;
+}
+
+.position-cell:nth-child(3) {
+    background-color: #f0f9ff;
+}
+
+.position-cell:nth-child(4) {
+    background-color: #f0fff4;
+}
+
+.position-cell:nth-child(5) {
+    background-color: #fffbf0;
+}
+
+.schedule-row:hover .position-cell {
+    background-color: #f8f9fc;
 }
 </style>
 
