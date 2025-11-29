@@ -64,6 +64,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('working-schedules/trash', [WorkingScheduleController::class, 'trash'])->name('working-schedules.trash');
     Route::put('working-schedules/{id}/restore', [WorkingScheduleController::class, 'restore'])->name('working-schedules.restore');
     Route::delete('working-schedules/{id}/force-delete', [WorkingScheduleController::class, 'forceDelete'])->name('working-schedules.force-delete');
+    Route::delete('working-schedules/delete-all', [WorkingScheduleController::class, 'deleteAll'])->name('working-schedules.delete-all');
+    Route::delete('working-schedules/trash/delete-all', [WorkingScheduleController::class, 'deleteAllTrash'])->name('working-schedules.trash.delete-all');
     Route::resource('working-schedules', WorkingScheduleController::class);
     
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
