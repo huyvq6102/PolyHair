@@ -15,21 +15,26 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Kiểm tra đăng nhập
+
         if (!auth()->check()) {
-            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để truy cập trang quản trị.');
+            return redirect()->route('login');
+
+        
+
         }
 
         $user = auth()->user();
         
-        // Load role nếu chưa được load
+
+        // Load role relationship if not already loaded
         if (!$user->relationLoaded('role')) {
             $user->load('role');
         }
-        
-        // Kiểm tra quyền admin
+
         if (!$user->isAdmin()) {
-            abort(403, 'Bạn không có quyền truy cập trang quản trị. Vui lòng liên hệ quản trị viên.');
+            abort(403, 'Unauthorized access.');
+
+        
         }
 
         return $next($request);
