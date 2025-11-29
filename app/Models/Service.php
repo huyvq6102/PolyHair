@@ -74,4 +74,12 @@ class Service extends Model
     {
         return $this->hasMany(Combo::class, 'owner_service_id');
     }
+
+    /**
+     * Promotions that include this service.
+     */
+    public function promotions(): BelongsToMany
+    {
+        return $this->belongsToMany(Promotion::class)->withTimestamps();
+    }
 }
