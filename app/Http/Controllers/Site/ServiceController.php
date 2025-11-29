@@ -36,16 +36,28 @@ class ServiceController extends Controller
         $categories = $this->categoryService->getAll();
         
         // Get filter parameters
-        $filterType = $request->get('filter_type', 'all'); // 'all', 'service', 'combo'
+        $filterType = $request->get('filter_type', 'all'); // 'all', 'service_single', 'service_variant', 'combo'
         $categoryId = $request->get('category');
         $typeId = $request->get('type'); // For backward compatibility
+        $keyword = $request->get('keyword', '');
+        $minPrice = $request->get('min_price');
+        $maxPrice = $request->get('max_price');
+        $sortBy = $request->get('sort_by', 'id_desc'); // 'id_desc', 'name_asc', 'name_desc', 'price_asc', 'price_desc'
 
         $items = collect();
 
-        // Get Services
-        if ($filterType === 'all' || $filterType === 'service') {
+        // Get Services (single or variant)
+        if ($filterType === 'all' || $filterType === 'service_single' || $filterType === 'service_variant') {
             $serviceQuery = Service::with(['category', 'serviceVariants', 'ownedCombos']);
 
+            // Filter by service type (single or variant)
+            if ($filterType === 'service_single') {
+                $serviceQuery->whereDoesntHave('serviceVariants');
+            } elseif ($filterType === 'service_variant') {
+                $serviceQuery->whereHas('serviceVariants');
+            }
+
+            // Filter by category
             if ($categoryId) {
                 $serviceQuery->where('category_id', $categoryId);
             } elseif ($typeId) {
@@ -53,18 +65,35 @@ class ServiceController extends Controller
                 $serviceQuery->where('category_id', $typeId);
             }
 
+            // Filter by keyword (name)
+            if ($keyword) {
+                $serviceQuery->where('name', 'like', "%{$keyword}%");
+            }
+
             $services = $serviceQuery->orderBy('id', 'desc')->get();
             
             foreach ($services as $service) {
+                $price = $service->serviceVariants->where('is_active', true)->min('price') 
+                        ?? $service->serviceVariants->min('price') 
+                        ?? $service->base_price 
+                        ?? 0;
+                
+                // Filter by price range
+                if ($minPrice !== null && $price < $minPrice) {
+                    continue;
+                }
+                if ($maxPrice !== null && $price > $maxPrice) {
+                    continue;
+                }
+
+                $serviceType = $service->serviceVariants->count() > 0 ? 'service_variant' : 'service_single';
+                
                 $items->push([
-                    'type' => 'service',
+                    'type' => $serviceType,
                     'id' => $service->id,
                     'name' => $service->name,
                     'image' => $service->image,
-                    'price' => $service->serviceVariants->where('is_active', true)->min('price') 
-                             ?? $service->serviceVariants->min('price') 
-                             ?? $service->base_price 
-                             ?? 0,
+                    'price' => $price,
                     'category' => $service->category,
                     'serviceVariants' => $service->serviceVariants,
                     'link' => route('site.services.show', $service->id),
@@ -76,27 +105,61 @@ class ServiceController extends Controller
         if ($filterType === 'all' || $filterType === 'combo') {
             $comboQuery = Combo::with(['category', 'services']);
 
+            // Filter by category
             if ($categoryId) {
                 $comboQuery->where('category_id', $categoryId);
+            }
+
+            // Filter by keyword (name)
+            if ($keyword) {
+                $comboQuery->where('name', 'like', "%{$keyword}%");
             }
 
             $combos = $comboQuery->orderBy('id', 'desc')->get();
             
             foreach ($combos as $combo) {
+                $price = $combo->price ?? 0;
+                
+                // Filter by price range
+                if ($minPrice !== null && $price < $minPrice) {
+                    continue;
+                }
+                if ($maxPrice !== null && $price > $maxPrice) {
+                    continue;
+                }
+                
                 $items->push([
                     'type' => 'combo',
                     'id' => $combo->id,
                     'name' => $combo->name,
                     'image' => $combo->image,
-                    'price' => $combo->price ?? 0,
+                    'price' => $price,
                     'category' => $combo->category,
                     'link' => '#',
                 ]);
             }
         }
 
-        // Sort by id desc and paginate
-        $items = $items->sortByDesc('id')->values();
+        // Sort items
+        switch ($sortBy) {
+            case 'name_asc':
+                $items = $items->sortBy('name')->values();
+                break;
+            case 'name_desc':
+                $items = $items->sortByDesc('name')->values();
+                break;
+            case 'price_asc':
+                $items = $items->sortBy('price')->values();
+                break;
+            case 'price_desc':
+                $items = $items->sortByDesc('price')->values();
+                break;
+            default: // 'id_desc'
+                $items = $items->sortByDesc('id')->values();
+                break;
+        }
+
+        // Paginate
         $perPage = 6;
         $currentPage = $request->get('page', 1);
         
@@ -114,7 +177,7 @@ class ServiceController extends Controller
             ]
         );
 
-        return view('site.service-list', compact('items', 'types', 'typeId', 'categories', 'filterType', 'categoryId'));
+        return view('site.service-list', compact('items', 'types', 'typeId', 'categories', 'filterType', 'categoryId', 'keyword', 'minPrice', 'maxPrice', 'sortBy'));
     }
 
     /**

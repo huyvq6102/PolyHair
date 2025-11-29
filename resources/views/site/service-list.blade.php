@@ -26,24 +26,22 @@
       <div class="service-left-inner">
         <h4 class="service-title mb-3">Bộ lọc</h4>
 
-        <form method="GET" action="{{ route('site.services.index') }}" id="filterForm">
+        <form method="GET" action="{{ route('site.services.index') }}" id="filterForm" onsubmit="return handleFilterSubmit(event)">
+          <!-- Search by Name -->
+          <div class="filter-group mb-4">
+            <h5 class="filter-title mb-2">Tìm kiếm</h5>
+            <input type="text" name="keyword" class="form-control filter-select" placeholder="Nhập tên dịch vụ..." value="{{ $keyword ?? '' }}" onkeyup="if(event.key === 'Enter') this.form.submit()">
+          </div>
+
           <!-- Filter by Type -->
           <div class="filter-group mb-4">
-            <h5 class="filter-title mb-2">Loại</h5>
-            <div class="filter-options">
-              <label class="filter-option">
-                <input type="radio" name="filter_type" value="all" {{ ($filterType ?? 'all') == 'all' ? 'checked' : '' }} onchange="this.form.submit()">
-                <span>Tất cả</span>
-              </label>
-              <label class="filter-option">
-                <input type="radio" name="filter_type" value="service" {{ ($filterType ?? '') == 'service' ? 'checked' : '' }} onchange="this.form.submit()">
-                <span>Dịch vụ</span>
-              </label>
-              <label class="filter-option">
-                <input type="radio" name="filter_type" value="combo" {{ ($filterType ?? '') == 'combo' ? 'checked' : '' }} onchange="this.form.submit()">
-                <span>Combo</span>
-              </label>
-            </div>
+            <h5 class="filter-title mb-2">Loại dịch vụ</h5>
+            <select name="filter_type" class="form-control filter-select" onchange="this.form.submit()">
+              <option value="all" {{ ($filterType ?? 'all') == 'all' ? 'selected' : '' }}>Tất cả</option>
+              <option value="service_single" {{ ($filterType ?? '') == 'service_single' ? 'selected' : '' }}>Dịch vụ đơn</option>
+              <option value="service_variant" {{ ($filterType ?? '') == 'service_variant' ? 'selected' : '' }}>Dịch vụ biến thể</option>
+              <option value="combo" {{ ($filterType ?? '') == 'combo' ? 'selected' : '' }}>Combo</option>
+            </select>
           </div>
 
           <!-- Filter by Category -->
@@ -61,8 +59,30 @@
           </div>
           @endif
 
+          <!-- Filter by Price -->
+          <div class="filter-group mb-4">
+            <h5 class="filter-title mb-2">Khoảng giá</h5>
+            <div class="price-inputs">
+              <input type="number" name="min_price" class="form-control filter-select mb-2" placeholder="Giá tối thiểu (vnđ)" value="{{ $minPrice ?? '' }}" min="0" step="1000">
+              <input type="number" name="max_price" class="form-control filter-select" placeholder="Giá tối đa (vnđ)" value="{{ $maxPrice ?? '' }}" min="0" step="1000">
+            </div>
+          </div>
+
+          <!-- Sort -->
+          <div class="filter-group mb-4">
+            <h5 class="filter-title mb-2">Sắp xếp</h5>
+            <select name="sort_by" class="form-control filter-select" onchange="this.form.submit()">
+              <option value="id_desc" {{ ($sortBy ?? 'id_desc') == 'id_desc' ? 'selected' : '' }}>Mới nhất</option>
+              <option value="name_asc" {{ ($sortBy ?? '') == 'name_asc' ? 'selected' : '' }}>Tên A-Z</option>
+              <option value="name_desc" {{ ($sortBy ?? '') == 'name_desc' ? 'selected' : '' }}>Tên Z-A</option>
+              <option value="price_asc" {{ ($sortBy ?? '') == 'price_asc' ? 'selected' : '' }}>Giá tăng dần</option>
+              <option value="price_desc" {{ ($sortBy ?? '') == 'price_desc' ? 'selected' : '' }}>Giá giảm dần</option>
+            </select>
+          </div>
+
           <!-- Filter Buttons -->
           <div class="filter-actions">
+            <button type="submit" class="btn btn-primary btn-block mb-2">Áp dụng</button>
             <a href="{{ route('site.services.index') }}" class="btn btn-secondary btn-block">Xóa bộ lọc</a>
           </div>
 
@@ -88,8 +108,16 @@
                 : asset('legacy/images/products/default.jpg');
 
             // Badge type
-            $typeBadge = $item['type'] == 'service' ? 'Dịch vụ' : 'Combo';
-            $typeClass = $item['type'] == 'service' ? 'badge-primary' : 'badge-success';
+            if ($item['type'] == 'service_single') {
+              $typeBadge = 'Dịch vụ đơn';
+              $typeClass = 'badge-primary';
+            } elseif ($item['type'] == 'service_variant') {
+              $typeBadge = 'Dịch vụ biến thể';
+              $typeClass = 'badge-info';
+            } else {
+              $typeBadge = 'Combo';
+              $typeClass = 'badge-success';
+            }
           @endphp
           <div class="svc-card">
             <a class="svc-img" href="{{ $item['link'] }}">
@@ -163,5 +191,43 @@
 </section>
 
     <!-- service_area_end -->
+    
+<script>
+function handleFilterSubmit(event) {
+    // Lưu vị trí scroll hiện tại
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    sessionStorage.setItem('filterScrollPosition', scrollPosition);
+    
+    // Cho phép form submit bình thường
+    return true;
+}
+
+// Sau khi trang load, scroll về vị trí đã lưu
+document.addEventListener('DOMContentLoaded', function() {
+    const savedPosition = sessionStorage.getItem('filterScrollPosition');
+    if (savedPosition) {
+        // Scroll về vị trí filter (khoảng 120px từ đầu trang)
+        const filterElement = document.querySelector('.service_left');
+        if (filterElement) {
+            setTimeout(function() {
+                const filterTop = filterElement.offsetTop - 120;
+                window.scrollTo({
+                    top: filterTop,
+                    behavior: 'smooth'
+                });
+                // Xóa vị trí đã lưu sau khi scroll
+                sessionStorage.removeItem('filterScrollPosition');
+            }, 100);
+        } else {
+            // Nếu không tìm thấy filter, scroll về vị trí đã lưu
+            window.scrollTo({
+                top: parseInt(savedPosition),
+                behavior: 'smooth'
+            });
+            sessionStorage.removeItem('filterScrollPosition');
+        }
+    }
+});
+</script>
 @endsection
 

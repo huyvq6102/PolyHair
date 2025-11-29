@@ -16,16 +16,17 @@
         <p class="desc">
             Chào mừng Quý khách hàng đến với POLY HAIR Salon,
             nơi mang đến cho bạn trải nghiệm làm đẹp tinh tế và độc đáo.
-            Dưới đây là bộ sưu tập những mẫu tóc đẹp nhất năm 2024 giúp nâng tầm vẻ đẹp của bạn lên một tầm cao mới.
+            Dưới đây là bộ sưu tập những mẫu tóc đẹp nhất năm 2025 giúp nâng tầm vẻ đẹp của bạn lên một tầm cao mới.
         </p>
       </div>
     </div>
     <div class="album-grid">
       @foreach([
-        ['name'=>'MÀU TRENDY','link'=>'#','img'=>'https://trakyhairsalon.com/watermark/product/300x450x1/upload/product/300x450-1-7558.png'],
-        ['name'=>'KIỂU TÓC HOT','link'=>'#','img'=>'https://trakyhairsalon.com/watermark/product/300x450x1/upload/product/300x450-3-1088.png'],
-        ['name'=>'TÓC LỠ','link'=>'#','img'=>'https://trakyhairsalon.com/watermark/product/300x450x1/upload/product/300x450-4-2010.png'],
-        ['name'=>'TÓC LỠ','link'=>'#','img'=>'https://trakyhairsalon.com/watermark/product/300x450x1/upload/product/300x450-4-2010.png'],
+        ['name'=>'UỐN SIDE PART','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/13448_5/1.jpeg'],
+        ['name'=>'MÀU HOT TREND','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/13016_13/1.jpeg'],
+        ['name'=>'XOĂN HÀN QUỐC','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/12822_1/1.png'],
+        ['name'=>'KIỂU SHORT QUIFF','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/10110_2/2.jpeg'],
+
       ] as $item)
       <div class="album-card">
         <div class="album-img"><img src="{{ $item['img'] }}" alt="{{ $item['name'] }}"></div>
@@ -34,11 +35,11 @@
       </div>
       @endforeach
     </div>
- 
+
   </div>
 </section>
 
-    <!--2 DỊCH VỤ TÓC -->
+<!--2 DỊCH VỤ TÓC -->
 <section class="service-section py-5">
   <div class="container">
     <div class="d-flex align-items-start mb-3">
@@ -188,12 +189,12 @@
 
     <div class="fb-grid">
       @foreach([
-        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/4521855211921800244922583292012091870822199n-65270.jpg',
-        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/45429722539776299825202751161716994539239682n-31370.jpg',
-        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/46732587315178433255834577210241778246238031n-18140.jpg',
-        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/4613427028548217134619082361666114740470727n-49950.jpg',
-        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/46667694715145918325752731143632095580929221n-11060.jpg',
-        'https://trakyhairsalon.com/thumbs/500x545x1/upload/photo/1ba9680e30848adad395-66330.jpg',
+        'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/2.png',
+        'https://storage.30shine.com/web/v4/images/sao-toa-sang/8.jpg',
+        'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/8.png',
+        'https://storage.30shine.com/web/v4/images/sao-toa-sang/7.jpg',
+        'https://storage.30shine.com/web/v4/images/sao-toa-sang/5.jpg',
+        'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/15.png',
       ] as $img)
         <a class="fb-card" href="#">
           <div class="fb-img"><img src="{{ $img }}" alt="Feedback"></div>
@@ -203,55 +204,23 @@
 
 
 </section>
-
-<!-- BEFORE & AFTER -->
- <section class="before-after-section py-5">
-    <div class="container">
-        <div class="d-flex align-items-center mb-3">
-            <span class="ba-bar mr-2"></span>
-            <h3 class="ba-title mb-0">BEFORE & AFTER</h3>
-        </div>
-        <p class="text-muted mb-4">
-            Chúng ta thường xuyên nghe về sức mạnh của một kiểu tóc đẹp... trải nghiệm sự thay đổi tại đây.
-        </p>
-
-        <div class="ba-slider">
-            <div class="ba-viewport">
-                <div class="ba-track">
-                    @foreach([
-                        ['title'=>'Kiểu Tóc Hush Cut','img'=>'https://trakyhairsalon.com/thumbs/390x660x1/upload/photo/63912d7021a085fedcb1-7478.jpg','video'=>'https://www.youtube.com/watch?v=5VOz__vyEhs'],
-                        ['title'=>'Nhuộm Tóc + Uốn Xoăn Lơi','img'=>'https://trakyhairsalon.com/thumbs/390x660x1/upload/photo/9669d0c3f513514d0802-1635.jpg','video'=>'https://www.youtube.com/watch?v=p87x50eGm8E'],
-                        ['title'=>'Trước Và Sau Khi Nối Tóc','img'=>'https://trakyhairsalon.com/thumbs/390x660x1/upload/photo/29d5326a98bb3ce565aa-9602.jpg','video'=>'https://www.youtube.com/watch?v=woF99xC4qkM'],
-                        ['title'=>'Nối Tóc Lông Vũ','img'=>'https://trakyhairsalon.com/thumbs/390x660x1/upload/photo/cecf2787b7f213ac4ae3-1-6731.jpg','video'=>'https://www.youtube.com/watch?v=nqgvBN-PBwM'],
-                    ] as $item)
-                    <div class="ba-card" data-video="{{ $item['video'] }}">
-                        <div class="ba-img">
-                            <img src="{{ $item['img'] }}" alt="{{ $item['title'] }}">
-                        </div>
-                        <div class="ba-name">{{ $item['title'] }}</div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-
-        <!-- <div class="text-center mt-4">
-            <a href="#" class="btn-view-all">Xem tất cả</a>
-        </div> -->
-    </div>
-</section>
-
 <!-- ETRAKY’S STYLIST -->
  <section class="stylist-section py-5">
     <div class="container stylist-wrapper">
-        <div class="stylist-left">
-            <!-- <div class="stylist-letter">T</div> -->
-            <h2 class="stylist-title ba-title mb-0"> POLY'S STYLIST</h2>
-            <p class="stylist-desc">
-                Chúng tôi tự hào sở hữu một đội ngũ nghệ sĩ tóc tài năng và có kinh nghiệm. Với sự đam mê sáng tạo
-                và kiến thức chuyên sâu về xu hướng làm đẹp, họ không chỉ biến ý tưởng của bạn thành hiện thực
-                mà còn mang lại sự tự tin và phong cách mới cho vẻ ngoại hình của bạn.
-            </p>
+        <div class="stylist-left-wrapper">
+            <div class="stylist-left">
+                <!-- <div class="stylist-letter">T</div> -->
+                <h2 class="stylist-title ba-title mb-0"> POLY'S STYLIST</h2>
+                <p class="stylist-desc">
+                    Chúng tôi tự hào sở hữu một đội ngũ nghệ sĩ tóc tài năng và có kinh nghiệm. Với sự đam mê sáng tạo
+                    và kiến thức chuyên sâu về xu hướng làm đẹp, họ không chỉ biến ý tưởng của bạn thành hiện thực
+                    mà còn mang lại sự tự tin và phong cách mới cho vẻ ngoại hình của bạn.
+                </p>
+            </div>
+            
+            <div class="text-center mt-4">
+                <a href="#" class="btn-view-all">Xem tất cả</a>
+            </div>
         </div>
 
         <div class="stylist-right">
@@ -273,14 +242,68 @@
                 </div>
                 @endforeach
             </div>
-            <div class="text-center mt-3">
-                <a href="#" class="btn-view-all">Xem tất cả</a>
-            </div>
         </div>
     </div>
 </section>
 
 <!-- END TRAKY’S STYLIST -->
+
+<!-- BEFORE & AFTER -->
+ <section class="before-after-section py-5">
+    <div class="container">
+        <div class="d-flex align-items-center mb-3">
+            <span class="ba-bar mr-2"></span>
+            <h3 class="ba-title mb-0">BEFORE & AFTER</h3>
+        </div>
+        <p class="text-muted mb-4">
+            Chúng ta thường xuyên nghe về sức mạnh của một kiểu tóc đẹp... trải nghiệm sự thay đổi tại đây.
+        </p>
+
+        <div class="ba-slider">
+            <div class="ba-viewport">
+                <div class="ba-track">
+                   @foreach([
+    [
+        'title' => 'Kiểu Tóc UnderCut ngắn',
+        'img'   => 'https://achau.vn/wp-content/uploads/2012/05/988273_406758706091200_754796503_n-390x520.jpg',
+        'video' => 'https://www.youtube.com/watch?v=5VOz__vyEhs',
+    ],
+    [
+        'title' => 'Nhuộm Line + Vuốt ngược',
+        'img'   => 'https://achau.vn/wp-content/uploads/2014/09/11143342_1606728432899767_4218537422100364876_n-390x520.jpg',
+        'video' => 'https://www.youtube.com/watch?v=p87x50eGm8E',
+    ],
+    [
+        'title' => 'Kiểu tóc Top Knot Man',
+        'img'   => 'https://achau.vn/wp-content/uploads/2019/05/29594958_1211960602240074_5705512853582689225_n-390x520.jpg',
+        'video' => 'https://www.youtube.com/watch?v=woF99xC4qkM',
+    ],
+    [
+        'title' => 'Kiểu UnderCut vuốt ngược',
+        'img'   => 'https://achau.vn/wp-content/uploads/2016/03/11193417_135477886790117_6187735647423674751_n-464x618.jpg',
+        'video' => 'https://www.youtube.com/watch?v=nqgvBN-PBwM',
+    ],
+] as $item)
+
+                  <div class="ba-card" data-video="{{ $item['video'] }}">
+    <div class="ba-img">
+        <img src="{{ $item['img'] }}" alt="{{ $item['title'] }}">
+    </div>
+    <div class="ba-name">{{ $item['title'] }}</div>
+</div>
+@endforeach
+
+                </div>
+            </div>
+        </div>
+
+        <!-- <div class="text-center mt-4">
+            <a href="#" class="btn-view-all">Xem tất cả</a>
+        </div> -->
+    </div>
+</section>
+
+
 <!-- San phảm chăm sóc tóc -->
 <section class="product-section py-5">
   <div class="container">
@@ -311,78 +334,6 @@
   </div>
 </section>
 <!-- End San phảm chăm sóc tóc -->
- <!-- hệ thống salon -->
-  <section class="salon-section py-5">
-  <div class="container">
-    <div class="d-flex align-items-start mb-3">
-      <span class="salon-bar mr-2"></span>
-      <div>
-        <h3 class="salon-title mb-1 ba-title mb-0">HỆ THỐNG POLY HAIR SALON</h3>
-        <p class="salon-desc mb-0">Hệ thống POLY HAIR SALON, đang có hơn 40 chi nhánh trên toàn quốc!</p>
-      </div>
-    </div>
-
-    <div class="salon-slider">
-      <button class="salon-nav prev" aria-label="Prev">‹</button>
-      <div class="salon-viewport">
-        <div class="salon-track">
-          @foreach([
-            ['name'=>'TP. Hồ Chí Minh','desc'=>'9 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/cn1-3166.jpg','link'=>'#'],
-            ['name'=>'TP. Hà Nội','desc'=>'1 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/cn1-7398.jpg','link'=>'#'],
-            ['name'=>'Kiên Giang','desc'=>'2 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/231201fbc6306d6e34215-2756.jpg','link'=>'#'],
-            ['name'=>'Đà Nẵng','desc'=>'2 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/cn1-3697.jpg','link'=>'#'],
-            ['name'=>'Các thành phố khác','desc'=>'22 salon','img'=>'https://trakyhairsalon.com/thumbs/300x225x1/upload/news/a6ad6db5aa7e0120586f4-8616.jpg','link'=>'#'],
-          ] as $item)
-            <a class="salon-card" href="{{ $item['link'] }}">
-              <div class="salon-img"><img src="{{ $item['img'] }}" alt="{{ $item['name'] }}"></div>
-              <div class="salon-txt">
-                <div class="salon-name">{{ $item['name'] }}</div>
-                <div class="salon-desc2">{{ $item['desc'] }}</div>
-              </div>
-            </a>
-          @endforeach
-        </div>
-      </div>
-      <button class="salon-nav next" aria-label="Next">›</button>
-    </div>
-  </div>
-</section>
-    <!-- end hệ thống salon -->
-<!-- đối tác -->
- <section class="partner-section py-5">
-  <div class="container">
-    <div class="d-flex align-items-start mb-3">
-      <span class="partner-bar mr-2"></span>
-      <h3 class="partner-title mb-0 ba-title mb-0">ĐỐI TÁC</h3>
-    </div>
-
-    <div class="partner-slider">
-      <button class="partner-nav prev" aria-label="Prev">‹</button>
-      <div class="partner-viewport">
-        <div class="partner-track">
-          @foreach([
-            ['name'=>'OLAPLEX','desc'=>'Olaplex là một trong những thương hiệu chăm sóc tóc lớn nhất...','img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-7253.png'],
-            ['name'=>'MOROCCANOIL','desc'=>'Moroccanoil là thương hiệu chăm sóc tóc nổi tiếng toàn cầu...','img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-1-5586.png'],
-            ['name'=>'B3 BRAZILIAN','desc'=>'B3 Brazillian Bond Builder nổi tiếng hàng đầu tại Mỹ...','img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-2-6250.png'],
-            ['name'=>"L'Oréal",'desc'=>"L'Oréal Paris là thương hiệu mỹ phẩm hàng đầu thế giới...",'img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-3-3370.png'],
-                        ['name'=>"L'Oréal",'desc'=>"L'Oréal Paris là thương hiệu mỹ phẩm hàng đầu thế giới...",'img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-3-3370.png'],
-                        ['name'=>"L'Oréal",'desc'=>"L'Oréal Paris là thương hiệu mỹ phẩm hàng đầu thế giới...",'img'=>'https://trakyhairsalon.com/thumbs/300x300x2/upload/photo/300x300-3-3370.png'],
-          ] as $p)
-          <a class="partner-card" href="#">
-            <div class="partner-img"><img src="{{ $p['img'] }}" alt="{{ $p['name'] }}"></div>
-            <div class="partner-txt">
-              <h4 class="partner-name">{{ $p['name'] }}</h4>
-              <div class="partner-desc">{{ $p['desc'] }}</div>
-            </div>
-          </a>
-          @endforeach
-        </div>
-      </div>
-      <button class="partner-nav next" aria-label="Next">›</button>
-    </div>
-  </div>
-</section>
-    <!-- end đối tác -->
     <!-- cộng đồng -->
      <section class="community-section py-4">
   <div class="container">
@@ -457,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nextSlide = () => {
     const maxScroll = track.scrollWidth - viewport.clientWidth;
     const currentScroll = viewport.scrollLeft;
-    
+
     if (currentScroll >= maxScroll - 10) {
       // Nếu đã đến cuối, quay về đầu
       viewport.scrollTo({ left: 0, behavior: 'smooth' });
