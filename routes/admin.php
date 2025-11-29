@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeeSkillController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\WorkingScheduleController;
+use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\SettingController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('services', ServiceController::class);
     
     Route::resource('service-categories', ServiceCategoryController::class);
+    Route::resource('promotions', PromotionController::class);
     
     // Appointment routes with additional actions
     Route::get('appointments/cancelled', [AppointmentController::class, 'cancelled'])->name('appointments.cancelled');
@@ -41,7 +43,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('appointments', AppointmentController::class);
     
     Route::resource('orders', OrderController::class);
+    
+    // Users routes - đặt trước resource để tránh conflict
+    Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
+    Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
+    Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
     Route::resource('users', UserController::class);
+    
+    // Employees routes - đặt trước resource để tránh conflict
+    Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
+    Route::post('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    Route::delete('employees/{employee}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
     Route::resource('employees', EmployeeController::class);
     Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
     Route::get('employee-skills/{employee}/edit', [EmployeeSkillController::class, 'edit'])->name('employee-skills.edit');
