@@ -345,11 +345,13 @@ $(document).ready(function() {
 });
 $('[data-toggle="popover"]').popover();
 //Slider anh detail
-$('.pgwSlideshow').pgwSlideshow({
-  autoSlide: false,
-  // adaptiveDuration : 5000,
-	displayControls : false
+if (typeof $.fn.pgwSlideshow !== 'undefined' && $('.pgwSlideshow').length > 0) {
+  $('.pgwSlideshow').pgwSlideshow({
+    autoSlide: false,
+    // adaptiveDuration : 5000,
+    displayControls : false
   });
+}
 
   //input
 $("input[type='number']").inputSpinner();

@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Models\ServiceCategory;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class ServiceCategoryService
 {
@@ -11,7 +14,13 @@ class ServiceCategoryService
      */
     public function getAll()
     {
-        return ServiceCategory::orderBy('id', 'desc')->get();
+        $query = ServiceCategory::query();
+
+        if (Schema::hasColumn('service_categories', 'sort_order')) {
+            $query->orderBy('sort_order');
+        }
+
+        return $query->orderBy('name')->get();
     }
 
     /**
@@ -27,7 +36,7 @@ class ServiceCategoryService
      */
     public function create(array $data)
     {
-        return ServiceCategory::create($data);
+        return ServiceCategory::create($this->preparePayload($data));
     }
 
     /**
@@ -36,7 +45,7 @@ class ServiceCategoryService
     public function update($id, array $data)
     {
         $category = ServiceCategory::findOrFail($id);
-        $category->update($data);
+        $category->update($this->preparePayload($data, $category));
         return $category;
     }
 
@@ -55,6 +64,38 @@ class ServiceCategoryService
     public function search($name)
     {
         return ServiceCategory::where('name', 'like', "%{$name}%")->get();
+    }
+
+    /**
+     * Prepare payload for insert/update.
+     */
+    protected function preparePayload(array $data, ?ServiceCategory $category = null): array
+    {
+        $name = Arr::get($data, 'name');
+        $slug = Arr::get($data, 'slug');
+
+        if (!$slug && $name) {
+            $slug = Str::slug($name);
+        }
+
+        $payload = [
+            'name' => $name,
+            'description' => Arr::get($data, 'description'),
+        ];
+
+        if (Schema::hasColumn('service_categories', 'slug')) {
+            $payload['slug'] = $slug;
+        }
+
+        if (Schema::hasColumn('service_categories', 'sort_order')) {
+            $payload['sort_order'] = Arr::get($data, 'sort_order', 0);
+        }
+
+        if (Schema::hasColumn('service_categories', 'is_active')) {
+            $payload['is_active'] = Arr::get($data, 'is_active', true);
+        }
+
+        return $payload;
     }
 }
 

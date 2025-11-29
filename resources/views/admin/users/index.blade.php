@@ -13,8 +13,11 @@
 
 <!-- Filter -->
 <div class="card shadow mb-4">
-    <div class="card-header py-3">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Bộ lọc người dùng</h6>
+        <a href="{{ route('admin.users.trash') }}" class="btn btn-warning btn-sm">
+            <i class="fas fa-trash"></i> Thùng rác
+        </a>
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('admin.users.index') }}" class="form-inline">
@@ -101,7 +104,7 @@
                                 <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary">
                                     <i class="fas fa-edit"></i> Sửa
                                 </a>
-                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa người dùng này?');">
+                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">
@@ -140,6 +143,16 @@
             }
         });
     });
+
+    function confirmDelete(userName) {
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('vi-VN', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        });
+        return confirm('Bạn có chắc chắn muốn xóa tài khoản người dùng "' + userName + '" vào ngày ' + dateStr + ' hay không?');
+    }
 </script>
 @endpush
 

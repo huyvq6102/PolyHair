@@ -1,17 +1,32 @@
 @php
     $setting = app(\App\Services\SettingService::class)->getFirst();
     $currentRoute = request()->route()->getName() ?? '';
+    $serviceMenuActive = \Illuminate\Support\Str::startsWith($currentRoute, ['admin.services', 'admin.service-categories']);
+    $isEmployee = auth()->user()->isEmployee();
+    $userMenuActive = \Illuminate\Support\Str::startsWith($currentRoute, ['admin.users', 'admin.employees', 'admin.employee-skills']);
+    $promotionMenuActive = \Illuminate\Support\Str::startsWith($currentRoute, 'admin.promotions');
 @endphp
 
 <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
     <!-- Sidebar - Brand -->
-    <a class="sidebar-brand d-flex align-items-center justify-content-center mb-3 pt-5" href="{{ route('admin.dashboard') }}">
+    <a class="sidebar-brand d-flex align-items-center justify-content-center mb-3 pt-5" href="{{ $isEmployee ? route('employee.appointments.index') : route('admin.dashboard') }}">
         <img src="{{ asset('legacy/images/' . ($setting->logo ?? 'logox.png')) }}" alt="logo" width="90" height="70">
     </a>
 
     <!-- Divider -->
     <hr class="sidebar-divider my-0">
 
+    @if($isEmployee)
+        <!-- Employee Menu Items -->
+        <!-- Nav Item - Employee Appointments -->
+        <li class="nav-item {{ str_contains($currentRoute, 'employee.appointments') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('employee.appointments.index') }}">
+                <i class="fas fa-fw fa-clipboard-list"></i>
+                <span>Quản lý đơn đặt</span>
+            </a>
+        </li>
+    @else
+        <!-- Admin Menu Items -->
     <!-- Nav Item - Dashboard -->
     <li class="nav-item {{ $currentRoute == 'admin.dashboard' ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.dashboard') }}">
@@ -24,20 +39,21 @@
     <hr class="sidebar-divider">
 
     <!-- Nav Item - Services -->
-    <li class="nav-item">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
+    <li class="nav-item {{ $serviceMenuActive ? 'active' : '' }}">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseServices" aria-expanded="{{ $serviceMenuActive ? 'true' : 'false' }}" aria-controls="collapseServices">
             <i class="fas fa-fw fa-folder"></i>
             <span>Dịch vụ</span>
         </a>
-        <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+        <div id="collapseServices" class="collapse {{ $serviceMenuActive ? 'show' : '' }}" aria-labelledby="headingServices" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item" href="{{ route('admin.services.index') }}">Quản lý dịch vụ</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.service-categories') ? 'active' : '' }}" href="{{ route('admin.service-categories.index') }}">Danh mục dịch vụ</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.services') ? 'active' : '' }}" href="{{ route('admin.services.index') }}">Quản lý dịch vụ</a>
             </div>
         </div>
     </li>
 
     <!-- Nav Item - Appointments -->
-    <li class="nav-item {{ str_contains($currentRoute, 'appointment') ? 'active' : '' }}">
+    <li class="nav-item {{ str_contains($currentRoute, 'appointment') && !str_contains($currentRoute, 'employee') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.appointments.index') }}">
             <i class="fas fa-fw fa-calendar-alt"></i>
             <span>Lịch hẹn</span>
@@ -53,15 +69,16 @@
     </li>
 
     <!-- Nav Item - Users -->
-    <li class="nav-item">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages2" aria-expanded="true" aria-controls="collapsePages">
+    <li class="nav-item {{ $userMenuActive ? 'active' : '' }}">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages2" aria-expanded="{{ $userMenuActive ? 'true' : 'false' }}" aria-controls="collapsePages">
             <i class="fas fa-fw fa-folder"></i>
             <span>Thành viên</span>
         </a>
-        <div id="collapsePages2" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+        <div id="collapsePages2" class="collapse {{ $userMenuActive ? 'show' : '' }}" aria-labelledby="headingPages" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item" href="{{ route('admin.users.index') }}">Quản lý người dùng</a>
-                <a class="collapse-item" href="{{ route('admin.employees.index') }}">Quản lý nhân viên</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.users') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">Quản lý người dùng</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.employees') ? 'active' : '' }}" href="{{ route('admin.employees.index') }}">Quản lý nhân viên</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.employee-skills') ? 'active' : '' }}" href="{{ route('admin.employee-skills.index') }}">Chuyên môn nhân viên</a>
             </div>
         </div>
     </li>
@@ -96,6 +113,14 @@
         </a>
     </li>
 
+    <!-- Nav Item - Promotions -->
+    <li class="nav-item {{ $promotionMenuActive ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.promotions.index') }}">
+            <i class="fas fa-fw fa-gift"></i>
+            <span>Khuyến mãi</span>
+        </a>
+    </li>
+
     <!-- Nav Item - Settings -->
     <li class="nav-item {{ str_contains($currentRoute, 'setting') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.settings.index') }}">
@@ -103,6 +128,7 @@
             <span>Quản lý website</span>
         </a>
     </li>
+    @endif
 
     <!-- Divider -->
     <hr class="sidebar-divider d-none d-md-block">

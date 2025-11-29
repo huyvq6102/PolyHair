@@ -13,11 +13,24 @@ class Service extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'service_code',
         'category_id',
         'name',
+        'slug',
         'description',
         'image',
         'status',
+        'base_price',
+        'base_duration',
+        'sort_order',
+        'is_featured',
+    ];
+
+    protected $casts = [
+        'base_price' => 'decimal:2',
+        'base_duration' => 'integer',
+        'is_featured' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     /**
@@ -49,6 +62,24 @@ class Service extends Model
      */
     public function combos(): BelongsToMany
     {
-        return $this->belongsToMany(Combo::class, 'combo_items');
+        return $this->belongsToMany(Combo::class, 'combo_items')
+            ->withPivot(['service_variant_id', 'quantity', 'price_override', 'notes'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get combos owned/managed directly by this service.
+     */
+    public function ownedCombos(): HasMany
+    {
+        return $this->hasMany(Combo::class, 'owner_service_id');
+    }
+
+    /**
+     * Promotions that include this service.
+     */
+    public function promotions(): BelongsToMany
+    {
+        return $this->belongsToMany(Promotion::class)->withTimestamps();
     }
 }

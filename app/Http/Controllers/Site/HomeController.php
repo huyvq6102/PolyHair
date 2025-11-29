@@ -37,7 +37,7 @@ class HomeController extends Controller
         $types = $this->typeService->getAll();
         $products = $this->productService->getWithLimit(8, 0);
         $productsOnSale = $this->productService->getOnSale(8, 0);
-        $services = $this->serviceService->getWithLimit(6, 0);
+        $services = $this->serviceService->getWithLimit(3, 0);
         $news = $this->newsService->getWithLimit(3, 0);
 
         return view('site.home', compact('settings', 'types', 'products', 'productsOnSale', 'services', 'news'));

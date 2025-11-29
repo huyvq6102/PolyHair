@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Combo extends Model
 {
@@ -13,14 +14,19 @@ class Combo extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
+        'image',
         'category_id',
+        'owner_service_id',
         'price',
         'status',
+        'sort_order',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'sort_order' => 'integer',
     ];
 
     /**
@@ -36,7 +42,35 @@ class Combo extends Model
      */
     public function services(): BelongsToMany
     {
-        return $this->belongsToMany(Service::class, 'combo_items');
+        return $this->belongsToMany(Service::class, 'combo_items')
+            ->withPivot(['service_variant_id', 'quantity', 'price_override', 'notes'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Variants linked to this combo.
+     */
+    public function serviceVariants(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceVariant::class, 'combo_items')
+            ->withPivot(['service_id', 'quantity', 'price_override', 'notes'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Combo items detail.
+     */
+    public function comboItems(): HasMany
+    {
+        return $this->hasMany(ComboItem::class);
+    }
+
+    /**
+     * Service owning/creating this combo entry (optional).
+     */
+    public function ownerService(): BelongsTo
+    {
+        return $this->belongsTo(Service::class, 'owner_service_id');
     }
 }
 

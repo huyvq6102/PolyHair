@@ -12,6 +12,10 @@ class ComboItem extends Model
     protected $fillable = [
         'combo_id',
         'service_id',
+        'service_variant_id',
+        'quantity',
+        'price_override',
+        'notes',
     ];
 
     /**
@@ -28,6 +32,14 @@ class ComboItem extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    /**
+     * Variant associated with the combo item.
+     */
+    public function serviceVariant(): BelongsTo
+    {
+        return $this->belongsTo(ServiceVariant::class);
     }
 }
 
