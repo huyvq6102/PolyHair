@@ -40,7 +40,34 @@ class Promotion extends Model
      */
     public function services(): BelongsToMany
     {
-        return $this->belongsToMany(Service::class)->withTimestamps();
+        return $this->belongsToMany(Service::class, 'promotion_service', 'promotion_id', 'service_id')
+            ->wherePivotNull('combo_id')
+            ->wherePivotNull('service_variant_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Combos that this promotion applies to.
+     */
+    public function combos(): BelongsToMany
+    {
+        return $this->belongsToMany(Combo::class, 'promotion_service', 'promotion_id', 'combo_id')
+            ->wherePivotNotNull('combo_id')
+            ->wherePivotNull('service_id')
+            ->wherePivotNull('service_variant_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Service variants that this promotion applies to.
+     */
+    public function serviceVariants(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceVariant::class, 'promotion_service', 'promotion_id', 'service_variant_id')
+            ->wherePivotNotNull('service_variant_id')
+            ->wherePivotNull('service_id')
+            ->wherePivotNull('combo_id')
+            ->withTimestamps();
     }
 }
 

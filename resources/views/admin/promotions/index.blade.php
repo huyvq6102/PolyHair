@@ -35,13 +35,52 @@
                             <td>{{ $promotion->name }}</td>
                             <td>{{ $promotion->discount_percent }}%</td>
                             <td>
-                                @if($promotion->services->count() > 0)
+                                @php
+                                    $servicesCount = $promotion->services->count();
+                                    $combosCount = $promotion->combos->count();
+                                    $variantsCount = $promotion->serviceVariants->count();
+                                    $totalItems = $servicesCount + $combosCount + $variantsCount;
+                                @endphp
+                                
+                                @if($totalItems > 0)
                                     <div class="small">
-                                        @foreach($promotion->services->take(3) as $service)
-                                            <span class="badge badge-info">{{ $service->name }}</span>
-                                        @endforeach
-                                        @if($promotion->services->count() > 3)
-                                            <span class="text-muted">+{{ $promotion->services->count() - 3 }} dịch vụ khác</span>
+                                        @if($servicesCount > 0)
+                                            @foreach($promotion->services->take(2) as $service)
+                                                <span class="badge badge-info">{{ $service->name }}</span>
+                                            @endforeach
+                                            @if($servicesCount > 2)
+                                                <span class="text-muted">+{{ $servicesCount - 2 }} dịch vụ</span>
+                                            @endif
+                                        @endif
+                                        
+                                        @if($combosCount > 0)
+                                            @foreach($promotion->combos->take(2) as $combo)
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-layer-group"></i> {{ $combo->name }}
+                                                </span>
+                                            @endforeach
+                                            @if($combosCount > 2)
+                                                <span class="text-muted">+{{ $combosCount - 2 }} combo</span>
+                                            @endif
+                                        @endif
+                                        
+                                        @if($variantsCount > 0)
+                                            @foreach($promotion->serviceVariants->take(2) as $variant)
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-tags"></i> {{ $variant->name }}
+                                                </span>
+                                            @endforeach
+                                            @if($variantsCount > 2)
+                                                <span class="text-muted">+{{ $variantsCount - 2 }} biến thể</span>
+                                            @endif
+                                        @endif
+                                        
+                                        @php
+                                            $displayedCount = min(2, $servicesCount) + min(2, $combosCount) + min(2, $variantsCount);
+                                            $remaining = $totalItems - $displayedCount;
+                                        @endphp
+                                        @if($remaining > 0)
+                                            <span class="text-muted">+{{ $remaining }} mục khác</span>
                                         @endif
                                     </div>
                                 @else

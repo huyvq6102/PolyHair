@@ -19,7 +19,11 @@
                         'promotion' => null, 
                         'statuses' => $statuses,
                         'services' => $services ?? [],
-                        'selectedServiceIds' => []
+                        'combos' => $combos ?? [],
+                        'serviceVariants' => $serviceVariants ?? [],
+                        'selectedServiceIds' => [],
+                        'selectedComboIds' => [],
+                        'selectedVariantIds' => []
                     ])
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Lưu thông tin

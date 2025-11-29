@@ -71,33 +71,111 @@
 
 <div class="form-group">
     <label>Chọn dịch vụ áp dụng</label>
-    <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
-        @php
-            $services = $services ?? [];
-            $selectedServiceIds = $selectedServiceIds ?? [];
-            $oldServices = old('services', []);
-            $checkedServiceIds = !empty($oldServices) ? $oldServices : $selectedServiceIds;
-        @endphp
-        
-        @forelse($services as $service)
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="services[]" 
-                       value="{{ $service->id }}" 
-                       id="service_{{ $service->id }}"
-                       {{ in_array($service->id, $checkedServiceIds) ? 'checked' : '' }}>
-                <label class="form-check-label" for="service_{{ $service->id }}">
-                    {{ $service->name }}
-                    @if($service->category)
-                        <small class="text-muted">({{ $service->category->name }})</small>
-                    @endif
-                </label>
-            </div>
-        @empty
-            <p class="text-muted mb-0">Chưa có dịch vụ nào. Vui lòng tạo dịch vụ trước.</p>
-        @endforelse
+    
+    <!-- Dịch vụ -->
+    <div class="mb-3">
+        <h6 class="font-weight-bold">Dịch vụ</h6>
+        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+            @php
+                $services = $services ?? [];
+                $selectedServiceIds = $selectedServiceIds ?? [];
+                $oldServices = old('services', []);
+                $checkedServiceIds = !empty($oldServices) ? $oldServices : $selectedServiceIds;
+            @endphp
+            
+            @forelse($services as $service)
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="services[]" 
+                           value="{{ $service->id }}" 
+                           id="service_{{ $service->id }}"
+                           {{ in_array($service->id, $checkedServiceIds) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="service_{{ $service->id }}">
+                        {{ $service->name }}
+                        @if($service->category)
+                            <small class="text-muted">({{ $service->category->name }})</small>
+                        @endif
+                    </label>
+                </div>
+            @empty
+                <p class="text-muted mb-0">Chưa có dịch vụ nào.</p>
+            @endforelse
+        </div>
     </div>
-    <small class="form-text text-muted">Chọn các dịch vụ mà khuyến mãi này sẽ áp dụng. Để trống nếu áp dụng cho tất cả dịch vụ.</small>
+
+    <!-- Combo -->
+    <div class="mb-3">
+        <h6 class="font-weight-bold">Combo</h6>
+        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+            @php
+                $combos = $combos ?? [];
+                $selectedComboIds = $selectedComboIds ?? [];
+                $oldCombos = old('combos', []);
+                $checkedComboIds = !empty($oldCombos) ? $oldCombos : $selectedComboIds;
+            @endphp
+            
+            @forelse($combos as $combo)
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="combos[]" 
+                           value="{{ $combo->id }}" 
+                           id="combo_{{ $combo->id }}"
+                           {{ in_array($combo->id, $checkedComboIds) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="combo_{{ $combo->id }}">
+                        {{ $combo->name }}
+                        @if($combo->category)
+                            <small class="text-muted">({{ $combo->category->name }})</small>
+                        @endif
+                        @if($combo->price)
+                            <small class="text-muted"> - {{ number_format($combo->price, 0, ',', '.') }} đ</small>
+                        @endif
+                    </label>
+                </div>
+            @empty
+                <p class="text-muted mb-0">Chưa có combo nào.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <!-- Dịch vụ biến thể -->
+    <div class="mb-3">
+        <h6 class="font-weight-bold">Dịch vụ biến thể</h6>
+        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+            @php
+                $serviceVariants = $serviceVariants ?? [];
+                $selectedVariantIds = $selectedVariantIds ?? [];
+                $oldVariants = old('service_variants', []);
+                $checkedVariantIds = !empty($oldVariants) ? $oldVariants : $selectedVariantIds;
+            @endphp
+            
+            @forelse($serviceVariants as $variant)
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="service_variants[]" 
+                           value="{{ $variant->id }}" 
+                           id="variant_{{ $variant->id }}"
+                           {{ in_array($variant->id, $checkedVariantIds) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="variant_{{ $variant->id }}">
+                        {{ $variant->name }}
+                        @if($variant->service)
+                            <small class="text-muted">({{ $variant->service->name }})</small>
+                        @endif
+                        @if($variant->price)
+                            <small class="text-muted"> - {{ number_format($variant->price, 0, ',', '.') }} đ</small>
+                        @endif
+                    </label>
+                </div>
+            @empty
+                <p class="text-muted mb-0">Chưa có dịch vụ biến thể nào.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <small class="form-text text-muted">Chọn các dịch vụ, combo hoặc dịch vụ biến thể mà khuyến mãi này sẽ áp dụng. Để trống nếu áp dụng cho tất cả.</small>
     @error('services')
+        <div class="text-danger small">{{ $message }}</div>
+    @enderror
+    @error('combos')
+        <div class="text-danger small">{{ $message }}</div>
+    @enderror
+    @error('service_variants')
         <div class="text-danger small">{{ $message }}</div>
     @enderror
 </div>

@@ -47,8 +47,12 @@ class PromotionController extends Controller
     {
         $statuses = $this->statuses;
         $services = $this->serviceService->getAll();
+        $combos = \App\Models\Combo::whereNull('deleted_at')->with('category')->get();
+        $serviceVariants = \App\Models\ServiceVariant::whereNull('deleted_at')
+            ->with('service.category')
+            ->get();
 
-        return view('admin.promotions.create', compact('statuses', 'services'));
+        return view('admin.promotions.create', compact('statuses', 'services', 'combos', 'serviceVariants'));
     }
 
     /**
@@ -58,8 +62,10 @@ class PromotionController extends Controller
     {
         $data = $this->validateData($request);
         $serviceIds = $request->input('services', []);
+        $comboIds = $request->input('combos', []);
+        $variantIds = $request->input('service_variants', []);
         
-        $this->promotionService->create($data, $serviceIds);
+        $this->promotionService->create($data, $serviceIds, $comboIds, $variantIds);
 
         return redirect()
             ->route('admin.promotions.index')
@@ -85,9 +91,24 @@ class PromotionController extends Controller
         $promotion = $this->promotionService->getOne($id);
         $statuses = $this->statuses;
         $services = $this->serviceService->getAll();
+        $combos = \App\Models\Combo::whereNull('deleted_at')->with('category')->get();
+        $serviceVariants = \App\Models\ServiceVariant::whereNull('deleted_at')
+            ->with('service.category')
+            ->get();
         $selectedServiceIds = $promotion->services->pluck('id')->toArray();
+        $selectedComboIds = $promotion->combos->pluck('id')->toArray();
+        $selectedVariantIds = $promotion->serviceVariants->pluck('id')->toArray();
 
-        return view('admin.promotions.edit', compact('promotion', 'statuses', 'services', 'selectedServiceIds'));
+        return view('admin.promotions.edit', compact(
+            'promotion', 
+            'statuses', 
+            'services', 
+            'combos',
+            'serviceVariants',
+            'selectedServiceIds',
+            'selectedComboIds',
+            'selectedVariantIds'
+        ));
     }
 
     /**
@@ -97,8 +118,10 @@ class PromotionController extends Controller
     {
         $data = $this->validateData($request, $id);
         $serviceIds = $request->input('services', []);
+        $comboIds = $request->input('combos', []);
+        $variantIds = $request->input('service_variants', []);
         
-        $this->promotionService->update($id, $data, $serviceIds);
+        $this->promotionService->update($id, $data, $serviceIds, $comboIds, $variantIds);
 
         return redirect()
             ->route('admin.promotions.index')
