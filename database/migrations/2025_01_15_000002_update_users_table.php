@@ -22,7 +22,6 @@ return new class extends Migration
             $table->date('dob')->nullable()->after('gender');
             $table->enum('status', ['Hoạt động', 'Vô hiệu hóa', 'Cấm'])->nullable()->after('dob');
             $table->foreignId('role_id')->nullable()->after('status')->constrained('roles')->onDelete('set null');
-            $table->softDeletes();
         });
     }
 

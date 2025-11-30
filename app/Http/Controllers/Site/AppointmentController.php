@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AppointmentConfirmationMail;
 use Carbon\Carbon;
 
 class AppointmentController extends Controller
@@ -112,7 +114,7 @@ class AppointmentController extends Controller
         }
         
         // Lấy tất cả nhân viên từ database
-        $allEmployees = \App\Models\Employee::with(['user.role'])
+        $allEmployees = \App\Models\Employee::with(['user.role', 'services'])
             ->whereNotNull('user_id')
             ->orderBy('id', 'desc')
             ->get();
@@ -143,7 +145,51 @@ class AppointmentController extends Controller
             }
             
             return true;
-        })->values();
+        });
+
+        // Filter employees by service expertise if service is selected
+        $serviceId = $request->input('service_id');
+        $variantIds = $request->input('service_variants', []);
+        $comboId = $request->input('combo_id');
+
+        if ($serviceId) {
+            // Lọc nhân viên có chuyên môn với service này
+            $employees = $employees->filter(function($employee) use ($serviceId) {
+                return $employee->services->contains('id', $serviceId);
+            });
+        } elseif (!empty($variantIds)) {
+            // Lấy service_id từ các variant
+            $variants = \App\Models\ServiceVariant::whereIn('id', is_array($variantIds) ? $variantIds : [$variantIds])->get();
+            $serviceIds = $variants->pluck('service_id')->unique()->toArray();
+            
+            if (!empty($serviceIds)) {
+                // Lọc nhân viên có chuyên môn với bất kỳ service nào trong danh sách
+                $employees = $employees->filter(function($employee) use ($serviceIds) {
+                    return $employee->services->whereIn('id', $serviceIds)->count() > 0;
+                });
+            }
+        } elseif ($comboId) {
+            // Lấy các service từ combo
+            $combo = \App\Models\Combo::with('comboItems.serviceVariant.service')->find($comboId);
+            if ($combo && $combo->comboItems) {
+                $serviceIds = [];
+                foreach ($combo->comboItems as $item) {
+                    if ($item->serviceVariant && $item->serviceVariant->service) {
+                        $serviceIds[] = $item->serviceVariant->service->id;
+                    }
+                }
+                $serviceIds = array_unique($serviceIds);
+                
+                if (!empty($serviceIds)) {
+                    // Lọc nhân viên có chuyên môn với bất kỳ service nào trong combo
+                    $employees = $employees->filter(function($employee) use ($serviceIds) {
+                        return $employee->services->whereIn('id', $serviceIds)->count() > 0;
+                    });
+                }
+            }
+        }
+
+        $employees = $employees->values();
         
         $wordTimes = $this->wordTimeService->getAll();
         $serviceCategories = \App\Models\ServiceCategory::whereNull('deleted_at')
@@ -350,6 +396,43 @@ class AppointmentController extends Controller
             }
 
             DB::commit();
+
+            // Gửi email xác nhận đặt lịch - gửi đến email trong form
+            // Lấy email từ form (ưu tiên email trong form, nếu không có thì dùng email của user)
+            $emailToSend = !empty($validated['email']) ? $validated['email'] : ($user->email ?? null);
+            
+            try {
+                if ($emailToSend) {
+                    // Load đầy đủ relationships cho email
+                    $appointment->load([
+                        'user',
+                        'employee.user',
+                        'appointmentDetails.serviceVariant.service',
+                        'appointmentDetails.combo'
+                    ]);
+                    
+                    // Gửi email đến địa chỉ email trong form
+                    Mail::to($emailToSend)->send(new AppointmentConfirmationMail($appointment));
+                    
+                    \Log::info('Appointment confirmation email sent', [
+                        'to' => $emailToSend,
+                        'appointment_id' => $appointment->id,
+                        'mailer' => config('mail.default')
+                    ]);
+                } else {
+                    \Log::warning('Cannot send appointment confirmation email: No email address provided in form and user has no email');
+                }
+            } catch (\Exception $e) {
+                // Log lỗi chi tiết nhưng không làm gián đoạn quá trình đặt lịch
+                \Log::error('Failed to send appointment confirmation email', [
+                    'email_to' => $emailToSend ?? 'N/A',
+                    'form_email' => $validated['email'] ?? 'N/A',
+                    'user_email' => $user->email ?? 'N/A',
+                    'appointment_id' => $appointment->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -711,6 +794,7 @@ class AppointmentController extends Controller
                         'name' => $employee->user->name,
                         'position' => $employee->position,
                         'level' => $employee->level,
+                        'avatar' => $employee->avatar,
                         'display_name' => $employee->user->name . 
                             ($employee->position ? ' - ' . $employee->position : '') . 
                             ($employee->level ? ' (' . $employee->level . ')' : ''),

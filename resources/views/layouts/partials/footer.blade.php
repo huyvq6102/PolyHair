@@ -1,13 +1,13 @@
 <!-- footer -->
-<footer class="footer">
-    <div class="footer_top">
+<footer class="footer" style="padding-top: 0;">
+    <div class="footer_top" style="padding-top: 100px; padding-bottom: 90px;">
         <div class="container">
             <div class="row">
                 <!-- Cột 1: TRAKY HAIR SALON -->
                 <div class="col-xl-2 col-md-6 col-lg-2">
                     <div class="footer_widget">
                         <h3 class="footer_title">
-                            TRAKY HAIR SALON
+                            POLY HAIR SALON
                         </h3>
                         <ul>
                             <li><a href="#">Những câu hỏi thường gặp</a></li>
@@ -29,7 +29,7 @@
                         <ul>
                             <li>Hotline: <a href="tel:1900636883">1900 636 883</a></li>
                             <li>Giờ mở cửa: 9h00 - 20h00</li>
-                            <li>Trụ sở văn phòng: 159 Đ. Calmette, Phường Nguyễn Thái Bình, Quận 1, Thành phố Hồ Chí Minh</li>
+                            <li>Trụ sở văn phòng: 159 Đ. Calmette, Phường Hoàn Kiếm, Thành phố Hà Nội</li>
                         </ul>
                     </div>
                 </div>
@@ -103,9 +103,8 @@
             </div>
         </div>
     </div>
-
     <!-- Phần dưới cùng -->
-    <div class="copy-right_text">
+    <div class="copy-right_text" style="padding-bottom: 20px;">
         <div class="container">
             <div class="footer_border"></div>
             <div class="row">
@@ -120,7 +119,7 @@
                         Giấy CNĐKDN số: 0318359961 - Ngày cấp: 20-03-2024 - Sửa đổi lần cuối ngày 24-06-2024
                     </p>
                     <p class="copy_right text-center" style="margin-bottom: 10px;">
-                        Cơ quan cấp: Chi cục Thuế Quận Phú Nhuận
+                        Cơ quan cấp: Chi cục Thuế Hà Nội
                     </p>
                     <p class="copy_right text-center" style="margin-bottom: 10px;">
                         Hotline: <a href="tel:1900636883" style="color: #fff;">1900 63 68 83</a> - Email: <a href="mailto:POLYHAIRR@gmail.com" style="color: #fff;">mkttraky@gmail.com</a>
