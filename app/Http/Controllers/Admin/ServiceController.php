@@ -120,12 +120,14 @@ class ServiceController extends Controller
     protected function storeSingleService(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:services,name',
             'category_id' => 'required|exists:service_categories,id',
             'base_price' => 'required|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'description' => 'nullable|string',
+        ], [
+            'name.unique' => 'Dịch vụ này đã tồn tại',
         ]);
 
         $data = $request->only([
@@ -162,7 +164,7 @@ class ServiceController extends Controller
     protected function storeVariant(Request $request)
     {
         $request->validate([
-            'service_name' => 'required|string|max:255',
+            'service_name' => 'required|string|max:255|unique:services,name',
             'category_id' => 'required|exists:service_categories,id',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -175,6 +177,8 @@ class ServiceController extends Controller
             'variants.*.attributes' => 'nullable|array',
             'variants.*.attributes.*.name' => 'required_with:variants.*.attributes|string|max:100',
             'variants.*.attributes.*.value' => 'required_with:variants.*.attributes|string|max:100',
+        ], [
+            'service_name.unique' => 'Dịch vụ này đã tồn tại',
         ]);
 
         DB::beginTransaction();
@@ -256,7 +260,7 @@ class ServiceController extends Controller
         $request->merge(['combo_items' => $filteredComboItems]);
         
         $request->validate([
-            'combo_name' => 'required|string|max:255',
+            'combo_name' => 'required|string|max:255|unique:combos,name',
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
             'combo_items' => 'required|array|min:1',
@@ -265,6 +269,8 @@ class ServiceController extends Controller
             'combo_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'combo_status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'combo_description' => 'nullable|string',
+        ], [
+            'combo_name.unique' => 'Dịch vụ này đã tồn tại',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -403,17 +409,17 @@ class ServiceController extends Controller
         $service = Service::findOrFail($id);
 
         $request->validate([
-            'service_code' => 'nullable|string|max:50|unique:services,service_code,' . $id,
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:services,name,' . $id,
             'category_id' => 'required|exists:service_categories,id',
             'base_price' => 'required|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'description' => 'nullable|string',
+        ], [
+            'name.unique' => 'Dịch vụ này đã tồn tại',
         ]);
 
         $data = $request->only([
-            'service_code',
             'name',
             'category_id',
             'base_price',
@@ -470,8 +476,7 @@ class ServiceController extends Controller
         $service = Service::with('serviceVariants.variantAttributes')->findOrFail($id);
 
         $request->validate([
-            'service_code' => 'nullable|string|max:50|unique:services,service_code,' . $id,
-            'service_name' => 'required|string|max:255',
+            'service_name' => 'required|string|max:255|unique:services,name,' . $id,
             'category_id' => 'required|exists:service_categories,id',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -484,13 +489,14 @@ class ServiceController extends Controller
             'variants.*.attributes' => 'nullable|array',
             'variants.*.attributes.*.name' => 'required_with:variants.*.attributes|string|max:100',
             'variants.*.attributes.*.value' => 'required_with:variants.*.attributes|string|max:100',
+        ], [
+            'service_name.unique' => 'Dịch vụ này đã tồn tại',
         ]);
 
         DB::beginTransaction();
         try {
             // Cập nhật thông tin dịch vụ chính
             $serviceData = [
-                'service_code' => $request->input('service_code'),
                 'name' => $request->input('service_name'),
                 'category_id' => $request->input('category_id'),
                 'description' => $request->input('description'),
@@ -609,7 +615,7 @@ class ServiceController extends Controller
         $request->merge(['combo_items' => $filteredComboItems]);
 
         $request->validate([
-            'combo_name' => 'required|string|max:255',
+            'combo_name' => 'required|string|max:255|unique:combos,name,' . $id,
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
             'combo_items' => 'required|array|min:1',
@@ -618,6 +624,8 @@ class ServiceController extends Controller
             'combo_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'combo_status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'combo_description' => 'nullable|string',
+        ], [
+            'combo_name.unique' => 'Dịch vụ này đã tồn tại',
         ]);
 
         DB::transaction(function () use ($request, $combo) {
