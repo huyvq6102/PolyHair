@@ -399,10 +399,11 @@ class AppointmentController extends Controller
 
             // Gửi email xác nhận đặt lịch - gửi đến email trong form
             // Lấy email từ form (ưu tiên email trong form, nếu không có thì dùng email của user)
-            $emailToSend = !empty($validated['email']) ? $validated['email'] : ($user->email ?? null);
+            $emailToSend = !empty($validated['email']) ? trim($validated['email']) : (trim($user->email ?? ''));
             
-            try {
-                if ($emailToSend) {
+            // Đảm bảo email hợp lệ
+            if (!empty($emailToSend) && filter_var($emailToSend, FILTER_VALIDATE_EMAIL)) {
+                try {
                     // Load đầy đủ relationships cho email
                     $appointment->load([
                         'user',
@@ -414,23 +415,42 @@ class AppointmentController extends Controller
                     // Gửi email đến địa chỉ email trong form
                     Mail::to($emailToSend)->send(new AppointmentConfirmationMail($appointment));
                     
-                    \Log::info('Appointment confirmation email sent', [
+                    \Log::info('Appointment confirmation email sent successfully', [
                         'to' => $emailToSend,
                         'appointment_id' => $appointment->id,
-                        'mailer' => config('mail.default')
+                        'mailer' => config('mail.default'),
+                        'mail_host' => config('mail.mailers.smtp.host'),
+                        'mail_port' => config('mail.mailers.smtp.port'),
+                        'from_address' => config('mail.from.address'),
                     ]);
-                } else {
-                    \Log::warning('Cannot send appointment confirmation email: No email address provided in form and user has no email');
+                } catch (\Swift_TransportException $e) {
+                    // Lỗi kết nối SMTP
+                    \Log::error('SMTP connection error when sending appointment confirmation email', [
+                        'email_to' => $emailToSend,
+                        'appointment_id' => $appointment->id,
+                        'error' => $e->getMessage(),
+                        'mailer' => config('mail.default'),
+                        'mail_host' => config('mail.mailers.smtp.host'),
+                        'mail_port' => config('mail.mailers.smtp.port'),
+                    ]);
+                } catch (\Exception $e) {
+                    // Log lỗi chi tiết nhưng không làm gián đoạn quá trình đặt lịch
+                    \Log::error('Failed to send appointment confirmation email', [
+                        'email_to' => $emailToSend,
+                        'form_email' => $validated['email'] ?? 'N/A',
+                        'user_email' => $user->email ?? 'N/A',
+                        'appointment_id' => $appointment->id,
+                        'error' => $e->getMessage(),
+                        'error_class' => get_class($e),
+                        'trace' => $e->getTraceAsString()
+                    ]);
                 }
-            } catch (\Exception $e) {
-                // Log lỗi chi tiết nhưng không làm gián đoạn quá trình đặt lịch
-                \Log::error('Failed to send appointment confirmation email', [
-                    'email_to' => $emailToSend ?? 'N/A',
+            } else {
+                \Log::warning('Cannot send appointment confirmation email: Invalid or missing email address', [
                     'form_email' => $validated['email'] ?? 'N/A',
                     'user_email' => $user->email ?? 'N/A',
+                    'email_to_send' => $emailToSend ?? 'N/A',
                     'appointment_id' => $appointment->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
                 ]);
             }
 
