@@ -1185,22 +1185,30 @@
         
         // Employee Selector - Toggle container
         $('#employeeToggleBtn').on('click', function(e) {
+            e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             const container = $('#employeeContainer');
             const chevron = $('.employee-chevron');
             
-            container.slideToggle(300, function() {
-                if (container.is(':visible')) {
+            // Chỉ toggle khi click vào toggle button, không toggle khi click vào container
+            if (container.is(':visible')) {
+                container.slideUp(300, function() {
+                    chevron.css('transform', 'rotate(0deg)');
+                });
+            } else {
+                container.slideDown(300, function() {
                     chevron.css('transform', 'rotate(180deg)');
                     // Load employees nếu chưa có
                     if ($('.employee-item-btn').length === 0) {
                         loadEmployeesForCarousel();
                     }
-                } else {
-                    chevron.css('transform', 'rotate(0deg)');
-                }
-            });
+                });
+            }
+            
+            return false;
         });
+        
         
         // Xử lý old value nếu có
         const oldEmployeeId = $('#employee_id').val();
@@ -1212,11 +1220,19 @@
             }
         }
         
-        // Xử lý chọn employee
-        $(document).on('click', '.employee-item-btn', function() {
+        // Xử lý chọn employee - đặt priority cao để chạy trước document click
+        $('#employeeContainer').on('click', '.employee-item-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             const employeeId = $(this).data('employee-id');
             const employeeName = $(this).data('employee-name');
             const employeePosition = $(this).data('employee-position');
+            
+            if (!employeeId) {
+                return false;
+            }
             
             // Cập nhật hidden input
             $('#employee_id').val(employeeId);
@@ -1234,10 +1250,19 @@
             
             // Trigger change event để load time slots nếu đã chọn ngày
             $('#employee_id').trigger('change');
+            
+            // Đảm bảo container vẫn mở
+            $('#employeeContainer').show();
+            
+            return false;
         });
         
         // Navigation buttons cho employee slider
-        $(document).on('click', '.employee-nav-prev', function() {
+        $('#employeeContainer').on('click', '.employee-nav-prev', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             const $slider = $('.employee-slider');
             const containerWidth = $('.employee-grid').width();
             const currentTransform = $slider.css('transform');
@@ -1252,9 +1277,15 @@
             
             const newX = Math.min(0, currentX + containerWidth);
             $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            return false;
         });
         
-        $(document).on('click', '.employee-nav-next', function() {
+        $('#employeeContainer').on('click', '.employee-nav-next', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
             const $slider = $('.employee-slider');
             const $container = $('.employee-grid');
             const containerWidth = $container.width();
@@ -1272,6 +1303,8 @@
             const maxX = -(sliderWidth - containerWidth);
             const newX = Math.max(maxX, currentX - containerWidth);
             $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            return false;
         });
         
         // Clear error when user starts typing/selecting (only if field has value)
