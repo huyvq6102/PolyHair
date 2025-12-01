@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
+use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
@@ -102,10 +103,7 @@ class CheckoutController extends Controller
     }
 
 
-    public function processPayment(Request $request){
-
-        
-        DB::beginTransaction();
+    public function processPayment(Request $request, PaymentService $paymentService){
 
         try {
             $cart = Session::get('cart', []);
@@ -116,99 +114,17 @@ class CheckoutController extends Controller
                     ->with('error', 'Không thể thanh toán – giỏ hàng trống hoặc chưa đăng nhập.');
             }
 
-            $total = 0;
-            $appointmentId = null;
-            $items = [];
-
-            foreach ($cart as $key => $item) {
-
-                // SERVICE VARIANT
-                if ($item['type'] === 'service_variant') {
-                    $variant = \App\Models\ServiceVariant::with('service')->find($item['id']);
-                    
-                    if (!$variant || !$variant->service) {
-                        continue; // Bỏ qua nếu variant hoặc service không tồn tại
-                    }
-                    
-                    $price = $variant->price * ($item['quantity'] ?? 1);
-
-                    $appointment = \App\Models\Appointment::create([
-                        'user_id'    => $user->id,
-                        'status'     => 'Đã thanh toán',
-                        'start_at'   => now(),
-                        'end_at'     => now()->addMinutes($variant->duration),
-                    ]);
-
-                    $appointmentId = $appointment->id;
-
-                    \App\Models\AppointmentDetail::create([
-                        'appointment_id'      => $appointment->id,
-                        'service_variant_id'  => $variant->id,
-                        'price_snapshot'      => $variant->price,
-                        'duration'            => $variant->duration,
-                        'status'              => 'Hoàn thành',
-                    ]);
-
-                    $total += $price;
-
-                    $items[] = [
-                        'name' => $variant->service->name . ' - ' . $variant->name,
-                        'price' => $price,
-                    ];
-                }
-
-                // APPOINTMENT
-                if ($item['type'] === 'appointment') {
-                    $appointment = \App\Models\Appointment::with('appointmentDetails.serviceVariant')
-                        ->find($item['id']);
-
-                    $appointmentId = $appointment->id;
-                    $appointmentTotal = 0;
-
-                    foreach ($appointment->appointmentDetails as $detail) {
-                        if (!$detail->serviceVariant || !$detail->serviceVariant->service) {
-                            continue; // Bỏ qua nếu serviceVariant hoặc service không tồn tại
-                        }
-
-                        $price = $detail->price_snapshot ?? $detail->serviceVariant->price;
-                        $appointmentTotal += $price;
-
-                        $items[] = [
-                            'name' => $detail->serviceVariant->service->name . ' - ' . $detail->serviceVariant->name,
-                            'price' => $price,
-                        ];
-                    }
-
-                    $total += $appointmentTotal;
-
-                    $appointment->status = 'Đã thanh toán';
-                    $appointment->save();
-                }
-            }
-
-            // VAT
-            $VAT = $total * 0.1;
-            $grandTotal = $total + $VAT;
-
-            // CREATE PAYMENT
-            $payment = \App\Models\Payment::create([
-                'user_id'        => $user->id,
-                'appointment_id' => $appointmentId,
-                'price'          => $total,
-                'VAT'            => $VAT,
-                'total'          => $grandTotal,
-                'created_by'     => $user->name,
-                'payment_type'   => 'cash',
-            ]);
-
-            DB::commit();
+            // Gọi Service để xử lý thanh toán
+            $payment = $paymentService->processPayment($user, $cart, $request->input('payment_method', 'cash'));
 
             Session::forget('cart');
 
-            return view('site.payments.success', compact('appointmentId'));
+            return view('site.payments.success', [
+                'appointmentId' => $payment->appointment_id,
+                'invoiceCode'   => $payment->invoice_code
+            ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             \Log::error($e);
             return back()->with('error', 'Thanh toán thất bại, vui lòng thử lại.');
         }
