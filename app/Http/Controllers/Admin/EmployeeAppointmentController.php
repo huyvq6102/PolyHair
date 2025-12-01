@@ -3,21 +3,189 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreEmployeeAppointmentRequest;
+use App\Http\Requests\CancelAppointmentRequest;
 use App\Services\AppointmentService;
 use App\Services\EmployeeService;
+use App\Services\ServiceService;
+use App\Services\ServiceCategoryService;
+use App\Services\WordTimeService;
+use App\Models\User;
+use App\Models\ServiceVariant;
+use App\Models\WorkingSchedule;
+use App\Models\WorkingShift;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class EmployeeAppointmentController extends Controller
 {
     protected $appointmentService;
     protected $employeeService;
 
+    protected $serviceService;
+    protected $serviceCategoryService;
+    protected $wordTimeService;
+
     public function __construct(
         AppointmentService $appointmentService,
-        EmployeeService $employeeService
+        EmployeeService $employeeService,
+        ServiceService $serviceService,
+        ServiceCategoryService $serviceCategoryService,
+        WordTimeService $wordTimeService
     ) {
         $this->appointmentService = $appointmentService;
         $this->employeeService = $employeeService;
+        $this->serviceService = $serviceService;
+        $this->serviceCategoryService = $serviceCategoryService;
+        $this->wordTimeService = $wordTimeService;
+    }
+
+    /**
+     * Show the form for creating a new appointment.
+     */
+    public function create()
+    {
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Bạn không phải là nhân viên.');
+        }
+
+        // Get all customers (users with customer role)
+        $customers = User::where('role_id', 3) // Khách hàng role
+            ->orderBy('name')
+            ->get();
+
+        // Get all service categories and services with variants
+        $categories = $this->serviceCategoryService->getAll();
+        $services = $this->serviceService->getAll()->load('serviceVariants');
+
+        return view('admin.employee-appointments.create', compact('customers', 'categories', 'services', 'employee'));
+    }
+
+    /**
+     * Store a newly created appointment.
+     */
+    public function store(StoreEmployeeAppointmentRequest $request)
+    {
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Bạn không phải là nhân viên.');
+        }
+
+        // Get validated data (validation is handled by Form Request)
+        $validated = $request->validated();
+        $customerType = $request->input('customer_type', 'existing');
+        
+        if ($customerType === 'existing') {
+            $userId = $validated['user_id'];
+        } else {
+            // Create new customer (phone and email can be duplicated)
+            $newUser = User::create([
+                'name' => $validated['new_customer_name'],
+                'phone' => $validated['new_customer_phone'],
+                'email' => $validated['new_customer_email'] ?? null,
+                'password' => bcrypt(Str::random(32)), // Random password
+                'status' => 'Hoạt động',
+                'role_id' => 3, // Khách hàng role
+            ]);
+            $userId = $newUser->id;
+        }
+
+        try {
+            // Validate time format manually
+            $timeString = $validated['appointment_time'];
+            if (!preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $timeString)) {
+                return back()->withInput()
+                    ->withErrors(['appointment_time' => 'Định dạng giờ không hợp lệ. Vui lòng nhập theo định dạng HH:mm (ví dụ: 09:00, 14:30).']);
+            }
+            
+            // Parse appointment date and time
+            $appointmentDate = Carbon::parse($validated['appointment_date']);
+            $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
+            
+            // Calculate total duration from selected service variants
+            $totalDuration = 0;
+            $serviceVariantData = [];
+            
+            foreach ($validated['service_variants'] as $variantId) {
+                $variant = ServiceVariant::findOrFail($variantId);
+                $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
+                
+                $serviceVariantData[] = [
+                    'service_variant_id' => $variantId,
+                    'employee_id' => $employee->id,
+                    'price_snapshot' => $variant->price,
+                    'duration' => $variant->duration ?? 60,
+                    'status' => 'Chờ',
+                ];
+            }
+            
+            $endAt = $startAt->copy()->addMinutes($totalDuration);
+            
+            // Check if time slot conflicts with existing appointments
+            // Rule: Appointments must be at least 1 hour apart
+            // For an existing appointment from A to B:
+            // - New appointment must start >= B + 1 hour, OR
+            // - New appointment must end <= A - 1 hour
+            // If neither condition is met, there's a conflict
+            $bufferMinutes = 60; // 1 hour buffer between appointments
+            
+            $existingAppointments = \App\Models\Appointment::where('employee_id', $employee->id)
+                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
+                ->whereNotIn('status', ['Đã hủy', 'Hoàn thành'])
+                ->get();
+            
+            foreach ($existingAppointments as $existing) {
+                $existingStart = Carbon::parse($existing->start_at);
+                $existingEnd = Carbon::parse($existing->end_at);
+                
+                // Calculate minimum start time (existing end + 1 hour)
+                $minStartTime = $existingEnd->copy()->addMinutes($bufferMinutes);
+                
+                // Calculate maximum end time (existing start - 1 hour)
+                $maxEndTime = $existingStart->copy()->subMinutes($bufferMinutes);
+                
+                // Conflict occurs if:
+                // New appointment starts before minStartTime AND ends after maxEndTime
+                // This means the new appointment is too close to the existing one
+                if ($startAt < $minStartTime && $endAt > $maxEndTime) {
+                    $existingStartFormatted = $existingStart->format('H:i');
+                    $existingEndFormatted = $existingEnd->format('H:i');
+                    $newStartFormatted = $startAt->format('H:i');
+                    $newEndFormatted = $endAt->format('H:i');
+                    return back()->withInput()
+                        ->withErrors(['appointment_time' => "Đã có người đặt trong khoảng thời gian {$existingStartFormatted} - {$existingEndFormatted}. Lịch hẹn của bạn ({$newStartFormatted} - {$newEndFormatted}) quá gần. Các lịch hẹn phải cách nhau ít nhất 1 giờ. Vui lòng chọn thời gian khác."]);
+                }
+            }
+
+            // Create appointment
+            $appointment = $this->appointmentService->create([
+                'user_id' => $userId,
+                'employee_id' => $employee->id,
+                'status' => 'Chờ xử lý',
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'note' => $validated['note'] ?? null,
+            ], $serviceVariantData);
+
+            return redirect()->route('employee.appointments.show', $appointment->id)
+                ->with('success', 'Đã tạo lịch hẹn thành công!');
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating appointment by employee', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->withInput()
+                ->withErrors(['error' => 'Có lỗi xảy ra khi tạo lịch hẹn. Vui lòng thử lại.']);
+        }
     }
 
     /**
@@ -188,7 +356,7 @@ class EmployeeAppointmentController extends Controller
     /**
      * Cancel the appointment.
      */
-    public function cancel(Request $request, string $id)
+    public function cancel(CancelAppointmentRequest $request, string $id)
     {
         $user = auth()->user();
         $employee = $this->employeeService->getByUserId($user->id);
@@ -215,14 +383,57 @@ class EmployeeAppointmentController extends Controller
                 ->with('error', 'Không thể hủy đơn đặt đã được xác nhận hoặc đang thực hiện.');
         }
 
-        $validated = $request->validate([
-            'cancellation_reason' => 'required|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $this->appointmentService->cancelAppointment($id, $validated['cancellation_reason']);
 
         return redirect()->route('employee.appointments.show', $id)
             ->with('success', 'Đơn đặt đã được hủy thành công!');
+    }
+
+    /**
+     * Delete an appointment (only for unconfirmed appointments).
+     */
+    public function destroy(string $id)
+    {
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'Bạn không phải là nhân viên.');
+        }
+
+        $appointment = $this->appointmentService->getOne($id);
+
+        // Check if appointment belongs to this employee
+        $hasAccess = $appointment->employee_id == $employee->id || 
+                     $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+        
+        if (!$hasAccess) {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Bạn không có quyền xóa đơn đặt này.');
+        }
+
+        // Check if appointment can be deleted (only Chờ xử lý or Chờ xác nhận)
+        if ($appointment->status !== 'Chờ xử lý' && $appointment->status !== 'Chờ xác nhận') {
+            return redirect()->route('employee.appointments.show', $id)
+                ->with('error', 'Chỉ có thể xóa đơn đặt chưa được xác nhận.');
+        }
+
+        try {
+            $this->appointmentService->delete($id);
+
+            return redirect()->route('employee.appointments.index')
+                ->with('success', 'Đơn đặt đã được xóa thành công!');
+        } catch (\Exception $e) {
+            \Log::error('Error deleting appointment', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('employee.appointments.show', $id)
+                ->with('error', 'Có lỗi xảy ra khi xóa đơn đặt. Vui lòng thử lại.');
+        }
     }
 }
 

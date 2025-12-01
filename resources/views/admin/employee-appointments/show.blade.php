@@ -173,6 +173,13 @@
                     <button type="button" class="btn btn-danger btn-lg" data-toggle="modal" data-target="#cancelModal">
                         <i class="fas fa-times"></i> Hủy đơn
                     </button>
+                    <form action="{{ route('employee.appointments.destroy', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đơn đặt này? Hành động này không thể hoàn tác.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-trash"></i> Xóa đơn
+                        </button>
+                    </form>
                 @endif
             </div>
         </div>
