@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Admin;
@@ -29,7 +30,8 @@ class PaymentController extends Controller
             'user', 
             'appointment.appointmentDetails.serviceVariant.service', 
             'order.orderDetails.product',
-            'appointment.employee'
+            'appointment.employee',
+            'appointment.promotionUsages.promotion'
         ])->findOrFail($id);
 
         return view('admin.payments.show', compact('payment'));
