@@ -82,8 +82,20 @@
             <div class="col-lg-4 col-sm-5 ml-auto">
                 <table class="table table-clear">
                     <tbody>
+                        @if($payment->appointment && $payment->appointment->promotionUsages->isNotEmpty())
+                            @foreach($payment->appointment->promotionUsages as $usage)
+                            <tr>
+                                <td class="left text-success">
+                                    <strong>Khuyến mại</strong> <br> 
+                                    <small>({{ $usage->promotion->code }} - {{ $usage->promotion->discount_percent }}%)</small>
+                                </td>
+                                <td class="text-right text-success">Đã áp dụng</td>
+                            </tr>
+                            @endforeach
+                        @endif
+
                         <tr>
-                            <td class="left"><strong>Tạm tính</strong></td>
+                            <td class="left"><strong>Tạm tính {{ ($payment->appointment && $payment->appointment->promotionUsages->isNotEmpty()) ? '(Sau giảm)' : '' }}</strong></td>
                             <td class="text-right">{{ number_format($payment->price) }} VNĐ</td>
                         </tr>
                         <tr>

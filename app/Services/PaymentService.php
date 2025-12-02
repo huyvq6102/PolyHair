@@ -4,10 +4,13 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\AppointmentDetail;
+use App\Models\Combo;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\Promotion;
+use App\Models\PromotionUsage;
 use App\Models\ServiceVariant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,10 +25,11 @@ class PaymentService
      * @param \App\Models\User $user
      * @param array $cart
      * @param string $paymentMethod
+     * @param string|null $couponCode
      * @return \App\Models\Payment
      * @throws Exception
      */
-    public function processPayment($user, $cart, $paymentMethod = 'cash')
+    public function processPayment($user, $cart, $paymentMethod = 'cash', $couponCode = null)
     {
         DB::beginTransaction();
 
@@ -42,7 +46,7 @@ class PaymentService
                 // -------------------------
                 // SERVICE VARIANT
                 // -------------------------
-                if ($item['type'] === 'service_variant') {
+                if (isset($item['type']) && $item['type'] === 'service_variant') {
                     $variant = ServiceVariant::with('service')->find($item['id']);
                     
                     if (!$variant || !$variant->service) {
@@ -74,9 +78,42 @@ class PaymentService
                 }
 
                 // -------------------------
+                // COMBO
+                // -------------------------
+                if (isset($item['type']) && $item['type'] === 'combo') {
+                    $combo = Combo::find($item['id']);
+                    
+                    if ($combo) {
+                        $quantity = $item['quantity'] ?? 1;
+                        $price = $combo->price * $quantity;
+
+                        // Create a new appointment for this combo
+                        // Note: Combos might not have a specific duration field, defaulting to 60 mins or 0
+                        $appointment = Appointment::create([
+                            'user_id'    => $user->id,
+                            'status'     => 'Đã thanh toán',
+                            'start_at'   => now(),
+                            'end_at'     => now()->addMinutes(60), 
+                        ]);
+
+                        $appointmentId = $appointment->id;
+
+                        AppointmentDetail::create([
+                            'appointment_id'      => $appointment->id,
+                            'combo_id'            => $combo->id,
+                            'price_snapshot'      => $combo->price,
+                            'duration'            => 60, // Default
+                            'status'              => 'Hoàn thành',
+                        ]);
+
+                        $total += $price;
+                    }
+                }
+
+                // -------------------------
                 // APPOINTMENT
                 // -------------------------
-                if ($item['type'] === 'appointment') {
+                if (isset($item['type']) && $item['type'] === 'appointment') {
                     $appointment = Appointment::with('appointmentDetails.serviceVariant.service')
                         ->find($item['id']);
 
@@ -85,11 +122,17 @@ class PaymentService
                         $appointmentTotal = 0;
 
                         foreach ($appointment->appointmentDetails as $detail) {
-                            if (!$detail->serviceVariant || !$detail->serviceVariant->service) {
-                                continue;
+                            // Calculate price based on snapshot or variant or combo
+                            if ($detail->price_snapshot) {
+                                $price = $detail->price_snapshot;
+                            } elseif ($detail->serviceVariant) {
+                                $price = $detail->serviceVariant->price;
+                            } elseif ($detail->combo) {
+                                $price = $detail->combo->price;
+                            } else {
+                                $price = 0;
                             }
 
-                            $price = $detail->price_snapshot ?? $detail->serviceVariant->price;
                             $appointmentTotal += $price;
                         }
 
@@ -103,7 +146,7 @@ class PaymentService
                 // -------------------------
                 // PRODUCT
                 // -------------------------
-                if ($item['type'] === 'product') {
+                if (isset($item['type']) && $item['type'] === 'product') {
                     $product = Product::find($item['id']);
                     if ($product) {
                         $quantity = $item['quantity'] ?? 1;
@@ -141,9 +184,29 @@ class PaymentService
                 }
             }
 
-            // VAT Calculation
-            $VAT = $total * 0.1;
-            $grandTotal = $total + $VAT;
+            // -------------------------
+            // PROMOTION CALCULATION
+            // -------------------------
+            $discountAmount = 0;
+            $appliedPromotion = null;
+
+            if ($couponCode) {
+                $appliedPromotion = Promotion::where('code', $couponCode)
+                    ->where('status', 1)
+                    ->whereDate('start_date', '<=', now())
+                    ->whereDate('end_date', '>=', now())
+                    ->first();
+
+                if ($appliedPromotion) {
+                    $discountAmount = $total * ($appliedPromotion->discount_percent / 100);
+                }
+            }
+
+            $taxablePrice = max(0, $total - $discountAmount);
+
+            // VAT Calculation (Assuming VAT is calculated on the final price after discount)
+            $VAT = $taxablePrice * 0.1;
+            $grandTotal = $taxablePrice + $VAT;
 
             // Create Payment Record
             $payment = Payment::create([
@@ -151,12 +214,22 @@ class PaymentService
                 'appointment_id' => $appointmentId,
                 'order_id'       => $orderId,
                 'invoice_code'   => $this->generateInvoiceCode(),
-                'price'          => $total,
+                'price'          => $taxablePrice, // Storing the Net Price after discount
                 'VAT'            => $VAT,
                 'total'          => $grandTotal,
                 'created_by'     => $user->name,
                 'payment_type'   => $paymentMethod,
             ]);
+
+            // Save Promotion Usage
+            if ($appliedPromotion) {
+                PromotionUsage::create([
+                    'promotion_id'   => $appliedPromotion->id,
+                    'user_id'        => $user->id,
+                    'appointment_id' => $appointmentId, // Link to the last created/processed appointment
+                    'used_at'        => now(),
+                ]);
+            }
 
             DB::commit();
 

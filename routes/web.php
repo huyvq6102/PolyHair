@@ -70,6 +70,8 @@ Route::prefix('check-out')->name('site.payments.')->group(function () {
     Route::get('/', [CheckoutController::class, 'checkout'])->name('checkout');
     Route::post('/process', [CheckoutController::class, 'processPayment'])->name('process');
     Route::get('/success/{appointmentId}', [CheckoutController::class, 'paymentSuccess'])->name('success');
+    Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('applyCoupon');
+    Route::post('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('removeCoupon');
 
 });
 
