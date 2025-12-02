@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('working_schedule', function (Blueprint $table) {
-            $table->string('image')->nullable()->after('status');
+        Schema::table('reviews', function (Blueprint $table) {
+            $table->json('images')->nullable()->after('comment');
+            $table->boolean('is_hidden')->default(false)->after('images');
         });
     }
 
@@ -21,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('working_schedule', function (Blueprint $table) {
-            $table->dropColumn('image');
+        Schema::table('reviews', function (Blueprint $table) {
+            $table->dropColumn(['images', 'is_hidden']);
         });
     }
 };

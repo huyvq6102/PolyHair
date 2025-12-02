@@ -11,9 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('working_schedule', function (Blueprint $table) {
-            $table->dropColumn('image');
-        });
+        Schema::dropIfExists('skills');
     }
 
     /**
@@ -21,8 +19,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('working_schedule', function (Blueprint $table) {
-            $table->string('image')->nullable()->after('status');
+        Schema::create('skills', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 100)->nullable();
+            $table->text('description')->nullable();
         });
     }
 };

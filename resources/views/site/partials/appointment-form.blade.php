@@ -104,8 +104,12 @@
                     @php $groupedVariants = $serviceVariants->groupBy('service_id'); @endphp
 
                     @foreach($groupedVariants as $serviceId => $variants)
-                        @php $service = $variants->first()->service; @endphp
+                        @php 
+                            $firstVariant = $variants->first();
+                            $service = $firstVariant ? $firstVariant->service : null;
+                        @endphp
 
+                        @if($service)
                         <div class="card mb-3 shadow-sm">
                             <div class="card-header fw-bold">
                                 {{ $service->name }}
@@ -131,6 +135,7 @@
                                 @endforeach
                             </div>
                         </div>
+                        @endif
 
                     @endforeach
                 </div>
@@ -531,15 +536,6 @@
         font-weight: 500;
     }
     
-    .error-message {
-        background: #f8d7da;
-        color: #721c24;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        border: 1px solid #f5c6cb;
-    }
-    
     /* Scrollbar Styling */
     .service-variants-container::-webkit-scrollbar {
         width: 6px;
@@ -817,12 +813,7 @@
         $('#appointmentForm').on('submit', function(e) {
             e.preventDefault();
             
-            // Validate service variants
-            const serviceVariants = $('input[name="service_variants[]"]:checked');
-            if (serviceVariants.length === 0) {
-                alert('Vui lòng chọn ít nhất một dịch vụ!');
-                return false;
-            }
+
             
             // Remove previous messages
             $('.success-message, .error-message').remove();
@@ -850,11 +841,9 @@
                             $('#appointmentForm')[0].reset();
                             $('#time_slot').prop('disabled', true).html('<option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>');
                             $.magnificPopup.close();
-                            // Show toast notification if available
+                            // Show toast notification if available (no alert popup)
                             if (typeof toastr !== 'undefined') {
                                 toastr.success(response.message);
-                            } else {
-                                alert(response.message);
                             }
                         }, 2000);
                     }
@@ -862,24 +851,35 @@
                 error: function(xhr) {
                     let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
                     
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                        // Display validation errors
-                        let errors = '';
+                    // Handle validation errors - display inline errors only
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
                         $.each(xhr.responseJSON.errors, function(key, value) {
-                            errors += value[0] + '<br>';
+                            if (value && value.length > 0) {
+                                // Map backend field names to frontend field IDs
+                                let fieldId = key;
+                                if (key === 'employee_id') fieldId = 'employee';
+                                if (key === 'appointment_date') fieldId = 'appointment_date';
+                                if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
+                                
+                                const $errorDiv = $('#' + fieldId + '-error');
+                                if ($errorDiv.length) {
+                                    $errorDiv.find('span').text(value[0]);
+                                    $errorDiv.show();
+                                    const $field = $('#' + fieldId);
+                                    if ($field.length) {
+                                        $field.addClass('is-invalid');
+                                    }
+                                }
+                            }
                         });
-                        errorMessage = errors;
-                    }
-                    
-                    $('#appointmentForm').prepend(
-                        '<div class="error-message" style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 5px; margin-bottom: 15px;">' + errorMessage + '</div>'
-                    );
-                    
-                    // Show toast notification if available
-                    if (typeof toastr !== 'undefined') {
-                        toastr.error(errorMessage);
+                        
+                        // Scroll to first error
+                        const firstError = $('.field-error:visible').first();
+                        if (firstError.length) {
+                            $('html, body').animate({
+                                scrollTop: firstError.offset().top - 100
+                            }, 300);
+                        }
                     }
                 }
             });

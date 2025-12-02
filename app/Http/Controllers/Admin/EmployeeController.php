@@ -56,6 +56,8 @@ class EmployeeController extends Controller
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:6',
+            'gender' => 'nullable|in:Nam,Nữ,Khác',
+            'dob' => 'nullable|date',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'position' => 'required|in:Stylist,Barber,Shampooer,Receptionist',
             'level' => 'nullable|in:Intern,Junior,Middle,Senior',
@@ -82,6 +84,8 @@ class EmployeeController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'],
+            'gender' => $validated['gender'] ?? null,
+            'dob' => $validated['dob'] ?? null,
             'role_id' => $employeeRole->id,
         ];
 
@@ -96,6 +100,8 @@ class EmployeeController extends Controller
         // Prepare employee data
         $employeeData = [
             'avatar' => $validated['avatar'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'dob' => $validated['dob'] ?? null,
             'position' => $validated['position'],
             'level' => $validated['level'] ?? null,
             'experience_years' => $validated['experience_years'] ?? null,
@@ -140,6 +146,8 @@ class EmployeeController extends Controller
             'email' => 'required|email|unique:users,email,' . $employee->user_id,
             'phone' => 'nullable|string|max:20',
             'password' => 'nullable|string|min:6',
+            'gender' => 'nullable|in:Nam,Nữ,Khác',
+            'dob' => 'nullable|date',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'position' => 'required|in:Stylist,Barber,Shampooer,Receptionist',
             'level' => 'nullable|in:Intern,Junior,Middle,Senior',
@@ -165,6 +173,8 @@ class EmployeeController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'dob' => $validated['dob'] ?? null,
             'role_id' => $employeeRole->id,
         ];
 
@@ -188,6 +198,8 @@ class EmployeeController extends Controller
         // Prepare employee data
         $employeeData = [
             'avatar' => $validated['avatar'] ?? $employee->avatar,
+            'gender' => $validated['gender'] ?? $employee->gender,
+            'dob' => $validated['dob'] ?? $employee->dob,
             'position' => $validated['position'],
             'level' => $validated['level'] ?? null,
             'experience_years' => $validated['experience_years'] ?? null,
@@ -203,14 +215,54 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage (soft delete).
      */
     public function destroy(string $id)
     {
+        $employee = $this->employeeService->getOne($id);
+
+        // Update status to Vô hiệu hóa before moving to trash
+        $employee->update(['status' => 'Vô hiệu hóa']);
+
+        if ($employee->user) {
+            $employee->user->update(['status' => 'Vô hiệu hóa']);
+        }
+
         $this->employeeService->delete($id);
 
         return redirect()->route('admin.employees.index')
-            ->with('success', 'Nhân viên đã được xóa thành công!');
+            ->with('success', 'Nhân viên đã được chuyển vào thùng rác thành công!');
+    }
+
+    /**
+     * Display trashed employees.
+     */
+    public function trash(Request $request)
+    {
+        $employees = $this->employeeService->getTrashed(10);
+        return view('admin.employees.trash', compact('employees'));
+    }
+
+    /**
+     * Restore a trashed employee.
+     */
+    public function restore(string $id)
+    {
+        $this->employeeService->restore($id);
+
+        return redirect()->route('admin.employees.index')
+            ->with('success', 'Nhân viên đã được khôi phục thành công!');
+    }
+
+    /**
+     * Permanently delete an employee.
+     */
+    public function forceDelete(string $id)
+    {
+        $this->employeeService->forceDelete($id);
+
+        return redirect()->route('admin.employees.trash')
+            ->with('success', 'Nhân viên đã được xóa vĩnh viễn thành công!');
     }
 }
 

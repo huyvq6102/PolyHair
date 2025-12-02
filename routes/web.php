@@ -10,6 +10,9 @@ use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\AppointmentController;
 use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use Illuminate\Support\Facades\Route;
+use  App\Http\Controllers\Site\CustomerController;
+use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\ReviewController;
 
 // Site Routes
 Route::get('/', [HomeController::class, 'index'])->name('site.home');
@@ -47,11 +50,41 @@ Route::prefix('cart')->name('site.cart.')->group(function () {
 });
 
 Route::prefix('appointment')->name('site.appointment.')->group(function () {
+    Route::get('/', [AppointmentController::class, 'create'])->name('create');
+    Route::get('/select-services', [AppointmentController::class, 'selectServices'])->name('select-services');
+    Route::get('/test-email', [\App\Http\Controllers\Site\TestEmailController::class, 'testEmail'])->name('test-email');
     Route::post('/', [AppointmentController::class, 'store'])->name('store');
     Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
-    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
+    Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');
+    Route::get('/employees-by-service', [AppointmentController::class, 'getEmployeesByService'])->name('employees-by-service');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
+    Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
 });
+
+// Customer Routes
+Route::prefix('customer')->name('site.customers.')->group(function () {
+    Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
+});
+// Payment Routes
+Route::prefix('check-out')->name('site.payments.')->group(function () {
+
+    Route::get('/', [CheckoutController::class, 'checkout'])->name('checkout');
+    Route::post('/process', [CheckoutController::class, 'processPayment'])->name('process');
+    Route::get('/success/{appointmentId}', [CheckoutController::class, 'paymentSuccess'])->name('success');
+
+});
+
+// Review Routes
+Route::prefix('reviews')->name('site.reviews.')->group(function () {
+    Route::get('/', [ReviewController::class, 'index'])->name('index');
+    Route::middleware('auth')->group(function () {
+        Route::get('/create', [ReviewController::class, 'create'])->name('create');
+        Route::post('/', [ReviewController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [ReviewController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ReviewController::class, 'update'])->name('update');
+    });
+});
+
 
 // Auth Routes
 Route::get('/dashboard', function () {

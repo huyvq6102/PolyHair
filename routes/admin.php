@@ -10,10 +10,12 @@ use App\Http\Controllers\Admin\AppointmentController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\EmployeeController;
-use App\Http\Controllers\Admin\EmployeeAppointmentController;
+use App\Http\Controllers\Admin\EmployeeSkillController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\WorkingScheduleController;
+use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -25,21 +27,50 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     // Service routes with trash functionality
     Route::get('services/trash', [ServiceController::class, 'trash'])->name('services.trash');
+    Route::get('services/{id}/detail', [ServiceController::class, 'showDetail'])->name('services.detail');
     Route::put('services/{id}/restore', [ServiceController::class, 'restore'])->name('services.restore');
     Route::delete('services/{id}/force-delete', [ServiceController::class, 'forceDelete'])->name('services.force-delete');
     Route::resource('services', ServiceController::class);
     
     Route::resource('service-categories', ServiceCategoryController::class);
+    Route::resource('promotions', PromotionController::class);
+    
+    // Appointment routes with additional actions
+    Route::get('appointments/cancelled', [AppointmentController::class, 'cancelled'])->name('appointments.cancelled');
+    Route::get('appointments/employee/{employeeId}/services', [AppointmentController::class, 'getServicesByEmployee'])->name('appointments.employee-services');
+    Route::post('appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
+    Route::post('appointments/{id}/restore', [AppointmentController::class, 'restore'])->name('appointments.restore');
+    Route::delete('appointments/{id}/force-delete', [AppointmentController::class, 'forceDelete'])->name('appointments.force-delete');
     Route::resource('appointments', AppointmentController::class);
+    
     Route::resource('orders', OrderController::class);
+    
+    // Reviews routes
+    Route::post('reviews/{id}/hide', [ReviewController::class, 'hide'])->name('reviews.hide');
+    Route::resource('reviews', ReviewController::class)->except(['create', 'store']);
+    
+    // Users routes - đặt trước resource để tránh conflict
+    Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
+    Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
+    Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
     Route::resource('users', UserController::class);
+    
+    // Employees routes - đặt trước resource để tránh conflict
+    Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
+    Route::post('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    Route::delete('employees/{employee}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
     Route::resource('employees', EmployeeController::class);
+    Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
+    Route::get('employee-skills/{employee}/edit', [EmployeeSkillController::class, 'edit'])->name('employee-skills.edit');
+    Route::put('employee-skills/{employee}', [EmployeeSkillController::class, 'update'])->name('employee-skills.update');
     Route::resource('news', NewsController::class);
     
     // Working schedule routes
     Route::get('working-schedules/trash', [WorkingScheduleController::class, 'trash'])->name('working-schedules.trash');
     Route::put('working-schedules/{id}/restore', [WorkingScheduleController::class, 'restore'])->name('working-schedules.restore');
     Route::delete('working-schedules/{id}/force-delete', [WorkingScheduleController::class, 'forceDelete'])->name('working-schedules.force-delete');
+    Route::delete('working-schedules/delete-all', [WorkingScheduleController::class, 'deleteAll'])->name('working-schedules.delete-all');
+    Route::delete('working-schedules/trash/delete-all', [WorkingScheduleController::class, 'deleteAllTrash'])->name('working-schedules.trash.delete-all');
     Route::resource('working-schedules', WorkingScheduleController::class);
     
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
