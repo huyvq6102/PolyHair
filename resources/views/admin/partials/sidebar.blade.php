@@ -121,6 +121,14 @@
         </a>
     </li>
 
+    <!-- Nav Item - Reviews -->
+    <li class="nav-item {{ str_contains($currentRoute, 'review') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.reviews.index') }}">
+            <i class="fas fa-fw fa-star"></i>
+            <span>Bình luận</span>
+        </a>
+    </li>
+
     <!-- Nav Item - Promotions -->
     <li class="nav-item {{ $promotionMenuActive ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.promotions.index') }}">

@@ -14,10 +14,14 @@ class Review extends Model
         'user_id',
         'rating',
         'comment',
+        'images',
+        'is_hidden',
     ];
 
     protected $casts = [
         'rating' => 'integer',
+        'images' => 'array',
+        'is_hidden' => 'boolean',
     ];
 
     /**

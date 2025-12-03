@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\WorkingScheduleController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\PaymentController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('appointments', AppointmentController::class);
     
     Route::resource('orders', OrderController::class);
+    
+    // Reviews routes
+    Route::post('reviews/{id}/hide', [ReviewController::class, 'hide'])->name('reviews.hide');
+    Route::resource('reviews', ReviewController::class)->except(['create', 'store']);
     
     // Users routes - đặt trước resource để tránh conflict
     Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');

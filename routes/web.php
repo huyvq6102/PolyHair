@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use Illuminate\Support\Facades\Route;
 use  App\Http\Controllers\Site\CustomerController;
 use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\ReviewController;
 
 // Site Routes
 Route::get('/', [HomeController::class, 'index'])->name('site.home');
@@ -73,6 +74,17 @@ Route::prefix('check-out')->name('site.payments.')->group(function () {
     Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('applyCoupon');
     Route::post('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('removeCoupon');
 
+});
+
+// Review Routes
+Route::prefix('reviews')->name('site.reviews.')->group(function () {
+    Route::get('/', [ReviewController::class, 'index'])->name('index');
+    Route::middleware('auth')->group(function () {
+        Route::get('/create', [ReviewController::class, 'create'])->name('create');
+        Route::post('/', [ReviewController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [ReviewController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ReviewController::class, 'update'])->name('update');
+    });
 });
 
 
