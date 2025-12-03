@@ -95,6 +95,19 @@ class ReviewController extends Controller
     }
 
     /**
+     * Show a general feedback form for users who may not have a specific appointment.
+     */
+    public function createGeneral()
+    {
+        $services = Service::whereNull('deleted_at')
+            ->where('status', 'Hoạt động')
+            ->orderBy('name')
+            ->get();
+
+        return view('site.reviews.general', compact('services'));
+    }
+
+    /**
      * Store a newly created review in storage.
      */
     public function store(Request $request)
@@ -152,6 +165,42 @@ class ReviewController extends Controller
 
         return redirect()->route('site.appointment.show', $appointment->id)
             ->with('success', 'Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được ghi nhận.');
+    }
+
+    /**
+     * Store a general review that is not tied to a specific appointment.
+     */
+    public function storeGeneral(Request $request)
+    {
+        $validated = $request->validate([
+            'service_id' => 'nullable|exists:services,id',
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'required|string|max:5000',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        // Handle image uploads
+        $images = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('reviews', 'public');
+                $images[] = basename($path);
+            }
+        }
+
+        Review::create([
+            'appointment_id' => null,
+            'service_id' => $validated['service_id'] ?? null,
+            'employee_id' => null,
+            'user_id' => Auth::id(),
+            'rating' => $validated['rating'],
+            'comment' => $validated['comment'],
+            'images' => !empty($images) ? $images : null,
+            'is_hidden' => false,
+        ]);
+
+        return redirect()->route('site.reviews.index')
+            ->with('success', 'Cảm ơn bạn đã gửi cảm nhận!');
     }
 
     /**

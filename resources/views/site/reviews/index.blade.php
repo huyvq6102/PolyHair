@@ -159,7 +159,15 @@ use Illuminate\Support\Facades\Storage;
             <h1 class="reviews-title">
                 <i class="fa fa-star"></i> Đánh giá khách hàng
             </h1>
-            <p class="text-muted">Xem những đánh giá từ khách hàng đã sử dụng dịch vụ của chúng tôi</p>
+            <p class="text-muted">Xem những đánh giá và cảm nhận từ khách hàng về PolyHair</p>
+
+            @auth
+                <div class="mt-3">
+                    <a href="{{ route('site.reviews.general.create') }}" class="btn btn-outline-primary">
+                        <i class="fa fa-comment"></i> Gửi cảm nhận chung (chưa từng sử dụng dịch vụ vẫn bình luận được)
+                    </a>
+                </div>
+            @endauth
         </div>
 
         <!-- Filter Section -->
