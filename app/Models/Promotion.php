@@ -15,7 +15,13 @@ class Promotion extends Model
         'code',
         'name',
         'description',
+        'discount_type',
         'discount_percent',
+        'discount_amount',
+        'apply_scope',
+        'min_order_amount',
+        'max_discount_amount',
+        'per_user_limit',
         'start_date',
         'end_date',
         'status',
@@ -23,6 +29,10 @@ class Promotion extends Model
 
     protected $casts = [
         'discount_percent' => 'integer',
+        'discount_amount' => 'decimal:2',
+        'min_order_amount' => 'decimal:2',
+        'max_discount_amount' => 'decimal:2',
+        'per_user_limit' => 'integer',
         'start_date' => 'date',
         'end_date' => 'date',
     ];

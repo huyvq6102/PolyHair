@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    public $timestamps = false;
     
     protected $fillable = [
         'user_id',
+        'invoice_code',
         'appointment_id',
+        'order_id',
         'price',
         'VAT',
         'total',
@@ -39,6 +40,14 @@ class Payment extends Model
     public function appointment(): BelongsTo
     {
         return $this->belongsTo(Appointment::class);
+    }
+
+    /**
+     * Get the order that owns the payment.
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }
 

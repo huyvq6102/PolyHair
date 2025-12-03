@@ -7,7 +7,18 @@
                 <h4 class="alert-heading">Thanh toán thành công!</h4>
                 <p>Cảm ơn bạn đã mua hàng tại PolyHair. Đơn hàng của bạn đã được xử lý thành công.</p>
                 <hr>
-                <p class="mb-0">Mã giao dịch của bạn: <strong>{{ $appointmentId }}</strong></p>
+                <p class="mb-0">Mã hóa đơn: <strong>{{ $invoiceCode }}</strong></p>
+                @if (isset($appointmentId) && $appointmentId)
+                    <p class="mb-0">Mã lịch hẹn: <strong>{{ $appointmentId }}</strong></p>
+                @endif
+                
+                @if (isset($total))
+                    <p class="mb-0 mt-2">Tổng thanh toán: <strong class="text-danger" style="font-size: 1.2em;">{{ number_format($total) }}đ</strong></p>
+                @endif
+
+                @if (isset($couponCode) && $couponCode)
+                    <p class="mb-0 text-muted"><small>Đã áp dụng mã khuyến mại: {{ $couponCode }}</small></p>
+                @endif
             </div>
             <a href="{{ route('site.home') }}" class="btn btn-primary mt-3">Quay về trang chủ</a>
         </div>

@@ -26,7 +26,7 @@ class CustomerController extends Controller
             'appointments.employee.user',
             'appointments.reviews',
             'payments',
-            // 'promotionUsages',
+            'promotionUsages',
             'reviews',
         ])->findOrFail($id);
 

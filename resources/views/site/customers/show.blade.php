@@ -71,6 +71,11 @@
                                 <i class="fas fa-user-cog me-2"></i>Thông tin cá nhân
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="payment-history-tab" data-bs-toggle="tab" data-bs-target="#payment-history" type="button" role="tab">
+                                <i class="fas fa-receipt me-2"></i>Lịch sử thanh toán
+                            </button>
+                        </li>
                     </ul>
                 </div>
                 <div class="card-body">
@@ -145,6 +150,7 @@
 
                             <h5 class="mb-4">Các lịch hẹn đã hoàn thành</h5>
                             <div class="list-group">
+<<<<<<< HEAD
                                 @php
                                     $completedAppointments = $user->appointments->filter(function($appointment) {
                                         return ($appointment->status == 'Hoàn thành' || $appointment->status == 'Đã thanh toán')
@@ -198,6 +204,21 @@
                                                     <i class="fas fa-star"></i> Đánh giá
                                                 </a>
                                             @endif
+=======
+                                @foreach($user->appointments as $appointment)
+                                    @if($appointment->status == 'Đã thanh toán' && $appointment->status != 'Đã hủy')
+
+                                    <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <h6 class="mb-1">Cắt tóc tạo kiểu</h6>
+                                          @if (!empty($appointment->employee))
+                                            <small class="text-muted">
+                                                {{ $appointment->employee->user->name }} - {{ $appointment->start_at }}
+                                            </small>
+                                          @else
+                                            <small class="text-muted">{{ $appointment->start_at }}</small>
+                                          @endif
+>>>>>>> 82ef0c91927fd97ffae3fd08510e99409a6da62f
                                         </div>
                                     </div>
                                 @empty
@@ -229,12 +250,51 @@
                             <hr>
                             <div class="row mb-3">
                                 <div class="col-sm-3"><p class="text-muted mb-0">Ngày sinh</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->dob }}</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->dob ? $user->dob->format('d/m/Y') : 'Chưa cập nhật' }}</p></div>
                             </div>
                             <hr>
                             <div class="row">
                                 <div class="col-sm-3"><p class="text-muted mb-0">Địa chỉ</p></div>
                                 <div class="col-sm-9"><p class="fw-bold mb-0"></p></div>
+                            </div>
+                        </div>
+
+                        <!-- Tab Lịch sử thanh toán -->
+                        <div class="tab-pane fade" id="payment-history" role="tabpanel">
+                            <h5 class="mb-4">Lịch sử thanh toán</h5>
+                            <div class="list-group">
+                                @forelse($user->payments as $payment)
+                                    <div class="list-group-item mb-3">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">Hóa đơn: <strong>{{ $payment->invoice_code }}</strong></h6>
+                                            <small class="text-muted">{{ $payment->created_at->format('H:i d/m/Y') }}</small>
+                                        </div>
+                                        <p class="mb-1">Tổng tiền: <strong class="text-danger">{{ number_format($payment->total) }}đ</strong></p>
+                                        <p class="mb-1"><small>Phương thức: {{ $payment->payment_type }}</small></p>
+                                        
+                                        @php
+                                            $appliedPromo = null;
+                                            if ($payment->appointment_id) {
+                                                foreach ($user->promotionUsages as $usage) {
+                                                    if ($usage->appointment_id == $payment->appointment_id) {
+                                                        $appliedPromo = $usage->promotion; // Assuming promotion relation is loaded on PromotionUsage
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        @endphp
+
+                                        @if ($appliedPromo)
+                                            <p class="mb-0 text-success">
+                                                <small>
+                                                    <i class="fas fa-tag me-1"></i>Mã KM: <strong>{{ $appliedPromo->code }}</strong> (-{{ $appliedPromo->discount_percent }}%)
+                                                </small>
+                                            </p>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <div class="alert alert-info">Chưa có lịch sử thanh toán nào.</div>
+                                @endforelse
                             </div>
                         </div>
 

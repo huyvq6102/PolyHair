@@ -1,6 +1,6 @@
 @extends('layouts.site')
 @section('content')
-<div class="container py-5">
+<div class="container py-5" style="margin-top: 100px;">
     <div class="text-center mb-5">
         <h2>Hoàn tất đặt lịch</h2>
         <p class="lead">Chỉ còn vài bước nữa để hoàn tất lịch hẹn của bạn.</p>
@@ -95,13 +95,52 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h4 class="mb-4">Tóm tắt đơn hàng</h4>
+
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">Đóng</button>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    <!-- Coupon Section -->
+                    <div class="mb-4">
+                        @if(isset($appliedCoupon) && $appliedCoupon)
+                            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                                <span>Mã giảm giá: <strong>{{ $appliedCoupon->code }}</strong> (-{{ $appliedCoupon->discount_percent }}%)</span>
+                                <form action="{{ route('site.payments.removeCoupon') }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Gỡ bỏ</button>
+                                </form>
+                            </div>
+                        @else
+                            <form action="{{ route('site.payments.applyCoupon') }}" method="POST" class="input-group mb-3">
+                                @csrf
+                                <input type="text" class="form-control" name="coupon_code" placeholder="Nhập mã khuyến mại" required>
+                                <button class="btn btn-outline-secondary" type="submit">Áp dụng</button>
+                            </form>
+                        @endif
+                    </div>
+
                     <ul class="list-group list-group-flush">
                         @foreach($services as $s)
                          <li class="list-group-item d-flex justify-content-between align-items-center px-0">{{ $s['name'] }}<span>{{ number_format($s['price']) }}đ</span></li>
                         @endforeach
-                        @if($promotion < 0)
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 text-success">Khuyến mãi<span>{{ number_format($promotion) }}đ</span></li>
+                        
+                        @if($promotion > 0)
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 text-success">
+                                Khuyến mãi
+                                <span>-{{ number_format($promotion) }}đ</span>
+                            </li>
                         @endif
+                        
                         <li class="list-group-item d-flex justify-content-between align-items-center border-top pt-3 px-0"><strong>Tổng cộng</strong><strong style="font-size: 1.2rem;">{{ number_format($total) }}đ</strong></li>
                     </ul>
                     <form action="{{ route('site.payments.process') }}" method="POST">

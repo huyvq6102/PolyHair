@@ -145,7 +145,7 @@ class PromotionController extends Controller
      */
     protected function validateData(Request $request, ?string $id = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'code' => [
                 'required',
                 'string',
@@ -154,11 +154,43 @@ class PromotionController extends Controller
             ],
             'name' => ['required', 'string', 'max:191'],
             'description' => ['nullable', 'string'],
-            'discount_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'discount_type' => ['required', Rule::in(['percent', 'amount'])],
+            'discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'apply_scope' => ['required', Rule::in(['service', 'order'])],
+            'min_order_amount' => ['nullable', 'numeric', 'min:0'],
+            'max_discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'per_user_limit' => ['nullable', 'integer', 'min:1'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'status' => ['required', Rule::in(array_keys($this->statuses))],
         ]);
+
+        // Ràng buộc logic theo loại giảm giá
+        if ($data['discount_type'] === 'percent') {
+            $data['discount_amount'] = null;
+            if ($data['discount_percent'] === null) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'discount_percent' => 'Vui lòng nhập % giảm giá khi chọn loại giảm giá theo phần trăm.',
+                ]);
+            }
+        } else {
+            $data['discount_percent'] = null;
+            if ($data['discount_amount'] === null) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'discount_amount' => 'Vui lòng nhập số tiền giảm giá khi chọn loại giảm giá theo số tiền.',
+                ]);
+            }
+        }
+
+        // Nếu áp dụng theo hóa đơn thì yêu cầu tổng tiền tối thiểu
+        if ($data['apply_scope'] === 'order' && $data['min_order_amount'] === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'min_order_amount' => 'Vui lòng nhập số tiền hóa đơn tối thiểu khi áp dụng theo hóa đơn.',
+            ]);
+        }
+
+        return $data;
     }
 }
 
