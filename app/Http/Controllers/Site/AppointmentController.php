@@ -615,11 +615,9 @@ class AppointmentController extends Controller
             }
             
             // Get working schedules for the employee on the selected date
-            // Status phải là 'approved' (đã được duyệt) để hiển thị lịch làm việc
             $workingSchedules = \App\Models\WorkingSchedule::with('shift')
                 ->where('employee_id', $employeeId)
                 ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
-                ->where('status', 'approved')
                 ->whereNull('deleted_at') // Loại bỏ các bản ghi đã bị xóa mềm
                 ->get();
 

@@ -83,6 +83,16 @@
     if (isset($combo)) {
         $editEntity = $combo;
         $editId = $combo->id;
+    } elseif (isset($variant) && $variant->service) {
+        // When editing a variant, we edit the service that contains it
+        $editEntity = $variant->service;
+        $editId = $variant->service->id;
+        // Also set $service for compatibility with the rest of the form
+        $service = $variant->service;
+        // Load variants if not already loaded
+        if (!$service->relationLoaded('serviceVariants')) {
+            $service->load('serviceVariants.variantAttributes');
+        }
     } elseif (isset($service)) {
         $editEntity = $service;
         $editId = $service->id;
@@ -445,7 +455,7 @@
                         <h6 class="mb-2 text-primary"><i class="fas fa-tag"></i> Dịch vụ đơn</h6>
                         @foreach($singleServices as $singleService)
                             <div class="form-check ml-3 mb-2">
-                                <input type="checkbox" name="combo_items[{{ $singleService->id }}][service_id]" 
+                                <input type="checkbox" 
                                        id="service_{{ $singleService->id }}" 
                                        class="form-check-input combo-service-checkbox" 
                                        value="{{ $singleService->id }}" 
@@ -456,7 +466,10 @@
                                     ({{ $singleService->service_code ?? 'N/A' }}) - 
                                     <span class="text-primary">{{ number_format($singleService->base_price ?? 0, 0, ',', '.') }} đ</span>
                                 </label>
-                                <input type="hidden" name="combo_items[{{ $singleService->id }}][service_variant_id]" value="">
+                                @if(isset($selectedItems[$singleService->id]))
+                                    <input type="hidden" name="combo_items[{{ $singleService->id }}][service_id]" value="{{ $singleService->id }}">
+                                    <input type="hidden" name="combo_items[{{ $singleService->id }}][service_variant_id]" value="">
+                                @endif
                             </div>
                         @endforeach
                     @endif
@@ -503,7 +516,9 @@
                                             </label>
                                         </div>
                                     @endforeach
-                                    <input type="hidden" name="combo_items[{{ $variantService->id }}][service_id]" value="{{ $variantService->id }}">
+                                    @if($isSelected)
+                                        <input type="hidden" name="combo_items[{{ $variantService->id }}][service_id]" value="{{ $variantService->id }}">
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
@@ -728,6 +743,47 @@
                     nameInput.value = nameField.value;
                     serviceForm.appendChild(nameInput);
                     nameField.disabled = true;
+                    
+                    // Rename 'image' to 'combo_image'
+                    const imageField = document.getElementById('image');
+                    if (imageField) {
+                        imageField.name = 'combo_image';
+                    }
+                    
+                    // Rename 'status' to 'combo_status'
+                    const statusField = document.getElementById('status');
+                    if (statusField) {
+                        statusField.name = 'combo_status';
+                    }
+                    
+                    // Rename 'description' to 'combo_description'
+                    const descriptionField = document.getElementById('description');
+                    if (descriptionField) {
+                        descriptionField.name = 'combo_description';
+                    }
+                    
+                    // Đảm bảo chỉ gửi các combo items được chọn
+                    // Xử lý dịch vụ đơn - disable checkbox không được check
+                    document.querySelectorAll('.combo-service-checkbox').forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                        }
+                    });
+                    
+                    // Xử lý dịch vụ biến thể - disable checkbox và ẩn các radio không được check
+                    document.querySelectorAll('.variant-service-checkbox').forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                            const serviceId = checkbox.getAttribute('data-service-id');
+                            const variantOptions = document.getElementById('variants_' + serviceId);
+                            if (variantOptions) {
+                                // Disable tất cả radio buttons
+                                variantOptions.querySelectorAll('input[type="radio"]').forEach(radio => {
+                                    radio.disabled = true;
+                                });
+                            }
+                        }
+                    });
                 }
             });
         }
@@ -1161,6 +1217,44 @@
             }
         }, 1000);
 
+        // Xử lý chọn dịch vụ đơn trong form combo
+        document.querySelectorAll('.combo-service-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const serviceId = this.value;
+                const checkboxContainer = this.closest('.form-check');
+                
+                if (this.checked) {
+                    // Tạo hidden input nếu chưa có
+                    let serviceIdInput = checkboxContainer.querySelector('input[type="hidden"][name*="[service_id]"]');
+                    if (!serviceIdInput) {
+                        serviceIdInput = document.createElement('input');
+                        serviceIdInput.type = 'hidden';
+                        serviceIdInput.name = 'combo_items[' + serviceId + '][service_id]';
+                        serviceIdInput.value = serviceId;
+                        checkboxContainer.appendChild(serviceIdInput);
+                    }
+                    
+                    // Tạo hidden input cho service_variant_id nếu chưa có
+                    let variantIdInput = checkboxContainer.querySelector('input[type="hidden"][name*="[service_variant_id]"]');
+                    if (!variantIdInput) {
+                        variantIdInput = document.createElement('input');
+                        variantIdInput.type = 'hidden';
+                        variantIdInput.name = 'combo_items[' + serviceId + '][service_variant_id]';
+                        variantIdInput.value = '';
+                        checkboxContainer.appendChild(variantIdInput);
+                    }
+                } else {
+                    // Xóa hidden inputs khi uncheck
+                    const hiddenInputs = checkboxContainer.querySelectorAll('input[type="hidden"]');
+                    hiddenInputs.forEach(input => {
+                        if (input.name.includes('combo_items[' + serviceId)) {
+                            input.remove();
+                        }
+                    });
+                }
+            });
+        });
+
         // Xử lý chọn dịch vụ biến thể trong form combo
         document.querySelectorAll('.variant-service-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
@@ -1174,17 +1268,36 @@
                         if (firstVariant && !variantOptions.querySelector('input[type="radio"]:checked')) {
                             firstVariant.checked = true;
                         }
+                        // Tạo hidden input service_id nếu chưa có
+                        let hiddenInput = variantOptions.querySelector('input[type="hidden"][name*="[service_id]"]');
+                        if (!hiddenInput) {
+                            hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = 'combo_items[' + serviceId + '][service_id]';
+                            hiddenInput.value = serviceId;
+                            variantOptions.appendChild(hiddenInput);
+                        }
                     } else {
                         variantOptions.style.display = 'none';
                         // Bỏ chọn tất cả biến thể
                         variantOptions.querySelectorAll('input[type="radio"]').forEach(radio => {
                             radio.checked = false;
                         });
+                        // Xóa hidden input service_id
+                        const hiddenInput = variantOptions.querySelector('input[type="hidden"][name*="[service_id]"]');
+                        if (hiddenInput) {
+                            hiddenInput.remove();
+                        }
                     }
                 }
             });
         });
 
+        // Khởi tạo hidden inputs cho các dịch vụ đơn đã được chọn khi trang load
+        document.querySelectorAll('.combo-service-checkbox:checked').forEach(checkbox => {
+            checkbox.dispatchEvent(new Event('change'));
+        });
+        
         // Khởi tạo hiển thị cho các dịch vụ biến thể đã được chọn (khi có old input)
         document.querySelectorAll('.variant-service-checkbox:checked').forEach(checkbox => {
             checkbox.dispatchEvent(new Event('change'));
