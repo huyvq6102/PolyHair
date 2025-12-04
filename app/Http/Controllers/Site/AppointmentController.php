@@ -757,9 +757,9 @@ class AppointmentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng. Vui lòng thanh toán để hoàn tất đặt lịch.',
+                'message' => '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng.',
                 'appointment_id' => $appointment->id,
-                'redirect_url' => route('site.payments.checkout'),
+                'redirect_url' => route('site.home'),
                 'cart_count' => count($cart),
             ]);
 
