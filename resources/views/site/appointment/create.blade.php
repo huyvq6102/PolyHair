@@ -2222,14 +2222,12 @@
                         $('#appointmentForm').off('submit');
                         $form.find('input, button, select, textarea').prop('disabled', true);
                         
-                        // Redirect to cart page after 3 seconds
-                        setTimeout(function() {
-                            if (response.redirect_url) {
-                                window.location.href = response.redirect_url;
-                            } else {
-                                window.location.href = '{{ route("site.cart.index") }}';
-                            }
-                        }, 3000);
+                        // Redirect to checkout page immediately
+                        if (response.redirect_url) {
+                            window.location.href = response.redirect_url;
+                        } else {
+                            window.location.href = '{{ route("site.payments.checkout") }}';
+                        }
                     } else {
                         // Re-enable button if not successful
                         isSubmitting = false;
