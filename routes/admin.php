@@ -15,11 +15,17 @@ use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\WorkingScheduleController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
+    // Đặt route export lên trước resource
+    Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
+    Route::resource('payments', PaymentController::class)->only(['index', 'show']);
+
     Route::resource('categories', CategoryController::class);
     Route::resource('types', TypeController::class);
     Route::resource('products', ProductController::class);
@@ -32,11 +38,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('services', ServiceController::class);
     
     Route::resource('service-categories', ServiceCategoryController::class);
-    
-    // Promotions routes with trash functionality
-    Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
-    Route::put('promotions/{id}/restore', [PromotionController::class, 'restore'])->name('promotions.restore');
-    Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
     Route::resource('promotions', PromotionController::class);
     
     // Appointment routes with additional actions
@@ -48,6 +49,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('appointments', AppointmentController::class);
     
     Route::resource('orders', OrderController::class);
+    
+    // Reviews routes
+    Route::post('reviews/{id}/hide', [ReviewController::class, 'hide'])->name('reviews.hide');
+    Route::resource('reviews', ReviewController::class)->except(['create', 'store']);
     
     // Users routes - đặt trước resource để tránh conflict
     Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
@@ -75,15 +80,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
-});
-
-// Employee appointment routes (accessible by employees)
-Route::prefix('admin/employee')->name('employee.')->middleware(['auth'])->group(function () {
-    Route::get('appointments', [EmployeeAppointmentController::class, 'index'])->name('appointments.index');
-    Route::get('appointments/{id}', [EmployeeAppointmentController::class, 'show'])->name('appointments.show');
-    Route::post('appointments/{id}/confirm', [EmployeeAppointmentController::class, 'confirm'])->name('appointments.confirm');
-    Route::post('appointments/{id}/start', [EmployeeAppointmentController::class, 'start'])->name('appointments.start');
-    Route::post('appointments/{id}/complete', [EmployeeAppointmentController::class, 'complete'])->name('appointments.complete');
-    Route::post('appointments/{id}/cancel', [EmployeeAppointmentController::class, 'cancel'])->name('appointments.cancel');
 });
 

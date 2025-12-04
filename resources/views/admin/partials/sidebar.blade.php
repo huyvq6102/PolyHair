@@ -19,10 +19,18 @@
     @if($isEmployee)
         <!-- Employee Menu Items -->
         <!-- Nav Item - Employee Appointments -->
-        <li class="nav-item {{ str_contains($currentRoute, 'employee.appointments') ? 'active' : '' }}">
+        <li class="nav-item {{ str_contains($currentRoute, 'employee.appointments') && $currentRoute !== 'employee.appointments.create' ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('employee.appointments.index') }}">
                 <i class="fas fa-fw fa-clipboard-list"></i>
                 <span>Quản lý đơn đặt</span>
+            </a>
+        </li>
+        
+        <!-- Nav Item - Create Appointment -->
+        <li class="nav-item {{ $currentRoute === 'employee.appointments.create' ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('employee.appointments.create') }}">
+                <i class="fas fa-fw fa-calendar-plus"></i>
+                <span>Tạo lịch hẹn</span>
             </a>
         </li>
     @else
@@ -105,11 +113,19 @@
         </div>
     </li>
 
-    <!-- Nav Item - Orders -->
-    <li class="nav-item {{ str_contains($currentRoute, 'order') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.orders.index') }}">
-            <i class="fas fa-fw fa-shopping-cart"></i>
+    <!-- Nav Item - Payments -->
+    <li class="nav-item {{ str_contains($currentRoute, 'payment') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.payments.index') }}">
+            <i class="fas fa-fw fa-file-invoice-dollar"></i>
             <span>Hóa đơn</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Reviews -->
+    <li class="nav-item {{ str_contains($currentRoute, 'review') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.reviews.index') }}">
+            <i class="fas fa-fw fa-star"></i>
+            <span>Bình luận</span>
         </a>
     </li>
 

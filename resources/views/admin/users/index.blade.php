@@ -104,19 +104,13 @@
                                 <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary">
                                     <i class="fas fa-edit"></i> Sửa
                                 </a>
-                                @if(!$user->isAdmin())
-                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i> Xóa
-                                        </button>
-                                    </form>
-                                @else
-                                    <button type="button" class="btn btn-sm btn-secondary" disabled title="Không thể xóa tài khoản quản trị viên">
-                                        <i class="fas fa-lock"></i> Không thể xóa
+                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i> Xóa
                                     </button>
-                                @endif
+                                </form>
                             </td>
                         </tr>
                     @empty

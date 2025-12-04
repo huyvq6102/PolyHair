@@ -41,21 +41,6 @@ class ServiceController extends Controller
         }
 
         $services = $query->orderBy('id', 'desc')->paginate($perPage);
-        
-        // Redirect to first page if current page is out of range
-        if ($request->has('page')) {
-            $currentPage = (int) $request->get('page');
-            $lastPage = $services->lastPage();
-            
-            // Nếu trang hiện tại lớn hơn trang cuối và có ít nhất 1 trang, redirect về trang 1
-            if ($currentPage > $lastPage && $lastPage > 0) {
-                return redirect()->route('admin.services.index', array_merge($request->except('page'), ['page' => 1]));
-            }
-            // Nếu không có dữ liệu (lastPage = 0) và đang ở trang > 1, redirect về trang 1
-            if ($lastPage == 0 && $currentPage > 1) {
-                return redirect()->route('admin.services.index', array_merge($request->except('page'), ['page' => 1]));
-            }
-        }
 
         // Get all combos
         $combosQuery = Combo::with(['category', 'comboItems.service'])
@@ -350,11 +335,21 @@ class ServiceController extends Controller
         // Check if it's a variant (single variant edit)
         if ($type === 'variant') {
             // Kiểm tra xem $id có phải là ServiceVariant ID không
-            // Nhưng ưu tiên kiểm tra xem có phải là Service ID không
-            $service = Service::find($id);
-            if ($service) {
-                // Đây là edit service có variants (ID là service ID)
-                $service->load(['category', 'serviceVariants.variantAttributes']);
+            $variant = ServiceVariant::find($id);
+            if ($variant) {
+                // Đây là edit một variant đơn lẻ
+                $variant->load('service');
+                $categories = $this->serviceCategoryService->getAll();
+                $singleServices = Service::whereNull('deleted_at')
+                    ->whereDoesntHave('serviceVariants')
+                    ->get();
+                // Truyền cả service_type và serviceType để đảm bảo tương thích
+                return view('admin.services.edit', compact('variant', 'categories', 'singleServices'))
+                    ->with('service_type', 'variant')
+                    ->with('serviceType', 'variant');
+            } else {
+                // Đây là edit service có variants
+                $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
                 $categories = $this->serviceCategoryService->getAll();
                 $singleServices = Service::whereNull('deleted_at')
                     ->whereDoesntHave('serviceVariants')
@@ -363,24 +358,6 @@ class ServiceController extends Controller
                 // Đảm bảo cả service_type và serviceType đều được truyền
                 return view('admin.services.edit', compact('service', 'categories', 'singleServices', 'serviceType'))
                     ->with('service_type', 'variant');
-            } else {
-                // Thử tìm variant với ID này (trường hợp edit variant đơn lẻ)
-                $variant = ServiceVariant::find($id);
-                if ($variant) {
-                    // Đây là edit một variant đơn lẻ
-                    $variant->load('service');
-                    $categories = $this->serviceCategoryService->getAll();
-                    $singleServices = Service::whereNull('deleted_at')
-                        ->whereDoesntHave('serviceVariants')
-                        ->get();
-                    // Truyền cả service_type và serviceType để đảm bảo tương thích
-                    return view('admin.services.edit', compact('variant', 'categories', 'singleServices'))
-                        ->with('service_type', 'variant')
-                        ->with('serviceType', 'variant');
-                } else {
-                    // Không tìm thấy cả service và variant
-                    abort(404, 'Service or Variant not found');
-                }
             }
         }
 

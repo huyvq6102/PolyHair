@@ -100,11 +100,8 @@ class CartController extends Controller
                             continue;
                         }
                         
-                        $appointment = \App\Models\Appointment::with([
-                            'appointmentDetails.serviceVariant.service', 
-                            'appointmentDetails.combo.comboItems.serviceVariant.service',
-                            'employee.user'
-                        ])->find($appointmentId);
+                        $appointment = \App\Models\Appointment::with(['appointmentDetails.serviceVariant.service', 'appointmentDetails.combo', 'employee.user'])
+                            ->find($appointmentId);
                         
                         if ($appointment) {
                             // Mark this appointment ID as processed

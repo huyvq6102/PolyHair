@@ -74,16 +74,14 @@ class CheckoutController extends Controller
             // APPOINTMENT
             // -------------------------
             if (isset($item['type']) && $item['type'] === 'appointment') {
-                $appointment = \App\Models\Appointment::with([
-                    'appointmentDetails.serviceVariant.service',
-                    'appointmentDetails.combo'
-                ])->find($item['id']);
+                $appointment = \App\Models\Appointment::with('appointmentDetails.serviceVariant.service')
+                    ->find($item['id']);
 
                 if ($appointment) {
                     $appointmentTotal = 0;
 
                     foreach ($appointment->appointmentDetails as $detail) {
-                        // Handle Service Variants in Appointment
+                        // Handle Standard Services in Appointment
                         if ($detail->serviceVariant && $detail->serviceVariant->service) {
                             $price = $detail->price_snapshot 
                                 ?? ($detail->serviceVariant->price ?? 0);
@@ -97,33 +95,9 @@ class CheckoutController extends Controller
                                 'type'  => 'appointment_item'
                             ];
                         }
-                        // Handle Single Services (no variant) in Appointment
-                        // These are stored with service_variant_id = null and service name in notes
-                        elseif (!$detail->serviceVariant && !$detail->combo_id && $detail->notes) {
-                            $price = $detail->price_snapshot ?? 0;
-
-                            $appointmentTotal += $price;
-
-                            $services[] = [
-                                'cart_id' => $cartKey,
-                                'name' => '[Lịch hẹn] ' . $detail->notes,
-                                'price' => $price,
-                                'type'  => 'appointment_item'
-                            ];
-                        }
-                        // Handle Combos in Appointment
-                        elseif ($detail->combo_id && $detail->combo) {
-                            $price = $detail->price_snapshot ?? ($detail->combo->price ?? 0);
-
-                            $appointmentTotal += $price;
-
-                            $services[] = [
-                                'cart_id' => $cartKey,
-                                'name' => '[Lịch hẹn] Combo: ' . $detail->combo->name,
-                                'price' => $price,
-                                'type'  => 'appointment_item'
-                            ];
-                        }
+                        // Handle Combos in Appointment (if stored directly or via logic)
+                        // Note: Current AppointmentDetail logic primarily links to serviceVariant. 
+                        // If combos are broken down into variants, they are handled above.
                     }
 
                     $subtotal += $appointmentTotal;

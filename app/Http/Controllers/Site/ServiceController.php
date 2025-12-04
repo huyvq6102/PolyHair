@@ -187,56 +187,7 @@ class ServiceController extends Controller
     {
         $service = $this->serviceService->getOne($id);
         $relatedServices = $this->serviceService->getRelated($service->category_id ?? 0, $id);
-        
-        // Kiểm tra category hoặc tên dịch vụ để quyết định lấy ảnh từ thư mục nào
-        $categoryName = strtolower($service->category->name ?? '');
-        $serviceName = strtolower($service->name ?? '');
-        $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
-        $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
-        $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
-        
-        if ($isUonService) {
-            // Dịch vụ uốn - lấy từ thư mục uốn
-            $imageDir = base_path('resources/views/image/uốn');
-            $publicImageDir = public_path('legacy/images/uon');
-        } elseif ($isNhuomService) {
-            // Dịch vụ nhuộm - lấy từ thư mục nhuộm
-            $imageDir = base_path('resources/views/image/nhuộm');
-            $publicImageDir = public_path('legacy/images/nhuom');
-        } elseif ($isGoiService) {
-            // Dịch vụ gội - lấy từ thư mục gội
-            $imageDir = base_path('resources/views/image/gội');
-            $publicImageDir = public_path('legacy/images/goi');
-        } else {
-            // Dịch vụ cắt (mặc định) - lấy từ thư mục Cắt
-            $imageDir = base_path('resources/views/image/Cắt');
-            $publicImageDir = public_path('legacy/images/cat');
-        }
-        
-        $randomImages = [];
-        if (is_dir($imageDir)) {
-            $allImages = array_filter(scandir($imageDir), function($file) {
-                return in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif']);
-            });
-            $allImages = array_values($allImages); // Reset keys
-            if (count($allImages) > 0) {
-                shuffle($allImages);
-                $randomImages = array_slice($allImages, 0, 3);
-            }
-        }
-        
-        // Đảm bảo ảnh đã được copy vào public để hiển thị
-        if (!is_dir($publicImageDir)) {
-            mkdir($publicImageDir, 0755, true);
-        }
-        foreach ($randomImages as $img) {
-            $sourcePath = $imageDir . '/' . $img;
-            $destPath = $publicImageDir . '/' . $img;
-            if (file_exists($sourcePath) && !file_exists($destPath)) {
-                copy($sourcePath, $destPath);
-            }
-        }
 
-        return view('site.service-detail', compact('service', 'relatedServices', 'randomImages'));
+        return view('site.service-detail', compact('service', 'relatedServices'));
     }
 }

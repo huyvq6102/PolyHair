@@ -101,6 +101,81 @@
   </div>
 </section>
 
+    <!--3 khuyen mai service_area_start -->
+
+    <section class="promo-section py-5">
+    <div class="container">
+        <div class="d-flex align-items-center mb-3">
+            <span class="promo-bar mr-2"></span>
+            <h3 class="promo-title mb-0">CHƯƠNG TRÌNH KHUYẾN MÃI</h3>
+        </div>
+        <div class="promo-slider">
+            <button class="promo-nav prev" aria-label="Prev">‹</button>
+            <div class="promo-viewport">
+                <div class="promo-track">
+                    @foreach([
+                        [
+                            'title' => 'Khuyến mãi đặc biệt mùa hè',
+                            'desc'  => 'Giảm ngay 20% cho tất cả dịch vụ làm tóc',
+                            'link'  => '#',
+                            'img'   => 'legacy/images/sliders/2.png',
+                        ],
+                        [
+                            'title' => 'Ưu đãi hấp dẫn cho khách hàng mới',
+                            'desc'  => 'Giảm giá 15% cho lần đầu sử dụng dịch vụ',
+                            'link'  => '#',
+                            'img'   => 'legacy/images/sliders/3.png',
+                        ],
+                        [
+                            'title' => 'Ưu đãi hấp dẫn cho dịch vụ chăm sóc tóc',
+                            'desc'  => 'Combo chăm sóc, phục hồi, dưỡng bóng mượt…',
+                            'link'  => '#',
+                            'img'   => 'legacy/images/sliders/1.png',
+                        ],
+                        [
+                            'title' => 'Ưu đãi hấp dẫn cho dịch vụ chăm sóc tóc',
+                            'desc'  => 'Combo chăm sóc, phục hồi, dưỡng bóng mượt…',
+                            'link'  => '#',
+                            'img'   => 'legacy/images/sliders/1.png',
+                        ],
+                        [
+                            'title' => 'Ưu đãi hấp dẫn cho dịch vụ chăm sóc tóc',
+                            'desc'  => 'Combo chăm sóc, phục hồi, dưỡng bóng mượt…',
+                            'link'  => '#',
+                            'img'   => 'legacy/images/sliders/1.png',
+                        ],
+                        [
+                            'title' => 'Ưu đãi hấp dẫn cho dịch vụ chăm sóc tóc',
+                            'desc'  => 'Combo chăm sóc, phục hồi, dưỡng bóng mượt…',
+                            'link'  => '#',
+                            'img'   => 'legacy/images/sliders/1.png',
+                        ],
+                        [
+                            'title' => 'Ưu đãi hấp dẫn cho dịch vụ chăm sóc tóc',
+                            'desc'  => 'Combo chăm sóc, phục hồi, dưỡng bóng mượt…',
+                            'link'  => '#',
+                            'img'   => 'legacy/images/sliders/1.png',
+                        ],
+                    ] as $promo)
+                    <a class="news__items promo-card" href="{{ $promo['link'] }}" title="{{ $promo['title'] }}">
+                        <div class="news__img img_hover scale-img promo-img">
+                            <img class="w-100" src="{{ asset($promo['img']) }}" alt="{{ $promo['title'] }}">
+                        </div>
+                        <div class="news__txt promo-body">
+                            <h3 class="news__name promo-heading"><span>{{ $promo['title'] }}</span></h3>
+                            <div class="news__line"></div>
+                            <div class="news__desc"><span>{{ $promo['desc'] }}</span></div>
+                        </div>
+                    </a>
+                    @endforeach
+                </div>
+            </div>
+            <button class="promo-nav next" aria-label="Next">›</button>
+        </div>
+    </div>
+</section>
+    <!-- khuyen mai service_area_end -->
+
     <!-- 4 FEEDBACK KHÁCH HÀNG -->
 <section class="feedback-section py-5">
   <div class="container">
@@ -286,48 +361,38 @@
 
 @endsection
 
-<style>
-/* Ẩn dòng kẻ ngang DƯỚI phần DỊCH VỤ TÓC & COMBO */
-.service-section > .container:first-of-type {
-    border-bottom: none !important;
-    border-top: none !important;
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-}
-.service-section > .container:first-of-type > *,
-.service-section > .container:first-of-type > * > *,
-.service-section > .container:first-of-type > * > * > * {
-    border-bottom: none !important;
-    border-top: none !important;
-}
-.service-section > .container:first-of-type .d-flex {
-    border-bottom: none !important;
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-.service-section > .container:first-of-type .desc {
-    border-bottom: none !important;
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-.service-section > .container:first-of-type::after,
-.service-section > .container:first-of-type::before,
-.service-section > .container:first-of-type .d-flex::after,
-.service-section > .container:first-of-type .d-flex::before,
-.service-section > .container:first-of-type .desc::after,
-.service-section > .container:first-of-type .desc::before {
-    display: none !important;
-    content: none !important;
-}
-/* Ẩn tất cả border trong container đầu tiên */
-.service-section .container:first-child {
-    border: none !important;
-}
-.service-section .container:first-child * {
-    border-bottom: none !important;
-}
-</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const track = document.querySelector('.promo-track');
+    const cards = Array.from(track.children);
+    let index = 0;
 
+    function cardWidth() {
+        const card = cards[0];
+        return card ? card.getBoundingClientRect().width + 28 /*gap*/ : 0;
+    }
+    function maxIndex() {
+        const vw = document.querySelector('.promo-viewport').clientWidth;
+        const visible = Math.max(1, Math.floor(vw / cardWidth()));
+        return Math.max(0, cards.length - visible);
+    }
+    function render() {
+        const offset = index * cardWidth();
+        track.style.transform = `translateX(-${offset}px)`;
+    }
+
+    document.querySelector('.promo-nav.prev').onclick = () => {
+        index = Math.max(0, index - 1); render();
+    };
+    document.querySelector('.promo-nav.next').onclick = () => {
+        index = Math.min(maxIndex(), index + 1); render();
+    };
+    window.addEventListener('resize', () => { index = Math.min(index, maxIndex()); render(); });
+
+    render();
+});
+
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const viewport = document.querySelector('.ba-viewport');
@@ -389,6 +454,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Bắt đầu auto play
   startAutoPlay();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const viewport = document.querySelector('.promo-viewport');
+  const track = document.querySelector('.promo-track');
+  const cards = Array.from(track.children);
+  if (!cards.length) return;
+  const gap = parseFloat(getComputedStyle(track).gap || 0);
+  const step = () => cards[0].getBoundingClientRect().width + gap;
+
+  document.querySelector('.promo-nav.prev').onclick = () => {
+    viewport.scrollBy({ left: -step(), behavior: 'smooth' });
+  };
+  document.querySelector('.promo-nav.next').onclick = () => {
+    viewport.scrollBy({ left: step(), behavior: 'smooth' });
+  };
 });
 </script>
 <script>

@@ -5783,46 +5783,7 @@ label.error {
 /* ==================================== Mẫu tóc hot================================ */
 .bar{width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
 .title{font-size:24px;font-weight:800;text-transform:uppercase;margin:0;}
-.desc{color:#333333;line-height:1.6;margin-top:6px;border-bottom:none !important;}
-/* Ẩn dòng kẻ ngang DƯỚI phần DỊCH VỤ TÓC & COMBO */
-.service-section > .container:first-of-type {
-    border-bottom: none !important;
-    border-top: none !important;
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-}
-.service-section > .container:first-of-type > *,
-.service-section > .container:first-of-type > * > *,
-.service-section > .container:first-of-type > * > * > * {
-    border-bottom: none !important;
-    border-top: none !important;
-}
-.service-section > .container:first-of-type .d-flex {
-    border-bottom: none !important;
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-.service-section > .container:first-of-type .desc {
-    border-bottom: none !important;
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-.service-section > .container:first-of-type::after,
-.service-section > .container:first-of-type::before,
-.service-section > .container:first-of-type .d-flex::after,
-.service-section > .container:first-of-type .d-flex::before,
-.service-section > .container:first-of-type .desc::after,
-.service-section > .container:first-of-type .desc::before {
-    display: none !important;
-    content: none !important;
-}
-/* Ẩn tất cả border trong container đầu tiên */
-.service-section .container:first-child {
-    border: none !important;
-}
-.service-section .container:first-child * {
-    border-bottom: none !important;
-}
+.desc{color:#333333;line-height:1.6;margin-top:6px;}
 .btn-view-all{display:inline-block;padding:10px 20px;background:#000;color:#e6c684;text-transform:uppercase;font-weight:700;letter-spacing:.05em;border:none;border-radius:4px;text-decoration:none;}
 .btn-view-all:hover{opacity:.9;color:#e6c684;}
 
@@ -5930,36 +5891,15 @@ label.error {
     align-items: flex-start;
     margin-top: auto;       /* thêm để đẩy body xuống đáy */
 }
-.svc-left {
-    flex: 1;
-    min-width: 0;          /* cho phép flex item co lại */
-    margin-right: 10px;
-}
-.svc-right {
-    flex-shrink: 0;         /* không cho phép button bị co lại */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-}
 /* bổ sung/đổi block .svc-name */
 .svc-name {
     margin: 0;
     font-weight: 800;
-    font-size: 14px;       /* giảm font-size */
     min-height: 40px;       /* giữ chiều cao tên để tên dài không đẩy nút lệch */
-    max-height: 60px;       /* giới hạn chiều cao tối đa */
-    overflow: hidden;       /* ẩn phần text vượt quá */
-    text-overflow: ellipsis; /* hiển thị dấu ... khi text quá dài */
-    display: -webkit-box;
-    -webkit-line-clamp: 2;  /* giới hạn 2 dòng */
-    -webkit-box-orient: vertical;
-    line-height: 1.4;       /* khoảng cách giữa các dòng */
-    word-wrap: break-word;  /* xuống dòng khi từ quá dài */
 }
 .svc-price span{color:#c08a3f;font-weight:700;}
 .svc-rating{font-size:13px;color:#a67832;}
-.svc-book{display:inline-block;padding:8px 12px;background:linear-gradient(135deg,#d8b26a 0%,#8b5a2b 100%);color:#000;font-weight:700;border-radius:999px;text-transform:uppercase;font-size:12px;white-space:nowrap;text-decoration:none;}
+.svc-book{display:inline-block;padding:8px 12px;background:linear-gradient(135deg,#d8b26a 0%,#8b5a2b 100%);color:#000;font-weight:700;border-radius:999px;text-transform:uppercase;font-size:12px;}
 .svc-book:hover{opacity:.9;color:#000;}
 
 @media(max-width:991px){

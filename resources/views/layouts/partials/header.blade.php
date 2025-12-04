@@ -58,6 +58,7 @@
                                                         @endforeach
                                                     </ul>
                                                     </li>
+                                                <li><a class="{{ str_contains($currentRoute, 'product') ? 'active' : '' }}" href="{{ route('site.products.index') }}">SẢN PHẨM</a></li>
                                                 <li><a class="{{ str_contains($currentRoute, 'blog') ? 'active' : '' }}" href="{{ route('site.blog.index') }}">TIN TỨC</a></li>
                                                 <li>
                                                     <a class="{{ str_contains($currentRoute, 'review') ? 'active' : '' }}" href="{{ route('site.reviews.index') }}">ĐÁNH GIÁ</a>
@@ -97,9 +98,9 @@
                                     @auth
                                         <div class="dropdown ml-3" style="position: relative;">
                                             <button type="button" class="btn bg-transparent p-0 d-flex align-items-center" id="userDropdown"
-                                                    style="border: none; outline: none; cursor: pointer; color: #000; max-width: 200px;">
-                                                <span class="text-uppercase" style="color: #000; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;">{{ auth()->user()->name ?? 'User' }}</span>
-                                                <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px; color: #000; flex-shrink: 0;"></i>
+                                                    style="border: none; outline: none; cursor: pointer; color: #000;">
+                                                <span class="text-uppercase" style="color: #000;">{{ auth()->user()->name ?? 'User' }}</span>
+                                                <i class="fa fa-chevron-down ml-2" aria-hidden="true" style="font-size: 10px; color: #000;"></i>
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-right shadow-lg" aria-labelledby="userDropdown"
                                                 style="min-width: 220px; border-radius: 8px; border: none; margin-top: 10px; padding: 0; display: none; position: absolute; right: 0; top: 100%; z-index: 1050;">
@@ -189,18 +190,5 @@
     /* a.popup-with-form[href="#test-form"] {
         color: #000 !important;
     } */
-
-    /* Xử lý tên người dùng dài */
-    #userDropdown {
-        max-width: 200px;
-    }
-    
-    #userDropdown span {
-        max-width: 180px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-    }
 
 </style>

@@ -304,9 +304,18 @@ class AppointmentService
                 'cancellation_reason' => $reason
             ]);
 
-            // Note: Working schedule status column has been removed.
-            // The working schedule is now managed differently (if needed).
-            // Free up working schedule time slot logic removed as status column no longer exists.
+            // Free up working schedule time slot if exists
+            if ($appointment->employee_id && $appointment->start_at) {
+                $workDate = $appointment->start_at->format('Y-m-d');
+                $workingSchedule = WorkingSchedule::where('employee_id', $appointment->employee_id)
+                    ->whereDate('work_date', $workDate)
+                    ->where('status', 'busy')
+                    ->first();
+                
+                if ($workingSchedule) {
+                    $workingSchedule->update(['status' => 'available']);
+                }
+            }
 
             // Log status change
             AppointmentLog::create([
@@ -449,9 +458,18 @@ class AppointmentService
                 'cancellation_reason' => null
             ]);
 
-            // Note: Working schedule status column has been removed.
-            // The working schedule is now managed differently (if needed).
-            // Mark working schedule as busy logic removed as status column no longer exists.
+            // Mark working schedule as busy again if exists
+            if ($appointment->employee_id && $appointment->start_at) {
+                $workDate = $appointment->start_at->format('Y-m-d');
+                $workingSchedule = WorkingSchedule::where('employee_id', $appointment->employee_id)
+                    ->whereDate('work_date', $workDate)
+                    ->where('status', 'available')
+                    ->first();
+                
+                if ($workingSchedule) {
+                    $workingSchedule->update(['status' => 'busy']);
+                }
+            }
 
             // Log status change
             AppointmentLog::create([

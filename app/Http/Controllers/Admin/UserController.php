@@ -163,12 +163,6 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         
-        // Prevent deletion of admin users
-        if ($user->isAdmin()) {
-            return redirect()->route('admin.users.index')
-                ->with('error', 'Không thể xóa tài khoản quản trị viên!');
-        }
-        
         // Update user status before soft delete
         $user->status = 'Vô hiệu hóa';
         $user->save();
@@ -228,13 +222,6 @@ class UserController extends Controller
     public function forceDelete(string $id)
     {
         $user = User::onlyTrashed()->findOrFail($id);
-        
-        // Prevent permanent deletion of admin users
-        if ($user->isAdmin()) {
-            return redirect()->route('admin.users.trash')
-                ->with('error', 'Không thể xóa vĩnh viễn tài khoản quản trị viên!');
-        }
-        
         $userId = $user->id;
         
         // Permanently delete associated employee if exists
