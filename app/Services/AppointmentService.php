@@ -11,23 +11,21 @@ use Illuminate\Support\Facades\DB;
 class AppointmentService
 {
     /**
-     * Get all appointments with relations (excluding cancelled).
+     * Get all appointments with relations (including cancelled).
      */
     public function getAll()
     {
         return Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
-            ->where('status', '!=', 'Đã hủy')
             ->orderBy('id', 'desc')
             ->get();
     }
 
     /**
-     * Get all appointments with filters.
+     * Get all appointments with filters (including cancelled).
      */
     public function getAllWithFilters(array $filters = [])
     {
-        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
-            ->where('status', '!=', 'Đã hủy');
+        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo']);
 
         // Search by customer name
         if (isset($filters['customer_name']) && !empty($filters['customer_name'])) {

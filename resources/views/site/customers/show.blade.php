@@ -72,6 +72,11 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="cancelled-tab" data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab">
+                                <i class="fas fa-times-circle me-2"></i>Lịch sử đã hủy
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="payment-history-tab" data-bs-toggle="tab" data-bs-target="#payment-history" type="button" role="tab">
                                 <i class="fas fa-receipt me-2"></i>Lịch sử thanh toán
                             </button>
@@ -129,12 +134,61 @@
                                                 Chưa có thời gian
                                             @endif
                                         </span>
-                                        <span class="badge bg-info ms-2">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
+                                        @php
+                                            $statusBadgeClass = 'bg-info'; // Mặc định
+                                            if ($appointment->status === 'Đã xác nhận') {
+                                                $statusBadgeClass = 'bg-success';
+                                            } elseif ($appointment->status === 'Chờ xử lý') {
+                                                $statusBadgeClass = 'bg-warning';
+                                            } elseif ($appointment->status === 'Đang thực hiện') {
+                                                $statusBadgeClass = 'bg-primary';
+                                            }
+                                        @endphp
+                                        <span class="badge {{ $statusBadgeClass }} ms-2">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
                                     </div>
                                     <div class="ms-3">
                                         <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary me-2">Xem</a>
-                                        @if($appointment->status != 'Đã hủy' && $appointment->status != 'Hoàn thành')
-                                            <a href="#" class="btn btn-sm btn-outline-danger">Hủy</a>
+                                        @php
+                                            // Chỉ hiển thị nút hủy nếu:
+                                            // 1. Status = 'Chờ xử lý'
+                                            // 2. Chưa quá 30 phút kể từ khi đặt
+                                            $canCancel = false;
+                                            if ($appointment->status === 'Chờ xử lý' && $appointment->created_at) {
+                                                $createdAt = \Carbon\Carbon::parse($appointment->created_at);
+                                                $minutesSinceCreated = $createdAt->diffInMinutes(now());
+                                                $canCancel = $minutesSinceCreated <= 30;
+                                            }
+                                        @endphp
+                                        @if($canCancel)
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ $appointment->id }}">
+                                                Hủy
+                                            </button>
+                                            
+                                            <!-- Modal xác nhận hủy -->
+                                            <div class="modal fade" id="cancelModal{{ $appointment->id }}" tabindex="-1" aria-labelledby="cancelModalLabel{{ $appointment->id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="cancelModalLabel{{ $appointment->id }}">Xác nhận hủy lịch hẹn</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <form action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST">
+                                                            @csrf
+                                                            <div class="modal-body">
+                                                                <p>Bạn có chắc chắn muốn hủy lịch hẹn này?</p>
+                                                                <div class="mb-3">
+                                                                    <label for="cancellation_reason{{ $appointment->id }}" class="form-label">Lý do hủy (tùy chọn):</label>
+                                                                    <textarea class="form-control" id="cancellation_reason{{ $appointment->id }}" name="cancellation_reason" rows="3" placeholder="Nhập lý do hủy lịch hẹn..."></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                                                <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         @endif
                                     </div>
                                 </div>
@@ -209,6 +263,70 @@
                                 <div class="list-group-item text-center text-muted py-4">
                                     <i class="fas fa-check-circle fa-2x mb-2"></i>
                                     <p class="mb-0">Chưa có lịch hẹn đã hoàn thành</p>
+                                </div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <!-- Tab Lịch sử đã hủy -->
+                        <div class="tab-pane fade" id="cancelled" role="tabpanel">
+                            <h5 class="mb-4">Các lịch hẹn đã hủy</h5>
+                            <div class="list-group">
+                                @php
+                                    $cancelledAppointments = $user->appointments->filter(function($appointment) {
+                                        return $appointment->status === 'Đã hủy'
+                                            && !$appointment->trashed();
+                                    })->sortByDesc('created_at');
+                                @endphp
+                                
+                                @forelse($cancelledAppointments as $appointment)
+                                    <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                @if($appointment->appointmentDetails->count() > 0)
+                                                    @foreach($appointment->appointmentDetails as $detail)
+                                                        @if($detail->serviceVariant)
+                                                            {{ $detail->serviceVariant->name }}
+                                                        @elseif($detail->combo)
+                                                            {{ $detail->combo->name }}
+                                                        @else
+                                                            {{ $detail->notes ?? 'Dịch vụ' }}
+                                                        @endif
+                                                        @if(!$loop->last), @endif
+                                                    @endforeach
+                                                @else
+                                                    Dịch vụ
+                                                @endif
+                                            </h6>
+                                            <small class="text-muted">
+                                                @if($appointment->employee && $appointment->employee->user)
+                                                    Barber: {{ $appointment->employee->user->name }}
+                                                @else
+                                                    Chưa phân công nhân viên
+                                                @endif
+                                                @if($appointment->start_at)
+                                                    - {{ $appointment->start_at->format('H:i, d/m/Y') }}
+                                                @endif
+                                            </small>
+                                            @if($appointment->cancellation_reason)
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle"></i> Lý do hủy: {{ $appointment->cancellation_reason }}
+                                                    </small>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-danger">Đã hủy</span>
+                                            <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> Xem
+                                            </a>
+                                        </div>
+                                    </div>
+                                @empty
+                                <div class="list-group-item text-center text-muted py-4">
+                                    <i class="fas fa-ban fa-2x mb-2"></i>
+                                    <p class="mb-0">Chưa có lịch hẹn nào đã hủy</p>
                                 </div>
                                 @endforelse
                             </div>
