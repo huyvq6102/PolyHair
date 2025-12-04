@@ -311,25 +311,75 @@ class AppointmentController extends Controller
             $totalDuration = 0;
             $serviceVariantData = [];
             
+            // Log để debug
+            \Log::info('Appointment store - Received data', [
+                'service_variants' => $validated['service_variants'] ?? [],
+                'service_id' => $validated['service_id'] ?? [],
+                'combo_id' => $validated['combo_id'] ?? [],
+                'raw_request' => $request->all(),
+            ]);
+            
             // Process service variants if selected (priority: variants over service/combo)
+            // IMPORTANT: Only process the service_variants that were actually selected
             if (!empty($validated['service_variants'])) {
-                foreach ($validated['service_variants'] as $variantId) {
-                    $variant = \App\Models\ServiceVariant::findOrFail($variantId);
-                    $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
-                    
-                    $serviceVariantData[] = [
-                        'service_variant_id' => $variantId,
-                        'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $variant->price,
-                        'duration' => $variant->duration ?? 60,
-                        'status' => 'Chờ',
-                    ];
+                // Ensure it's an array and filter out any empty/null values
+                $variantIds = is_array($validated['service_variants']) 
+                    ? array_filter($validated['service_variants'], function($id) {
+                        return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                    })
+                    : [];
+                
+                // Remove duplicates and re-index array
+                $variantIds = array_values(array_unique($variantIds));
+                
+                // CRITICAL: If we have more than 10 variants, something is wrong - log warning
+                if (count($variantIds) > 10) {
+                    \Log::warning('Appointment store - Suspicious number of variants', [
+                        'count' => count($variantIds),
+                        'variant_ids' => $variantIds,
+                        'request_url' => $request->fullUrl(),
+                    ]);
+                }
+                
+                \Log::info('Appointment store - Processing variants', [
+                    'variant_ids' => $variantIds,
+                    'count' => count($variantIds),
+                ]);
+                
+                foreach ($variantIds as $variantId) {
+                    try {
+                        $variant = \App\Models\ServiceVariant::findOrFail($variantId);
+                        $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
+                        
+                        $serviceVariantData[] = [
+                            'service_variant_id' => $variantId,
+                            'employee_id' => $validated['employee_id'] ?? null,
+                            'price_snapshot' => $variant->price,
+                            'duration' => $variant->duration ?? 60,
+                            'status' => 'Chờ',
+                        ];
+                    } catch (\Exception $e) {
+                        \Log::error('Appointment store - Failed to process variant', [
+                            'variant_id' => $variantId,
+                            'error' => $e->getMessage(),
+                        ]);
+                        // Skip invalid variant
+                    }
                 }
             }
             
             // Process combos if selected
             if (!empty($validated['combo_id'])) {
-                $comboIds = is_array($validated['combo_id']) ? $validated['combo_id'] : [$validated['combo_id']];
+                // Ensure it's an array and filter out any empty/null values
+                $comboIds = is_array($validated['combo_id']) 
+                    ? array_filter($validated['combo_id'], function($id) {
+                        return !empty($id) && $id !== '0' && $id !== 0;
+                    })
+                    : (($validated['combo_id'] && $validated['combo_id'] !== '0') ? [$validated['combo_id']] : []);
+                
+                // Remove duplicates
+                $comboIds = array_unique($comboIds);
+                
                 foreach ($comboIds as $comboId) {
                     $combo = \App\Models\Combo::with('comboItems.serviceVariant')->findOrFail($comboId);
                     
@@ -356,7 +406,16 @@ class AppointmentController extends Controller
             
             // Process services if selected
             if (!empty($validated['service_id'])) {
-                $serviceIds = is_array($validated['service_id']) ? $validated['service_id'] : [$validated['service_id']];
+                // Ensure it's an array and filter out any empty/null values
+                $serviceIds = is_array($validated['service_id']) 
+                    ? array_filter($validated['service_id'], function($id) {
+                        return !empty($id) && $id !== '0' && $id !== 0;
+                    })
+                    : (($validated['service_id'] && $validated['service_id'] !== '0') ? [$validated['service_id']] : []);
+                
+                // Remove duplicates
+                $serviceIds = array_unique($serviceIds);
+                
                 foreach ($serviceIds as $serviceId) {
                     $service = \App\Models\Service::findOrFail($serviceId);
                     $totalDuration += $service->base_duration ?? 60; // Default 60 minutes if not set
@@ -379,41 +438,88 @@ class AppointmentController extends Controller
             
             $endAt = $startAt->copy()->addMinutes($totalDuration);
 
-            // Check for duplicate appointment (same user, same date, same time)
-            $existingAppointment = \App\Models\Appointment::where('user_id', $user->id)
-                ->where('start_at', $startAt)
-                ->where('employee_id', $validated['employee_id'] ?? null)
-                ->where('status', '!=', 'Đã hủy')
-                ->first();
+            // Log final serviceVariantData before creating appointment
+            \Log::info('Appointment store - Final serviceVariantData', [
+                'count' => count($serviceVariantData),
+                'data' => $serviceVariantData,
+            ]);
             
-            if ($existingAppointment) {
-                // Appointment already exists, use it instead of creating new one
-                $appointment = $existingAppointment;
-            } else {
-                // Create appointment
-                $appointment = $this->appointmentService->create([
+            // CRITICAL: Validate that we're not creating too many appointment details
+            // Reasonable limit: 20 services (allowing for multiple services, combos, etc.)
+            // If more than 20, something is definitely wrong
+            if (count($serviceVariantData) > 20) {
+                \Log::error('Appointment store - Too many service variants detected', [
+                    'count' => count($serviceVariantData),
+                    'service_variant_data' => $serviceVariantData,
+                ]);
+                
+                // Return error instead of creating appointment with wrong data
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Có lỗi xảy ra: Quá nhiều dịch vụ được chọn. Vui lòng thử lại.',
+                    'error' => 'Too many service variants: ' . count($serviceVariantData)
+                ], 422);
+            }
+            
+            // Warning if more than 5 (unusual but not necessarily wrong)
+            if (count($serviceVariantData) > 5) {
+                \Log::warning('Appointment store - Unusual number of service variants', [
+                    'count' => count($serviceVariantData),
+                    'service_variant_data' => $serviceVariantData,
+                ]);
+            }
+
+            // Always create a new appointment for each booking
+            // This ensures each booking has its own appointment with only the selected services
+            $appointment = $this->appointmentService->create([
                 'user_id' => $user->id,
                 'employee_id' => $validated['employee_id'] ?? null,
                 'status' => 'Chờ xử lý',
                 'start_at' => $startAt,
                 'end_at' => $endAt,
                 'note' => $validated['note'] ?? null,
-                ], $serviceVariantData);
+            ], $serviceVariantData);
+            
+            \Log::info('Appointment store - Created appointment', [
+                'appointment_id' => $appointment->id,
+                'details_count' => $appointment->appointmentDetails->count(),
+                'expected_count' => count($serviceVariantData),
+            ]);
+            
+            // Verify appointment details count matches expected
+            if ($appointment->appointmentDetails->count() !== count($serviceVariantData)) {
+                \Log::error('Appointment store - Mismatch in appointment details count', [
+                    'appointment_id' => $appointment->id,
+                    'expected' => count($serviceVariantData),
+                    'actual' => $appointment->appointmentDetails->count(),
+                ]);
             }
 
-            // Add appointment to cart (check if already exists to prevent duplicates)
+            // CRITICAL: Remove any existing appointments from cart before adding new one
+            // This ensures we don't have old appointments with wrong data in cart
             $cart = Session::get('cart', []);
-            $cartKey = 'appointment_' . $appointment->id;
             
-            // Only add if not already in cart
-            if (!isset($cart[$cartKey])) {
-                $cart[$cartKey] = [
-                    'type' => 'appointment',
-                    'id' => $appointment->id,
-                    'quantity' => 1,
-                ];
-                Session::put('cart', $cart);
+            // Remove all existing appointments from cart
+            foreach ($cart as $key => $item) {
+                if (isset($item['type']) && $item['type'] === 'appointment') {
+                    unset($cart[$key]);
+                }
             }
+            
+            // Add new appointment to cart
+            $cartKey = 'appointment_' . $appointment->id;
+            $cart[$cartKey] = [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1,
+            ];
+            Session::put('cart', $cart);
+            
+            \Log::info('Appointment store - Cart updated', [
+                'appointment_id' => $appointment->id,
+                'cart_keys' => array_keys($cart),
+            ]);
 
             DB::commit();
 
