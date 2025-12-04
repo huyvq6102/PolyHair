@@ -95,8 +95,15 @@ use Illuminate\Support\Facades\Storage;
     }
     
     .review-rating .stars {
-        color: #ffc107;
         font-size: 18px;
+    }
+    
+    .review-rating .stars .fa-star {
+        color: #ffc107;
+    }
+    
+    .review-rating .stars .fa-star-o {
+        color: #ddd;
     }
     
     .review-rating .rating-text {
@@ -159,7 +166,19 @@ use Illuminate\Support\Facades\Storage;
             <h1 class="reviews-title">
                 <i class="fa fa-star"></i> Đánh giá khách hàng
             </h1>
-            <p class="text-muted">Xem những đánh giá từ khách hàng đã sử dụng dịch vụ của chúng tôi</p>
+            <p class="text-muted">Xem những đánh giá và cảm nhận từ khách hàng về PolyHair</p>
+
+            <div class="mt-3">
+            @auth
+                <a href="{{ route('site.reviews.general.create') }}" class="btn btn-outline-primary">
+                    <i class="fa fa-comment"></i> Gửi bình luận (không cần đánh giá sao)
+                </a>
+            @else
+                <a href="{{ route('login', ['redirect' => route('site.reviews.general.create')]) }}" class="btn btn-outline-primary">
+                    <i class="fa fa-comment"></i> Gửi bình luận (không cần đánh giá sao)
+                </a>
+            @endauth
+            </div>
         </div>
 
         <!-- Filter Section -->
@@ -207,7 +226,18 @@ use Illuminate\Support\Facades\Storage;
                             {{ strtoupper(substr($review->user->name ?? 'U', 0, 1)) }}
                         </div>
                         <div class="reviewer-details">
-                            <h5>{{ $review->user->name ?? 'Khách hàng' }}</h5>
+                            <h5>
+                                {{ $review->user->name ?? 'Khách hàng' }}
+                                @if(!$review->appointment_id)
+                                    <span class="badge bg-info ms-2" style="font-size: 11px; padding: 3px 8px;">
+                                        <i class="fa fa-comment"></i> Bình luận
+                                    </span>
+                                @else
+                                    <span class="badge bg-warning ms-2" style="font-size: 11px; padding: 3px 8px; color: #000;">
+                                        <i class="fa fa-star"></i> Đánh giá
+                                    </span>
+                                @endif
+                            </h5>
                             <p>
                                 @if($review->service)
                                     <i class="fa fa-scissors"></i> {{ $review->service->name }}
@@ -237,18 +267,23 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                 </div>
 
-                <div class="review-rating">
-                    <div class="stars">
-                        @for($i = 1; $i <= 5; $i++)
-                            @if($i <= ($review->rating ?? 0))
-                                <i class="fa fa-star"></i>
-                            @else
-                                <i class="fa fa-star-o"></i>
-                            @endif
-                        @endfor
+                @if($review->rating !== null && $review->rating > 0)
+                    @php
+                        $rating = (int)$review->rating;
+                    @endphp
+                    <div class="review-rating">
+                        <div class="stars">
+                            @for($i = 1; $i <= 5; $i++)
+                                @if($i <= $rating)
+                                    <i class="fa fa-star"></i>
+                                @else
+                                    <i class="fa fa-star-o"></i>
+                                @endif
+                            @endfor
+                        </div>
+                        <span class="rating-text">({{ $rating }}/5)</span>
                     </div>
-                    <span class="rating-text">({{ $review->rating ?? 0 }}/5)</span>
-                </div>
+                @endif
 
                 <div class="review-comment">
                     {{ $review->comment ?? 'Không có bình luận' }}
@@ -292,14 +327,15 @@ use Illuminate\Support\Facades\Storage;
                                     continue;
                                 }
                                 
-                                // Build image URL - use asset for public storage
+                                // Build image URL - use asset() for correct base URL
                                 $imageUrl = asset('storage/reviews/' . $imageName);
                             @endphp
                             <img src="{{ $imageUrl }}" 
                                  alt="Review Image" 
                                  class="review-image"
-                                 onerror="console.error('Image error: {{ $imageName }}'); this.style.display='none';"
-                                 onclick="openImageModal('{{ $imageUrl }}')">
+                                 onerror="console.error('Image not found: {{ $imageName }}'); this.style.display='none';"
+                                 onclick="openImageModal('{{ $imageUrl }}')"
+                                 loading="lazy">
                         @endforeach
                     </div>
                 @endif

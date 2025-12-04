@@ -83,7 +83,13 @@ class AppointmentService
      */
     public function getOne($id)
     {
-        return Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
+        return Appointment::with([
+                'employee.user',
+                'user',
+                'appointmentDetails.serviceVariant.service',
+                'appointmentDetails.combo',
+                'promotionUsages.promotion',
+            ])
             ->findOrFail($id);
     }
 
@@ -133,7 +139,12 @@ class AppointmentService
             'modified_by' => $data['user_id'],
         ]);
 
-        return $appointment->load(['employee.user', 'user', 'appointmentDetails.serviceVariant.service']);
+        return $appointment->load([
+            'employee.user',
+            'user',
+            'appointmentDetails.serviceVariant.service',
+            'promotionUsages.promotion',
+        ]);
     }
 
     /**

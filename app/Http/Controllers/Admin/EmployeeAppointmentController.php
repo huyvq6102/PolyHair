@@ -10,6 +10,9 @@ use App\Services\EmployeeService;
 use App\Services\ServiceService;
 use App\Services\ServiceCategoryService;
 use App\Services\WordTimeService;
+use App\Models\Promotion;
+use App\Models\PromotionUsage;
+use App\Models\Service;
 use App\Models\User;
 use App\Models\ServiceVariant;
 use App\Models\WorkingSchedule;
@@ -63,7 +66,14 @@ class EmployeeAppointmentController extends Controller
         $categories = $this->serviceCategoryService->getAll();
         $services = $this->serviceService->getAll()->load('serviceVariants');
 
-        return view('admin.employee-appointments.create', compact('customers', 'categories', 'services', 'employee'));
+        // Active promotions that can be applied by employee (same rule as checkout)
+        $promotions = Promotion::where('status', 'active')
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.employee-appointments.create', compact('customers', 'categories', 'services', 'employee', 'promotions'));
     }
 
     /**
@@ -110,11 +120,13 @@ class EmployeeAppointmentController extends Controller
             $appointmentDate = Carbon::parse($validated['appointment_date']);
             $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
             
-            // Calculate total duration from selected service variants
+            // Calculate total duration from selected service variants / base services
             $totalDuration = 0;
             $serviceVariantData = [];
             
-            foreach ($validated['service_variants'] as $variantId) {
+            // Biến thể dịch vụ (nếu có)
+            $variantIds = $validated['service_variants'] ?? [];
+            foreach ($variantIds as $variantId) {
                 $variant = ServiceVariant::findOrFail($variantId);
                 $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
                 
@@ -126,42 +138,62 @@ class EmployeeAppointmentController extends Controller
                     'status' => 'Chờ',
                 ];
             }
+
+            // Dịch vụ không có biến thể: dùng base_price / base_duration
+            $simpleServiceIds = $validated['simple_services'] ?? [];
+            foreach ($simpleServiceIds as $serviceId) {
+                $service = Service::findOrFail($serviceId);
+                $duration = $service->base_duration ?? 60;
+                $price = $service->base_price ?? 0;
+
+                $totalDuration += $duration;
+
+                $serviceVariantData[] = [
+                    'service_variant_id' => null,
+                    'employee_id' => $employee->id,
+                    'price_snapshot' => $price,
+                    'duration' => $duration,
+                    'status' => 'Chờ',
+                    'notes' => $service->name,
+                ];
+            }
             
             $endAt = $startAt->copy()->addMinutes($totalDuration);
             
-            // Check if time slot conflicts with existing appointments
-            // Rule: Appointments must be at least 1 hour apart
-            // For an existing appointment from A to B:
-            // - New appointment must start >= B + 1 hour, OR
-            // - New appointment must end <= A - 1 hour
-            // If neither condition is met, there's a conflict
-            $bufferMinutes = 60; // 1 hour buffer between appointments
-            
-            $existingAppointments = \App\Models\Appointment::where('employee_id', $employee->id)
-                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-                ->whereNotIn('status', ['Đã hủy', 'Hoàn thành'])
-                ->get();
-            
-            foreach ($existingAppointments as $existing) {
-                $existingStart = Carbon::parse($existing->start_at);
-                $existingEnd = Carbon::parse($existing->end_at);
+            // Optional: check time conflicts with existing appointments
+            // Hiện tại tạm tắt check để tránh chặn đặt lịch khi không mong muốn.
+            // Nếu sau này cần bật lại, đặt $enableConflictCheck = true.
+            $enableConflictCheck = false;
+
+            if ($enableConflictCheck) {
+                // Rule: Appointments must be at least 1 hour apart
+                $bufferMinutes = 60; // 1 hour buffer between appointments
                 
-                // Calculate minimum start time (existing end + 1 hour)
-                $minStartTime = $existingEnd->copy()->addMinutes($bufferMinutes);
+                $existingAppointments = \App\Models\Appointment::where('employee_id', $employee->id)
+                    ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
+                    ->whereNotIn('status', ['Đã hủy', 'Hoàn thành'])
+                    ->get();
                 
-                // Calculate maximum end time (existing start - 1 hour)
-                $maxEndTime = $existingStart->copy()->subMinutes($bufferMinutes);
-                
-                // Conflict occurs if:
-                // New appointment starts before minStartTime AND ends after maxEndTime
-                // This means the new appointment is too close to the existing one
-                if ($startAt < $minStartTime && $endAt > $maxEndTime) {
-                    $existingStartFormatted = $existingStart->format('H:i');
-                    $existingEndFormatted = $existingEnd->format('H:i');
-                    $newStartFormatted = $startAt->format('H:i');
-                    $newEndFormatted = $endAt->format('H:i');
-                    return back()->withInput()
-                        ->withErrors(['appointment_time' => "Đã có người đặt trong khoảng thời gian {$existingStartFormatted} - {$existingEndFormatted}. Lịch hẹn của bạn ({$newStartFormatted} - {$newEndFormatted}) quá gần. Các lịch hẹn phải cách nhau ít nhất 1 giờ. Vui lòng chọn thời gian khác."]);
+                foreach ($existingAppointments as $existing) {
+                    $existingStart = Carbon::parse($existing->start_at);
+                    $existingEnd = Carbon::parse($existing->end_at);
+                    
+                    // Calculate minimum start time (existing end + 1 hour)
+                    $minStartTime = $existingEnd->copy()->addMinutes($bufferMinutes);
+                    
+                    // Calculate maximum end time (existing start - 1 hour)
+                    $maxEndTime = $existingStart->copy()->subMinutes($bufferMinutes);
+                    
+                    // Conflict occurs if:
+                    // New appointment starts before minStartTime AND ends after maxEndTime
+                    if ($startAt < $minStartTime && $endAt > $maxEndTime) {
+                        $existingStartFormatted = $existingStart->format('H:i');
+                        $existingEndFormatted = $existingEnd->format('H:i');
+                        $newStartFormatted = $startAt->format('H:i');
+                        $newEndFormatted = $endAt->format('H:i');
+                        return back()->withInput()
+                            ->withErrors(['appointment_time' => "Đã có người đặt trong khoảng thời gian {$existingStartFormatted} - {$existingEndFormatted}. Lịch hẹn của bạn ({$newStartFormatted} - {$newEndFormatted}) quá gần. Các lịch hẹn phải cách nhau ít nhất 1 giờ. Vui lòng chọn thời gian khác."]);
+                    }
                 }
             }
 
@@ -175,16 +207,34 @@ class EmployeeAppointmentController extends Controller
                 'note' => $validated['note'] ?? null,
             ], $serviceVariantData);
 
+            // If employee selected a promotion code, link it to this appointment & customer
+            if (!empty($validated['promotion_code'] ?? null)) {
+                $promotion = Promotion::where('code', $validated['promotion_code'])
+                    ->where('status', 'active')
+                    ->whereDate('start_date', '<=', now())
+                    ->whereDate('end_date', '>=', now())
+                    ->first();
+
+                if ($promotion) {
+                    PromotionUsage::create([
+                        'promotion_id'   => $promotion->id,
+                        'user_id'        => $userId,
+                        'appointment_id' => $appointment->id,
+                        'used_at'        => null, // sẽ được ghi nhận khi thực tế sử dụng/ thanh toán
+                    ]);
+                }
+            }
+
             return redirect()->route('employee.appointments.show', $appointment->id)
                 ->with('success', 'Đã tạo lịch hẹn thành công!');
 
         } catch (\Exception $e) {
+            // Ghi log rồi ném lại exception để hiển thị lỗi cụ thể (trong môi trường dev)
             \Log::error('Error creating appointment by employee', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return back()->withInput()
-                ->withErrors(['error' => 'Có lỗi xảy ra khi tạo lịch hẹn. Vui lòng thử lại.']);
+            throw $e;
         }
     }
 

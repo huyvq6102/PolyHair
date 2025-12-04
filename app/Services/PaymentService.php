@@ -192,7 +192,7 @@ class PaymentService
 
             if ($couponCode) {
                 $appliedPromotion = Promotion::where('code', $couponCode)
-                    ->where('status', 1)
+                    ->where('status', 'active')
                     ->whereDate('start_date', '<=', now())
                     ->whereDate('end_date', '>=', now())
                     ->first();
