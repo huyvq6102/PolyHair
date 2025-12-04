@@ -4,6 +4,7 @@
     $serviceMenuActive = \Illuminate\Support\Str::startsWith($currentRoute, ['admin.services', 'admin.service-categories']);
     $isEmployee = auth()->user()->isEmployee();
     $userMenuActive = \Illuminate\Support\Str::startsWith($currentRoute, ['admin.users', 'admin.employees', 'admin.employee-skills']);
+    $promotionMenuActive = \Illuminate\Support\Str::startsWith($currentRoute, 'admin.promotions');
 @endphp
 
 <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
@@ -104,11 +105,19 @@
         </div>
     </li>
 
-    <!-- Nav Item - Payments -->
-    <li class="nav-item {{ str_contains($currentRoute, 'payment') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.payments.index') }}">
-            <i class="fas fa-fw fa-file-invoice-dollar"></i>
+    <!-- Nav Item - Orders -->
+    <li class="nav-item {{ str_contains($currentRoute, 'order') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.orders.index') }}">
+            <i class="fas fa-fw fa-shopping-cart"></i>
             <span>Hóa đơn</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Promotions -->
+    <li class="nav-item {{ $promotionMenuActive ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.promotions.index') }}">
+            <i class="fas fa-fw fa-gift"></i>
+            <span>Khuyến mãi</span>
         </a>
     </li>
 

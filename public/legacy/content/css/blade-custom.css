@@ -509,51 +509,267 @@
 }
 
 /* ============================================
+   SERVICE FILTER TOP SECTION STYLES
+   ============================================ */
+.filter-section-top {
+  background: #fff;
+  padding: 24px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.filter-form-horizontal {
+  width: 100%;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  align-items: end;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a4a4a;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  font-size: 15px;
+  color: #4a4a4a;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #8b5a2b;
+}
+
+.filter-options-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-option-horizontal {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.filter-option-horizontal:hover {
+  border-color: #8b5a2b;
+  background: #f9f9f9;
+}
+
+.filter-option-horizontal input[type="radio"] {
+  margin-right: 6px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #8b5a2b;
+}
+
+.filter-option-horizontal input[type="radio"]:checked + span {
+  color: #8b5a2b;
+  font-weight: 600;
+}
+
+.filter-option-horizontal:has(input[type="radio"]:checked) {
+  border-color: #8b5a2b;
+  background: #f5f0e8;
+}
+
+.filter-option-horizontal span {
+  font-size: 14px;
+  color: #4a4a4a;
+  user-select: none;
+}
+
+.price-inputs-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-inputs-horizontal .filter-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.price-separator {
+  color: #8b5a2b;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  flex-direction: row;
+}
+
+.filter-buttons .btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-buttons .btn-primary {
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+  color: #fff;
+  border: none;
+}
+
+.filter-buttons .btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.filter-buttons .btn-secondary {
+  background: #f5f5f5;
+  color: #4a4a4a;
+  border: 1px solid #e5e5e5;
+}
+
+.filter-buttons .btn-secondary:hover {
+  background: #e5e5e5;
+  color: #333;
+}
+
+.service-grid-wrapper {
+  width: 100%;
+}
+
+.service-grid-wrapper .service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  justify-content: start;
+}
+
+.service-grid-wrapper .svc-card {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Responsive for filter */
+@media (max-width: 1200px) {
+  .filter-row {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 991px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-options-horizontal {
+    flex-wrap: wrap;
+  }
+
+  .price-inputs-horizontal {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .price-separator {
+    display: none;
+  }
+
+  .filter-buttons {
+    flex-direction: column;
+  }
+
+  .filter-buttons .btn {
+    width: 100%;
+  }
+}
+
+/* ============================================
    SERVICE FILTER SIDEBAR STYLES
    ============================================ */
-/* Sticky sidebar filter */
+/* Override style.css - Remove background and border */
 .service-section .service_left {
   position: sticky;
   top: 120px;
   align-self: flex-start;
-  max-height: calc(100vh - 140px);
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
+  overflow: visible;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.service-section .service_left::before {
+  display: none !important;
 }
 
 .service-section .service-left-inner {
   position: relative;
+  padding: 0;
 }
 
 .filter-group {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .filter-group:last-child {
   border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .filter-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: #4a4a4a;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .filter-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .filter-option {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 6px 0;
   transition: color 0.2s ease;
 }
 
@@ -562,15 +778,15 @@
 }
 
 .filter-option input[type="radio"] {
-  margin-right: 10px;
+  margin-right: 8px;
   cursor: pointer;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   accent-color: #8b5a2b;
 }
 
 .filter-option span {
-  font-size: 15px;
+  font-size: 14px;
   color: #4a4a4a;
   user-select: none;
 }
@@ -581,10 +797,10 @@
 
 .filter-select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #e5e5e5;
   border-radius: 4px;
-  font-size: 15px;
+  font-size: 14px;
   color: #4a4a4a;
   background-color: #fff;
   cursor: pointer;
@@ -596,18 +812,24 @@
   border-color: #8b5a2b;
 }
 
+/* Input text for search */
+.filter-select[type="text"],
+.filter-select[type="number"] {
+  cursor: text;
+}
+
 .price-inputs {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .price-inputs .form-control {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #e5e5e5;
   border-radius: 4px;
-  font-size: 15px;
+  font-size: 14px;
   color: #4a4a4a;
   transition: border-color 0.2s ease;
 }
@@ -618,16 +840,16 @@
 }
 
 .filter-actions {
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .filter-actions .btn {
-  padding: 12px 20px;
-  font-size: 15px;
+  padding: 10px 16px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   transition: all 0.2s ease;
 }
 
@@ -884,21 +1106,184 @@
 }
 
 /* ============================================
+
+   STYLIST SECTION - BUTTON POSITION
+   ============================================ */
+.stylist-left-wrapper {
+  flex: 0 0 35%;
+  display: flex;
+  flex-direction: column;
+}
+.about-section {
+  background: #fff;
+  min-height: calc(100vh - 140px);
+  padding-top: 20px;
+}
+
+.about-header {
+  font-size: 18px;
+  color: #8b5a2b;
+  font-weight: 600;
+  margin-bottom: 30px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #d8b26a;
+}
+
+.about-content {
+  margin-bottom: 40px;
+}
+
+.about-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #4A3600;
+  margin-bottom: 20px;
+  position: relative;
+  padding-left: 15px;
+}
+
+.about-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 28px;
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+  border-radius: 2px;
+}
+
+.about-text p {
+  color: #333;
+  line-height: 1.8;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+.about-text > div {
+  margin-bottom: 15px;
+}
+
+.about-text strong {
+  color: #4A3600;
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.about-text p:last-child {
+  margin-bottom: 0;
+}
+
+.core-values > div {
+  margin-bottom: 25px;
+  padding-left: 20px;
+  border-left: 3px solid #e5e5e5;
+  transition: border-color 0.3s ease;
+}
+
+.core-values > div:hover {
+  border-left-color: #d8b26a;
+}
+
+.core-values > div:last-child {
+  margin-bottom: 0;
+}
+
+.core-values strong {
+  color: #4A3600;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.core-values p {
+  margin-bottom: 0;
+  color: #333;
+  line-height: 1.8;
+  font-size: 16px;
+}
+
+.share-section {
+  border-top: 1px solid #e5e5e5;
+  padding-top: 30px;
+  margin-top: 40px;
+}
+
+.share-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4A3600;
+  margin-bottom: 15px;
+}
+
+.social-share {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #333;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.social-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.social-icon:hover::before {
+  left: 100%;
+}
+
+.social-icon:hover {
+  background-color: #d8b26a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(216, 178, 106, 0.4);
+}
+
+.social-icon i,
+.social-icon span {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
    RESPONSIVE STYLES
    ============================================ */
 @media (max-width: 767px) {
   .breadcam_thumb h3 {
     font-size: 32px;
   }
-  
+
   .breadcam_thumb p {
     font-size: 16px;
   }
-  
+
   .slider-text-wrapper h3 {
     font-size: 2rem;
   }
-  
+
   .slider-text-wrapper p {
     font-size: 1.2rem;
   }
@@ -913,6 +1298,119 @@
   .filter-group {
     margin-bottom: 20px;
     padding-bottom: 16px;
+  }
+}
+
+/* ============================================
+   SCROLL TO TOP BUTTON
+   ============================================ */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 15px rgba(216, 178, 106, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.scroll-to-top-btn:hover {
+  background: linear-gradient(135deg, #e8c46e 0%, #9d6b3a 100%);
+  box-shadow: 0 6px 20px rgba(216, 178, 106, 0.5);
+  transform: translateY(-2px);
+}
+
+.scroll-to-top-btn.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scroll-to-top-btn i {
+  line-height: 1;
+}
+
+/* Social Fixed Buttons (Messenger, Facebook, Zalo) */
+.social-fixed-btn {
+  position: fixed;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 15px rgba(216, 178, 106, 0.4);
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  text-decoration: none;
+}
+
+.social-fixed-btn:hover {
+  background: linear-gradient(135deg, #e8c46e 0%, #9d6b3a 100%);
+  box-shadow: 0 6px 20px rgba(216, 178, 106, 0.5);
+  transform: translateY(-2px);
+  color: #fff;
+  text-decoration: none;
+}
+
+.social-fixed-btn i {
+  line-height: 1;
+}
+
+/* Position các nút xã hội - xếp từ trên xuống */
+.social-btn-messenger {
+  bottom: 150px !important; /* Messenger - trên cùng */
+}
+
+.social-btn-zalo {
+  bottom: 90px !important; /* Zalo */
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .scroll-to-top-btn {
+    width: 45px;
+    height: 45px;
+    bottom: 20px;
+    right: 20px;
+    font-size: 18px;
+  }
+
+  .social-fixed-btn {
+    width: 45px;
+    height: 45px;
+    right: 20px;
+    font-size: 18px;
+  }
+
+  .social-btn-messenger {
+    bottom: 135px !important; /* Messenger */
+  }
+
+  .social-btn-zalo {
+    bottom: 75px !important; /* Zalo */
   }
 }
 

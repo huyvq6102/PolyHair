@@ -8,9 +8,11 @@ use App\Http\Controllers\Site\BlogController;
 use App\Http\Controllers\Site\ContactController;
 use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\AppointmentController;
+use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use Illuminate\Support\Facades\Route;
 use  App\Http\Controllers\Site\CustomerController;
 use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\ReviewController;
 
 // Site Routes
 Route::get('/', [HomeController::class, 'index'])->name('site.home');
@@ -74,6 +76,17 @@ Route::prefix('check-out')->name('site.payments.')->group(function () {
 
 });
 
+// Review Routes
+Route::prefix('reviews')->name('site.reviews.')->group(function () {
+    Route::get('/', [ReviewController::class, 'index'])->name('index');
+    Route::middleware('auth')->group(function () {
+        Route::get('/create', [ReviewController::class, 'create'])->name('create');
+        Route::post('/', [ReviewController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [ReviewController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ReviewController::class, 'update'])->name('update');
+    });
+});
+
 
 // Auth Routes
 Route::get('/dashboard', function () {
@@ -83,6 +96,19 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+});
+
+// Employee routes (accessible by employees only, not under admin)
+Route::prefix('employee')->name('employee.')->middleware(['auth', 'employee'])->group(function () {
+    Route::get('appointments', [EmployeeAppointmentController::class, 'index'])->name('appointments.index');
+    Route::get('appointments/create', [EmployeeAppointmentController::class, 'create'])->name('appointments.create');
+    Route::post('appointments', [EmployeeAppointmentController::class, 'store'])->name('appointments.store');
+    Route::get('appointments/{id}', [EmployeeAppointmentController::class, 'show'])->name('appointments.show');
+    Route::post('appointments/{id}/confirm', [EmployeeAppointmentController::class, 'confirm'])->name('appointments.confirm');
+    Route::post('appointments/{id}/start', [EmployeeAppointmentController::class, 'start'])->name('appointments.start');
+    Route::post('appointments/{id}/complete', [EmployeeAppointmentController::class, 'complete'])->name('appointments.complete');
+    Route::post('appointments/{id}/cancel', [EmployeeAppointmentController::class, 'cancel'])->name('appointments.cancel');
+    Route::delete('appointments/{id}', [EmployeeAppointmentController::class, 'destroy'])->name('appointments.destroy');
 });
 
 require __DIR__.'/auth.php';

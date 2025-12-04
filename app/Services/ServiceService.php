@@ -90,6 +90,16 @@ class ServiceService
     }
 
     /**
+     * Get minimal service list for selectors.
+     */
+    public function getSimpleList()
+    {
+        return Service::orderBy('name')
+            ->select('id', 'name')
+            ->get();
+    }
+
+    /**
      * Create a new service.
      */
     public function create(array $serviceData, array $variants = [], array $combos = [])

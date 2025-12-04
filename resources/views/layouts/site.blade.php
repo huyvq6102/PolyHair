@@ -64,6 +64,71 @@
     </main>
 
     @include('layouts.partials.footer')
+    
+    <!-- Scroll to Top Button -->
+    <button id="scrollToTopBtn" class="scroll-to-top-btn" aria-label="Scroll to top">
+        <i class="fa fa-chevron-up"></i>
+    </button>
+    
+    <!-- Messenger/Chat Button -->
+    <button id="messengerBtn" class="social-fixed-btn social-btn-messenger" aria-label="Nhắn tin">
+        <i class="fa fa-comment"></i>
+    </button>
+    
+    <!-- Zalo Button -->
+    <a href="https://zalo.me" target="_blank" class="social-fixed-btn social-btn-zalo" aria-label="Zalo">
+        <i class="fa fa-phone"></i>
+    </a>
+    
+    @stack('scripts')
+    
+    <script>
+    // Scroll to Top Button
+    (function() {
+        const scrollBtn = document.getElementById('scrollToTopBtn');
+        
+        if (!scrollBtn) return;
+        
+        // Show/hide button based on scroll position
+        function toggleScrollButton() {
+            if (window.pageYOffset > 300) {
+                scrollBtn.classList.add('show');
+            } else {
+                scrollBtn.classList.remove('show');
+            }
+        }
+        
+        // Scroll to top when button is clicked
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // Listen to scroll events
+        window.addEventListener('scroll', toggleScrollButton);
+        
+        // Check on page load
+        toggleScrollButton();
+    })();
+    
+    // Messenger Button
+    (function() {
+        const messengerBtn = document.getElementById('messengerBtn');
+        
+        if (!messengerBtn) return;
+        
+        // Open messenger/chat when button is clicked
+        messengerBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Có thể mở messenger Facebook, Zalo, hoặc chat widget
+            // Ví dụ: window.open('https://m.me/your-page', '_blank');
+            // Hoặc mở chat widget nếu có
+            window.open('https://m.me/your-page', '_blank');
+        });
+    })();
+    </script>
 </body>
 </html>
 

@@ -5631,7 +5631,7 @@ label.error {
 .ba-slider { position:relative; display:flex; align-items:center; }
 .ba-viewport { overflow:hidden; width:100%; }
 .ba-track { display:flex; gap:16px; transition:transform .3s ease; }
-.ba-card { flex:0 0 48%; max-width:48%; cursor:pointer; }
+.ba-card { flex:0 0 calc(33.333% - 11px); max-width:calc(33.333% - 11px); cursor:pointer; }
 .ba-img {
   position:relative;
   overflow:hidden;
@@ -5863,7 +5863,7 @@ label.error {
 }
 
 .service-wrapper{display:flex;gap:24px;align-items:flex-start;}
-.service_left{position:relative;flex:0 0 32%;padding:32px 24px;border:1px solid #e5e5e5;background:#fdfdfd;overflow:hidden;}
+.service_left{position:relative;flex:0 0 280px;padding:0;border:none;background:transparent;overflow:visible;}
 .service_letter{position:absolute;right:-20%;top:-10%;font-size:420px;font-weight:800;color:#e8e8e8;line-height:1;pointer-events:none;}
 .service_title{font-size:24px;font-weight:800;text-transform:uppercase;margin:0 0 10px 0;}
 .service_desc{color:#4a4a4a;line-height:1.7;position:relative;z-index:1;}
@@ -5891,15 +5891,36 @@ label.error {
     align-items: flex-start;
     margin-top: auto;       /* thêm để đẩy body xuống đáy */
 }
+.svc-left {
+    flex: 1;
+    min-width: 0;          /* cho phép flex item co lại */
+    margin-right: 10px;
+}
+.svc-right {
+    flex-shrink: 0;         /* không cho phép button bị co lại */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
 /* bổ sung/đổi block .svc-name */
 .svc-name {
     margin: 0;
     font-weight: 800;
+    font-size: 14px;       /* giảm font-size */
     min-height: 40px;       /* giữ chiều cao tên để tên dài không đẩy nút lệch */
+    max-height: 60px;       /* giới hạn chiều cao tối đa */
+    overflow: hidden;       /* ẩn phần text vượt quá */
+    text-overflow: ellipsis; /* hiển thị dấu ... khi text quá dài */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;  /* giới hạn 2 dòng */
+    -webkit-box-orient: vertical;
+    line-height: 1.4;       /* khoảng cách giữa các dòng */
+    word-wrap: break-word;  /* xuống dòng khi từ quá dài */
 }
 .svc-price span{color:#c08a3f;font-weight:700;}
 .svc-rating{font-size:13px;color:#a67832;}
-.svc-book{display:inline-block;padding:8px 12px;background:linear-gradient(135deg,#d8b26a 0%,#8b5a2b 100%);color:#000;font-weight:700;border-radius:999px;text-transform:uppercase;font-size:12px;}
+.svc-book{display:inline-block;padding:8px 12px;background:linear-gradient(135deg,#d8b26a 0%,#8b5a2b 100%);color:#000;font-weight:700;border-radius:999px;text-transform:uppercase;font-size:12px;white-space:nowrap;text-decoration:none;}
 .svc-book:hover{opacity:.9;color:#000;}
 
 @media(max-width:991px){

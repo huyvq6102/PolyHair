@@ -424,7 +424,30 @@
                         <button type="button" class="btn-action btn-print" onclick="window.print()">
                             <i class="fa fa-print"></i> In
                         </button>
+                        @if(isset($canReview) && $canReview)
+                            <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn-action" style="background: #ffc107; color: #000;">
+                                <i class="fa fa-star"></i> Đánh giá dịch vụ
+                            </a>
+                        @elseif(isset($existingReview) && $existingReview)
+                            <a href="{{ route('site.reviews.edit', $existingReview->id) }}" class="btn-action" style="background: #17a2b8; color: #fff;">
+                                <i class="fa fa-edit"></i> Xem/Sửa đánh giá
+                            </a>
+                        @endif
                     </div>
+                    
+                    @if($appointment->status === 'Hoàn thành' && auth()->check() && $appointment->user_id == auth()->id())
+                        @if(isset($existingReview) && $existingReview)
+                            <div class="alert alert-warning mt-3" style="border-left: 4px solid #ffc107;">
+                                <i class="fa fa-exclamation-triangle"></i> 
+                                <strong>Bạn đã đánh giá lịch hẹn này rồi.</strong> Mỗi lịch hẹn chỉ có thể đánh giá một lần. Bạn có thể sửa đánh giá hiện có.
+                            </div>
+                        @else
+                            <div class="alert alert-info mt-3" style="border-left: 4px solid #17a2b8;">
+                                <i class="fa fa-info-circle"></i> 
+                                <strong>Bạn đã hoàn thành dịch vụ!</strong> Hãy chia sẻ trải nghiệm của bạn để giúp chúng tôi cải thiện dịch vụ.
+                            </div>
+                        @endif
+                    @endif
                 </div>
             </div>
         </div>
