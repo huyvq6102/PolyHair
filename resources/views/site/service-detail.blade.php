@@ -21,13 +21,6 @@
                     <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(74, 144, 226, 0.3) 100%); transform: skewX(20deg);"></div>
                     
                     <div style="position: relative; z-index: 1;">
-                        <!-- Badge -->
-                        <div class="text-center mb-3">
-                            <span style="display: inline-block; background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%); color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);">
-                                {{ strtoupper($service->category->name ?? 'DỊCH VỤ') }}
-                            </span>
-                        </div>
-                        
                         <!-- Title -->
                         <div class="text-center mb-4">
                             <h1 style="color: #fff; font-size: 32px; font-weight: 800; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 8px rgba(0,0,0,0.3);">
@@ -53,7 +46,18 @@
                                 $categoryName = strtolower($service->category->name ?? '');
                                 $serviceName = strtolower($service->name ?? '');
                                 $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
-                                $bannerFolder = $isGoiService ? 'goi' : 'cat';
+                                $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
+                                $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
+                                
+                                if ($isUonService) {
+                                    $bannerFolder = 'uon';
+                                } elseif ($isNhuomService) {
+                                    $bannerFolder = 'nhuom';
+                                } elseif ($isGoiService) {
+                                    $bannerFolder = 'goi';
+                                } else {
+                                    $bannerFolder = 'cat';
+                                }
                             @endphp
                             @foreach($bannerImages as $bannerImg)
                                 <div class="banner-image-card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.3); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
@@ -72,8 +76,8 @@
             <div class="service-process-section" style="padding: 60px 0; background: transparent;">
                 <div class="container" style="max-width: 1400px;">
                     <div class="d-flex align-items-center mb-4">
-                        <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%); margin-right: 12px; border-radius: 4px;"></span>
-                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #4A90E2; margin: 0; text-transform: uppercase;">
+                        <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: #000; margin-right: 12px; border-radius: 4px;"></span>
+                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #000; margin: 0; text-transform: uppercase;">
                             QUY TRÌNH DỊCH VỤ
                         </h2>
                     </div>
@@ -82,8 +86,14 @@
                             $categoryName = strtolower($service->category->name ?? '');
                             $serviceName = strtolower($service->name ?? '');
                             $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
+                            $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
+                            $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
                         @endphp
-                        @if($isGoiService)
+                        @if($isUonService)
+                            Dịch vụ uốn tóc chuyên nghiệp mang đến kiểu tóc xoăn tự nhiên, bền đẹp và phù hợp với phong cách cá nhân.
+                        @elseif($isNhuomService)
+                            Dịch vụ nhuộm tóc chuyên nghiệp mang đến màu sắc hiện đại, bền màu và phù hợp với phong cách cá nhân.
+                        @elseif($isGoiService)
                             Dịch vụ gội đầu chuyên nghiệp mang đến trải nghiệm thư giãn và chăm sóc tóc toàn diện.
                         @else
                             Dịch vụ cắt xả mang đến kiểu tóc hiện đại, gọn gàng và phù hợp phong cách cá nhân.
@@ -96,8 +106,26 @@
                             $categoryName = strtolower($service->category->name ?? '');
                             $serviceName = strtolower($service->name ?? '');
                             $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
+                            $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
+                            $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
                             
-                            if ($isGoiService) {
+                            if ($isUonService) {
+                                // Dịch vụ uốn
+                                $steps = [
+                                    ['image' => 'uonb1.jpg', 'title' => 'Kiểm tra & đánh giá chất tóc', 'folder' => 'uon'],
+                                    ['image' => 'uonb2.jpg', 'title' => 'Uốn tóc', 'folder' => 'uon'],
+                                    ['image' => 'uonb3.jpg', 'title' => 'Xả tóc', 'folder' => 'uon'],
+                                    ['image' => 'uonb4.jpg', 'title' => 'Sấy vuốt tạo kiểu', 'folder' => 'uon'],
+                                ];
+                            } elseif ($isNhuomService) {
+                                // Dịch vụ nhuộm
+                                $steps = [
+                                    ['image' => 'nhuomb1.jpg', 'title' => 'Kiểm tra & đánh giá chất tóc', 'folder' => 'nhuom'],
+                                    ['image' => 'nhuomb2.jpg', 'title' => 'Nhuộm màu', 'folder' => 'nhuom'],
+                                    ['image' => 'nhuomb3.jpg', 'title' => 'Xả tóc', 'folder' => 'nhuom'],
+                                    ['image' => 'nhuomb4.jpg', 'title' => 'Sấy vuốt tạo kiểu', 'folder' => 'nhuom'],
+                                ];
+                            } elseif ($isGoiService) {
                                 // Dịch vụ gội
                                 $steps = [
                                     ['image' => 'goib1.png', 'title' => 'Rửa mặt', 'folder' => 'goi'],

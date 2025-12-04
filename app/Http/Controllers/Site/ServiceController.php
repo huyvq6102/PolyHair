@@ -192,8 +192,18 @@ class ServiceController extends Controller
         $categoryName = strtolower($service->category->name ?? '');
         $serviceName = strtolower($service->name ?? '');
         $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
+        $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
+        $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
         
-        if ($isGoiService) {
+        if ($isUonService) {
+            // Dịch vụ uốn - lấy từ thư mục uốn
+            $imageDir = base_path('resources/views/image/uốn');
+            $publicImageDir = public_path('legacy/images/uon');
+        } elseif ($isNhuomService) {
+            // Dịch vụ nhuộm - lấy từ thư mục nhuộm
+            $imageDir = base_path('resources/views/image/nhuộm');
+            $publicImageDir = public_path('legacy/images/nhuom');
+        } elseif ($isGoiService) {
             // Dịch vụ gội - lấy từ thư mục gội
             $imageDir = base_path('resources/views/image/gội');
             $publicImageDir = public_path('legacy/images/goi');
