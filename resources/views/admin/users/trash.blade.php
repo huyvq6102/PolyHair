@@ -86,13 +86,19 @@
                                         <i class="fas fa-undo"></i> Khôi phục
                                     </button>
                                 </form>
-                                <form action="{{ route('admin.users.force-delete', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn người dùng này? Hành động này không thể hoàn tác!');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash-alt"></i> Xóa vĩnh viễn
+                                @if(!$user->isAdmin())
+                                    <form action="{{ route('admin.users.force-delete', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn người dùng này? Hành động này không thể hoàn tác!');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash-alt"></i> Xóa vĩnh viễn
+                                        </button>
+                                    </form>
+                                @else
+                                    <button type="button" class="btn btn-sm btn-secondary" disabled title="Không thể xóa vĩnh viễn tài khoản quản trị viên">
+                                        <i class="fas fa-lock"></i> Không thể xóa
                                     </button>
-                                </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
