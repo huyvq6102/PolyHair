@@ -29,13 +29,13 @@
         @endphp
         
         @if($shiftSchedules->isNotEmpty())
-            <div class="card shadow mb-4">
+<div class="card shadow mb-4">
                 <div class="card-header py-3" style="background-color: #4e73df; color: white;">
                     <h6 class="m-0 font-weight-bold" style="font-size: 1rem;">
                         {{ $shift->name }} ({{ $shift->formatted_start_time ?? '--:--' }} - {{ $shift->formatted_end_time ?? '--:--' }})
                     </h6>
-                </div>
-                <div class="card-body">
+    </div>
+    <div class="card-body">
                     @php
                         // Nhóm nhân viên theo vị trí
                         $schedulesByPosition = $shiftSchedules->groupBy(function($schedule) {
@@ -57,14 +57,11 @@
                                     @php
                                         $employee = $schedule->employee;
                                         $user = $employee->user ?? null;
-                                        $status = $schedule->status;
-                                        $statusLabel = $statusOptions[$status] ?? ucfirst($status ?? 'N/A');
                                     @endphp
                                     <div class="ml-3 mb-2">
                                         <strong style="color: #5a5c69;">{{ $user->name ?? 'N/A' }}</strong>
                                         <span class="text-muted small">
                                             • {{ $user->email ?? 'N/A' }}
-                                            • Trạng thái: {{ $statusLabel }}
                                             @if($employee->level)
                                                 • Level: {{ strtolower($employee->level) }}
                                             @endif
@@ -72,21 +69,21 @@
                                                 • Kinh nghiệm: {{ $employee->experience_years }} năm
                                             @endif
                                         </span>
-                                    </div>
+            </div>
                                 @endforeach
-                            @else
+                @else
                                 <div class="ml-3 text-danger small">
                                     <i class="fas fa-exclamation-triangle"></i> Chưa có nhân viên cho vị trí này
                                 </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
+                @endif
             </div>
+                    @endforeach
+        </div>
+    </div>
         @endif
     @endforeach
 @else
-    <div class="card shadow mb-4">
+<div class="card shadow mb-4">
         <div class="card-body text-center py-5">
             <p class="text-muted mb-0">Không có lịch làm việc nào trong ngày này</p>
         </div>
