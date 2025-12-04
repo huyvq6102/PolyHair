@@ -82,6 +82,11 @@ Route::prefix('reviews')->name('site.reviews.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/create', [ReviewController::class, 'create'])->name('create');
         Route::post('/', [ReviewController::class, 'store'])->name('store');
+
+        // General feedback (not tied to a specific appointment)
+        Route::get('/general/create', [ReviewController::class, 'createGeneral'])->name('general.create');
+        Route::post('/general', [ReviewController::class, 'storeGeneral'])->name('general.store');
+
         Route::get('/{id}/edit', [ReviewController::class, 'edit'])->name('edit');
         Route::put('/{id}', [ReviewController::class, 'update'])->name('update');
     });

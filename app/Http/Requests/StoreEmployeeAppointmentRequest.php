@@ -25,11 +25,14 @@ class StoreEmployeeAppointmentRequest extends FormRequest
         
         // Common validation rules
         $commonRules = [
-            'service_variants' => 'required|array|min:1',
+            'service_variants' => 'nullable|array',
             'service_variants.*' => 'exists:service_variants,id',
+            'simple_services' => 'nullable|array',
+            'simple_services.*' => 'exists:services,id',
             'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required|string',
             'note' => 'nullable|string|max:1000',
+            'promotion_code' => 'nullable|string|exists:promotions,code',
         ];
         
         if ($customerType === 'existing') {
@@ -55,8 +58,8 @@ class StoreEmployeeAppointmentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'service_variants.required' => 'Vui lòng chọn ít nhất một dịch vụ.',
-            'service_variants.min' => 'Vui lòng chọn ít nhất một dịch vụ.',
+            'service_variants.*.exists' => 'Biến thể dịch vụ không hợp lệ.',
+            'simple_services.*.exists' => 'Dịch vụ không hợp lệ.',
             'appointment_date.required' => 'Vui lòng chọn ngày đặt lịch.',
             'appointment_date.after_or_equal' => 'Ngày đặt lịch phải từ hôm nay trở đi.',
             'appointment_time.required' => 'Vui lòng chọn giờ đặt lịch.',
@@ -66,5 +69,23 @@ class StoreEmployeeAppointmentRequest extends FormRequest
             'new_customer_phone.required' => 'Vui lòng nhập số điện thoại.',
             'new_customer_email.email' => 'Email không hợp lệ.',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $variants = $this->input('service_variants', []);
+            $simpleServices = $this->input('simple_services', []);
+
+            $hasVariants = is_array($variants) && count(array_filter($variants)) > 0;
+            $hasSimple = is_array($simpleServices) && count(array_filter($simpleServices)) > 0;
+
+            if (!$hasVariants && !$hasSimple) {
+                $validator->errors()->add('service_variants', 'Vui lòng chọn ít nhất một dịch vụ.');
+            }
+        });
     }
 }
