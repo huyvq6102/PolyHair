@@ -524,6 +524,21 @@
                 nameInput.value = nameField.value;
                 serviceForm.appendChild(nameInput);
                 nameField.disabled = true;
+                
+                // Rename 'image' to 'combo_image'
+                if (imageField) {
+                    imageField.name = 'combo_image';
+                }
+                
+                // Rename 'status' to 'combo_status'
+                if (statusField) {
+                    statusField.name = 'combo_status';
+                }
+                
+                // Rename 'description' to 'combo_description'
+                if (descriptionField) {
+                    descriptionField.name = 'combo_description';
+                }
             }
         });
 
