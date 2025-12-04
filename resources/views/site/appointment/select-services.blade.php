@@ -56,7 +56,7 @@
 @endphp
 
 @section('content')
-<div class="select-services-page" style="padding: 40px 0 20px; background: #f8f9fa; min-height: 100vh;">
+<div class="select-services-page" style="padding: 120px 0 20px; background: #f8f9fa; min-height: 100vh;">
     <div class="container">
         <div class="row">
             <div class="col-12">
@@ -70,7 +70,11 @@
 
                 <!-- Services by Category -->
                 @forelse($categories ?? [] as $category)
-                    @if($category->services && $category->services->count() > 0)
+                    @php
+                        $hasServices = $category->services && $category->services->count() > 0;
+                        $hasCombos = isset($category->combos) && $category->combos->count() > 0;
+                    @endphp
+                    @if($hasServices || $hasCombos)
                         <!-- Category Header -->
                         <div class="category-section" style="margin-top: 40px; margin-bottom: 20px;">
                             <div class="d-flex align-items-center mb-3">
