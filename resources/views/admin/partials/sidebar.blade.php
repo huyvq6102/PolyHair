@@ -106,8 +106,8 @@
     </li>
 
     <!-- Nav Item - Orders -->
-    <li class="nav-item {{ str_contains($currentRoute, 'order') ? 'active' : '' }}">
-        <a class="nav-link" href="{{ route('admin.orders.index') }}">
+    <li class="nav-item {{ str_contains($currentRoute, 'payment') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.payments.index') }}">
             <i class="fas fa-fw fa-shopping-cart"></i>
             <span>Hóa đơn</span>
         </a>
