@@ -5783,7 +5783,46 @@ label.error {
 /* ==================================== Mẫu tóc hot================================ */
 .bar{width:10px;height:28px;background:linear-gradient(135deg,#f6d17a 0%,#d8b26a 50%,#8b5a2b 100%);}
 .title{font-size:24px;font-weight:800;text-transform:uppercase;margin:0;}
-.desc{color:#333333;line-height:1.6;margin-top:6px;}
+.desc{color:#333333;line-height:1.6;margin-top:6px;border-bottom:none !important;}
+/* Ẩn dòng kẻ ngang DƯỚI phần DỊCH VỤ TÓC & COMBO */
+.service-section > .container:first-of-type {
+    border-bottom: none !important;
+    border-top: none !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+.service-section > .container:first-of-type > *,
+.service-section > .container:first-of-type > * > *,
+.service-section > .container:first-of-type > * > * > * {
+    border-bottom: none !important;
+    border-top: none !important;
+}
+.service-section > .container:first-of-type .d-flex {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+.service-section > .container:first-of-type .desc {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+.service-section > .container:first-of-type::after,
+.service-section > .container:first-of-type::before,
+.service-section > .container:first-of-type .d-flex::after,
+.service-section > .container:first-of-type .d-flex::before,
+.service-section > .container:first-of-type .desc::after,
+.service-section > .container:first-of-type .desc::before {
+    display: none !important;
+    content: none !important;
+}
+/* Ẩn tất cả border trong container đầu tiên */
+.service-section .container:first-child {
+    border: none !important;
+}
+.service-section .container:first-child * {
+    border-bottom: none !important;
+}
 .btn-view-all{display:inline-block;padding:10px 20px;background:#000;color:#e6c684;text-transform:uppercase;font-weight:700;letter-spacing:.05em;border:none;border-radius:4px;text-decoration:none;}
 .btn-view-all:hover{opacity:.9;color:#e6c684;}
 
