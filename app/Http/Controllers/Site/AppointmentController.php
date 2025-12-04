@@ -39,28 +39,43 @@ class AppointmentController extends Controller
      */
     public function selectServices()
     {
-        // Lấy tất cả danh mục có dịch vụ, sắp xếp theo bảng chữ cái
-        $categories = \App\Models\ServiceCategory::with(['services' => function($query) {
-                $query->whereNull('deleted_at')
-                    ->where('status', 'Hoạt động')
-                    ->with('serviceVariants')
-                    ->orderBy('name', 'asc'); // Sắp xếp dịch vụ theo bảng chữ cái
-            }])
-            ->whereHas('services', function($query) {
-                $query->whereNull('deleted_at')
-                    ->where('status', 'Hoạt động');
+        // Lấy tất cả danh mục có dịch vụ hoặc combo, sắp xếp theo bảng chữ cái
+        $categories = \App\Models\ServiceCategory::with([
+                'services' => function($query) {
+                    $query->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động')
+                        ->with('serviceVariants')
+                        ->orderBy('name', 'asc'); // Sắp xếp dịch vụ theo bảng chữ cái
+                },
+                'combos' => function($query) {
+                    $query->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động')
+                        ->with('comboItems.serviceVariant')
+                        ->orderBy('name', 'asc'); // Sắp xếp combo theo bảng chữ cái
+                }
+            ])
+            ->where(function($query) {
+                // Danh mục có dịch vụ hoặc combo
+                $query->whereHas('services', function($q) {
+                    $q->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động');
+                })->orWhereHas('combos', function($q) {
+                    $q->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động');
+                });
             })
             ->orderBy('name', 'asc') // Sắp xếp danh mục theo bảng chữ cái
             ->get();
 
-        // Lấy tất cả combo, sắp xếp theo bảng chữ cái
-        $combos = \App\Models\Combo::with('comboItems.serviceVariant')
+        // Lấy các combo không có category (để hiển thị riêng nếu cần)
+        $combosWithoutCategory = \App\Models\Combo::with('comboItems.serviceVariant')
             ->whereNull('deleted_at')
             ->where('status', 'Hoạt động')
+            ->whereNull('category_id')
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('site.appointment.select-services', compact('categories', 'combos'));
+        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory'));
     }
 
     /**
@@ -180,15 +195,20 @@ class AppointmentController extends Controller
         
         // Lấy service IDs từ combo
         if (!empty($comboIds)) {
-            $combos = \App\Models\Combo::with('comboItems.serviceVariant.service')
+            $combos = \App\Models\Combo::with(['comboItems.serviceVariant.service', 'comboItems.service'])
                 ->whereIn('id', $comboIds)
                 ->get();
             
             foreach ($combos as $combo) {
                 if ($combo && $combo->comboItems) {
                     foreach ($combo->comboItems as $item) {
+                        // Lấy service ID từ service_variant nếu có
                         if ($item->serviceVariant && $item->serviceVariant->service) {
                             $allServiceIds[] = $item->serviceVariant->service->id;
+                        }
+                        // Lấy service ID trực tiếp nếu có (combo item có service_id nhưng không có variant)
+                        elseif ($item->service_id) {
+                            $allServiceIds[] = $item->service_id;
                         }
                     }
                 }
@@ -959,15 +979,20 @@ class AppointmentController extends Controller
             
             // Lấy service IDs từ combo
             if (!empty($comboIds)) {
-                $combos = \App\Models\Combo::with('comboItems.serviceVariant.service')
+                $combos = \App\Models\Combo::with(['comboItems.serviceVariant.service', 'comboItems.service'])
                     ->whereIn('id', $comboIds)
                     ->get();
                 
                 foreach ($combos as $combo) {
                     if ($combo && $combo->comboItems) {
                         foreach ($combo->comboItems as $item) {
+                            // Lấy service ID từ service_variant nếu có
                             if ($item->serviceVariant && $item->serviceVariant->service) {
                                 $allServiceIds[] = $item->serviceVariant->service->id;
+                            }
+                            // Lấy service ID trực tiếp nếu có (combo item có service_id nhưng không có variant)
+                            elseif ($item->service_id) {
+                                $allServiceIds[] = $item->service_id;
                             }
                         }
                     }
