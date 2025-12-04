@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('employees', function (Blueprint $table) {
-            $table->softDeletes();
+        Schema::table('payments', function (Blueprint $table) {
+            // Thêm cột invoice_code, unique để không trùng lặp
+            $table->string('invoice_code')->nullable()->unique()->after('id');
         });
     }
 
@@ -21,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('employees', function (Blueprint $table) {
-            $table->dropSoftDeletes();
+        Schema::table('payments', function (Blueprint $table) {
+            $table->dropColumn('invoice_code');
         });
     }
 };

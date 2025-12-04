@@ -59,6 +59,7 @@
                                                     </ul>
                                                     </li>
                                                 <li><a class="{{ str_contains($currentRoute, 'blog') ? 'active' : '' }}" href="{{ route('site.blog.index') }}">TIN TỨC</a></li>
+                                                <li><a class="{{ str_contains($currentRoute, 'review') ? 'active' : '' }}" href="{{ route('site.reviews.index') }}">ĐÁNH GIÁ</a></li>
                                                 <li><a class="{{ str_contains($currentRoute, 'contact') ? 'active' : '' }}" href="{{ route('site.contact.index') }}">VỀ POLY HAIR</a></li>
                                                     <li class="d-lg-none ">
                                                         <a href="{{ route('site.cart.index') }}">
@@ -95,6 +96,10 @@
                                                <a class="dropdown-item py-2 w-100 text-left" href="{{ route('site.customers.show', Auth::user()->id) }}"
                                                    style="border: none; background: none; color: #000;">
                                                     <i class="fa fa-user mr-2" aria-hidden="true"></i>Thông tin cá nhân
+                                                </a>
+                                                <a class="dropdown-item py-2 w-100 text-left" href="{{ route('site.reviews.index') }}"
+                                                   style="border: none; background: none; color: #000;">
+                                                    <i class="fa fa-star mr-2" aria-hidden="true"></i>Đánh giá
                                                 </a>
                                                 <form method="POST" action="{{ route('logout') }}" class="m-0">
                                                     @csrf

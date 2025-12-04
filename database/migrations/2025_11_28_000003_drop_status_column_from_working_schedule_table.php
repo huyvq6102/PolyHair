@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('employees', function (Blueprint $table) {
-            $table->softDeletes();
+        Schema::table('working_schedule', function (Blueprint $table) {
+            $table->dropColumn('status');
         });
     }
 
@@ -21,10 +21,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('employees', function (Blueprint $table) {
-            $table->dropSoftDeletes();
+        Schema::table('working_schedule', function (Blueprint $table) {
+            $table->enum('status', ['pending', 'approved', 'cancelled', 'completed'])->default('pending')->after('shift_id');
         });
     }
 };
+
+
 
 

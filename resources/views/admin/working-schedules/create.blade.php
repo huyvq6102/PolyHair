@@ -182,21 +182,6 @@
             </div>
 
             <div class="form-group">
-                <label for="status">Trạng thái <span class="text-danger">*</span></label>
-                <select name="status" id="status" class="form-control @error('status') is-invalid @enderror" required>
-                    <option value="">-- Chọn trạng thái --</option>
-                    @foreach($statusOptions as $value => $label)
-                        <option value="{{ $value }}" {{ old('status') === $value ? 'selected' : '' }}>{{ $label }}</option>
-                    @endforeach
-                </select>
-                @error('status')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @else
-                    <div class="invalid-feedback">Vui lòng chọn trạng thái</div>
-                @enderror
-            </div>
-
-            <div class="form-group">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Lưu</button>
                 <a href="{{ route('admin.working-schedules.index') }}" class="btn btn-secondary">Hủy</a>
             </div>

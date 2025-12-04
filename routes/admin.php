@@ -32,6 +32,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('services', ServiceController::class);
     
     Route::resource('service-categories', ServiceCategoryController::class);
+    
+    // Promotions routes with trash functionality
+    Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
+    Route::put('promotions/{id}/restore', [PromotionController::class, 'restore'])->name('promotions.restore');
+    Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
     Route::resource('promotions', PromotionController::class);
     
     // Appointment routes with additional actions

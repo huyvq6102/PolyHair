@@ -16,7 +16,6 @@ class WorkingSchedule extends Model
         'employee_id',
         'work_date',
         'shift_id',
-        'status',
         'is_handover',
     ];
 

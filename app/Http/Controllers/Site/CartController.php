@@ -70,6 +70,27 @@ class CartController extends Controller
                                 'variant' => $variant,
                             ];
                         }
+                    } elseif (isset($item['type']) && $item['type'] === 'product') {
+                        $product = \App\Models\Product::find($item['id']);
+                        if ($product) {
+                            $price = $product->price ?? 0;
+                            $quantity = $item['quantity'] ?? 1;
+                            $subtotal = $price * $quantity;
+                            $total += $subtotal;
+
+                            $items[] = [
+                                'key' => $cartKey,
+                                'id' => $item['id'],
+                                'type' => 'product',
+                                'name' => $product->name ?? 'Sản phẩm',
+                                'service_name' => 'Sản phẩm', // Hoặc danh mục sản phẩm
+                                'price' => $price,
+                                'quantity' => $quantity,
+                                'subtotal' => $subtotal,
+                                'image' => $product->image ?? null, 
+                                'product' => $product,
+                            ];
+                        }
                     } elseif (isset($item['type']) && $item['type'] === 'appointment') {
                         // Appointment items (from booking)
                         $appointmentId = $item['id'] ?? null;
@@ -79,8 +100,11 @@ class CartController extends Controller
                             continue;
                         }
                         
-                        $appointment = \App\Models\Appointment::with(['appointmentDetails.serviceVariant.service', 'appointmentDetails.combo', 'employee.user'])
-                            ->find($appointmentId);
+                        $appointment = \App\Models\Appointment::with([
+                            'appointmentDetails.serviceVariant.service', 
+                            'appointmentDetails.combo.comboItems.serviceVariant.service',
+                            'employee.user'
+                        ])->find($appointmentId);
                         
                         if ($appointment) {
                             // Mark this appointment ID as processed
@@ -160,7 +184,7 @@ class CartController extends Controller
     public function add(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:service_variant,appointment',
+            'type' => 'required|in:service_variant,appointment,product',
             'id' => 'required|integer',
             'quantity' => 'nullable|integer|min:1',
         ]);
@@ -174,6 +198,16 @@ class CartController extends Controller
             } else {
                 $cart[$key] = [
                     'type' => 'service_variant',
+                    'id' => $request->id,
+                    'quantity' => $request->quantity ?? 1,
+                ];
+            }
+        } elseif ($request->type === 'product') {
+            if (isset($cart[$key])) {
+                $cart[$key]['quantity'] += $request->quantity ?? 1;
+            } else {
+                $cart[$key] = [
+                    'type' => 'product',
                     'id' => $request->id,
                     'quantity' => $request->quantity ?? 1,
                 ];
@@ -193,7 +227,7 @@ class CartController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Đã thêm vào lịch đặt',
+            'message' => 'Đã thêm vào giỏ hàng',
             'cart_count' => count($cart),
         ]);
     }

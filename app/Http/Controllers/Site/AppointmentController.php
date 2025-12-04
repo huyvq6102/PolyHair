@@ -147,46 +147,66 @@ class AppointmentController extends Controller
             return true;
         });
 
-        // Filter employees by service expertise if service is selected
-        $serviceId = $request->input('service_id');
+        // Filter employees by service expertise - chỉ hiển thị nhân viên có chuyên môn phù hợp
+        $serviceIds = $request->input('service_id', []);
         $variantIds = $request->input('service_variants', []);
-        $comboId = $request->input('combo_id');
-
-        if ($serviceId) {
-            // Lọc nhân viên có chuyên môn với service này
-            $employees = $employees->filter(function($employee) use ($serviceId) {
-                return $employee->services->contains('id', $serviceId);
-            });
-        } elseif (!empty($variantIds)) {
-            // Lấy service_id từ các variant
-            $variants = \App\Models\ServiceVariant::whereIn('id', is_array($variantIds) ? $variantIds : [$variantIds])->get();
-            $serviceIds = $variants->pluck('service_id')->unique()->toArray();
+        $comboIds = $request->input('combo_id', []);
+        
+        // Chuyển đổi thành array nếu là single value
+        if (!is_array($serviceIds)) {
+            $serviceIds = $serviceIds ? [$serviceIds] : [];
+        }
+        if (!is_array($variantIds)) {
+            $variantIds = $variantIds ? [$variantIds] : [];
+        }
+        if (!is_array($comboIds)) {
+            $comboIds = $comboIds ? [$comboIds] : [];
+        }
+        
+        // Thu thập tất cả service IDs từ các nguồn
+        $allServiceIds = [];
+        
+        // Lấy service IDs từ service_id
+        if (!empty($serviceIds)) {
+            $allServiceIds = array_merge($allServiceIds, $serviceIds);
+        }
+        
+        // Lấy service IDs từ service_variants
+        if (!empty($variantIds)) {
+            $variants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->get();
+            $variantServiceIds = $variants->pluck('service_id')->unique()->toArray();
+            $allServiceIds = array_merge($allServiceIds, $variantServiceIds);
+        }
+        
+        // Lấy service IDs từ combo
+        if (!empty($comboIds)) {
+            $combos = \App\Models\Combo::with('comboItems.serviceVariant.service')
+                ->whereIn('id', $comboIds)
+                ->get();
             
-            if (!empty($serviceIds)) {
-                // Lọc nhân viên có chuyên môn với bất kỳ service nào trong danh sách
-                $employees = $employees->filter(function($employee) use ($serviceIds) {
-                    return $employee->services->whereIn('id', $serviceIds)->count() > 0;
-                });
-            }
-        } elseif ($comboId) {
-            // Lấy các service từ combo
-            $combo = \App\Models\Combo::with('comboItems.serviceVariant.service')->find($comboId);
-            if ($combo && $combo->comboItems) {
-                $serviceIds = [];
-                foreach ($combo->comboItems as $item) {
-                    if ($item->serviceVariant && $item->serviceVariant->service) {
-                        $serviceIds[] = $item->serviceVariant->service->id;
+            foreach ($combos as $combo) {
+                if ($combo && $combo->comboItems) {
+                    foreach ($combo->comboItems as $item) {
+                        if ($item->serviceVariant && $item->serviceVariant->service) {
+                            $allServiceIds[] = $item->serviceVariant->service->id;
+                        }
                     }
                 }
-                $serviceIds = array_unique($serviceIds);
-                
-                if (!empty($serviceIds)) {
-                    // Lọc nhân viên có chuyên môn với bất kỳ service nào trong combo
-                    $employees = $employees->filter(function($employee) use ($serviceIds) {
-                        return $employee->services->whereIn('id', $serviceIds)->count() > 0;
-                    });
-                }
             }
+        }
+        
+        // Loại bỏ trùng lặp
+        $allServiceIds = array_unique($allServiceIds);
+        
+        // Chỉ lọc nhân viên nếu có dịch vụ được chọn
+        if (!empty($allServiceIds)) {
+            // Lọc nhân viên có chuyên môn với ít nhất một service trong danh sách
+            $employees = $employees->filter(function($employee) use ($allServiceIds) {
+                return $employee->services->whereIn('id', $allServiceIds)->count() > 0;
+            });
+        } else {
+            // Nếu không có dịch vụ nào được chọn, không hiển thị nhân viên nào
+            $employees = collect([]);
         }
 
         $employees = $employees->values();
@@ -397,40 +417,74 @@ class AppointmentController extends Controller
 
             DB::commit();
 
-            // Gửi email xác nhận đặt lịch - gửi đến email trong form
-            // Lấy email từ form (ưu tiên email trong form, nếu không có thì dùng email của user)
-            $emailToSend = !empty($validated['email']) ? $validated['email'] : ($user->email ?? null);
+            // Gửi email xác nhận đặt lịch - chỉ gửi một lần cho mỗi appointment
+            // Sử dụng cache để đảm bảo chỉ gửi email một lần
+            $emailSentKey = 'appointment_email_sent_' . $appointment->id;
             
-            try {
-                if ($emailToSend) {
-                    // Load đầy đủ relationships cho email
-                    $appointment->load([
-                        'user',
-                        'employee.user',
-                        'appointmentDetails.serviceVariant.service',
-                        'appointmentDetails.combo'
-                    ]);
-                    
-                    // Gửi email đến địa chỉ email trong form
-                    Mail::to($emailToSend)->send(new AppointmentConfirmationMail($appointment));
-                    
-                    \Log::info('Appointment confirmation email sent', [
-                        'to' => $emailToSend,
-                        'appointment_id' => $appointment->id,
-                        'mailer' => config('mail.default')
-                    ]);
+            // Kiểm tra xem đã gửi email cho appointment này chưa
+            if (!\Cache::has($emailSentKey)) {
+                // Lấy email từ form (ưu tiên email trong form, nếu không có thì dùng email của user)
+                $emailToSend = !empty($validated['email']) ? trim($validated['email']) : (trim($user->email ?? ''));
+                
+                // Đảm bảo email hợp lệ
+                if (!empty($emailToSend) && filter_var($emailToSend, FILTER_VALIDATE_EMAIL)) {
+                    try {
+                        // Load đầy đủ relationships cho email
+                        $appointment->load([
+                            'user',
+                            'employee.user',
+                            'appointmentDetails.serviceVariant.service',
+                            'appointmentDetails.combo'
+                        ]);
+                        
+                        // Đánh dấu đã gửi email (cache trong 5 phút để tránh gửi lại)
+                        \Cache::put($emailSentKey, true, 300);
+                        
+                        // Gửi email đến địa chỉ email trong form
+                        Mail::to($emailToSend)->send(new AppointmentConfirmationMail($appointment));
+                        
+                        \Log::info('Appointment confirmation email sent successfully', [
+                            'to' => $emailToSend,
+                            'appointment_id' => $appointment->id,
+                            'mailer' => config('mail.default'),
+                            'mail_host' => config('mail.mailers.smtp.host'),
+                            'mail_port' => config('mail.mailers.smtp.port'),
+                            'from_address' => config('mail.from.address'),
+                        ]);
+                    } catch (\Swift_TransportException $e) {
+                        // Lỗi kết nối SMTP
+                        \Log::error('SMTP connection error when sending appointment confirmation email', [
+                            'email_to' => $emailToSend,
+                            'appointment_id' => $appointment->id,
+                            'error' => $e->getMessage(),
+                            'mailer' => config('mail.default'),
+                            'mail_host' => config('mail.mailers.smtp.host'),
+                            'mail_port' => config('mail.mailers.smtp.port'),
+                        ]);
+                    } catch (\Exception $e) {
+                        // Log lỗi chi tiết nhưng không làm gián đoạn quá trình đặt lịch
+                        \Log::error('Failed to send appointment confirmation email', [
+                            'email_to' => $emailToSend,
+                            'form_email' => $validated['email'] ?? 'N/A',
+                            'user_email' => $user->email ?? 'N/A',
+                            'appointment_id' => $appointment->id,
+                            'error' => $e->getMessage(),
+                            'error_class' => get_class($e),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                    }
                 } else {
-                    \Log::warning('Cannot send appointment confirmation email: No email address provided in form and user has no email');
+                    \Log::warning('Cannot send appointment confirmation email: Invalid or missing email address', [
+                        'form_email' => $validated['email'] ?? 'N/A',
+                        'user_email' => $user->email ?? 'N/A',
+                        'email_to_send' => $emailToSend ?? 'N/A',
+                        'appointment_id' => $appointment->id,
+                    ]);
                 }
-            } catch (\Exception $e) {
-                // Log lỗi chi tiết nhưng không làm gián đoạn quá trình đặt lịch
-                \Log::error('Failed to send appointment confirmation email', [
-                    'email_to' => $emailToSend ?? 'N/A',
-                    'form_email' => $validated['email'] ?? 'N/A',
-                    'user_email' => $user->email ?? 'N/A',
+            } else {
+                // Email đã được gửi cho appointment này rồi, bỏ qua
+                \Log::info('Appointment confirmation email already sent, skipping', [
                     'appointment_id' => $appointment->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
                 ]);
             }
 
@@ -438,7 +492,7 @@ class AppointmentController extends Controller
                 'success' => true,
                 'message' => '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng. Vui lòng thanh toán để hoàn tất đặt lịch.',
                 'appointment_id' => $appointment->id,
-                'redirect_url' => route('site.cart.index'),
+                'redirect_url' => route('site.payments.checkout'),
                 'cart_count' => count($cart),
             ]);
 
@@ -461,7 +515,8 @@ class AppointmentController extends Controller
             'user', 
             'employee.user', 
             'appointmentDetails.serviceVariant.service',
-            'payments'
+            'payments',
+            'reviews'
         ])->findOrFail($id);
         
         // Calculate total price
@@ -470,7 +525,18 @@ class AppointmentController extends Controller
             $totalPrice += $detail->price_snapshot ?? 0;
         }
         
-        return view('site.appointment.show', compact('appointment', 'totalPrice'));
+        // Check if user can review (appointment completed and not reviewed yet)
+        $canReview = false;
+        $existingReview = null;
+        
+        if (auth()->check() && $appointment->status === 'Hoàn thành' && $appointment->user_id == auth()->id()) {
+            $existingReview = \App\Models\Review::where('appointment_id', $appointment->id)
+                ->where('user_id', auth()->id())
+                ->first();
+            $canReview = !$existingReview;
+        }
+        
+        return view('site.appointment.show', compact('appointment', 'totalPrice', 'canReview', 'existingReview'));
     }
 
     /**
@@ -536,19 +602,25 @@ class AppointmentController extends Controller
                 $currentHour = $currentHour + 1;
             }
 
-        // Luôn tạo tất cả time slots từ 7:00 đến 22:00 (mỗi 30 phút)
-        $startTime = Carbon::parse('07:00');
-        $endTime = Carbon::parse('22:00');
-        $timeSlots = [];
-        $workingTimeRanges = [];
-        
-        // Nếu có employee, lấy giờ làm việc của nhân viên
-        if ($employeeId) {
+            $timeSlots = [];
+            $workingTimeRanges = [];
+            
+            // Bắt buộc phải có employee_id
+            if (!$employeeId) {
+                return response()->json([
+                    'success' => true,
+                    'time_slots' => [],
+                    'message' => 'Vui lòng chọn kỹ thuật viên trước'
+                ]);
+            }
+            
             // Get working schedules for the employee on the selected date
+            // Status phải là 'approved' (đã được duyệt) để hiển thị lịch làm việc
             $workingSchedules = \App\Models\WorkingSchedule::with('shift')
                 ->where('employee_id', $employeeId)
                 ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
-                ->where('status', 'available')
+                ->where('status', 'approved')
+                ->whereNull('deleted_at') // Loại bỏ các bản ghi đã bị xóa mềm
                 ->get();
 
             // Lưu các khoảng thời gian làm việc
@@ -577,6 +649,9 @@ class AppointmentController extends Controller
                     'end' => $shiftEnd
                 ];
             }
+            
+            // Nếu không có lịch làm việc, vẫn hiển thị tất cả slots nhưng tất cả đều unavailable
+            // (workingTimeRanges sẽ rỗng, nên isInWorkingTime sẽ luôn false)
 
             // Get booked appointments for this employee on this date
             $bookedAppointments = \App\Models\Appointment::where('employee_id', $employeeId)
@@ -591,57 +666,58 @@ class AppointmentController extends Controller
                     $bookedTimes[] = $appointmentStart->format('H:i');
                 }
             }
-        }
-        
-        // Tạo tất cả time slots từ 7:00 đến 22:00
-        $currentTime = $startTime->copy();
-        while ($currentTime->lte($endTime)) {
-            $timeString = $currentTime->format('H:i');
             
-            // Find or create word_time for this time slot
-            $wordTime = \App\Models\WordTime::firstOrCreate(
-                ['time' => $timeString],
-                ['time' => $timeString]
-            );
+            // Tạo TẤT CẢ time slots từ 7:00 đến 22:00 (mỗi 30 phút)
+            $startTime = Carbon::parse('07:00');
+            $endTime = Carbon::parse('22:00');
+            $currentTime = $startTime->copy();
             
-            // Kiểm tra xem slot có nằm trong giờ làm việc không
-            $isInWorkingTime = false;
-            if (!empty($workingTimeRanges)) {
+            while ($currentTime->lte($endTime)) {
+                $timeString = $currentTime->format('H:i');
+                
+                // Find or create word_time for this time slot
+                $wordTime = \App\Models\WordTime::firstOrCreate(
+                    ['time' => $timeString],
+                    ['time' => $timeString]
+                );
+                
+                // Kiểm tra xem slot có nằm trong khung giờ làm việc không
+                $isInWorkingTime = false;
                 foreach ($workingTimeRanges as $range) {
                     $slotTime = Carbon::createFromFormat('H:i', $timeString);
+                    // Kiểm tra slot có nằm trong khoảng [start, end) không
                     if ($slotTime->gte($range['start']) && $slotTime->lt($range['end'])) {
                         $isInWorkingTime = true;
                         break;
                     }
                 }
-            } else {
-                // Nếu không có employee, tất cả đều available
-                $isInWorkingTime = true;
-            }
-            
-            // Kiểm tra xem slot có bị đặt chưa
-            $isBooked = isset($bookedTimes) && in_array($timeString, $bookedTimes);
-            
-            // Kiểm tra xem slot có trước giờ hiện tại không (nếu là ngày hôm nay)
-            $isPastTime = false;
-            if ($isToday) {
-                $slotHour = (int)substr($timeString, 0, 2);
-                $slotMinute = (int)substr($timeString, 3, 2);
                 
-                if ($slotHour < $currentHour || ($slotHour === $currentHour && $slotMinute < $currentSlotMinute)) {
-                    $isPastTime = true;
+                // Kiểm tra xem slot có bị đặt chưa
+                $isBooked = in_array($timeString, $bookedTimes);
+                
+                // Kiểm tra xem slot có trước giờ hiện tại không (nếu là ngày hôm nay)
+                $isPastTime = false;
+                if ($isToday) {
+                    $slotHour = (int)substr($timeString, 0, 2);
+                    $slotMinute = (int)substr($timeString, 3, 2);
+                    
+                    if ($slotHour < $currentHour || ($slotHour === $currentHour && $slotMinute < $currentSlotMinute)) {
+                        $isPastTime = true;
+                    }
                 }
+                
+                // Slot chỉ available nếu: nằm trong khung giờ làm việc VÀ chưa bị đặt VÀ không phải quá khứ
+                $isAvailable = $isInWorkingTime && !$isBooked && !$isPastTime;
+                
+                $timeSlots[] = [
+                    'time' => $timeString,
+                    'display' => $timeString,
+                    'word_time_id' => $wordTime->id,
+                    'available' => $isAvailable,
+                ];
+                
+                $currentTime->addMinutes(30);
             }
-            
-            $timeSlots[] = [
-                'time' => $timeString,
-                'display' => $timeString,
-                'word_time_id' => $wordTime->id,
-                'available' => $isInWorkingTime && !$isBooked && !$isPastTime,
-            ];
-            
-            $currentTime->addMinutes(30);
-        }
 
             return response()->json([
                 'success' => true,
@@ -712,10 +788,6 @@ class AppointmentController extends Controller
     public function getEmployeesByService(Request $request)
     {
         try {
-            $serviceId = $request->input('service_id');
-            $variantIds = $request->input('service_variants', []);
-            $comboId = $request->input('combo_id');
-
             // Lấy tất cả nhân viên từ database
             $allEmployees = \App\Models\Employee::with(['user.role', 'services'])
                 ->whereNotNull('user_id')
@@ -750,38 +822,66 @@ class AppointmentController extends Controller
                 return true;
             });
 
-            // Filter by service expertise
-            if ($serviceId) {
-                // Lọc nhân viên có chuyên môn với service này
-                $employees = $employees->filter(function($employee) use ($serviceId) {
-                    return $employee->services->contains('id', $serviceId);
-                });
-            } elseif (!empty($variantIds)) {
-                // Lấy service_id từ các variant
+            // Filter by service expertise - chỉ hiển thị nhân viên có chuyên môn phù hợp
+            $serviceIds = $request->input('service_id', []);
+            $variantIds = $request->input('service_variants', []);
+            $comboIds = $request->input('combo_id', []);
+            
+            // Chuyển đổi thành array nếu là single value
+            if (!is_array($serviceIds)) {
+                $serviceIds = $serviceIds ? [$serviceIds] : [];
+            }
+            if (!is_array($variantIds)) {
+                $variantIds = $variantIds ? [$variantIds] : [];
+            }
+            if (!is_array($comboIds)) {
+                $comboIds = $comboIds ? [$comboIds] : [];
+            }
+            
+            // Thu thập tất cả service IDs từ các nguồn
+            $allServiceIds = [];
+            
+            // Lấy service IDs từ service_id
+            if (!empty($serviceIds)) {
+                $allServiceIds = array_merge($allServiceIds, $serviceIds);
+            }
+            
+            // Lấy service IDs từ service_variants
+            if (!empty($variantIds)) {
                 $variants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->get();
-                $serviceIds = $variants->pluck('service_id')->unique()->toArray();
+                $variantServiceIds = $variants->pluck('service_id')->unique()->toArray();
+                $allServiceIds = array_merge($allServiceIds, $variantServiceIds);
+            }
+            
+            // Lấy service IDs từ combo
+            if (!empty($comboIds)) {
+                $combos = \App\Models\Combo::with('comboItems.serviceVariant.service')
+                    ->whereIn('id', $comboIds)
+                    ->get();
                 
-                // Lọc nhân viên có chuyên môn với bất kỳ service nào trong danh sách
-                $employees = $employees->filter(function($employee) use ($serviceIds) {
-                    return $employee->services->whereIn('id', $serviceIds)->count() > 0;
-                });
-            } elseif ($comboId) {
-                // Lấy các service từ combo
-                $combo = \App\Models\Combo::with('comboItems.serviceVariant.service')->find($comboId);
-                if ($combo && $combo->comboItems) {
-                    $serviceIds = [];
-                    foreach ($combo->comboItems as $item) {
-                        if ($item->serviceVariant && $item->serviceVariant->service) {
-                            $serviceIds[] = $item->serviceVariant->service->id;
+                foreach ($combos as $combo) {
+                    if ($combo && $combo->comboItems) {
+                        foreach ($combo->comboItems as $item) {
+                            if ($item->serviceVariant && $item->serviceVariant->service) {
+                                $allServiceIds[] = $item->serviceVariant->service->id;
+                            }
                         }
                     }
-                    $serviceIds = array_unique($serviceIds);
-                    
-                    // Lọc nhân viên có chuyên môn với bất kỳ service nào trong combo
-                    $employees = $employees->filter(function($employee) use ($serviceIds) {
-                        return $employee->services->whereIn('id', $serviceIds)->count() > 0;
-                    });
                 }
+            }
+            
+            // Loại bỏ trùng lặp
+            $allServiceIds = array_unique($allServiceIds);
+            
+            // Chỉ lọc nhân viên nếu có dịch vụ được chọn
+            if (!empty($allServiceIds)) {
+                // Lọc nhân viên có chuyên môn với ít nhất một service trong danh sách
+                $employees = $employees->filter(function($employee) use ($allServiceIds) {
+                    return $employee->services->whereIn('id', $allServiceIds)->count() > 0;
+                });
+            } else {
+                // Nếu không có dịch vụ nào được chọn, không hiển thị nhân viên nào
+                $employees = collect([]);
             }
 
             $employees = $employees->values();
