@@ -13,9 +13,9 @@
                 <i class="fas fa-trash-alt"></i> Xóa tất cả vĩnh viễn
             </button>
         </form>
-        <a href="{{ route('admin.working-schedules.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Quay lại danh sách
-        </a>
+    <a href="{{ route('admin.working-schedules.index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Quay lại danh sách
+    </a>
     </div>
 </div>
 
@@ -32,7 +32,6 @@
                         <th>Nhân viên</th>
                         <th>Ngày làm việc</th>
                         <th>Ca làm việc</th>
-                        <th>Trạng thái</th>
                         <th>Ngày xóa</th>
                         <th>Thao tác</th>
                     </tr>
@@ -44,19 +43,6 @@
                             <td>{{ $schedule->employee->user->name ?? 'N/A' }}</td>
                             <td>{{ optional($schedule->work_date)->format('d/m/Y') ?? 'N/A' }}</td>
                             <td>{{ $schedule->shift->name ?? 'N/A' }}</td>
-                            <td>
-                                @php
-                                    $status = $schedule->status;
-                                    $badge = match($status) {
-                                        'pending' => 'warning',
-                                        'approved' => 'success',
-                                        'cancelled' => 'danger',
-                                        'completed' => 'info',
-                                        default => 'secondary'
-                                    };
-                                @endphp
-                                <span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? ucfirst($status ?? 'N/A') }}</span>
-                            </td>
                             <td>{{ optional($schedule->deleted_at)->format('d/m/Y H:i') }}</td>
                             <td>
                                 <form action="{{ route('admin.working-schedules.restore', $schedule->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Phục hồi lịch này?');">
@@ -77,7 +63,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center">Thùng rác trống</td>
+                            <td colspan="6" class="text-center">Thùng rác trống</td>
                         </tr>
                     @endforelse
                 </tbody>

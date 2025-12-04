@@ -32,7 +32,7 @@
                         <a href="#" class="mr-3 btn btn-primary rounded-pill w-100 fw-bold d-flex align-items-center justify-content-center py-2">
                             <i class="fas fa-calendar-plus mr-2"></i>Đặt lịch
                         </a>
-                        <a href="#thong-tin-ca-nhan" class="mr-2 btn btn-outline-secondary rounded-pill w-100 d-flex align-items-center justify-content-center py-2">
+                        <a href="{{ route('profile.edit') }}" class="mr-2 btn btn-outline-secondary rounded-pill w-100 d-flex align-items-center justify-content-center py-2">
                             <i class="fas fa-user-edit mr-2"></i>Sửa hồ sơ
                         </a>
                     </div>
@@ -150,7 +150,6 @@
 
                             <h5 class="mb-4">Các lịch hẹn đã hoàn thành</h5>
                             <div class="list-group">
-<<<<<<< HEAD
                                 @php
                                     $completedAppointments = $user->appointments->filter(function($appointment) {
                                         return ($appointment->status == 'Hoàn thành' || $appointment->status == 'Đã thanh toán')
@@ -204,21 +203,6 @@
                                                     <i class="fas fa-star"></i> Đánh giá
                                                 </a>
                                             @endif
-=======
-                                @foreach($user->appointments as $appointment)
-                                    @if($appointment->status == 'Đã thanh toán' && $appointment->status != 'Đã hủy')
-
-                                    <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
-                                        <div>
-                                            <h6 class="mb-1">Cắt tóc tạo kiểu</h6>
-                                          @if (!empty($appointment->employee))
-                                            <small class="text-muted">
-                                                {{ $appointment->employee->user->name }} - {{ $appointment->start_at }}
-                                            </small>
-                                          @else
-                                            <small class="text-muted">{{ $appointment->start_at }}</small>
-                                          @endif
->>>>>>> 82ef0c91927fd97ffae3fd08510e99409a6da62f
                                         </div>
                                     </div>
                                 @empty
@@ -267,7 +251,7 @@
                                     <div class="list-group-item mb-3">
                                         <div class="d-flex w-100 justify-content-between">
                                             <h6 class="mb-1">Hóa đơn: <strong>{{ $payment->invoice_code }}</strong></h6>
-                                            <small class="text-muted">{{ $payment->created_at->format('H:i d/m/Y') }}</small>
+                                            <small class="text-muted">{{ $payment->created_at ? $payment->created_at->format('H:i d/m/Y') : 'N/A' }}</small>
                                         </div>
                                         <p class="mb-1">Tổng tiền: <strong class="text-danger">{{ number_format($payment->total) }}đ</strong></p>
                                         <p class="mb-1"><small>Phương thức: {{ $payment->payment_type }}</small></p>

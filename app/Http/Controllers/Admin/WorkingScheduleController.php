@@ -11,13 +11,6 @@ use Illuminate\Http\Request;
 
 class WorkingScheduleController extends Controller
 {
-    protected array $statusOptions = [
-        'pending' => 'Chờ duyệt',
-        'approved' => 'Đã duyệt',
-        'cancelled' => 'Đã hủy',
-        'completed' => 'Hoàn thành',
-    ];
-
     /**
      * Display a listing of the resource.
      */
@@ -50,25 +43,49 @@ class WorkingScheduleController extends Controller
                     return $schedule->employee->position ?? 'Other';
                 }),
             ];
-        })->values();
+        })->sortBy(function ($group) {
+            // Sắp xếp với thứ 2 là đầu tiên
+            $workDate = $group['work_date'];
+            if ($workDate instanceof \Carbon\Carbon) {
+                $carbon = $workDate;
+            } elseif ($workDate instanceof \DateTime) {
+                $carbon = \Carbon\Carbon::instance($workDate);
+            } else {
+                $carbon = \Carbon\Carbon::parse($workDate);
+            }
+            // Chuyển đổi dayOfWeek: 0 (CN) -> 7, 1 (T2) -> 1, 2 (T3) -> 2, ...
+            $dayOfWeek = $carbon->dayOfWeek;
+            $adjustedDay = $dayOfWeek == 0 ? 7 : $dayOfWeek;
+            // Sắp xếp theo năm-tuần-thứ để nhóm theo tuần, sau đó theo thứ trong tuần (T2 đầu tiên)
+            $yearWeek = $carbon->format('Y') . '-' . str_pad($carbon->week, 2, '0', STR_PAD_LEFT);
+            return $yearWeek . '-' . str_pad($adjustedDay, 2, '0', STR_PAD_LEFT) . '-' . $carbon->format('Y-m-d');
+        })->values()->reverse(); // Reverse để mới nhất lên đầu
 
         // Phân trang thủ công
         $perPage = 15;
-        $currentPage = $request->get('page', 1);
+        $currentPage = (int) $request->get('page', 1);
         $currentItems = $groupedSchedules->slice(($currentPage - 1) * $perPage, $perPage)->values();
         $total = $groupedSchedules->count();
+        
+        // Tạo paginator với query string đầy đủ
         $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
             $currentItems,
             $total,
             $perPage,
             $currentPage,
-            ['path' => $request->url(), 'query' => $request->query()]
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+                'pageName' => 'page',
+            ]
         );
+        
+        // Set paginator path để giữ query string
+        $paginator->setPath($request->url());
 
         return view('admin.working-schedules.index', [
             'groupedSchedules' => $paginator,
             'filters' => $request->only('employee_name', 'work_date'),
-            'statusOptions' => $this->statusOptions,
         ]);
     }
 
@@ -91,7 +108,6 @@ class WorkingScheduleController extends Controller
             'shampooers' => $shampooers,
             'receptionists' => $receptionists,
             'shifts' => $shifts,
-            'statusOptions' => $this->statusOptions,
         ]);
     }
 
@@ -110,7 +126,6 @@ class WorkingScheduleController extends Controller
             'week_start_date' => 'required_if:schedule_type,week|nullable|date',
             'shift_ids' => 'required|array|min:1',
             'shift_ids.*' => 'required|exists:working_shifts,id',
-            'status' => 'required|in:pending,approved,cancelled,completed',
         ]);
 
         // Kiểm tra nhân viên có đúng vị trí không
@@ -147,7 +162,6 @@ class WorkingScheduleController extends Controller
             $validated['receptionist_id'],
         ];
         $shiftIds = $validated['shift_ids'];
-        $status = $validated['status'];
         $scheduleType = $validated['schedule_type'];
 
         // Xác định danh sách ngày cần tạo lịch
@@ -197,7 +211,6 @@ class WorkingScheduleController extends Controller
                         'employee_id' => $employeeId,
                         'work_date' => $workDate,
                         'shift_id' => $shiftId,
-                        'status' => $status,
                     ]);
 
                     $createdCount++;
@@ -215,7 +228,7 @@ class WorkingScheduleController extends Controller
         }
 
         if (empty($conflicts)) {
-            return redirect()->route('admin.working-schedules.index')
+        return redirect()->route('admin.working-schedules.index')
                 ->with('success', $message ?: 'Lịch nhân viên đã được tạo thành công!');
         } else {
             return redirect()->back()
@@ -251,7 +264,6 @@ class WorkingScheduleController extends Controller
             'workDate' => $workDate,
             'schedulesByShift' => $schedulesByShift,
             'shifts' => $shifts,
-            'statusOptions' => $this->statusOptions,
         ]);
     }
 
@@ -268,7 +280,6 @@ class WorkingScheduleController extends Controller
             'schedule' => $schedule,
             'employees' => $employees,
             'shifts' => $shifts,
-            'statusOptions' => $this->statusOptions,
         ]);
     }
 
@@ -283,7 +294,6 @@ class WorkingScheduleController extends Controller
             'employee_id' => 'required|exists:employees,id',
             'work_date' => 'required|date',
             'shift_id' => 'required|exists:working_shifts,id',
-            'status' => 'required|in:pending,approved,cancelled,completed',
         ]);
 
         // Kiểm tra trùng lịch (loại trừ lịch hiện tại)
@@ -348,7 +358,6 @@ class WorkingScheduleController extends Controller
 
         return view('admin.working-schedules.trash', [
             'schedules' => $schedules,
-            'statusOptions' => $this->statusOptions,
         ]);
     }
 
