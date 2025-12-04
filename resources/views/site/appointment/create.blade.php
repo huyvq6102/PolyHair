@@ -2456,11 +2456,11 @@
                         $('#appointmentForm').off('submit');
                         $form.find('input, button, select, textarea').prop('disabled', true);
                         
-                        // Redirect to home page after successful booking
+                        // Redirect to checkout page immediately
                         if (response.redirect_url) {
                             window.location.href = response.redirect_url;
                         } else {
-                            window.location.href = '{{ route("site.home") }}';
+                            window.location.href = '{{ route("site.payments.checkout") }}';
                         }
                     } else {
                         // Re-enable button if not successful
