@@ -19,7 +19,7 @@ class CheckoutController extends Controller
         $user = auth()->user();
 
         if (!$user) {
-            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập để tiếp tục');
+            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập để tiếp tục !');
         }
 
         $services = [];
