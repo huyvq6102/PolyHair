@@ -60,7 +60,17 @@
                                                     </li>
                                                 <li><a class="{{ str_contains($currentRoute, 'product') ? 'active' : '' }}" href="{{ route('site.products.index') }}">SẢN PHẨM</a></li>
                                                 <li><a class="{{ str_contains($currentRoute, 'blog') ? 'active' : '' }}" href="{{ route('site.blog.index') }}">TIN TỨC</a></li>
-                                                <li><a class="{{ str_contains($currentRoute, 'review') ? 'active' : '' }}" href="{{ route('site.reviews.index') }}">ĐÁNH GIÁ</a></li>
+                                                <li>
+                                                    <a class="{{ str_contains($currentRoute, 'review') ? 'active' : '' }}" href="{{ route('site.reviews.index') }}">ĐÁNH GIÁ</a>
+                                                    <ul class="submenu">
+                                                        <li><a href="{{ route('site.reviews.index') }}">Xem đánh giá & Bình luận</a></li>
+                                                        @auth
+                                                            <li><a href="{{ route('site.reviews.general.create') }}">Gửi bình luận</a></li>
+                                                        @else
+                                                            <li><a href="{{ route('login', ['redirect' => route('site.reviews.general.create')]) }}">Gửi bình luận</a></li>
+                                                        @endauth
+                                                    </ul>
+                                                </li>
                                                 <li><a class="{{ str_contains($currentRoute, 'contact') ? 'active' : '' }}" href="{{ route('site.contact.index') }}">VỀ POLY HAIR</a></li>
                                                     <li class="d-lg-none ">
                                                         <a href="{{ route('site.cart.index') }}">

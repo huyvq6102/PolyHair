@@ -174,7 +174,7 @@ class ReviewController extends Controller
     {
         $validated = $request->validate([
             'service_id' => 'nullable|exists:services,id',
-            'rating' => 'required|integer|min:1|max:5',
+            'rating' => 'nullable|integer|min:1|max:5',
             'comment' => 'required|string|max:5000',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
@@ -193,14 +193,14 @@ class ReviewController extends Controller
             'service_id' => $validated['service_id'] ?? null,
             'employee_id' => null,
             'user_id' => Auth::id(),
-            'rating' => $validated['rating'],
+            'rating' => $validated['rating'] ?? null,
             'comment' => $validated['comment'],
             'images' => !empty($images) ? $images : null,
             'is_hidden' => false,
         ]);
 
         return redirect()->route('site.reviews.index')
-            ->with('success', 'Cảm ơn bạn đã gửi cảm nhận!');
+            ->with('success', 'Cảm ơn bạn đã gửi bình luận!');
     }
 
     /**

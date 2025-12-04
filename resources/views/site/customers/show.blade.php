@@ -204,21 +204,6 @@
                                                     <i class="fas fa-star"></i> Đánh giá
                                                 </a>
                                             @endif
-=======
-                                @foreach($user->appointments as $appointment)
-                                    @if($appointment->status == 'Đã thanh toán' && $appointment->status != 'Đã hủy')
-
-                                    <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
-                                        <div>
-                                            <h6 class="mb-1">Cắt tóc tạo kiểu</h6>
-                                          @if (!empty($appointment->employee))
-                                            <small class="text-muted">
-                                                {{ $appointment->employee->user->name }} - {{ $appointment->start_at }}
-                                            </small>
-                                          @else
-                                            <small class="text-muted">{{ $appointment->start_at }}</small>
-                                          @endif
->>>>>>> 82ef0c91927fd97ffae3fd08510e99409a6da62f
                                         </div>
                                     </div>
                                 @empty

@@ -32,35 +32,6 @@
         margin-bottom: 10px;
     }
     
-    .star-rating {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        margin: 20px 0;
-        flex-direction: row-reverse;
-    }
-    
-    .star-rating input {
-        display: none;
-    }
-    
-    .star-rating label {
-        font-size: 40px;
-        color: #ddd;
-        cursor: pointer;
-        transition: color 0.2s;
-    }
-    
-    .star-rating label:hover,
-    .star-rating label:hover ~ label,
-    .star-rating input:checked ~ label {
-        color: #ffc107;
-    }
-    
-    .star-rating input:checked ~ label {
-        color: #ffc107;
-    }
-    
     .image-preview {
         display: flex;
         flex-wrap: wrap;
@@ -109,7 +80,7 @@
                 <div class="review-form-container">
                     <div class="review-header">
                         <h1 class="review-title">
-                            <i class="fa fa-comment"></i> Gửi cảm nhận chung
+                            <i class="fa fa-comment"></i> Gửi bình luận
                         </h1>
                         <p class="text-muted">
                             Dù bạn chưa từng sử dụng dịch vụ, bạn vẫn có thể chia sẻ cảm nhận, góp ý hoặc kỳ vọng của mình để PolyHair cải thiện tốt hơn.
@@ -148,28 +119,6 @@
                             </select>
                             @error('service_id')
                                 <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Rating -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold d-block text-center mb-3">
-                                <i class="fa fa-star"></i> Mức độ hài lòng/kỳ vọng của bạn <span class="text-danger">*</span>
-                            </label>
-                            <div class="star-rating">
-                                <input type="radio" id="star5" name="rating" value="5" {{ old('rating', '5') == '5' ? 'checked' : '' }} required>
-                                <label for="star5"><i class="fa fa-star"></i></label>
-                                <input type="radio" id="star4" name="rating" value="4" {{ old('rating') == '4' ? 'checked' : '' }}>
-                                <label for="star4"><i class="fa fa-star"></i></label>
-                                <input type="radio" id="star3" name="rating" value="3" {{ old('rating') == '3' ? 'checked' : '' }}>
-                                <label for="star3"><i class="fa fa-star"></i></label>
-                                <input type="radio" id="star2" name="rating" value="2" {{ old('rating') == '2' ? 'checked' : '' }}>
-                                <label for="star2"><i class="fa fa-star"></i></label>
-                                <input type="radio" id="star1" name="rating" value="1" {{ old('rating') == '1' ? 'checked' : '' }}>
-                                <label for="star1"><i class="fa fa-star"></i></label>
-                            </div>
-                            @error('rating')
-                                <div class="text-danger text-center">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -289,14 +238,10 @@
         input.files = dt.files;
     }
 
-    // Form validation
+    // Form validation - rating is optional for comments
     document.getElementById('generalReviewForm').addEventListener('submit', function(e) {
-        const rating = document.querySelector('input[name="rating"]:checked');
-        if (!rating) {
-            e.preventDefault();
-            alert('Vui lòng chọn số sao đánh giá!');
-            return false;
-        }
+        // Rating is optional, so no validation needed
+        // Just ensure comment is filled (handled by HTML5 required attribute)
     });
 </script>
 @endpush
