@@ -42,8 +42,6 @@
                     <tr>
                         <th>#</th>
                         <th>Tên danh mục</th>
-                        <th>Slug</th>
-                        <th>Thứ tự</th>
                         <th>Trạng thái</th>
                         <th>Thao tác</th>
                     </tr>
@@ -53,8 +51,6 @@
                         <tr>
                             <td>{{ $category->id }}</td>
                             <td>{{ $category->name }}</td>
-                            <td><code>{{ $category->slug ?? '—' }}</code></td>
-                            <td>{{ $category->sort_order }}</td>
                             <td>
                                 <span class="badge badge-{{ $category->is_active ? 'success' : 'secondary' }}">
                                     {{ $category->is_active ? 'Hoạt động' : 'Ẩn' }}
@@ -75,7 +71,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center">Chưa có danh mục nào.</td>
+                            <td colspan="4" class="text-center">Chưa có danh mục nào.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -92,7 +88,7 @@
             language: {
                 url: "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
             },
-            order: [[3, 'asc']]
+            order: [[1, 'asc']]
         });
     });
 </script>
