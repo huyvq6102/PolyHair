@@ -86,7 +86,7 @@
                             
                             <!-- Service Grid for this Category -->
                             <div class="service-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
-                                <!-- Services -->
+                                <!-- Services in this Category -->
                                 @foreach($category->services as $service)
                                     @php
                                         $imagePath = $service->image ? 'legacy/images/products/' . $service->image : null;
@@ -200,7 +200,7 @@
                                 @endforeach
                                 
                                 <!-- Combos in this Category -->
-                                @if(isset($category->combos) && $category->combos->count() > 0)
+                                @if($category->combos && $category->combos->count() > 0)
                                     @foreach($category->combos as $combo)
                                         @php
                                             $imagePath = $combo->image ? 'legacy/images/products/' . $combo->image : null;
@@ -209,7 +209,7 @@
                                             $comboDuration = 60;
                                             if ($combo->comboItems && $combo->comboItems->count() > 0) {
                                                 $comboDuration = $combo->comboItems->sum(function($item) {
-                                                    return $item->serviceVariant->duration ?? 60;
+                                                    return $item->serviceVariant ? ($item->serviceVariant->duration ?? 60) : 60;
                                                 });
                                             }
                                         @endphp
@@ -260,6 +260,72 @@
                         <p class="text-muted">Chưa có dịch vụ nào</p>
                     </div>
                 @endforelse
+
+                <!-- Combos Without Category Section (if any) -->
+                @if(isset($combosWithoutCategory) && $combosWithoutCategory->count() > 0)
+                    <div class="category-section" style="margin-top: 40px; margin-bottom: 20px;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="bar mr-2" style="width: 10px; height: 28px; background: linear-gradient(135deg, #f6d17a 0%, #d8b26a 50%, #8b5a2b 100%);"></span>
+                            <h3 class="category-title mb-0" style="font-size: 20px; font-weight: 800; text-transform: uppercase; color: #000;">
+                                COMBO
+                            </h3>
+                        </div>
+                        
+                        <!-- Combo Grid -->
+                        <div class="service-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                            @foreach($combosWithoutCategory as $combo)
+                                @php
+                                    $imagePath = $combo->image ? 'legacy/images/products/' . $combo->image : null;
+                                    $formattedPrice = number_format($combo->price ?? 0, 0, ',', '.');
+                                    // Tính duration từ combo items
+                                    $comboDuration = 60;
+                                    if ($combo->comboItems && $combo->comboItems->count() > 0) {
+                                        $comboDuration = $combo->comboItems->sum(function($item) {
+                                            return $item->serviceVariant ? ($item->serviceVariant->duration ?? 60) : 60;
+                                        });
+                                    }
+                                @endphp
+                                <div class="svc-card service-card-wrapper" 
+                                     data-combo-id="{{ $combo->id }}"
+                                     style="border: 1px solid #eee; box-shadow: 0 6px 14px rgba(0,0,0,0.06); background: #fff; display: flex; flex-direction: column; border-radius: 8px; overflow: visible; position: relative;">
+                                    <div class="svc-img" style="overflow: hidden; display: block; height: 250px; background: #f5f5f5; cursor: default;">
+                                        @if($imagePath && file_exists(public_path($imagePath)))
+                                            <img src="{{ asset($imagePath) }}" alt="{{ $combo->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
+                                        @elseif($combo->image)
+                                            <img src="{{ asset('legacy/images/products/' . $combo->image) }}" alt="{{ $combo->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}'; this.onerror=null;">
+                                        @else
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);">
+                                                <i class="fa fa-image" style="font-size: 48px; color: #ccc;"></i>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="svc-body" style="padding: 15px; display: flex; flex-direction: column; flex-grow: 1;">
+                                        <div class="svc-info" style="flex-grow: 1;">
+                                            <h4 class="svc-name" style="margin: 0 0 10px 0; font-weight: 800; font-size: 16px;">
+                                                <a href="#" style="color: inherit; text-decoration: none;">{{ $combo->name }}</a>
+                                                <span style="color: #c08a3f; font-size: 12px; font-weight: 600; margin-left: 5px;">(COMBO)</span>
+                                            </h4>
+                                            <div class="svc-price" style="margin-bottom: 10px; font-size: 14px;">
+                                                Giá: <span style="color: #c08a3f; font-weight: 700;">{{ $formattedPrice }}vnđ</span>
+                                            </div>
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                                                <i class="fa fa-clock-o"></i> Thời gian: <strong>{{ $comboDuration }} phút</strong>
+                                            </div>
+                                        </div>
+                                        <div class="svc-actions" style="margin-top: auto; position: relative;">
+                                            <a href="{{ buildServiceUrl(['combo_id' => $combo->id]) }}" 
+                                               class="btn btn-primary w-100 select-service-btn" 
+                                               data-has-variants="false"
+                                               style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; position: relative; z-index: 1;">
+                                                <i class="fa fa-check"></i> Chọn
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

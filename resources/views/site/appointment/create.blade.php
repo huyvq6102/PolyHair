@@ -31,7 +31,21 @@
                         
                         @if(request('service_id'))
                             @php
-                                $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
+                                // CRITICAL: Get services ONLY from query string
+                                $queryServices = request()->query('service_id', []);
+                                
+                                // Convert to array if single value
+                                if (!is_array($queryServices)) {
+                                    $queryServices = $queryServices ? [$queryServices] : [];
+                                }
+                                
+                                // Filter out any empty/null values
+                                $serviceIds = array_filter($queryServices, function($id) {
+                                    return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                });
+                                
+                                // Remove duplicates - ensure each service ID appears only once
+                                $serviceIds = array_values(array_unique($serviceIds));
                             @endphp
                             @foreach($serviceIds as $serviceId)
                                 @if(!request('remove_service_id') || request('remove_service_id') != $serviceId)
@@ -40,9 +54,60 @@
                             @endforeach
                         @endif
 
-                        @if(request('service_variants'))
+                        @if(request()->has('service_variants'))
                             @php
-                                $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
+                                // CRITICAL: Get variants ONLY from query string, not from any other source
+                                // Parse URL manually to avoid any Laravel request merging issues
+                                $url = request()->fullUrl();
+                                $parsedUrl = parse_url($url);
+                                $queryParams = [];
+                                if (isset($parsedUrl['query'])) {
+                                    parse_str($parsedUrl['query'], $queryParams);
+                                }
+                                
+                                // Get service_variants from parsed query string only
+                                // Handle both formats: service_variants[] and service_variants[0], service_variants[1], etc.
+                                $queryVariants = [];
+                                
+                                // Check for service_variants[] format
+                                if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
+                                    $queryVariants = $queryParams['service_variants'];
+                                } elseif (isset($queryParams['service_variants'])) {
+                                    $queryVariants = [$queryParams['service_variants']];
+                                }
+                                
+                                // Check for service_variants[0], service_variants[1], etc. format
+                                $indexedVariants = [];
+                                foreach ($queryParams as $key => $value) {
+                                    if (preg_match('/^service_variants\[(\d+)\]$/', $key, $matches)) {
+                                        $indexedVariants[] = $value;
+                                    }
+                                }
+                                
+                                // Merge both formats
+                                $queryVariants = array_merge($queryVariants, $indexedVariants);
+                                
+                                // Filter out any empty/null values
+                                $variantIds = array_filter($queryVariants, function($id) {
+                                    return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                });
+                                
+                                // Remove duplicates - ensure each variant ID appears only once
+                                $variantIds = array_values(array_unique($variantIds));
+                                
+                                // Debug log (only in development)
+                                if (config('app.debug')) {
+                                    \Log::info('Appointment form - Creating hidden inputs', [
+                                        'url' => $url,
+                                        'parsed_query' => $queryParams,
+                                        'query_variants' => $queryVariants,
+                                        'indexed_variants' => $indexedVariants,
+                                        'filtered_variants' => $variantIds,
+                                        'count' => count($variantIds),
+                                        'request_all' => request()->all(),
+                                        'request_query' => request()->query(),
+                                    ]);
+                                }
                             @endphp
                             @foreach($variantIds as $variantId)
                                 @if(!request('remove_variant_id') || request('remove_variant_id') != $variantId)
@@ -53,7 +118,21 @@
 
                         @if(request('combo_id'))
                             @php
-                                $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
+                                // CRITICAL: Get combos ONLY from query string
+                                $queryCombos = request()->query('combo_id', []);
+                                
+                                // Convert to array if single value
+                                if (!is_array($queryCombos)) {
+                                    $queryCombos = $queryCombos ? [$queryCombos] : [];
+                                }
+                                
+                                // Filter out any empty/null values
+                                $comboIds = array_filter($queryCombos, function($id) {
+                                    return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                });
+                                
+                                // Remove duplicates - ensure each combo ID appears only once
+                                $comboIds = array_values(array_unique($comboIds));
                             @endphp
                             @foreach($comboIds as $comboId)
                                 @if(!request('remove_combo_id') || request('remove_combo_id') != $comboId)
@@ -958,6 +1037,129 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
+        // CRITICAL: Remove duplicate hidden inputs for service_variants, service_id, and combo_id
+        // This ensures we only have one input per unique ID
+        function removeDuplicateHiddenInputs(inputName) {
+            const seen = new Set();
+            const inputs = $(`input[name="${inputName}"]`);
+            let removedCount = 0;
+            
+            inputs.each(function() {
+                const val = $(this).val();
+                if (val && val.trim() !== '' && val !== '0') {
+                    const id = val.trim();
+                    if (seen.has(id)) {
+                        // Duplicate found - remove it
+                        $(this).remove();
+                        removedCount++;
+                    } else {
+                        seen.add(id);
+                    }
+                } else {
+                    // Empty or invalid value - remove it
+                    $(this).remove();
+                    removedCount++;
+                }
+            });
+            
+            if (removedCount > 0) {
+                console.log(`Removed ${removedCount} duplicate/invalid ${inputName} inputs`);
+            }
+        }
+        
+        // CRITICAL: Get valid variants from URL and remove any inputs that don't match
+        function validateHiddenInputsFromUrl() {
+            // Parse URL to get service_variants
+            const url = new URL(window.location.href);
+            const urlVariants = url.searchParams.getAll('service_variants[]');
+            
+            // Also check for service_variants[0], service_variants[1], etc.
+            const urlVariantsAlt = [];
+            for (let i = 0; i < 100; i++) {
+                const param = url.searchParams.get(`service_variants[${i}]`);
+                if (param) {
+                    urlVariantsAlt.push(param);
+                } else {
+                    // Continue checking, don't break on first gap (might have service_variants[0] and service_variants[2])
+                    if (i > 10) break; // But stop after reasonable limit
+                }
+            }
+            
+            // Combine both formats and remove duplicates
+            const validVariants = [...new Set([...urlVariants, ...urlVariantsAlt])].filter(v => v && v !== '0' && v !== '');
+            
+            console.log('Valid variants from URL:', validVariants);
+            
+            // CRITICAL: Remove ALL existing hidden inputs first, then recreate only valid ones
+            // This ensures we don't have any stray inputs from previous renders or JavaScript
+            const allInputs = $('input[name="service_variants[]"]');
+            const existingValues = [];
+            allInputs.each(function() {
+                existingValues.push($(this).val());
+            });
+            
+            // Remove all existing inputs
+            allInputs.remove();
+            
+            // Recreate only valid inputs from URL
+            const $form = $('#appointmentForm');
+            if ($form.length) {
+                validVariants.forEach(function(variantId) {
+                    const $newInput = $('<input>', {
+                        type: 'hidden',
+                        name: 'service_variants[]',
+                        value: variantId
+                    });
+                    // Insert after CSRF token for proper form structure
+                    $form.find('input[name="_token"]').after($newInput);
+                });
+            }
+            
+            const removedCount = existingValues.length - validVariants.length;
+            if (removedCount > 0) {
+                console.log(`Removed ${removedCount} invalid service_variants[] inputs and recreated ${validVariants.length} valid ones from URL`);
+            } else if (existingValues.length !== validVariants.length) {
+                console.log(`Recreated ${validVariants.length} service_variants[] inputs from URL (was ${existingValues.length})`);
+            }
+            
+            return validVariants;
+        }
+        
+        // Log BEFORE cleanup
+        console.log('Hidden inputs BEFORE cleanup:', {
+            service_variants: $('input[name="service_variants[]"]').length,
+            service_id: $('input[name="service_id[]"]').length,
+            combo_id: $('input[name="combo_id[]"]').length,
+            url: window.location.href,
+        });
+        
+        // Log all service_variants values before cleanup
+        const allVariantsBefore = [];
+        $('input[name="service_variants[]"]').each(function() {
+            allVariantsBefore.push($(this).val());
+        });
+        console.log('All service_variants values BEFORE cleanup:', allVariantsBefore);
+        
+        // CRITICAL: First validate inputs against URL, then remove duplicates
+        const validUrlVariants = validateHiddenInputsFromUrl();
+        
+        // Remove duplicates for all three input types
+        removeDuplicateHiddenInputs('service_variants[]');
+        removeDuplicateHiddenInputs('service_id[]');
+        removeDuplicateHiddenInputs('combo_id[]');
+        
+        // Log AFTER cleanup
+        const allVariantsAfter = [];
+        $('input[name="service_variants[]"]').each(function() {
+            allVariantsAfter.push($(this).val());
+        });
+        console.log('Hidden inputs AFTER cleanup:', {
+            service_variants: $('input[name="service_variants[]"]').length,
+            service_id: $('input[name="service_id[]"]').length,
+            combo_id: $('input[name="combo_id[]"]').length,
+        });
+        console.log('All service_variants values AFTER cleanup:', allVariantsAfter);
+        
         // Khôi phục thông tin từ localStorage khi quay lại từ trang chọn dịch vụ
         const savedFormData = localStorage.getItem('appointmentFormData');
         let restoredEmployeeId = null;
@@ -2132,33 +2334,61 @@
             }
             
             // Xử lý service arrays
+            // Collect service IDs and remove duplicates
             const serviceIds = [];
+            const seenServiceIds = new Set(); // Use Set to track duplicates
             $('input[name="service_id[]"]').each(function() {
                 const val = $(this).val();
                 if (val && val.trim() !== '' && val !== '0') {
-                    serviceIds.push(val.trim());
+                    const serviceId = val.trim();
+                    // Only add if not already seen (remove duplicates)
+                    if (!seenServiceIds.has(serviceId)) {
+                        seenServiceIds.add(serviceId);
+                        serviceIds.push(serviceId);
+                    }
                 }
             });
             if (serviceIds.length > 0) {
                 formDataObj.service_id = serviceIds;
             }
             
+            // Collect service variants and remove duplicates
             const serviceVariants = [];
+            const seenVariants = new Set(); // Use Set to track duplicates
             $('input[name="service_variants[]"]').each(function() {
                 const val = $(this).val();
                 if (val && val.trim() !== '' && val !== '0') {
-                    serviceVariants.push(val.trim());
+                    const variantId = val.trim();
+                    // Only add if not already seen (remove duplicates)
+                    if (!seenVariants.has(variantId)) {
+                        seenVariants.add(variantId);
+                        serviceVariants.push(variantId);
+                    }
                 }
             });
             if (serviceVariants.length > 0) {
                 formDataObj.service_variants = serviceVariants;
             }
             
+            // Log để debug
+            console.log('Service variants collected:', {
+                total_inputs: $('input[name="service_variants[]"]').length,
+                unique_variants: serviceVariants.length,
+                variants: serviceVariants
+            });
+            
+            // Collect combo IDs and remove duplicates
             const comboIds = [];
+            const seenComboIds = new Set(); // Use Set to track duplicates
             $('input[name="combo_id[]"]').each(function() {
                 const val = $(this).val();
                 if (val && val.trim() !== '' && val !== '0') {
-                    comboIds.push(val.trim());
+                    const comboId = val.trim();
+                    // Only add if not already seen (remove duplicates)
+                    if (!seenComboIds.has(comboId)) {
+                        seenComboIds.add(comboId);
+                        comboIds.push(comboId);
+                    }
                 }
             });
             if (comboIds.length > 0) {
