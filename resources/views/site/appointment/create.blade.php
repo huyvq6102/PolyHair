@@ -81,7 +81,7 @@
                                            class="form-control"
                                            style="font-size: 12px; padding: 8px 12px; height: 38px; border: 1px solid #ddd; border-radius: 6px;"
                                            placeholder="Họ tên"
-                                           value="{{ old('name', '') }}">
+                                           value="{{ old('name', auth()->user()->name ?? '') }}">
                                     <div class="field-error" id="name-error" style="display: none; color: #dc3545; font-size: 10px; margin-top: 3px;">
                                         <i class="fa fa-exclamation-circle"></i> <span></span>
                                     </div>
@@ -97,7 +97,7 @@
                                            class="form-control"
                                            style="font-size: 12px; padding: 8px 12px; height: 38px; border: 1px solid #ddd; border-radius: 6px;"
                                            placeholder="Số điện thoại"
-                                           value="{{ old('phone', '') }}">
+                                           value="{{ old('phone', auth()->user()->phone ?? '') }}">
                                     <div class="field-error" id="phone-error" style="display: none; color: #dc3545; font-size: 10px; margin-top: 3px;">
                                         <i class="fa fa-exclamation-circle"></i> <span></span>
                                     </div>
@@ -113,7 +113,7 @@
                                        class="form-control"
                                        style="font-size: 12px; padding: 8px 12px; height: 38px; border: 1px solid #ddd; border-radius: 6px;"
                                        placeholder="Email (tùy chọn)"
-                                       value="{{ old('email', '') }}">
+                                       value="{{ old('email', auth()->user()->email ?? '') }}">
                             </div>
                         </div>
 
@@ -283,23 +283,27 @@
                                     </button>
                                     <div id="employee_grid" class="employee-grid" style="overflow: hidden; padding: 5px 0;">
                                         <div class="employee-slider" style="transition: transform 0.3s ease; display: flex; gap: 15px;">
-                                            @foreach($employees as $employee)
-                                                <div class="employee-item-btn{{ old('employee_id') == $employee->id ? ' selected' : '' }}" data-employee-id="{{ $employee->id }}" data-employee-name="{{ $employee->user->name }}" data-employee-position="{{ $employee->position ?? '' }}" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
-                                                    <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ old('employee_id') == $employee->id ? '#007bff' : '#ddd' }};">
-                                                        @if($employee->avatar)
-                                                            <img src="{{ asset('legacy/images/avatars/' . $employee->avatar) }}" alt="{{ $employee->user->name }}" style="width: 100%; height: 100%; object-fit: cover;">
-                                                        @else
-                                                            <div style="width: 100%; height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                                                                <i class="fa fa-user" style="font-size: 40px; color: #999;"></i>
-                                                            </div>
-                                                        @endif
+                                            @if(count($employees) > 0)
+                                                @foreach($employees as $employee)
+                                                    <div class="employee-item-btn{{ old('employee_id') == $employee->id ? ' selected' : '' }}" data-employee-id="{{ $employee->id }}" data-employee-name="{{ $employee->user->name }}" data-employee-position="{{ $employee->position ?? '' }}" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
+                                                        <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ old('employee_id') == $employee->id ? '#007bff' : '#ddd' }};">
+                                                            @if($employee->avatar)
+                                                                <img src="{{ asset('legacy/images/avatars/' . $employee->avatar) }}" alt="{{ $employee->user->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                                            @else
+                                                                <div style="width: 100%; height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                                                                    <i class="fa fa-user" style="font-size: 40px; color: #999;"></i>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                        <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">{{ $employee->user->name }}</div>
+                                                    @if($employee->position)
+                                                        <div class="employee-position" style="font-size: 11px; color: #666;">{{ $employee->position }}</div>
+                                                    @endif
                                                     </div>
-                                                    <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">{{ $employee->user->name }}</div>
-                                                @if($employee->position)
-                                                    <div class="employee-position" style="font-size: 11px; color: #666;">{{ $employee->position }}</div>
-                                                @endif
-                                                </div>
-                                            @endforeach
+                                                @endforeach
+                                            @else
+                                                <div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>
+                                            @endif
                                         </div>
                                     </div>
                                     <button type="button" class="employee-nav-btn employee-nav-next" style="position: absolute; right: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
