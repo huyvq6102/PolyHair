@@ -21,9 +21,12 @@ class CustomerController extends Controller
         $user = User::with([
             'role',
             'employee',
-            'appointments',
+            'appointments.appointmentDetails.serviceVariant.service',
+            'appointments.appointmentDetails.combo',
+            'appointments.employee.user',
+            'appointments.reviews',
             'payments',
-            // 'promotionUsages',
+            'promotionUsages',
             'reviews',
         ])->findOrFail($id);
 

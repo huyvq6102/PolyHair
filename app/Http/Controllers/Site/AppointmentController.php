@@ -515,7 +515,8 @@ class AppointmentController extends Controller
             'user', 
             'employee.user', 
             'appointmentDetails.serviceVariant.service',
-            'payments'
+            'payments',
+            'reviews'
         ])->findOrFail($id);
         
         // Calculate total price
@@ -524,7 +525,18 @@ class AppointmentController extends Controller
             $totalPrice += $detail->price_snapshot ?? 0;
         }
         
-        return view('site.appointment.show', compact('appointment', 'totalPrice'));
+        // Check if user can review (appointment completed and not reviewed yet)
+        $canReview = false;
+        $existingReview = null;
+        
+        if (auth()->check() && $appointment->status === 'Hoàn thành' && $appointment->user_id == auth()->id()) {
+            $existingReview = \App\Models\Review::where('appointment_id', $appointment->id)
+                ->where('user_id', auth()->id())
+                ->first();
+            $canReview = !$existingReview;
+        }
+        
+        return view('site.appointment.show', compact('appointment', 'totalPrice', 'canReview', 'existingReview'));
     }
 
     /**
