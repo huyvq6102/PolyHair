@@ -136,28 +136,36 @@ class CheckoutController extends Controller
         // -------------------------
         $couponCode = Session::get('coupon_code');
         $appliedCoupon = null;
+        $promotionMessage = null;
 
         if ($couponCode) {
-            $promo = Promotion::where('code', $couponCode)
-                ->where('status', 'active')
-                ->whereDate('start_date', '<=', now())
-                ->whereDate('end_date', '>=', now())
-                ->first();
+            $promotionService = app(PromotionService::class);
+            $result = $promotionService->validateAndCalculateDiscount(
+                $couponCode,
+                $cart,
+                $subtotal,
+                $user->id
+            );
 
-            if ($promo) {
-                // Tính giảm giá theo phần trăm
-                $promotionAmount = $subtotal * ($promo->discount_percent / 100);
-                $appliedCoupon = $promo;
+            if ($result['valid']) {
+                $promotionAmount = $result['discount_amount'];
+                $appliedCoupon = $result['promotion'];
+                $promotionMessage = $result['message'];
             } else {
-                // Mã không hợp lệ hoặc hết hạn -> xóa khỏi session
+                // Mã không hợp lệ -> xóa khỏi session
                 Session::forget('coupon_code');
+                $promotionMessage = $result['message'];
             }
         }
 
         // -------------------------
-        // TÍNH TỔNG
+        // TÍNH TỔNG (giống như PaymentService)
         // -------------------------
-        $total = max(0, $subtotal - $promotionAmount);
+        $taxablePrice = max(0, $subtotal - $promotionAmount);
+        
+        // VAT Calculation (giống như PaymentService)
+        $VAT = $taxablePrice * 0.1;
+        $total = $taxablePrice + $VAT;
 
         return view('site.payments.show', [
             'customer' => [
@@ -168,8 +176,11 @@ class CheckoutController extends Controller
             'services' => $services,
             'promotion' => $promotionAmount,
             'appliedCoupon' => $appliedCoupon, // Để hiển thị mã đã dùng ở view
+            'promotionMessage' => $promotionMessage, // Thông báo về promotion
             'subtotal' => $subtotal,
-            'total' => $total,
+            'taxablePrice' => $taxablePrice, // Giá sau giảm giá (trước VAT)
+            'vat' => $VAT, // VAT
+            'total' => $total, // Tổng cuối cùng (sau VAT)
             'payment_methods' => [
                 ['id' => 'card', 'name' => 'Thẻ tín dụng'],
                 ['id' => 'momo', 'name' => 'Ví MoMo'],

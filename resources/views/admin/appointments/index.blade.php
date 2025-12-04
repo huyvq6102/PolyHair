@@ -131,21 +131,30 @@
                                 <span class="badge badge-{{ $appointment->status == 'Hoàn thành' ? 'success' : ($appointment->status == 'Đã hủy' ? 'danger' : ($appointment->status == 'Đã xác nhận' ? 'info' : 'warning')) }}">
                                     {{ $appointment->status }}
                                 </span>
+                                @if($appointment->status == 'Đã hủy' && $appointment->cancellation_reason)
+                                    <br><small class="text-muted"><i class="fas fa-info-circle"></i> {{ Str::limit($appointment->cancellation_reason, 30) }}</small>
+                                @endif
                             </td>
                             <td>{{ Str::limit($appointment->note ?? 'N/A', 50) }}</td>
                             <td>
                                 <a href="{{ route('admin.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
+                                @if($appointment->status != 'Đã hủy')
+                                    <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="btn btn-sm btn-secondary" title="Lịch đã hủy" disabled>
                                         <i class="fas fa-ban"></i>
-                                    </button>
-                                </form>
+                                    </span>
+                                @endif
                             </td>
                         </tr>
                     @empty

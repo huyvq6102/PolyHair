@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Promotion;
 use App\Models\PromotionUsage;
 use App\Models\ServiceVariant;
+use App\Services\PromotionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Exception;
@@ -57,21 +58,25 @@ class PaymentService
                     $price = $variant->price * $quantity;
 
                     // Create a new appointment for this service
+                    // Nếu thanh toán tại quầy, status = 'Chờ xử lý', ngược lại = 'Đã thanh toán'
+                    $appointmentStatus = ($paymentMethod === 'cash') ? 'Chờ xử lý' : 'Đã thanh toán';
                     $appointment = Appointment::create([
                         'user_id'    => $user->id,
-                        'status'     => 'Đã thanh toán',
+                        'status'     => $appointmentStatus,
                         'start_at'   => now(),
                         'end_at'     => now()->addMinutes($variant->duration),
                     ]);
 
                     $appointmentId = $appointment->id;
 
+                    // Status của detail phụ thuộc vào payment method
+                    $detailStatus = ($paymentMethod === 'cash') ? 'Chờ' : 'Hoàn thành';
                     AppointmentDetail::create([
                         'appointment_id'      => $appointment->id,
                         'service_variant_id'  => $variant->id,
                         'price_snapshot'      => $variant->price,
                         'duration'            => $variant->duration,
-                        'status'              => 'Hoàn thành',
+                        'status'              => $detailStatus,
                     ]);
 
                     $total += $price;
@@ -89,21 +94,25 @@ class PaymentService
 
                         // Create a new appointment for this combo
                         // Note: Combos might not have a specific duration field, defaulting to 60 mins or 0
+                        // Nếu thanh toán tại quầy, status = 'Chờ xử lý', ngược lại = 'Đã thanh toán'
+                        $appointmentStatus = ($paymentMethod === 'cash') ? 'Chờ xử lý' : 'Đã thanh toán';
                         $appointment = Appointment::create([
                             'user_id'    => $user->id,
-                            'status'     => 'Đã thanh toán',
+                            'status'     => $appointmentStatus,
                             'start_at'   => now(),
                             'end_at'     => now()->addMinutes(60), 
                         ]);
 
                         $appointmentId = $appointment->id;
 
+                        // Status của detail phụ thuộc vào payment method
+                        $detailStatus = ($paymentMethod === 'cash') ? 'Chờ' : 'Hoàn thành';
                         AppointmentDetail::create([
                             'appointment_id'      => $appointment->id,
                             'combo_id'            => $combo->id,
                             'price_snapshot'      => $combo->price,
                             'duration'            => 60, // Default
-                            'status'              => 'Hoàn thành',
+                            'status'              => $detailStatus,
                         ]);
 
                         $total += $price;
@@ -138,7 +147,9 @@ class PaymentService
 
                         $total += $appointmentTotal;
 
-                        $appointment->status = 'Đã thanh toán';
+                        // Nếu thanh toán tại quầy, status = 'Chờ xử lý', ngược lại = 'Đã thanh toán'
+                        $appointmentStatus = ($paymentMethod === 'cash') ? 'Chờ xử lý' : 'Đã thanh toán';
+                        $appointment->status = $appointmentStatus;
                         $appointment->save();
                     }
                 }
@@ -191,15 +202,19 @@ class PaymentService
             $appliedPromotion = null;
 
             if ($couponCode) {
-                $appliedPromotion = Promotion::where('code', $couponCode)
-                    ->where('status', 'active')
-                    ->whereDate('start_date', '<=', now())
-                    ->whereDate('end_date', '>=', now())
-                    ->first();
+                $promotionService = app(PromotionService::class);
+                $result = $promotionService->validateAndCalculateDiscount(
+                    $couponCode,
+                    $cart,
+                    $total,
+                    $user->id
+                );
 
-                if ($appliedPromotion) {
-                    $discountAmount = $total * ($appliedPromotion->discount_percent / 100);
+                if ($result['valid']) {
+                    $discountAmount = $result['discount_amount'];
+                    $appliedPromotion = $result['promotion'];
                 }
+                // Nếu không hợp lệ, vẫn tiếp tục thanh toán nhưng không có giảm giá
             }
 
             $taxablePrice = max(0, $total - $discountAmount);
@@ -209,6 +224,9 @@ class PaymentService
             $grandTotal = $taxablePrice + $VAT;
 
             // Create Payment Record
+            // Nếu thanh toán tại quầy, vẫn tạo payment record nhưng có thể đánh dấu là chưa thanh toán
+            // Hoặc có thể không tạo payment record cho đến khi thanh toán thực sự
+            // Ở đây tôi sẽ tạo payment record để theo dõi, nhưng status của appointment sẽ là "Chờ xử lý"
             $payment = Payment::create([
                 'user_id'        => $user->id,
                 'appointment_id' => $appointmentId,
@@ -221,8 +239,8 @@ class PaymentService
                 'payment_type'   => $paymentMethod,
             ]);
 
-            // Save Promotion Usage
-            if ($appliedPromotion) {
+            // Save Promotion Usage (chỉ lưu nếu có promotion được áp dụng)
+            if ($appliedPromotion && $appointmentId) {
                 PromotionUsage::create([
                     'promotion_id'   => $appliedPromotion->id,
                     'user_id'        => $user->id,
