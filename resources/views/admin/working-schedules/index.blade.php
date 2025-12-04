@@ -14,9 +14,9 @@
                 <i class="fas fa-trash-alt"></i> Xóa tất cả
             </button>
         </form>
-        <a href="{{ route('admin.working-schedules.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Thêm mới
-        </a>
+    <a href="{{ route('admin.working-schedules.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Thêm mới
+    </a>
     </div>
 </div>
 
@@ -52,13 +52,39 @@
     </div>
     <div class="card-body p-0">
         @php
-            // Nhóm lại theo ngày trước
-            $schedulesByDate = collect($groupedSchedules->items())->groupBy(function($group) {
-                if (is_array($group) && isset($group['work_date']) && $group['work_date']) {
-                    return $group['work_date']->format('Y-m-d');
+            // Nhóm lại theo ngày
+            $items = $groupedSchedules->items();
+            $schedulesByDate = collect($items)->groupBy(function($group) {
+                if (is_array($group) && isset($group['work_date'])) {
+                    $workDate = $group['work_date'];
+                    if ($workDate instanceof \Carbon\Carbon || $workDate instanceof \DateTime) {
+                        return $workDate->format('Y-m-d');
+                    }
+                    if (is_string($workDate)) {
+                        return \Carbon\Carbon::parse($workDate)->format('Y-m-d');
+                    }
                 }
                 return 'unknown';
-            });
+            })->sortBy(function($dateGroups, $dateKey) {
+                // Sắp xếp với thứ 2 luôn lên đầu tiên trong mỗi tuần
+                $firstGroup = $dateGroups->first();
+                if (!is_array($firstGroup) || !isset($firstGroup['work_date'])) {
+                    return '9999-99-99'; // Đẩy xuống cuối
+                }
+                $workDate = $firstGroup['work_date'];
+                if ($workDate instanceof \Carbon\Carbon || $workDate instanceof \DateTime) {
+                    $carbon = $workDate instanceof \Carbon\Carbon ? $workDate : \Carbon\Carbon::instance($workDate);
+                } else {
+                    $carbon = \Carbon\Carbon::parse($workDate);
+                }
+                // Chuyển đổi dayOfWeek: 0 (CN) -> 7, 1 (T2) -> 1, 2 (T3) -> 2, ...
+                // Thứ 2 (1) sẽ có giá trị nhỏ nhất, nên sẽ lên đầu trong mỗi tuần
+                $dayOfWeek = $carbon->dayOfWeek;
+                $adjustedDay = $dayOfWeek == 0 ? 7 : $dayOfWeek;
+                // Sắp xếp: năm-tuần-thứ (T2=1 nhỏ nhất trong tuần), để mới nhất lên đầu
+                $yearWeek = $carbon->format('Y') . '-' . str_pad($carbon->week, 2, '0', STR_PAD_LEFT);
+                return $yearWeek . '-' . str_pad($adjustedDay, 2, '0', STR_PAD_LEFT);
+            })->reverse(); // Reverse để tuần mới nhất lên đầu, và trong mỗi tuần thì T2 trước
         @endphp
 
         @forelse($schedulesByDate as $dateKey => $dateGroups)
@@ -91,18 +117,18 @@
                 </div>
 
                 <!-- Bảng lịch cho ngày này -->
-                <div class="table-responsive">
+        <div class="table-responsive">
                     <table class="table table-bordered table-hover mb-0 schedule-table">
                         <thead class="thead-light">
-                            <tr>
+                    <tr>
                                 <th style="width: 15%;" class="text-center">Ca làm việc</th>
                                 <th style="width: 21.25%;" class="text-center">Stylist</th>
                                 <th style="width: 21.25%;" class="text-center">Barber</th>
                                 <th style="width: 21.25%;" class="text-center">Shampooer</th>
                                 <th style="width: 21.25%;" class="text-center">Receptionist</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                    </tr>
+                </thead>
+                <tbody>
                             @foreach($dateGroups as $group)
                                 @php
                                     if (!is_array($group) || !isset($group['shift']) || !isset($group['schedules'])) {
@@ -129,7 +155,7 @@
                                                 <i class="fas fa-eye"></i> Chi tiết
                                             </a>
                                         @endif
-                                    </td>
+                            </td>
                                     @foreach($requiredPositions as $position)
                                         @php
                                             $positionSchedules = ($schedulesByPosition instanceof \Illuminate\Support\Collection) 
@@ -144,38 +170,27 @@
                                                 @php
                                                     $employee = $schedule->employee;
                                                     $user = $employee->user ?? null;
-                                                    $status = $schedule->status;
-                                                    $badge = match($status) {
-                                                        'pending' => 'warning',
-                                                        'approved' => 'success',
-                                                        'cancelled' => 'danger',
-                                                        'completed' => 'info',
-                                                        default => 'secondary'
-                                                    };
                                                 @endphp
                                                 <div class="employee-info">
                                                     <div class="employee-name">
                                                         <strong>{{ $user->name ?? 'N/A' }}</strong>
                                                     </div>
-                                                    <div class="employee-status mt-1 mb-2">
-                                                        <span class="badge badge-{{ $badge }}">{{ $statusOptions[$status] ?? 'N/A' }}</span>
-                                                    </div>
                                                     <div class="employee-actions">
                                                         <a href="{{ route('admin.working-schedules.edit', $schedule->id) }}" 
                                                            class="btn btn-xs btn-primary" 
                                                            title="Sửa">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
+                                    <i class="fas fa-edit"></i>
+                                </a>
                                                         <form action="{{ route('admin.working-schedules.destroy', $schedule->id) }}" 
                                                               method="POST" 
                                                               class="d-inline" 
                                                               onsubmit="return confirm('Bạn có chắc chắn muốn xóa lịch này?');">
-                                                            @csrf
-                                                            @method('DELETE')
+                                    @csrf
+                                    @method('DELETE')
                                                             <button type="submit" class="btn btn-xs btn-danger" title="Xóa">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                                                     </div>
                                                 </div>
                                             @else
@@ -184,13 +199,13 @@
                                                     <div class="small">Chưa có</div>
                                                 </div>
                                             @endif
-                                        </td>
+                            </td>
                                     @endforeach
-                                </tr>
+                        </tr>
                             @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                </tbody>
+            </table>
+        </div>
             </div>
         @empty
             <div class="text-center py-5">
@@ -200,8 +215,8 @@
         @endforelse
 
         @if($groupedSchedules->hasPages())
-            <div class="d-flex justify-content-center p-3 border-top">
-                {{ $groupedSchedules->links() }}
+            <div class="pagination-wrapper">
+                {{ $groupedSchedules->links('pagination::simple-bootstrap-4') }}
             </div>
         @endif
     </div>
@@ -335,6 +350,29 @@
 
 .schedule-row:hover .position-cell {
     background-color: #f8f9fc;
+}
+
+/* Pagination gọn gàng */
+.pagination-wrapper {
+    padding: 10px 15px;
+    border-top: 1px solid #e3e6f0;
+    background-color: #f8f9fc;
+}
+
+.pagination-wrapper .pagination {
+    margin-bottom: 0;
+    justify-content: center;
+}
+
+.pagination-wrapper .pagination .page-item .page-link {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.pagination-wrapper .pagination .page-item.disabled .page-link {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 </style>
 
