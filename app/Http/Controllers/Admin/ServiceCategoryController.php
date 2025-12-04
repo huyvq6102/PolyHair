@@ -80,16 +80,9 @@ class ServiceCategoryController extends Controller
 
     protected function validateRequest(Request $request, ?int $ignoreId = null): array
     {
-        $uniqueRule = 'unique:service_categories,slug';
-        if ($ignoreId) {
-            $uniqueRule .= ',' . $ignoreId;
-        }
-
         return $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => ['nullable', 'string', 'max:255', $uniqueRule],
             'description' => 'nullable|string',
-            'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
         ]);
     }
