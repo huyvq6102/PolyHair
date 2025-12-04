@@ -5,7 +5,7 @@
         <div class="col-md-8 text-center">
             <div class="alert alert-success">
                 <h4 class="alert-heading">Thanh toán thành công!</h4>
-                <p>Cảm ơn bạn đã mua hàng tại PolyHair. Đơn hàng của bạn đã được xử lý thành công.</p>
+                <p>Cảm ơn bạn đã đặt lịch tại PolyHair. Lịch đặt của bạn đã được xử lý thành công.</p>
                 <hr>
                 <p class="mb-0">Mã hóa đơn: <strong>{{ $invoiceCode }}</strong></p>
                 @if (isset($appointmentId) && $appointmentId)

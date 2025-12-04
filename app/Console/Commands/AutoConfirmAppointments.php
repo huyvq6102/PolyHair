@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use App\Models\Appointment;
+use App\Models\AppointmentLog;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class AutoConfirmAppointments extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'appointments:auto-confirm';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 30 phút';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
+    {
+        $this->info('Đang kiểm tra lịch hẹn cần tự động xác nhận...');
+        
+        // Tìm các lịch hẹn có status = 'Chờ xử lý' và đã quá 30 phút kể từ khi tạo
+        $cutoffTime = Carbon::now()->subMinutes(30);
+        
+        $appointments = Appointment::where('status', 'Chờ xử lý')
+            ->where('created_at', '<=', $cutoffTime)
+            ->get();
+        
+        $count = 0;
+        
+        foreach ($appointments as $appointment) {
+            try {
+                DB::transaction(function () use ($appointment, &$count) {
+                    $oldStatus = $appointment->status;
+                    
+                    // Chuyển status sang "Đã xác nhận"
+                    $appointment->update([
+                        'status' => 'Đã xác nhận'
+                    ]);
+                    
+                    // Log status change
+                    AppointmentLog::create([
+                        'appointment_id' => $appointment->id,
+                        'status_from' => $oldStatus,
+                        'status_to' => 'Đã xác nhận',
+                        'modified_by' => null, // Tự động xác nhận
+                    ]);
+                    
+                    $count++;
+                });
+            } catch (\Exception $e) {
+                $this->error("Lỗi khi xác nhận lịch hẹn ID {$appointment->id}: " . $e->getMessage());
+            }
+        }
+        
+        if ($count > 0) {
+            $this->info("Đã tự động xác nhận {$count} lịch hẹn.");
+        } else {
+            $this->info("Không có lịch hẹn nào cần tự động xác nhận.");
+        }
+        
+        return Command::SUCCESS;
+    }
+}

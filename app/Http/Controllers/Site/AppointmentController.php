@@ -907,6 +907,51 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Cancel an appointment.
+     */
+    public function cancel(Request $request, $id)
+    {
+        try {
+            $appointment = \App\Models\Appointment::findOrFail($id);
+            
+            // Kiểm tra quyền: chỉ chủ sở hữu mới được hủy
+            if (auth()->id() != $appointment->user_id && !auth()->user()->isAdmin()) {
+                return back()->with('error', 'Bạn không có quyền hủy lịch hẹn này.');
+            }
+            
+            // Kiểm tra xem có thể hủy không
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 phút
+            if ($appointment->status !== 'Chờ xử lý') {
+                return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
+            }
+            
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 phút kể từ khi đặt
+            $createdAt = \Carbon\Carbon::parse($appointment->created_at);
+            $now = now();
+            $minutesSinceCreated = $createdAt->diffInMinutes($now);
+            
+            if ($minutesSinceCreated > 30) {
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+            }
+            
+            // Lấy lý do hủy từ form hoặc dùng mặc định
+            $reason = $request->input('cancellation_reason', 'Khách hàng tự hủy');
+            if (empty(trim($reason))) {
+                $reason = 'Khách hàng tự hủy';
+            }
+            
+            // Hủy lịch hẹn
+            $this->appointmentService->cancelAppointment($id, $reason, auth()->id());
+            
+            return back()->with('success', 'Lịch hẹn đã được hủy thành công.');
+            
+        } catch (\Exception $e) {
+            \Log::error('Error canceling appointment: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi hủy lịch hẹn. Vui lòng thử lại.');
+        }
+    }
+
+    /**
      * Get employees by service (chuyên môn).
      */
     public function getEmployeesByService(Request $request)
