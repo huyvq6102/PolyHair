@@ -36,8 +36,21 @@ class PromotionController extends Controller
     {
         $promotions = $this->promotionService->getAll();
         $statuses = $this->statuses;
+        $isTrash = false;
 
-        return view('admin.promotions.index', compact('promotions', 'statuses'));
+        return view('admin.promotions.index', compact('promotions', 'statuses', 'isTrash'));
+    }
+
+    /**
+     * Display a listing of trashed promotions.
+     */
+    public function trash()
+    {
+        $promotions = $this->promotionService->getTrashed();
+        $statuses = $this->statuses;
+        $isTrash = true;
+
+        return view('admin.promotions.index', compact('promotions', 'statuses', 'isTrash'));
     }
 
     /**
@@ -129,7 +142,7 @@ class PromotionController extends Controller
     }
 
     /**
-     * Remove the specified promotion from storage.
+     * Remove the specified promotion from storage (soft delete).
      */
     public function destroy(string $id)
     {
@@ -138,6 +151,30 @@ class PromotionController extends Controller
         return redirect()
             ->route('admin.promotions.index')
             ->with('success', 'Khuyến mãi đã được xóa!');
+    }
+
+    /**
+     * Restore the specified trashed promotion.
+     */
+    public function restore(string $id)
+    {
+        $this->promotionService->restore($id);
+
+        return redirect()
+            ->route('admin.promotions.trash')
+            ->with('success', 'Khuyến mãi đã được khôi phục!');
+    }
+
+    /**
+     * Permanently delete the specified promotion.
+     */
+    public function forceDelete(string $id)
+    {
+        $this->promotionService->forceDelete($id);
+
+        return redirect()
+            ->route('admin.promotions.trash')
+            ->with('success', 'Khuyến mãi đã được xóa vĩnh viễn!');
     }
 
     /**
