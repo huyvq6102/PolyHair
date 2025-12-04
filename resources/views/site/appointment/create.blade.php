@@ -678,12 +678,12 @@
     }
 
     .time-slot-btn {
-        padding: 10px 6px;
+        padding: 14px 10px;
         border: 1px solid #000;
-        border-radius: 6px;
+        border-radius: 8px;
         background: #fff;
         color: #000;
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -954,11 +954,15 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        // Khôi phục thông tin từ localStorage nếu có
+        // Khôi phục thông tin từ localStorage khi quay lại từ trang chọn dịch vụ
         const savedFormData = localStorage.getItem('appointmentFormData');
+        let restoredEmployeeId = null;
+        let restoredAppointmentDate = null;
+        
         if (savedFormData) {
             try {
                 const formData = JSON.parse(savedFormData);
+                // Khôi phục thông tin khách hàng (luôn điền lại khi quay lại)
                 if (formData.name) {
                     $('#name').val(formData.name);
                 }
@@ -971,11 +975,16 @@
                 if (formData.note) {
                     $('textarea[name="note"]').val(formData.note);
                 }
+                // Khôi phục thông tin đặt lịch nếu có
                 if (formData.employee_id) {
                     $('#employee_id').val(formData.employee_id);
+                    restoredEmployeeId = formData.employee_id;
+                    // Enable input date nếu đã có employee
+                    $('#appointment_date').prop('disabled', false);
                 }
                 if (formData.appointment_date) {
                     $('#appointment_date').val(formData.appointment_date);
+                    restoredAppointmentDate = formData.appointment_date;
                 }
                 if (formData.word_time_id) {
                     $('#word_time_id').val(formData.word_time_id);
@@ -1036,14 +1045,60 @@
         // Xóa tất cả thông báo lỗi tổng hợp khi trang load
         $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').remove();
         
-        // Theo dõi và xóa thông báo lỗi tổng hợp mới được thêm vào
+        // Clear errors khi trang load nếu đã có giá trị
+        function clearErrorsIfHasValue() {
+            // Clear name error nếu đã có giá trị
+            if ($('#name').val() && $('#name').val().trim() !== '') {
+                $('#name-error').hide();
+                $('#name').removeClass('is-invalid');
+            }
+            
+            // Clear phone error nếu đã có giá trị
+            if ($('#phone').val() && $('#phone').val().trim() !== '') {
+                $('#phone-error').hide();
+                $('#phone').removeClass('is-invalid');
+            }
+            
+            // Clear employee error nếu đã có giá trị
+            const employeeId = $('#employee_id').val();
+            if (employeeId && employeeId !== '' && employeeId !== '0') {
+                $('#employee-error').hide();
+                $('#employeeToggleBtn').css('color', '');
+            }
+            
+            // Clear appointment date error nếu đã có giá trị
+            const appointmentDate = $('#appointment_date').val();
+            if (appointmentDate && appointmentDate.trim() !== '') {
+                $('#appointment_date-error').hide();
+                $('#appointment_date').removeClass('is-invalid');
+            }
+            
+            // Clear time slot error nếu đã có giá trị
+            const wordTimeId = $('#word_time_id').val();
+            if (wordTimeId && wordTimeId !== '' && wordTimeId !== '0') {
+                $('#time_slot-error').hide();
+            }
+        }
+        
+        // Chạy ngay khi trang load
+        clearErrorsIfHasValue();
+        
+        // Chạy lại sau một chút để đảm bảo tất cả giá trị đã được set
+        setTimeout(clearErrorsIfHasValue, 500);
+        setTimeout(clearErrorsIfHasValue, 1000);
+        
+        // Theo dõi và tự động clear errors nếu đã có giá trị (chạy định kỳ)
         setInterval(function() {
+            // Clear errors nếu đã có giá trị
+            clearErrorsIfHasValue();
+            
+            // Xóa thông báo lỗi tổng hợp mới được thêm vào
             $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').each(function() {
                 if (!$(this).hasClass('field-error') && !$(this).closest('.field-error').length) {
                     $(this).remove();
                 }
             });
-        }, 100);
+        }, 500);
         // Set min date to today (theo timezone Việt Nam)
         const now = new Date();
         // Lấy timezone offset của Việt Nam (UTC+7)
@@ -1056,23 +1111,48 @@
         // Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
         if (!$('#employee_id').val()) {
             $('#appointment_date').prop('disabled', true);
+        } else {
+            // Nếu đã có employee_id (từ localStorage), enable input date
+            $('#appointment_date').prop('disabled', false);
         }
         
         // Load employees by service on page load
         loadEmployeesByService();
         loadEmployeesForCarousel();
         
+        // Nếu đã khôi phục employee_id và appointment_date từ localStorage, load time slots
+        if (restoredEmployeeId && restoredAppointmentDate) {
+            // Đợi một chút để đảm bảo employees đã load xong
+            setTimeout(function() {
+                loadAvailableTimeSlots();
+            }, 500);
+        }
+        
         // Function to load employees by service (for select dropdown - not used anymore but kept for compatibility)
         function loadEmployeesByService() {
-            const serviceId = $('input[name="service_id"]').val();
+            const serviceIds = [];
+            $('input[name="service_id[]"]').each(function() {
+                if ($(this).val()) {
+                    serviceIds.push($(this).val());
+                }
+            });
+            
             const serviceVariants = [];
             $('input[name="service_variants[]"]').each(function() {
-                serviceVariants.push($(this).val());
+                if ($(this).val()) {
+                    serviceVariants.push($(this).val());
+                }
             });
-            const comboId = $('input[name="combo_id"]').val();
+            
+            const comboIds = [];
+            $('input[name="combo_id[]"]').each(function() {
+                if ($(this).val()) {
+                    comboIds.push($(this).val());
+                }
+            });
             
             // Only load if there's a service selected
-            if (!serviceId && serviceVariants.length === 0 && !comboId) {
+            if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
                 return;
             }
             
@@ -1080,9 +1160,9 @@
                 url: '{{ route("site.appointment.employees-by-service") }}',
                 method: 'GET',
                 data: {
-                    service_id: serviceId || '',
+                    service_id: serviceIds,
                     service_variants: serviceVariants,
-                    combo_id: comboId || ''
+                    combo_id: comboIds
                 },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -1110,7 +1190,7 @@
                             });
                         } else {
                             // No employees found
-                            $select.append($('<option></option>').text('Không có nhân viên phù hợp'));
+                            $select.append($('<option></option>').text('Không có kỹ thuật viên nào có chuyên môn phù hợp'));
                         }
                     }
                 },
@@ -1122,21 +1202,45 @@
         
         // Function to load employees for slider
         function loadEmployeesForCarousel() {
-            const serviceId = $('input[name="service_id"]').val();
+            const serviceIds = [];
+            $('input[name="service_id[]"]').each(function() {
+                if ($(this).val()) {
+                    serviceIds.push($(this).val());
+                }
+            });
+            
             const serviceVariants = [];
             $('input[name="service_variants[]"]').each(function() {
-                serviceVariants.push($(this).val());
+                if ($(this).val()) {
+                    serviceVariants.push($(this).val());
+                }
             });
-            const comboId = $('input[name="combo_id"]').val();
+            
+            const comboIds = [];
+            $('input[name="combo_id[]"]').each(function() {
+                if ($(this).val()) {
+                    comboIds.push($(this).val());
+                }
+            });
+            
+            // Kiểm tra xem có dịch vụ nào được chọn không
+            if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
+                const $slider = $('.employee-slider');
+                $slider.empty();
+                $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
+                $('#employee_id').val('');
+                return;
+            }
+            
             const currentEmployeeId = $('#employee_id').val();
             
             $.ajax({
                 url: '{{ route("site.appointment.employees-by-service") }}',
                 method: 'GET',
                 data: {
-                    service_id: serviceId || '',
+                    service_id: serviceIds,
                     service_variants: serviceVariants,
-                    combo_id: comboId || ''
+                    combo_id: comboIds
                 },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -1178,12 +1282,15 @@
                             }
                         } else {
                             // Không có nhân viên phù hợp
-                            $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Không có nhân viên phù hợp với dịch vụ đã chọn</div>');
+                            $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Không có kỹ thuật viên nào có chuyên môn phù hợp với dịch vụ đã chọn</div>');
                         }
                     }
                 },
                 error: function(xhr) {
                     console.error('Error loading employees:', xhr);
+                    const $slider = $('.employee-slider');
+                    $slider.empty();
+                    $slider.append('<div style="text-align: center; padding: 20px; color: #dc3545; width: 100%;">Có lỗi xảy ra khi tải danh sách kỹ thuật viên</div>');
                 }
             });
         }
@@ -1242,6 +1349,12 @@
             // Cập nhật hidden input
             $('#employee_id').val(employeeId);
             
+            // Debug: Log để kiểm tra
+            console.log('Employee selected:', {
+                employeeId: employeeId,
+                employeeIdValue: $('#employee_id').val()
+            });
+            
             // Xóa selected của tất cả items
             $('.employee-item-btn').removeClass('selected');
             $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
@@ -1250,8 +1363,9 @@
             $(this).addClass('selected');
             $(this).find('.employee-avatar-wrapper').css('border-color', '#007bff');
             
-            // Clear error
+            // Clear error và remove invalid class
             $('#employee-error').hide();
+            $('#employeeToggleBtn').css('color', '');
             
             // Trigger change event để load time slots nếu đã chọn ngày
             $('#employee_id').trigger('change');
@@ -1312,17 +1426,29 @@
             return false;
         });
         
-        // Clear error when user starts typing/selecting (only if field has value)
-        $('input[name="name"]').on('input keyup', function() {
-            if ($(this).val().trim().length > 0) {
+        // Clear error when user starts typing/selecting (clear ngay khi có giá trị)
+        $('input[name="name"]').on('input keyup change paste', function() {
+            const value = $(this).val();
+            if (value && value.trim().length > 0) {
                 $('#name-error').hide();
                 $(this).removeClass('is-invalid');
             }
         });
         
-        $('input[name="phone"]').on('input keyup', function() {
-            if ($(this).val().trim().length > 0) {
+        $('input[name="phone"]').on('input keyup change paste', function() {
+            const value = $(this).val();
+            if (value && value.trim().length > 0) {
                 $('#phone-error').hide();
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        // Clear error khi focus vào input (nếu đã có giá trị)
+        $('input[name="name"], input[name="phone"]').on('focus', function() {
+            const value = $(this).val();
+            if (value && value.trim().length > 0) {
+                const fieldName = $(this).attr('name');
+                $('#' + fieldName + '-error').hide();
                 $(this).removeClass('is-invalid');
             }
         });
@@ -1360,24 +1486,49 @@
             }
         });
         
-        $('#appointment_date').on('change', function() {
-            if ($(this).val()) {
+        $('#appointment_date').on('change input', function() {
+            const dateValue = $(this).val();
+            if (dateValue && dateValue.trim() !== '') {
                 $('#appointment_date-error').hide();
                 $(this).removeClass('is-invalid');
                 // Chỉ load time slots nếu đã chọn kỹ thuật viên
                 if ($('#employee_id').val()) {
                     loadAvailableTimeSlots();
                 }
+            } else {
+                // Nếu xóa date, hiển thị error
+                $('#appointment_date-error').show();
+                $(this).addClass('is-invalid');
             }
         });
         
         // Clear service error when service is selected (check on page load only)
         function checkAndClearServiceError() {
-            const serviceId = $('input[name="service_id"]').val();
-            const serviceVariants = $('input[name="service_variants[]"]').length;
-            const comboId = $('input[name="combo_id"]').val();
+            // Kiểm tra service_id[] (array)
+            const serviceIds = [];
+            $('input[name="service_id[]"]').each(function() {
+                if ($(this).val()) {
+                    serviceIds.push($(this).val());
+                }
+            });
             
-            if (serviceId || serviceVariants > 0 || comboId) {
+            // Kiểm tra service_variants[] (array)
+            const serviceVariants = [];
+            $('input[name="service_variants[]"]').each(function() {
+                if ($(this).val()) {
+                    serviceVariants.push($(this).val());
+                }
+            });
+            
+            // Kiểm tra combo_id[] (array)
+            const comboIds = [];
+            $('input[name="combo_id[]"]').each(function() {
+                if ($(this).val()) {
+                    comboIds.push($(this).val());
+                }
+            });
+            
+            if (serviceIds.length > 0 || serviceVariants.length > 0 || comboIds.length > 0) {
                 $('#service-error').hide();
             }
         }
@@ -1438,6 +1589,15 @@
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function(response) {
+                    // Kiểm tra xem có message từ server không (khi không có lịch làm việc)
+                    if (response.success && response.message && (!response.time_slots || response.time_slots.length === 0)) {
+                        $('.time-slot-container').hide();
+                        timeSlotMessage.text(response.message || 'Nhân viên này không có lịch làm việc vào ngày đã chọn');
+                        timeSlotHidden.val('');
+                        wordTimeIdInput.val('');
+                        return;
+                    }
+                    
                     if (response.success && response.time_slots && response.time_slots.length > 0) {
                         const currentlySelectedTime = timeSlotHidden.val();
                         let availableCount = 0;
@@ -1451,11 +1611,12 @@
                         $slider.empty();
                         
                         // Tính toán số cột và hàng dựa trên số lượng slots
-                        // Cố định số cột là 11 để đồng bộ cho tất cả nhân viên
+                        // Từ 7:00 đến 22:00 mỗi 30 phút = 30 slots
+                        // Sử dụng 10 cột x 3 hàng = 30 slots (hoặc 11 cột x 3 hàng = 33 slots để có thêm không gian)
                         const fixedColumns = 11;
                         const totalSlots = sortedSlots.length;
-                        // Cố định số hàng là 3 để hiển thị từ 7h-22h (30 slots = 11 cột x 3 hàng)
-                        const fixedRowsPerPage = 3;
+                        // Tính số hàng cần thiết (làm tròn lên)
+                        const fixedRowsPerPage = Math.ceil(totalSlots / fixedColumns);
                         const slotsPerPage = fixedColumns * fixedRowsPerPage;
                         
                         // Xóa style cũ nếu có
@@ -1519,11 +1680,7 @@
                         
                         if (availableCount === 0) {
                             $('.time-slot-container').hide();
-                            if (employeeId) {
-                                timeSlotMessage.text('Không còn khung giờ trống trong ca làm việc của nhân viên này');
-                            } else {
-                                timeSlotMessage.text('Không còn khung giờ trống');
-                            }
+                            timeSlotMessage.text('Không còn khung giờ trống trong ca làm việc của nhân viên này');
                         } else {
                             $('.time-slot-container').show();
                             timeSlotMessage.hide();
@@ -1533,10 +1690,12 @@
                         // No time slots available
                         $('.time-slot-container').hide();
                         if (employeeId) {
-                            timeSlotMessage.text('Nhân viên này không có ca làm việc vào ngày đã chọn');
+                            timeSlotMessage.text(response.message || 'Nhân viên này không có ca làm việc vào ngày đã chọn');
                         } else {
                             timeSlotMessage.text('Vui lòng chọn kỹ thuật viên và ngày trước');
                         }
+                        timeSlotHidden.val('');
+                        wordTimeIdInput.val('');
                     }
                 },
                 error: function(xhr) {
@@ -1638,8 +1797,22 @@
             // Set hidden inputs
             const time = $(this).data('time');
             const wordTimeId = $(this).data('word-time-id');
-            $('#time_slot').val(time);
-            $('#word_time_id').val(wordTimeId);
+            
+            // Đảm bảo set giá trị đúng
+            if (time) {
+                $('#time_slot').val(time);
+            }
+            if (wordTimeId) {
+                $('#word_time_id').val(wordTimeId);
+            }
+            
+            // Debug: Log để kiểm tra
+            console.log('Time slot selected:', {
+                time: time,
+                wordTimeId: wordTimeId,
+                timeSlotValue: $('#time_slot').val(),
+                wordTimeIdValue: $('#word_time_id').val()
+            });
         });
         
         
@@ -1651,23 +1824,65 @@
             $('.field-error').hide().find('span').text('');
             $('.form-control, .form-select').removeClass('is-invalid');
             $('.selected-service-display, .selected-variants-display, .selected-combo-display').removeClass('is-invalid');
-            // Clear employee error
+            // Clear employee error và reset màu
             $('#employee-error').hide();
+            $('#employeeToggleBtn').css('color', '');
+            // Clear appointment date error
+            $('#appointment_date-error').hide();
+            $('#appointment_date').removeClass('is-invalid');
+            // Clear time slot error
+            $('#time_slot-error').hide();
         }
         
-        // Show error for a specific field
+        // Show error for a specific field - chỉ hiển thị nếu thực sự thiếu giá trị
         function showFieldError(fieldId, message) {
-            const $errorDiv = $('#' + fieldId + '-error');
-            if ($errorDiv.length) {
-                $errorDiv.find('span').text(message);
-                $errorDiv.show();
+            // Kiểm tra xem field có giá trị không trước khi hiển thị lỗi
+            let hasValue = false;
+            
+            if (fieldId === 'name') {
+                const value = $('#name').val();
+                hasValue = value && value.trim() !== '';
+            } else if (fieldId === 'phone') {
+                const value = $('#phone').val();
+                hasValue = value && value.trim() !== '';
+            } else if (fieldId === 'employee') {
+                const value = $('#employee_id').val();
+                hasValue = value && value !== '' && value !== '0';
+            } else if (fieldId === 'appointment_date') {
+                const value = $('#appointment_date').val();
+                hasValue = value && value.trim() !== '';
+            } else if (fieldId === 'time_slot') {
+                const value = $('#word_time_id').val();
+                hasValue = value && value !== '' && value !== '0';
+            }
+            
+            // Chỉ hiển thị lỗi nếu thực sự không có giá trị
+            if (!hasValue) {
+                const $errorDiv = $('#' + fieldId + '-error');
+                if ($errorDiv.length) {
+                    $errorDiv.find('span').text(message);
+                    $errorDiv.show();
+                    const $field = $('#' + fieldId);
+                    if ($field.length) {
+                        $field.addClass('is-invalid');
+                    }
+                    // Xử lý đặc biệt cho employee
+                    if (fieldId === 'employee') {
+                        $('#employeeToggleBtn').css('color', '#dc3545');
+                    }
+                }
+            } else {
+                // Nếu đã có giá trị, clear error
+                const $errorDiv = $('#' + fieldId + '-error');
+                if ($errorDiv.length) {
+                    $errorDiv.hide();
+                }
                 const $field = $('#' + fieldId);
                 if ($field.length) {
-                    $field.addClass('is-invalid');
+                    $field.removeClass('is-invalid');
                 }
-                // Xử lý đặc biệt cho employee
                 if (fieldId === 'employee') {
-                    $('#employeeToggleBtn').css('color', '#dc3545');
+                    $('#employeeToggleBtn').css('color', '');
                 }
             }
         }
@@ -1685,29 +1900,63 @@
         function validateForm() {
             let isValid = true;
             
-            // Clear previous errors
+            // Clear previous errors TRƯỚC KHI validate
             clearFieldErrors();
             
-            // Check name
-            const name = $('input[name="name"]').val().trim();
-            if (!name) {
+            // Clear errors ngay nếu đã có giá trị (đảm bảo không hiển thị lỗi sai)
+            clearErrorsIfHasValue();
+            
+            // Check name - chỉ hiển thị lỗi nếu thực sự trống
+            const name = $('input[name="name"]').val();
+            const nameTrimmed = name ? String(name).trim() : '';
+            if (!nameTrimmed || nameTrimmed === '') {
                 showFieldError('name', 'Mời anh nhập họ và tên');
                 isValid = false;
+            } else {
+                // Clear error nếu đã có giá trị
+                $('#name-error').hide();
+                $('#name').removeClass('is-invalid');
             }
             
-            // Check phone
-            const phone = $('input[name="phone"]').val().trim();
-            if (!phone) {
+            // Check phone - chỉ hiển thị lỗi nếu thực sự trống
+            const phone = $('input[name="phone"]').val();
+            const phoneTrimmed = phone ? String(phone).trim() : '';
+            if (!phoneTrimmed || phoneTrimmed === '') {
                 showFieldError('phone', 'Mời anh nhập số điện thoại');
                 isValid = false;
+            } else {
+                // Clear error nếu đã có giá trị
+                $('#phone-error').hide();
+                $('#phone').removeClass('is-invalid');
             }
             
             // Check service (at least one must be selected)
-            const serviceId = $('input[name="service_id"]').val();
-            const serviceVariants = $('input[name="service_variants[]"]').length;
-            const comboId = $('input[name="combo_id"]').val();
+            // Kiểm tra service_id[] (array)
+            const serviceIds = [];
+            $('input[name="service_id[]"]').each(function() {
+                if ($(this).val()) {
+                    serviceIds.push($(this).val());
+                }
+            });
             
-            if (!serviceId && serviceVariants === 0 && !comboId) {
+            // Kiểm tra service_variants[] (array)
+            const serviceVariants = [];
+            $('input[name="service_variants[]"]').each(function() {
+                if ($(this).val()) {
+                    serviceVariants.push($(this).val());
+                }
+            });
+            
+            // Kiểm tra combo_id[] (array)
+            const comboIds = [];
+            $('input[name="combo_id[]"]').each(function() {
+                if ($(this).val()) {
+                    comboIds.push($(this).val());
+                }
+            });
+            
+            // Kiểm tra xem có ít nhất một dịch vụ được chọn không
+            if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
                 const $errorDiv = $('#service-error');
                 if ($errorDiv.length) {
                     $errorDiv.find('span').text('Mời anh chọn dịch vụ để chọn giờ cắt');
@@ -1716,26 +1965,57 @@
                 isValid = false;
             }
             
-            // Check employee
+            // Check employee - kiểm tra kỹ hơn
             const employeeId = $('#employee_id').val();
-            if (!employeeId) {
+            const employeeIdTrimmed = employeeId ? String(employeeId).trim() : '';
+            const hasEmployeeId = employeeIdTrimmed && employeeIdTrimmed !== '' && employeeIdTrimmed !== '0' && employeeIdTrimmed !== 'null' && employeeIdTrimmed !== 'undefined';
+            
+            if (!hasEmployeeId) {
                 showFieldError('employee', 'Mời anh chọn kỹ thuật viên');
                 isValid = false;
+            } else {
+                // Clear error nếu đã chọn
+                $('#employee-error').hide();
+                $('#employeeToggleBtn').css('color', '');
             }
             
-            // Check appointment date
+            // Check appointment date - kiểm tra kỹ hơn
             const appointmentDate = $('#appointment_date').val();
-            if (!appointmentDate) {
+            const appointmentDateTrimmed = appointmentDate ? String(appointmentDate).trim() : '';
+            const hasAppointmentDate = appointmentDateTrimmed && appointmentDateTrimmed !== '';
+            
+            if (!hasAppointmentDate) {
                 showFieldError('appointment_date', 'Mời anh chọn ngày đặt lịch');
                 isValid = false;
+            } else {
+                // Clear error nếu đã chọn
+                $('#appointment_date-error').hide();
+                $('#appointment_date').removeClass('is-invalid');
             }
             
-            // Check time slot
+            // Check time slot - kiểm tra kỹ hơn
             const wordTimeId = $('#word_time_id').val();
-            if (!wordTimeId) {
+            const wordTimeIdTrimmed = wordTimeId ? String(wordTimeId).trim() : '';
+            const hasWordTimeId = wordTimeIdTrimmed && wordTimeIdTrimmed !== '' && wordTimeIdTrimmed !== '0' && wordTimeIdTrimmed !== 'null' && wordTimeIdTrimmed !== 'undefined';
+            
+            if (!hasWordTimeId) {
                 showFieldError('time_slot', 'Mời anh chọn giờ đặt lịch');
                 isValid = false;
+            } else {
+                // Clear error nếu đã chọn
+                $('#time_slot-error').hide();
             }
+            
+            // Debug log để kiểm tra
+            console.log('Validation details:', {
+                hasName: nameTrimmed !== '',
+                hasPhone: phoneTrimmed !== '',
+                hasService: serviceIds.length > 0 || serviceVariants.length > 0 || comboIds.length > 0,
+                hasEmployeeId: hasEmployeeId,
+                hasAppointmentDate: hasAppointmentDate,
+                hasWordTimeId: hasWordTimeId,
+                isValid: isValid
+            });
             
             return isValid;
         }
@@ -1744,9 +2024,17 @@
         $('#appointmentForm').off('submit').on('submit', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             
-            // Prevent multiple submissions
+            // Prevent multiple submissions - kiểm tra ngay từ đầu
             if (isSubmitting) {
+                console.log('Form is already submitting, ignoring duplicate submission');
+                return false;
+            }
+            
+            // Kiểm tra xem đã có thông báo thành công chưa (tránh submit lại)
+            if ($('.alert-success').length > 0) {
+                console.log('Success message already shown, ignoring submission');
                 return false;
             }
             
@@ -1757,8 +2045,26 @@
             const $form = $(this);
             
             // Validate form - validation will get values directly from DOM
+            console.log('Starting validation...');
             const isValid = validateForm();
+            console.log('Validation result:', isValid);
+            
+            // Debug: Log tất cả giá trị để kiểm tra
+            console.log('Form values:', {
+                name: $('#name').val(),
+                phone: $('#phone').val(),
+                email: $('input[name="email"]').val(),
+                serviceIds: $('input[name="service_id[]"]').length,
+                serviceVariants: $('input[name="service_variants[]"]').length,
+                comboIds: $('input[name="combo_id[]"]').length,
+                employeeId: $('#employee_id').val(),
+                appointmentDate: $('#appointment_date').val(),
+                wordTimeId: $('#word_time_id').val(),
+                timeSlot: $('#time_slot').val()
+            });
+            
             if (!isValid) {
+                console.log('Validation failed, showing errors');
                 // Scroll to first error
                 const firstError = $('.field-error:visible').first();
                 if (firstError.length) {
@@ -1772,18 +2078,108 @@
                 return false;
             }
             
+            console.log('Validation passed, submitting form...');
+            
             // If validation passes, continue with submission
             
             // Remove previous messages
-            $('.success-message, .error-message').remove();
+            $('.success-message, .error-message, .alert-success').remove();
             
-            // Set submitting flag
+            // Set submitting flag NGAY LẬP TỨC để ngăn chặn submit lại
             isSubmitting = true;
             
-            // Disable submit button to prevent double submission
+            // Chuẩn bị dữ liệu TRƯỚC KHI disable form
+            const formDataObj = {};
+            
+            // Lấy dữ liệu trực tiếp từ các input (trước khi disable)
+            const name = $('#name').val();
+            if (name && name.trim() !== '') {
+                formDataObj.name = name.trim();
+            }
+            
+            const phone = $('#phone').val();
+            if (phone && phone.trim() !== '') {
+                formDataObj.phone = phone.trim();
+            }
+            
+            const email = $('input[name="email"]').val();
+            if (email && email.trim() !== '') {
+                formDataObj.email = email.trim();
+            }
+            
+            const employeeId = $('#employee_id').val();
+            if (employeeId && employeeId !== '' && employeeId !== '0') {
+                formDataObj.employee_id = employeeId;
+            }
+            
+            const appointmentDate = $('#appointment_date').val();
+            if (appointmentDate && appointmentDate.trim() !== '') {
+                formDataObj.appointment_date = appointmentDate.trim();
+            }
+            
+            const wordTimeId = $('#word_time_id').val();
+            if (wordTimeId && wordTimeId !== '' && wordTimeId !== '0') {
+                formDataObj.word_time_id = wordTimeId;
+            }
+            
+            const note = $('textarea[name="note"]').val();
+            if (note && note.trim() !== '') {
+                formDataObj.note = note.trim();
+            }
+            
+            // Xử lý service arrays
+            const serviceIds = [];
+            $('input[name="service_id[]"]').each(function() {
+                const val = $(this).val();
+                if (val && val.trim() !== '' && val !== '0') {
+                    serviceIds.push(val.trim());
+                }
+            });
+            if (serviceIds.length > 0) {
+                formDataObj.service_id = serviceIds;
+            }
+            
+            const serviceVariants = [];
+            $('input[name="service_variants[]"]').each(function() {
+                const val = $(this).val();
+                if (val && val.trim() !== '' && val !== '0') {
+                    serviceVariants.push(val.trim());
+                }
+            });
+            if (serviceVariants.length > 0) {
+                formDataObj.service_variants = serviceVariants;
+            }
+            
+            const comboIds = [];
+            $('input[name="combo_id[]"]').each(function() {
+                const val = $(this).val();
+                if (val && val.trim() !== '' && val !== '0') {
+                    comboIds.push(val.trim());
+                }
+            });
+            if (comboIds.length > 0) {
+                formDataObj.combo_id = comboIds;
+            }
+            
+            console.log('Form data object:', formDataObj);
+            console.log('Form data keys:', Object.keys(formDataObj));
+            console.log('Form data values:', {
+                name: formDataObj.name,
+                phone: formDataObj.phone,
+                email: formDataObj.email,
+                employee_id: formDataObj.employee_id,
+                appointment_date: formDataObj.appointment_date,
+                word_time_id: formDataObj.word_time_id,
+                service_id: formDataObj.service_id,
+                service_variants: formDataObj.service_variants,
+                combo_id: formDataObj.combo_id
+            });
+            
+            // Disable form và submit button để ngăn chặn submit lại
             const $submitBtn = $('.submit-appointment-btn');
             const originalBtnText = $submitBtn.html();
             $submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
+            $form.find('input, button, select, textarea').prop('disabled', true);
             
             // Submit form via AJAX
             $.ajax({
@@ -1794,32 +2190,37 @@
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json'
                 },
-                data: $form.serialize(),
+                data: formDataObj,
                 success: function(response) {
-                    if (response.success) {
+                    // Kiểm tra lại để tránh xử lý nhiều lần
+                    if (isSubmitting && response.success) {
                         // Xóa dữ liệu đã lưu trong localStorage sau khi submit thành công
                         localStorage.removeItem('appointmentFormData');
                         
-                        // Remove any previous messages
+                        // Remove any previous messages (kiểm tra lại)
                         $('.alert-success, .alert-danger, .alert-warning, .validation-error-alert').remove();
                         
-                        // Extract only the text message without icon
-                        let messageText = response.message.replace(/<i[^>]*>.*?<\/i>/gi, '').trim();
+                        // Chỉ hiển thị thông báo nếu chưa có
+                        if ($('.alert-success').length === 0) {
+                            // Extract only the text message without icon
+                            let messageText = response.message.replace(/<i[^>]*>.*?<\/i>/gi, '').trim();
+                            
+                            // Show success message with better styling (chỉ một lần)
+                            $('#appointmentForm').prepend(
+                                '<div class="alert alert-success alert-dismissible fade show appointment-success-message" role="alert" style="margin-bottom: 20px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 15px 20px; border-radius: 5px;">' +
+                                messageText +
+                                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="float: right; border: none; background: none; font-size: 20px; cursor: pointer;">&times;</button>' +
+                                '</div>'
+                            );
+                            
+                            // Scroll to top to show message
+                            $('html, body').animate({ scrollTop: 0 }, 300);
+                        }
                         
-                        // Show success message with better styling
-                        $('#appointmentForm').prepend(
-                            '<div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 20px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 15px 20px; border-radius: 5px;">' +
-                            messageText +
-                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="float: right; border: none; background: none; font-size: 20px; cursor: pointer;">&times;</button>' +
-                            '</div>'
-                        );
-                        
-                        // Scroll to top to show message
-                        $('html, body').animate({ scrollTop: 0 }, 300);
-                        
-                        // Prevent any further submissions
+                        // Prevent any further submissions - disable form hoàn toàn
                         isSubmitting = true;
                         $('#appointmentForm').off('submit');
+                        $form.find('input, button, select, textarea').prop('disabled', true);
                         
                         // Redirect to cart page after 3 seconds
                         setTimeout(function() {
@@ -1833,24 +2234,53 @@
                         // Re-enable button if not successful
                         isSubmitting = false;
                         $submitBtn.prop('disabled', false).html(originalBtnText);
+                        $form.find('input, button, select, textarea').prop('disabled', false);
                     }
                 },
                 error: function(xhr) {
                     // Re-enable button on error
                     isSubmitting = false;
                     $submitBtn.prop('disabled', false).html(originalBtnText);
+                    $form.find('input, button, select, textarea').prop('disabled', false);
+                    
+                    console.log('AJAX Error:', xhr);
+                    console.log('Response:', xhr.responseJSON);
+                    console.log('Status:', xhr.status);
+                    console.log('Response Text:', xhr.responseText);
                     
                     // Handle validation errors - display inline errors
                     if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        // Clear all errors trước
+                        clearFieldErrors();
+                        
+                        console.log('Server validation errors:', xhr.responseJSON.errors);
+                        
                         $.each(xhr.responseJSON.errors, function(key, value) {
                             if (value && value.length > 0) {
+                                console.log('Error for field:', key, 'Message:', value[0]);
+                                
                                 // Map backend field names to frontend field IDs
                                 let fieldId = key;
                                 if (key === 'employee_id') fieldId = 'employee';
                                 if (key === 'appointment_date') fieldId = 'appointment_date';
                                 if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
+                                if (key === 'service_id' || key === 'service_id.*') fieldId = 'service';
                                 
-                                showFieldError(fieldId, value[0]);
+                                // Hiển thị lỗi
+                                const $errorDiv = $('#' + fieldId + '-error');
+                                if ($errorDiv.length) {
+                                    $errorDiv.find('span').text(value[0]);
+                                    $errorDiv.show();
+                                } else {
+                                    // Nếu không tìm thấy error div, thử showFieldError
+                                    showFieldError(fieldId, value[0]);
+                                }
+                                
+                                // Thêm invalid class cho field
+                                const $field = $('#' + fieldId);
+                                if ($field.length) {
+                                    $field.addClass('is-invalid');
+                                }
                             }
                         });
                         
@@ -1860,7 +2290,26 @@
                             $('html, body').animate({
                                 scrollTop: firstError.offset().top - 100
                             }, 300);
+                        } else {
+                            // Nếu không có error nào hiển thị, hiển thị alert với tất cả lỗi
+                            let errorMessages = [];
+                            $.each(xhr.responseJSON.errors, function(key, value) {
+                                if (value && value.length > 0) {
+                                    errorMessages.push(value[0]);
+                                }
+                            });
+                            if (errorMessages.length > 0) {
+                                alert('Có lỗi xảy ra:\n' + errorMessages.join('\n'));
+                            }
                         }
+                    } else {
+                        // Nếu không có errors từ server, có thể là lỗi khác
+                        console.error('Unexpected error:', xhr);
+                        let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        alert(errorMessage);
                     }
                 }
             });
