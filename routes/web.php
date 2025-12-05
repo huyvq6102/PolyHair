@@ -57,6 +57,7 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
     Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');
     Route::get('/employees-by-service', [AppointmentController::class, 'getEmployeesByService'])->name('employees-by-service');
+    Route::get('/employees-for-service', [AppointmentController::class, 'getEmployeesForService'])->name('employees-for-service');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
     Route::middleware('auth')->group(function () {
         Route::post('/{id}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');

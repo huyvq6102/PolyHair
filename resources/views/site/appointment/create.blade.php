@@ -204,20 +204,81 @@
 
                             @php
                                 $hasAnyService = request('service_id') || request('service_variants') || request('combo_id');
+                                // Đếm tổng số dịch vụ được chọn
+                                $totalServicesCount = 0;
+                                if (request('service_id')) {
+                                    $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
+                                    $totalServicesCount += count(array_filter($serviceIds));
+                                }
+                                if (request('service_variants')) {
+                                    $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
+                                    $totalServicesCount += count(array_filter($variantIds));
+                                }
+                                if (request('combo_id')) {
+                                    $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
+                                    $totalServicesCount += count(array_filter($comboIds));
+                                }
+                                $hasMultipleServices = $totalServicesCount >= 2;
                             @endphp
                             
-                            @if(request('service_id'))
+                            @if(request()->has('service_id'))
                                 @php
-                                    $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
+                                    // CRITICAL: Use same logic as hidden inputs creation - parse URL directly
+                                    $url = request()->fullUrl();
+                                    $parsedUrl = parse_url($url);
+                                    $queryParams = [];
+                                    if (isset($parsedUrl['query'])) {
+                                        parse_str($parsedUrl['query'], $queryParams);
+                                    }
+                                    
+                                    // Get service_id from parsed query string only
+                                    $queryServices = [];
+                                    
+                                    // Check for service_id[] format
+                                    if (isset($queryParams['service_id']) && is_array($queryParams['service_id'])) {
+                                        $queryServices = $queryParams['service_id'];
+                                    } elseif (isset($queryParams['service_id'])) {
+                                        $queryServices = [$queryParams['service_id']];
+                                    }
+                                    
+                                    // Check for service_id[0], service_id[1], etc. format
+                                    $indexedServices = [];
+                                    foreach ($queryParams as $key => $value) {
+                                        if (preg_match('/^service_id\[(\d+)\]$/', $key, $matches)) {
+                                            $indexedServices[] = $value;
+                                        }
+                                    }
+                                    
+                                    // Merge both formats
+                                    $queryServices = array_merge($queryServices, $indexedServices);
+                                    
+                                    // Filter out any empty/null values
+                                    $serviceIds = array_filter($queryServices, function($id) {
+                                        return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                    });
+                                    
+                                    // Remove duplicates
+                                    $serviceIds = array_values(array_unique($serviceIds));
+                                    
                                     $selectedServices = \App\Models\Service::whereIn('id', $serviceIds)->get();
                                 @endphp
                                 @if($selectedServices->count() > 0)
                                     @foreach($selectedServices as $selectedService)
-                                        <div class="selected-service-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                        <div class="selected-service-display service-item-selectable" data-service-id="{{ $selectedService->id }}" data-service-type="service" data-service-selector="service_{{ $selectedService->id }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px;">
-                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i> {{ $selectedService->name }}
+                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i>
+                                                        <span>{{ $selectedService->name }}</span>
+                                                        <span id="service_employee_display_service_{{ $selectedService->id }}" class="selected-employee-info" style="display: none; font-size: 13px; color: #1976d2; font-weight: 600; margin-left: 5px;">
+                                                            <i class="fa fa-user" style="color: #1976d2; margin-right: 6px;"></i>
+                                                            <span class="employee-name"></span>
+                                                            <span class="employee-position" style="color: #666; font-weight: 400; margin-left: 6px;"></span>
+                                                            <span id="service_time_display_service_{{ $selectedService->id }}" class="selected-time-info" style="display: none; color: #28a745; font-weight: 600; margin-left: 8px;">
+                                                                <i class="fa fa-clock-o" style="color: #28a745; margin-right: 4px;"></i>
+                                                                <span class="time-slot-text"></span>
+                                                            </span>
+                                                        </span>
                                                     </div>
                                                     <div style="color: #666; font-size: 13px;">
                                                         <span style="margin-right: 20px;">
@@ -227,6 +288,25 @@
                                                             <i class="fa fa-clock-o"></i> <strong>{{ $selectedService->base_duration ?? 60 }} phút</strong>
                                                         </span>
                                                     </div>
+                                                    @if($hasMultipleServices)
+                                                        <input type="hidden" name="service_employee[service_{{ $selectedService->id }}]" 
+                                                               class="service-employee-input" 
+                                                               data-service-id="{{ $selectedService->id }}"
+                                                               data-service-type="service"
+                                                               data-display-container="service_employee_display_service_{{ $selectedService->id }}"
+                                                               value="">
+                                                        <input type="hidden" name="service_time[service_{{ $selectedService->id }}]" 
+                                                               class="service-time-input" 
+                                                               data-service-id="{{ $selectedService->id }}"
+                                                               data-service-type="service"
+                                                               data-display-container="service_time_display_service_{{ $selectedService->id }}"
+                                                               value="">
+                                                        <input type="hidden" name="service_date[service_{{ $selectedService->id }}]" 
+                                                               class="service-date-input" 
+                                                               data-service-id="{{ $selectedService->id }}"
+                                                               data-service-type="service"
+                                                               value="">
+                                                    @endif
                                                 </div>
                                                 <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_service_id' => $selectedService->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 6px 12px; font-size: 12px; border-radius: 6px; margin-left: 15px;">
                                                     <i class="fa fa-times"></i> Xóa
@@ -237,30 +317,104 @@
                                 @endif
                             @endif
                             
-                            @if(request('service_variants'))
+                            @if(request()->has('service_variants'))
                                 @php
-                                    $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
-                                    $selectedVariants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->with('service')->get();
+                                    // CRITICAL: Use same logic as hidden inputs creation - parse URL directly
+                                    $url = request()->fullUrl();
+                                    $parsedUrl = parse_url($url);
+                                    $queryParams = [];
+                                    if (isset($parsedUrl['query'])) {
+                                        parse_str($parsedUrl['query'], $queryParams);
+                                    }
+                                    
+                                    // Get service_variants from parsed query string only
+                                    $queryVariants = [];
+                                    
+                                    // Check for service_variants[] format
+                                    if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
+                                        $queryVariants = $queryParams['service_variants'];
+                                    } elseif (isset($queryParams['service_variants'])) {
+                                        $queryVariants = [$queryParams['service_variants']];
+                                    }
+                                    
+                                    // Check for service_variants[0], service_variants[1], etc. format
+                                    $indexedVariants = [];
+                                    foreach ($queryParams as $key => $value) {
+                                        if (preg_match('/^service_variants\[(\d+)\]$/', $key, $matches)) {
+                                            $indexedVariants[] = $value;
+                                        }
+                                    }
+                                    
+                                    // Merge both formats
+                                    $queryVariants = array_merge($queryVariants, $indexedVariants);
+                                    
+                                    // Filter out any empty/null values
+                                    $variantIds = array_filter($queryVariants, function($id) {
+                                        return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                    });
+                                    
+                                    // Remove duplicates - ensure each variant ID appears only once
+                                    $variantIds = array_values(array_unique($variantIds));
+                                    
+                                    $selectedVariants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->with(['service', 'variantAttributes'])->get();
                                 @endphp
                                 @if($selectedVariants->count() > 0)
                                     @foreach($selectedVariants as $variant)
-                                        <div class="selected-variant-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                        <div class="selected-variant-display service-item-selectable" data-variant-id="{{ $variant->id }}" data-service-id="{{ $variant->service_id }}" data-service-type="variant" data-service-selector="variant_{{ $variant->id }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px;">
-                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i> {{ $variant->name }}
+                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i>
+                                                        <span>{{ $variant->name }}</span>
                                                         @if($variant->service)
                                                             <span style="color: #666; font-size: 12px; font-weight: 400;">({{ $variant->service->name }})</span>
                                                         @endif
+                                                        <span id="service_employee_display_variant_{{ $variant->id }}" class="selected-employee-info" style="display: none; font-size: 13px; color: #1976d2; font-weight: 600; margin-left: 5px;">
+                                                            <i class="fa fa-user" style="color: #1976d2; margin-right: 6px;"></i>
+                                                            <span class="employee-name"></span>
+                                                            <span class="employee-position" style="color: #666; font-weight: 400; margin-left: 6px;"></span>
+                                                            <span id="service_time_display_variant_{{ $variant->id }}" class="selected-time-info" style="display: none; color: #28a745; font-weight: 600; margin-left: 8px;">
+                                                                <i class="fa fa-clock-o" style="color: #28a745; margin-right: 4px;"></i>
+                                                                <span class="time-slot-text"></span>
+                                                            </span>
+                                                        </span>
                                                     </div>
                                                     <div style="color: #666; font-size: 13px;">
                                                         <span style="margin-right: 20px;">
                                                             <i class="fa fa-money" style="color: #c08a3f;"></i> <strong style="color: #c08a3f;">{{ number_format($variant->price ?? 0, 0, ',', '.') }}vnđ</strong>
                                                         </span>
-                                                        <span>
+                                                        <span style="margin-right: 20px;">
                                                             <i class="fa fa-clock-o"></i> <strong>{{ $variant->duration ?? 60 }} phút</strong>
                                                         </span>
+                                                        @if($variant->variantAttributes && $variant->variantAttributes->count() > 0)
+                                                            @foreach($variant->variantAttributes as $attr)
+                                                                <span style="margin-right: 12px; display: inline-flex; align-items: center; gap: 4px; color: #1976d2; font-size: 12px; background: #e3f2fd; padding: 2px 8px; border-radius: 4px;">
+                                                                    <i class="fa fa-tag"></i>
+                                                                    <strong>{{ $attr->attribute_name }}: {{ $attr->attribute_value }}</strong>
+                                                                </span>
+                                                            @endforeach
+                                                        @endif
                                                     </div>
+                                                    @if($hasMultipleServices)
+                                                        <input type="hidden" name="service_employee[variant_{{ $variant->id }}]" 
+                                                                class="service-employee-input" 
+                                                                data-variant-id="{{ $variant->id }}"
+                                                                data-service-id="{{ $variant->service_id }}"
+                                                                data-service-type="variant"
+                                                                data-display-container="service_employee_display_variant_{{ $variant->id }}"
+                                                                value="">
+                                                        <input type="hidden" name="service_time[variant_{{ $variant->id }}]" 
+                                                               class="service-time-input" 
+                                                               data-variant-id="{{ $variant->id }}"
+                                                               data-service-type="variant"
+                                                               data-display-container="service_time_display_variant_{{ $variant->id }}"
+                                                               value="">
+                                                        <input type="hidden" name="service_date[variant_{{ $variant->id }}]" 
+                                                               class="service-date-input" 
+                                                               data-variant-id="{{ $variant->id }}"
+                                                               data-service-type="variant"
+                                                               value="">
+                                                    @endif
                                                 </div>
                                                 <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_variant_id' => $variant->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 6px 12px; font-size: 12px; border-radius: 6px; margin-left: 15px;">
                                                     <i class="fa fa-times"></i> Xóa
@@ -280,18 +434,38 @@
                                     @foreach($selectedCombos as $selectedCombo)
                                         @php
                                             $comboDuration = 60;
+                                            $comboServiceIds = [];
                                             if ($selectedCombo->comboItems && $selectedCombo->comboItems->count() > 0) {
                                                 $comboDuration = $selectedCombo->comboItems->sum(function($item) {
                                                     return $item->serviceVariant->duration ?? 60;
                                                 });
+                                                // Lấy service IDs từ combo items
+                                                foreach ($selectedCombo->comboItems as $item) {
+                                                    if ($item->serviceVariant && $item->serviceVariant->service_id) {
+                                                        $comboServiceIds[] = $item->serviceVariant->service_id;
+                                                    } elseif ($item->service_id) {
+                                                        $comboServiceIds[] = $item->service_id;
+                                                    }
+                                                }
+                                                $comboServiceIds = array_unique($comboServiceIds);
                                             }
                                         @endphp
-                                        <div class="selected-combo-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                        <div class="selected-combo-display service-item-selectable" data-combo-id="{{ $selectedCombo->id }}" data-service-type="combo" data-service-selector="combo_{{ $selectedCombo->id }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px;">
-                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i> {{ $selectedCombo->name }}
+                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i>
+                                                        <span>{{ $selectedCombo->name }}</span>
                                                         <span style="color: #666; font-size: 12px; font-weight: 400; margin-left: 5px;">(COMBO)</span>
+                                                        <span id="service_employee_display_combo_{{ $selectedCombo->id }}" class="selected-employee-info" style="display: none; font-size: 13px; color: #1976d2; font-weight: 600; margin-left: 5px;">
+                                                            <i class="fa fa-user" style="color: #1976d2; margin-right: 6px;"></i>
+                                                            <span class="employee-name"></span>
+                                                            <span class="employee-position" style="color: #666; font-weight: 400; margin-left: 6px;"></span>
+                                                            <span id="service_time_display_combo_{{ $selectedCombo->id }}" class="selected-time-info" style="display: none; color: #28a745; font-weight: 600; margin-left: 8px;">
+                                                                <i class="fa fa-clock-o" style="color: #28a745; margin-right: 4px;"></i>
+                                                                <span class="time-slot-text"></span>
+                                                            </span>
+                                                        </span>
                                                     </div>
                                                     <div style="color: #666; font-size: 13px;">
                                                         <span style="margin-right: 20px;">
@@ -301,6 +475,26 @@
                                                             <i class="fa fa-clock-o"></i> <strong>{{ $comboDuration }} phút</strong>
                                                         </span>
                                                     </div>
+                                                    @if($hasMultipleServices)
+                                                        <input type="hidden" name="service_employee[combo_{{ $selectedCombo->id }}]" 
+                                                               class="service-employee-input" 
+                                                               data-combo-id="{{ $selectedCombo->id }}"
+                                                               data-service-ids="{{ implode(',', $comboServiceIds) }}"
+                                                               data-service-type="combo"
+                                                               data-display-container="service_employee_display_combo_{{ $selectedCombo->id }}"
+                                                               value="">
+                                                        <input type="hidden" name="service_time[combo_{{ $selectedCombo->id }}]" 
+                                                               class="service-time-input" 
+                                                               data-combo-id="{{ $selectedCombo->id }}"
+                                                               data-service-type="combo"
+                                                               data-display-container="service_time_display_combo_{{ $selectedCombo->id }}"
+                                                               value="">
+                                                        <input type="hidden" name="service_date[combo_{{ $selectedCombo->id }}]" 
+                                                               class="service-date-input" 
+                                                               data-combo-id="{{ $selectedCombo->id }}"
+                                                               data-service-type="combo"
+                                                               value="">
+                                                    @endif
                                                 </div>
                                                 <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_combo_id' => $selectedCombo->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 6px 12px; font-size: 12px; border-radius: 6px; margin-left: 15px;">
                                                     <i class="fa fa-times"></i> Xóa
@@ -345,14 +539,14 @@
                             </h5>
 
                             <!-- Kỹ thuật viên -->
-                            <div class="mb-2" style="margin-top: 10px;">
+                            <div class="mb-2 employee-selection-container" style="margin-top: 10px;">
                                 <label class="form-label" style="font-size: 12px; margin-bottom: 5px; font-weight: 500; display: flex; align-items: center; gap: 6px; cursor: pointer;" id="employeeToggleBtn">
                                     <i class="fa fa-scissors"></i>
                                     <span>KỸ THUẬT VIÊN <span class="text-danger">*</span></span>
                                     <i class="fa fa-chevron-down employee-chevron" style="font-size: 12px; color: #999; transition: transform 0.3s ease; margin-left: auto;"></i>
                                 </label>
 
-                                <!-- Hidden input để lưu employee_id -->
+                                <!-- Hidden input để lưu employee_id (dùng khi chỉ có 1 dịch vụ) -->
                                 <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id') }}">
 
                                 <!-- Container hiển thị nhân viên giống time slot -->
@@ -729,8 +923,8 @@
         display: grid;
         grid-template-columns: repeat(11, 1fr);
         grid-template-rows: repeat(3, 1fr);
-        grid-auto-flow: column;
-        gap: 8px;
+        grid-auto-flow: row;
+        gap: 10px;
         width: 100%;
         min-width: 100%;
         flex-shrink: 0;
@@ -761,12 +955,12 @@
     }
 
     .time-slot-btn {
-        padding: 14px 10px;
+        padding: 18px 14px;
         border: 1px solid #000;
         border-radius: 8px;
         background: #fff;
         color: #000;
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -821,6 +1015,94 @@
         visibility: hidden;
         pointer-events: none;
         border: none;
+    }
+    
+    /* Service Time Slot Styles */
+    .service-time-slot-btn {
+        padding: 18px 14px;
+        border: 1px solid #000;
+        border-radius: 8px;
+        background: #fff;
+        color: #000;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        min-width: 80px;
+        flex-shrink: 0;
+    }
+    
+    .service-time-slot-btn:hover:not(.unavailable) {
+        background: #f8f8f8;
+        border-color: #333;
+        transform: scale(1.05);
+    }
+    
+    .service-time-slot-btn.selected {
+        background: #000;
+        color: #fff;
+        border-color: #000;
+        font-weight: 600;
+    }
+    
+    .service-time-slot-btn.unavailable {
+        background: #e8e8e8;
+        color: #b0b0b0;
+        border: 1px solid #e0e0e0;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .service-time-slot-btn.unavailable:hover {
+        background: #e8e8e8;
+        transform: none;
+        box-shadow: none;
+        border-color: #e0e0e0;
+    }
+    
+    .service-time-slot-grid {
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .service-time-slot-slider {
+        display: flex;
+        gap: 0;
+        width: max-content;
+        transition: transform 0.3s ease;
+    }
+    
+    .service-time-slot-slider .time-slot-page {
+        display: grid;
+        grid-template-columns: repeat(11, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        grid-auto-flow: row;
+        gap: 10px;
+        width: 100%;
+        min-width: 100%;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        align-items: stretch;
+        justify-items: stretch;
+        overflow: visible;
+        margin-top: 10px;
+    }
+    
+    .service-time-slot-nav-btn {
+        transition: all 0.3s ease;
+    }
+    
+    .service-time-slot-nav-btn:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+    }
+    
+    .service-time-slot-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
         background: transparent;
         width: 100%;
         height: 100%;
@@ -913,6 +1195,90 @@
     .employee-nav-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+
+    /* Service Employee Carousel Styles */
+    .service-employee-container {
+        position: relative;
+    }
+
+    .service-employee-grid {
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        padding: 5px 0;
+    }
+
+    .service-employee-slider {
+        display: flex;
+        gap: 15px;
+        transition: transform 0.3s ease;
+    }
+
+    .service-employee-item-btn {
+        transition: all 0.3s ease;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        position: relative;
+    }
+
+    .service-employee-item-btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-color: #333;
+        position: relative;
+        z-index: 10;
+    }
+
+    .service-employee-item-btn.selected {
+        background: #fff;
+        border-color: #007bff;
+        border-width: 2px;
+    }
+
+    .service-employee-item-btn.selected .employee-name,
+    .service-employee-item-btn.selected .employee-position {
+        color: #000;
+    }
+
+    .service-employee-item-btn.selected .employee-avatar-wrapper {
+        border-color: #007bff !important;
+        border-width: 2px !important;
+    }
+
+    .service-employee-nav-btn {
+        transition: all 0.3s ease;
+    }
+
+    .service-employee-nav-btn:hover:not(:disabled) {
+        background: #FFC107 !important;
+        color: #000 !important;
+    }
+
+    .service-employee-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Service Selection Styles */
+    .service-item-selectable {
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+    }
+    
+    .service-item-selectable:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    }
+
+    .service-item-selectable.active-service {
+        border-color: #007bff !important;
+        border-width: 3px !important;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+        background: #f0f8ff !important;
+        transform: translateY(-2px);
     }
 
     .employee-carousel .owl-item {
@@ -1039,6 +1405,7 @@
     $(document).ready(function() {
         // CRITICAL: Remove duplicate hidden inputs for service_variants, service_id, and combo_id
         // This ensures we only have one input per unique ID
+        // ONLY remove duplicates and empty/invalid inputs - DO NOT remove valid inputs
         function removeDuplicateHiddenInputs(inputName) {
             const seen = new Set();
             const inputs = $(`input[name="${inputName}"]`);
@@ -1047,7 +1414,7 @@
             inputs.each(function() {
                 const val = $(this).val();
                 if (val && val.trim() !== '' && val !== '0') {
-                    const id = val.trim();
+                    const id = String(val.trim());
                     if (seen.has(id)) {
                         // Duplicate found - remove it
                         $(this).remove();
@@ -1067,98 +1434,96 @@
             }
         }
         
-        // CRITICAL: Get valid variants from URL and remove any inputs that don't match
+        // CRITICAL: Get valid services from URL and ensure they exist as hidden inputs
+        // DO NOT remove inputs that are already rendered from server - only add missing ones from URL
         function validateHiddenInputsFromUrl() {
-            // Parse URL to get service_variants
+            // Parse URL to get service_variants, service_id, combo_id
             const url = new URL(window.location.href);
             const urlVariants = url.searchParams.getAll('service_variants[]');
+            const urlServiceIds = url.searchParams.getAll('service_id[]');
+            const urlComboIds = url.searchParams.getAll('combo_id[]');
             
-            // Also check for service_variants[0], service_variants[1], etc.
+            // Also check for indexed format service_variants[0], service_variants[1], etc.
             const urlVariantsAlt = [];
             for (let i = 0; i < 100; i++) {
                 const param = url.searchParams.get(`service_variants[${i}]`);
                 if (param) {
                     urlVariantsAlt.push(param);
                 } else {
-                    // Continue checking, don't break on first gap (might have service_variants[0] and service_variants[2])
-                    if (i > 10) break; // But stop after reasonable limit
+                    if (i > 10) break;
                 }
             }
             
             // Combine both formats and remove duplicates
-            const validVariants = [...new Set([...urlVariants, ...urlVariantsAlt])].filter(v => v && v !== '0' && v !== '');
+            const validVariants = [...new Set([...urlVariants, ...urlVariantsAlt])].map(v => String(v)).filter(v => v && v !== '0' && v !== '');
+            const validServiceIds = [...new Set(urlServiceIds)].map(v => String(v)).filter(v => v && v !== '0' && v !== '');
+            const validComboIds = [...new Set(urlComboIds)].map(v => String(v)).filter(v => v && v !== '0' && v !== '');
             
             console.log('Valid variants from URL:', validVariants);
+            console.log('Valid service_ids from URL:', validServiceIds);
+            console.log('Valid combo_ids from URL:', validComboIds);
             
-            // CRITICAL: Remove ALL existing hidden inputs first, then recreate only valid ones
-            // This ensures we don't have any stray inputs from previous renders or JavaScript
-            const allInputs = $('input[name="service_variants[]"]');
-            const existingValues = [];
-            allInputs.each(function() {
-                existingValues.push($(this).val());
-            });
-            
-            // Remove all existing inputs
-            allInputs.remove();
-            
-            // Recreate only valid inputs from URL
             const $form = $('#appointmentForm');
-            if ($form.length) {
-                validVariants.forEach(function(variantId) {
+            if (!$form.length) {
+                return { variants: validVariants, serviceIds: validServiceIds, comboIds: validComboIds };
+            }
+            
+            // Ensure variants from URL exist (don't remove existing ones)
+            validVariants.forEach(function(variantId) {
+                const exists = $form.find(`input[name="service_variants[]"][value="${variantId}"]`).length > 0;
+                if (!exists) {
                     const $newInput = $('<input>', {
                         type: 'hidden',
                         name: 'service_variants[]',
                         value: variantId
                     });
-                    // Insert after CSRF token for proper form structure
                     $form.find('input[name="_token"]').after($newInput);
-                });
-            }
+                }
+            });
             
-            const removedCount = existingValues.length - validVariants.length;
-            if (removedCount > 0) {
-                console.log(`Removed ${removedCount} invalid service_variants[] inputs and recreated ${validVariants.length} valid ones from URL`);
-            } else if (existingValues.length !== validVariants.length) {
-                console.log(`Recreated ${validVariants.length} service_variants[] inputs from URL (was ${existingValues.length})`);
-            }
+            // Ensure service_ids from URL exist
+            validServiceIds.forEach(function(serviceId) {
+                const exists = $form.find(`input[name="service_id[]"][value="${serviceId}"]`).length > 0;
+                if (!exists) {
+                    const $newInput = $('<input>', {
+                        type: 'hidden',
+                        name: 'service_id[]',
+                        value: serviceId
+                    });
+                    $form.find('input[name="_token"]').after($newInput);
+                }
+            });
             
-            return validVariants;
+            // Ensure combo_ids from URL exist
+            validComboIds.forEach(function(comboId) {
+                const exists = $form.find(`input[name="combo_id[]"][value="${comboId}"]`).length > 0;
+                if (!exists) {
+                    const $newInput = $('<input>', {
+                        type: 'hidden',
+                        name: 'combo_id[]',
+                        value: comboId
+                    });
+                    $form.find('input[name="_token"]').after($newInput);
+                }
+            });
+            
+            return {
+                variants: validVariants,
+                serviceIds: validServiceIds,
+                comboIds: validComboIds
+            };
         }
         
-        // Log BEFORE cleanup
-        console.log('Hidden inputs BEFORE cleanup:', {
-            service_variants: $('input[name="service_variants[]"]').length,
-            service_id: $('input[name="service_id[]"]').length,
-            combo_id: $('input[name="combo_id[]"]').length,
-            url: window.location.href,
-        });
+        // CRITICAL: Ensure inputs from URL exist as hidden inputs
+        // This function only ADDS missing inputs from URL, does NOT remove existing ones
+        // Server-side rendering already created the correct inputs based on URL, we just need to ensure they exist
+        const validUrlData = validateHiddenInputsFromUrl();
         
-        // Log all service_variants values before cleanup
-        const allVariantsBefore = [];
-        $('input[name="service_variants[]"]').each(function() {
-            allVariantsBefore.push($(this).val());
-        });
-        console.log('All service_variants values BEFORE cleanup:', allVariantsBefore);
-        
-        // CRITICAL: First validate inputs against URL, then remove duplicates
-        const validUrlVariants = validateHiddenInputsFromUrl();
-        
-        // Remove duplicates for all three input types
+        // Only remove duplicates and empty/invalid inputs - DO NOT remove valid inputs
+        // This ensures we don't have duplicate inputs, but keeps all valid ones from server-side rendering
         removeDuplicateHiddenInputs('service_variants[]');
         removeDuplicateHiddenInputs('service_id[]');
         removeDuplicateHiddenInputs('combo_id[]');
-        
-        // Log AFTER cleanup
-        const allVariantsAfter = [];
-        $('input[name="service_variants[]"]').each(function() {
-            allVariantsAfter.push($(this).val());
-        });
-        console.log('Hidden inputs AFTER cleanup:', {
-            service_variants: $('input[name="service_variants[]"]').length,
-            service_id: $('input[name="service_id[]"]').length,
-            combo_id: $('input[name="combo_id[]"]').length,
-        });
-        console.log('All service_variants values AFTER cleanup:', allVariantsAfter);
         
         // Khôi phục thông tin từ localStorage khi quay lại từ trang chọn dịch vụ
         const savedFormData = localStorage.getItem('appointmentFormData');
@@ -1322,9 +1687,652 @@
             $('#appointment_date').prop('disabled', false);
         }
         
-        // Load employees by service on page load
+        // Biến để lưu dịch vụ đang được chọn để gán nhân viên
+        let activeServiceSelector = null;
+        
+        // Đếm số dịch vụ được chọn
+        function countSelectedServices() {
+            let count = 0;
+            $('input[name="service_id[]"]').each(function() {
+                if ($(this).val()) count++;
+            });
+            $('input[name="service_variants[]"]').each(function() {
+                if ($(this).val()) count++;
+            });
+            $('input[name="combo_id[]"]').each(function() {
+                if ($(this).val()) count++;
+            });
+            return count;
+        }
+        
+        // Xử lý khi click vào card dịch vụ để chọn dịch vụ đang active (chỉ khi có >= 2 dịch vụ)
+        $(document).on('click', '.service-item-selectable', function(e) {
+            // Nếu click vào button xóa hoặc link khác, không xử lý
+            if ($(e.target).closest('a, button').length) {
+                return;
+            }
+            
+            const serviceCount = countSelectedServices();
+            if (serviceCount < 2) {
+                return; // Chỉ xử lý khi có >= 2 dịch vụ
+            }
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $serviceItem = $(this);
+            const selector = $serviceItem.attr('data-service-selector');
+            
+            if (!selector) {
+                return;
+            }
+            
+            // Xóa active của tất cả dịch vụ
+            $('.service-item-selectable').removeClass('active-service');
+            
+            // Đánh dấu dịch vụ này là active
+            $serviceItem.addClass('active-service');
+            
+            // Lưu selector của dịch vụ đang active
+            activeServiceSelector = selector;
+            
+            // Load nhân viên cho dịch vụ này
+            loadEmployeesForSelectedService($serviceItem);
+            
+            // Đảm bảo container được mở (không scroll)
+            setTimeout(function() {
+                const employeeContainer = $('#employeeContainer');
+                if (employeeContainer.length) {
+                    // Đảm bảo container được mở
+                    if (!employeeContainer.is(':visible')) {
+                        employeeContainer.slideDown(300);
+                        $('.employee-chevron').css('transform', 'rotate(180deg)');
+                    }
+                }
+            }, 100);
+        });
+        
+        // Load nhân viên cho dịch vụ được chọn
+        function loadEmployeesForSelectedService($serviceItem) {
+            const serviceType = $serviceItem.attr('data-service-type');
+            let serviceId = null;
+            let variantId = null;
+            let comboId = null;
+            
+            if (serviceType === 'service') {
+                serviceId = $serviceItem.attr('data-service-id');
+            } else if (serviceType === 'variant') {
+                variantId = $serviceItem.attr('data-variant-id');
+            } else if (serviceType === 'combo') {
+                comboId = $serviceItem.attr('data-combo-id');
+            }
+            
+            if (!serviceId && !variantId && !comboId) {
+                return;
+            }
+            
+            // Hiển thị loading
+            const $slider = $('.employee-slider');
+            $slider.html('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Đang tải danh sách kỹ thuật viên...</div>');
+            
+            // Gọi API để lấy nhân viên cho dịch vụ này
+            $.ajax({
+                url: '{{ route("site.appointment.employees-for-service") }}',
+                method: 'GET',
+                data: {
+                    service_id: serviceId || null,
+                    variant_id: variantId || null,
+                    combo_id: comboId || null
+                },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success && response.employees) {
+                        const currentEmployeeId = $('#employee_id').val();
+                        const $slider = $('.employee-slider');
+                        
+                        // Clear existing content
+                        $slider.empty();
+                        
+                        if (response.employees.length > 0) {
+                            response.employees.forEach(function(employee) {
+                                const avatarUrl = employee.avatar ? '{{ asset("legacy/images/avatars") }}/' + employee.avatar : '';
+                                const isSelected = currentEmployeeId == employee.id;
+                                
+                                const serviceIds = employee.service_ids || [];
+                                let itemHtml = '<div class="employee-item-btn' + (isSelected ? ' selected' : '') + '" data-employee-id="' + employee.id + '" data-employee-name="' + employee.name + '" data-employee-position="' + (employee.position || '') + '" data-service-ids="' + serviceIds.join(',') + '" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">';
+                                itemHtml += '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isSelected ? '#007bff' : '#ddd') + ';">';
+                                
+                                if (avatarUrl) {
+                                    itemHtml += '<img src="' + avatarUrl + '" alt="' + employee.name + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                                } else {
+                                    itemHtml += '<div style="width: 100%; height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center;"><i class="fa fa-user" style="font-size: 40px; color: #999;"></i></div>';
+                                }
+                                
+                                itemHtml += '</div>';
+                                itemHtml += '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">' + employee.name + '</div>';
+                                
+                                if (employee.position) {
+                                    itemHtml += '<div class="employee-position" style="font-size: 11px; color: #666;">' + employee.position + '</div>';
+                                }
+                                
+                                itemHtml += '</div>';
+                                $slider.append(itemHtml);
+                            });
+                            
+                            // Reset slider position về đầu
+                            $slider.css('transform', 'translateX(0px)');
+                        } else {
+                            // Không có nhân viên phù hợp
+                            $slider.html('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Không có kỹ thuật viên nào có chuyên môn phù hợp với dịch vụ này</div>');
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error loading employees for service:', xhr);
+                    const $slider = $('.employee-slider');
+                    $slider.empty();
+                    $slider.html('<div style="text-align: center; padding: 20px; color: #dc3545; width: 100%;">Có lỗi xảy ra khi tải danh sách kỹ thuật viên</div>');
+                }
+            });
+        }
+        
+        // Load employees for each service when >= 2 services (vào carousel)
+        function loadEmployeesForEachService() {
+            const serviceCount = countSelectedServices();
+            
+            if (serviceCount < 2) {
+                // Chỉ có 1 dịch vụ, giữ nguyên selector chung
+                $('.service-employee-selector').hide();
+                $('.employee-selection-container').show();
+                loadEmployeesByService();
+                return;
+            }
+            
+            // Có >= 2 dịch vụ, giữ nguyên carousel chung và hiển thị selector riêng cho từng dịch vụ
+            $('.employee-selection-container').show();
+            $('.service-employee-selector').show();
+            
+            // Load nhân viên cho từng dịch vụ vào carousel (chỉ nhân viên có chuyên môn phù hợp)
+            $('.service-employee-input').each(function() {
+                const $input = $(this);
+                const serviceType = $input.attr('data-service-type');
+                let serviceId = null;
+                let variantId = null;
+                let comboId = null;
+                let sliderSelector = null;
+                
+                if (serviceType === 'service') {
+                    serviceId = $input.attr('data-service-id');
+                    sliderSelector = '.service_employee_slider_service_' + serviceId;
+                } else if (serviceType === 'variant') {
+                    variantId = $input.attr('data-variant-id');
+                    sliderSelector = '.service_employee_slider_variant_' + variantId;
+                } else if (serviceType === 'combo') {
+                    comboId = $input.attr('data-combo-id');
+                    sliderSelector = '.service_employee_slider_combo_' + comboId;
+                }
+                
+                if (!serviceId && !variantId && !comboId) {
+                    return;
+                }
+                
+                const $slider = $(sliderSelector);
+                if ($slider.length === 0) {
+                    return;
+                }
+                
+                // Load nhân viên phù hợp cho dịch vụ này
+                $.ajax({
+                    url: '{{ route("site.appointment.employees-for-service") }}',
+                    method: 'GET',
+                    data: {
+                        service_id: serviceId,
+                        variant_id: variantId,
+                        combo_id: comboId
+                    },
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success && response.employees) {
+                            // Clear existing content
+                            $slider.empty();
+                            
+                            // Add employees to carousel
+                            if (response.employees.length > 0) {
+                                response.employees.forEach(function(employee) {
+                                    const avatarUrl = employee.avatar ? '{{ asset("legacy/images/avatars") }}/' + employee.avatar : '';
+                                    
+                                    let itemHtml = '<div class="service-employee-item-btn" data-employee-id="' + employee.id + '" data-employee-name="' + (employee.name || employee.display_name) + '" data-employee-position="' + (employee.position || '') + '" data-service-input="' + $input.attr('name') + '" data-display-container="' + $input.attr('data-display-container') + '" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0; border: 1px solid #ddd; border-radius: 8px; background: #fff;">';
+                                    itemHtml += '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid #ddd;">';
+                                    
+                                    if (avatarUrl) {
+                                        itemHtml += '<img src="' + avatarUrl + '" alt="' + employee.name + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                                    } else {
+                                        itemHtml += '<div style="width: 100%; height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center;"><i class="fa fa-user" style="font-size: 40px; color: #999;"></i></div>';
+                                    }
+                                    
+                                    itemHtml += '</div>';
+                                    itemHtml += '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">' + employee.name + '</div>';
+                                    
+                                    if (employee.position) {
+                                        itemHtml += '<div class="employee-position" style="font-size: 11px; color: #666;">' + employee.position + '</div>';
+                                    }
+                                    
+                                    itemHtml += '</div>';
+                                    $slider.append(itemHtml);
+                                });
+                                
+                                // Update navigation buttons after a short delay to ensure DOM is updated
+                                setTimeout(function() {
+                                    const sliderClasses = $slider.attr('class').split(' ');
+                                    const sliderClass = sliderClasses.find(c => c.startsWith('service_employee_slider_'));
+                                    if (sliderClass) {
+                                        updateServiceEmployeeNavigation(sliderClass);
+                                    }
+                                }, 100);
+                            } else {
+                                $slider.html('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Không có kỹ thuật viên phù hợp</div>');
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Error loading employees for service:', xhr);
+                        $slider.html('<div style="text-align: center; padding: 20px; color: #dc3545; width: 100%;">Có lỗi xảy ra khi tải danh sách kỹ thuật viên</div>');
+                    }
+                });
+            });
+        }
+        
+        // Update navigation buttons for service employee carousel
+        function updateServiceEmployeeNavigation(sliderClass) {
+            if (!sliderClass) return;
+            
+            const $slider = $('.' + sliderClass);
+            if ($slider.length === 0) return;
+            
+            const $container = $slider.closest('.service-employee-grid');
+            const $prevBtn = $container.siblings('.service-employee-nav-prev');
+            const $nextBtn = $container.siblings('.service-employee-nav-next');
+            
+            if ($container.length === 0) {
+                return;
+            }
+            
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            // Show/hide navigation buttons
+            if (sliderWidth <= containerWidth) {
+                $prevBtn.hide();
+                $nextBtn.hide();
+            } else {
+                $prevBtn.show();
+                $nextBtn.show();
+                
+                // Disable/enable buttons based on position
+                if (currentX >= 0) {
+                    $prevBtn.prop('disabled', true);
+                } else {
+                    $prevBtn.prop('disabled', false);
+                }
+                
+                const maxX = -(sliderWidth - containerWidth);
+                if (currentX <= maxX) {
+                    $nextBtn.prop('disabled', true);
+                } else {
+                    $nextBtn.prop('disabled', false);
+                }
+            }
+        }
+        
+        // Handle service employee carousel navigation
+        $(document).on('click', '.service-employee-nav-prev', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $container = $(this).siblings('.service-employee-grid');
+            const $slider = $container.find('.service-employee-slider');
+            const containerWidth = $container.width();
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const newX = Math.min(0, currentX + containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            setTimeout(function() {
+                const sliderClasses = $slider.attr('class').split(' ');
+                const sliderClass = sliderClasses.find(c => c.startsWith('service_employee_slider_'));
+                if (sliderClass) {
+                    updateServiceEmployeeNavigation(sliderClass);
+                }
+            }, 300);
+        });
+        
+        $(document).on('click', '.service-employee-nav-next', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $container = $(this).siblings('.service-employee-grid');
+            const $slider = $container.find('.service-employee-slider');
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const maxX = -(sliderWidth - containerWidth);
+            const newX = Math.max(maxX, currentX - containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            setTimeout(function() {
+                const sliderClasses = $slider.attr('class').split(' ');
+                const sliderClass = sliderClasses.find(c => c.startsWith('service_employee_slider_'));
+                if (sliderClass) {
+                    updateServiceEmployeeNavigation(sliderClass);
+                }
+            }, 300);
+        });
+        
+        // Handle service employee selection from carousel
+        $(document).on('click', '.service-employee-item-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const employeeId = $(this).attr('data-employee-id');
+            const employeeName = $(this).attr('data-employee-name') || '';
+            const employeePosition = $(this).attr('data-employee-position') || '';
+            const inputName = $(this).attr('data-service-input');
+            const displayContainerId = $(this).attr('data-display-container');
+            
+            if (!employeeId || !inputName) {
+                return false;
+            }
+            
+            // Update hidden input
+            $('input[name="' + inputName + '"]').val(employeeId);
+            
+            // Remove selected class from all items in this carousel
+            $(this).closest('.service-employee-slider').find('.service-employee-item-btn').removeClass('selected');
+            $(this).closest('.service-employee-slider').find('.employee-avatar-wrapper').css('border-color', '#ddd');
+            
+            // Add selected class to clicked item
+            $(this).addClass('selected');
+            $(this).find('.employee-avatar-wrapper').css('border-color', '#007bff');
+            
+            // Display employee info under service name
+            if (displayContainerId) {
+                const $displayContainer = $('#' + displayContainerId);
+                $displayContainer.find('.employee-name').text(employeeName);
+                
+                if (employeePosition) {
+                    $displayContainer.find('.employee-position').text('(' + employeePosition + ')').show();
+                } else {
+                    $displayContainer.find('.employee-position').hide();
+                }
+                
+                $displayContainer.fadeIn(300);
+            }
+            
+            return false;
+        });
+        
+        // Load employees by service on page load - luôn dùng carousel chung
         loadEmployeesByService();
         loadEmployeesForCarousel();
+        
+        // Nếu có >= 2 dịch vụ, tự động chọn dịch vụ đầu tiên làm active
+        const serviceCount = countSelectedServices();
+        if (serviceCount >= 2) {
+            const $firstServiceItem = $('.service-item-selectable').first();
+            if ($firstServiceItem.length) {
+                $firstServiceItem.addClass('active-service');
+                activeServiceSelector = $firstServiceItem.attr('data-service-selector');
+            }
+        }
+        
+        // Format time slot
+        function formatTimeSlot(time) {
+            if (!time) return '';
+            const parts = time.split(':');
+            if (parts.length >= 2) {
+                return parts[0] + ':' + parts[1];
+            }
+            return time;
+        }
+        
+        // Load time slots cho từng dịch vụ
+        function loadTimeSlotsForService($datePicker, appointmentDate, employeeId, timeInputSelector) {
+            const $timeContainer = $datePicker.closest('.service-time-container');
+            const $timeSlotContainer = $timeContainer.find('.service-time-slot-container');
+            const $timeSlotSlider = $timeContainer.find('.service-time-slot-slider');
+            const $timeSlotMessage = $timeContainer.find('.service-time-slot-message');
+            const $timeInput = $(timeInputSelector);
+            const $dateInput = $timeContainer.siblings('.service-date-input');
+            
+            // Reset
+            $timeSlotContainer.hide();
+            $timeSlotSlider.empty();
+            $timeSlotMessage.hide();
+            $timeInput.val('');
+            
+            if (!employeeId || !appointmentDate) {
+                return;
+            }
+            
+            // Show loading
+            $timeSlotMessage.text('Đang tải khung giờ...').show();
+            
+            // Load time slots via AJAX
+            $.ajax({
+                url: '{{ route("site.appointment.available-time-slots") }}',
+                method: 'GET',
+                data: {
+                    employee_id: employeeId,
+                    appointment_date: appointmentDate
+                },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success && response.message && (!response.time_slots || response.time_slots.length === 0)) {
+                        $timeSlotContainer.hide();
+                        $timeSlotMessage.text(response.message || 'Nhân viên này không có lịch làm việc vào ngày đã chọn').show();
+                        $timeInput.val('');
+                        return;
+                    }
+                    
+                    if (response.success && response.time_slots && response.time_slots.length > 0) {
+                        const currentlySelectedTime = $timeInput.val();
+                        
+                        // Sort time slots by time
+                        const sortedSlots = response.time_slots.sort(function(a, b) {
+                            return a.time.localeCompare(b.time);
+                        });
+                        
+                        $timeSlotSlider.empty();
+                        
+                        // Tính toán số cột và hàng
+                        const fixedColumns = 11;
+                        const totalSlots = sortedSlots.length;
+                        const fixedRowsPerPage = Math.ceil(totalSlots / fixedColumns);
+                        const slotsPerPage = fixedColumns * fixedRowsPerPage;
+                        
+                        let currentPage = null;
+                        let slotIndex = 0;
+                        
+                        sortedSlots.forEach(function(slot) {
+                            // Create new page if needed
+                            if (slotIndex % slotsPerPage === 0) {
+                                currentPage = $('<div></div>').addClass('time-slot-page');
+                                $timeSlotSlider.append(currentPage);
+                            }
+                            
+                            const isAvailable = slot.available !== false;
+                            const formattedTime = formatTimeSlot(slot.time);
+                            const isSelected = currentlySelectedTime === slot.time;
+                            
+                            const btn = $('<button></button>')
+                                .attr('type', 'button')
+                                .addClass('time-slot-btn service-time-slot-btn')
+                                .attr('data-time', slot.time)
+                                .attr('data-word-time-id', slot.word_time_id)
+                                .text(formattedTime);
+                            
+                            if (!isAvailable) {
+                                btn.addClass('unavailable');
+                            }
+                            
+                            if (isSelected) {
+                                btn.addClass('selected');
+                            }
+                            
+                            currentPage.append(btn);
+                            slotIndex++;
+                        });
+                        
+                        // Fill empty slots in last page
+                        const remainingSlots = slotsPerPage - (slotIndex % slotsPerPage);
+                        if (remainingSlots < slotsPerPage && currentPage) {
+                            for (let i = 0; i < remainingSlots; i++) {
+                                const emptyBtn = $('<button></button>')
+                                    .addClass('time-slot-btn empty-slot')
+                                    .css({
+                                        'visibility': 'hidden',
+                                        'pointer-events': 'none',
+                                        'border': 'none'
+                                    });
+                                currentPage.append(emptyBtn);
+                            }
+                        }
+                        
+                        $timeSlotContainer.show();
+                        $timeSlotMessage.hide();
+                    } else {
+                        $timeSlotContainer.hide();
+                        $timeSlotMessage.text('Không có khung giờ khả dụng').show();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error loading time slots:', xhr);
+                    $timeSlotContainer.hide();
+                    $timeSlotMessage.text('Có lỗi xảy ra khi tải khung giờ').show();
+                }
+            });
+        }
+        
+        // Event handler khi chọn ngày cho từng dịch vụ
+        $(document).on('change', '.service-date-picker', function() {
+            const $datePicker = $(this);
+            const appointmentDate = $datePicker.val();
+            const employeeId = $datePicker.attr('data-employee-id');
+            const timeInputSelector = $datePicker.attr('data-time-input-selector');
+            const serviceType = $datePicker.attr('data-service-type');
+            
+            // Lưu ngày vào hidden input
+            let $dateInput = null;
+            if (serviceType === 'service') {
+                const serviceId = $datePicker.attr('data-service-id');
+                $dateInput = $('.service-date-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+            } else if (serviceType === 'variant') {
+                const variantId = $datePicker.attr('data-variant-id');
+                $dateInput = $('.service-date-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+            } else if (serviceType === 'combo') {
+                const comboId = $datePicker.attr('data-combo-id');
+                $dateInput = $('.service-date-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+            }
+            
+            if ($dateInput && $dateInput.length) {
+                $dateInput.val(appointmentDate);
+            }
+            
+            if (appointmentDate && employeeId && timeInputSelector) {
+                loadTimeSlotsForService($datePicker, appointmentDate, employeeId, timeInputSelector);
+            }
+        });
+        
+        // Event handler khi chọn time slot cho từng dịch vụ
+        $(document).on('click', '.service-time-slot-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if ($(this).hasClass('unavailable')) {
+                return false;
+            }
+            
+            const time = $(this).attr('data-time');
+            const wordTimeId = $(this).attr('data-word-time-id');
+            const formattedTime = formatTimeSlot(time);
+            
+            // Tìm time input và date input tương ứng
+            const $timeContainer = $(this).closest('.service-time-container');
+            const $datePicker = $timeContainer.find('.service-date-picker');
+            const serviceType = $datePicker.attr('data-service-type');
+            let $timeInput = null;
+            let $dateInput = null;
+            let displayContainerId = null;
+            
+            if (serviceType === 'service') {
+                const serviceId = $datePicker.attr('data-service-id');
+                $timeInput = $('.service-time-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                $dateInput = $('.service-date-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                displayContainerId = 'service_time_display_service_' + serviceId;
+            } else if (serviceType === 'variant') {
+                const variantId = $datePicker.attr('data-variant-id');
+                $timeInput = $('.service-time-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                $dateInput = $('.service-date-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                displayContainerId = 'service_time_display_variant_' + variantId;
+            } else if (serviceType === 'combo') {
+                const comboId = $datePicker.attr('data-combo-id');
+                $timeInput = $('.service-time-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                $dateInput = $('.service-date-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                displayContainerId = 'service_time_display_combo_' + comboId;
+            }
+            
+            if ($timeInput && $timeInput.length) {
+                // Lưu time slot
+                $timeInput.val(time);
+                
+                // Xóa selected của tất cả time slots trong container này
+                $timeContainer.find('.service-time-slot-btn').removeClass('selected');
+                
+                // Thêm selected cho time slot được chọn
+                $(this).addClass('selected');
+                
+                // Hiển thị time slot cạnh tên nhân viên
+                if (displayContainerId) {
+                    const $displayContainer = $('#' + displayContainerId);
+                    $displayContainer.find('.time-slot-text').text(formattedTime);
+                    $displayContainer.fadeIn(300);
+                }
+            }
+            
+            return false;
+        });
         
         // Nếu đã khôi phục employee_id và appointment_date từ localStorage, load time slots
         if (restoredEmployeeId && restoredAppointmentDate) {
@@ -1462,7 +2470,8 @@
                                 const avatarUrl = employee.avatar ? '{{ asset("legacy/images/avatars") }}/' + employee.avatar : '';
                                 const isSelected = currentEmployeeId == employee.id;
                                 
-                                let itemHtml = '<div class="employee-item-btn' + (isSelected ? ' selected' : '') + '" data-employee-id="' + employee.id + '" data-employee-name="' + employee.name + '" data-employee-position="' + (employee.position || '') + '" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">';
+                                const serviceIds = employee.service_ids || [];
+                                let itemHtml = '<div class="employee-item-btn' + (isSelected ? ' selected' : '') + '" data-employee-id="' + employee.id + '" data-employee-name="' + employee.name + '" data-employee-position="' + (employee.position || '') + '" data-service-ids="' + serviceIds.join(',') + '" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">';
                                 itemHtml += '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isSelected ? '#007bff' : '#ddd') + ';">';
                                 
                                 if (avatarUrl) {
@@ -1545,8 +2554,8 @@
             e.stopImmediatePropagation();
             
             const employeeId = $(this).data('employee-id');
-            const employeeName = $(this).data('employee-name');
-            const employeePosition = $(this).data('employee-position');
+            const employeeName = $(this).data('employee-name') || $(this).attr('data-employee-name') || '';
+            const employeePosition = $(this).data('employee-position') || $(this).attr('data-employee-position') || '';
             
             if (!employeeId) {
                 return false;
@@ -1558,7 +2567,9 @@
             // Debug: Log để kiểm tra
             console.log('Employee selected:', {
                 employeeId: employeeId,
-                employeeIdValue: $('#employee_id').val()
+                employeeIdValue: $('#employee_id').val(),
+                employeeName: employeeName,
+                employeePosition: employeePosition
             });
             
             // Xóa selected của tất cả items
@@ -1572,6 +2583,86 @@
             // Clear error và remove invalid class
             $('#employee-error').hide();
             $('#employeeToggleBtn').css('color', '');
+            
+            // Nếu có >= 2 dịch vụ, gán nhân viên cho dịch vụ đang active
+            const serviceCount = countSelectedServices();
+            if (serviceCount >= 2) {
+                // Nếu chưa chọn dịch vụ nào, tự động chọn dịch vụ đầu tiên
+                if (!activeServiceSelector) {
+                    const $firstServiceItem = $('.service-item-selectable').first();
+                    if ($firstServiceItem.length) {
+                        $firstServiceItem.addClass('active-service');
+                        activeServiceSelector = $firstServiceItem.attr('data-service-selector');
+                    }
+                }
+                
+                if (!activeServiceSelector) {
+                    // Nếu vẫn không có dịch vụ nào, thông báo cho người dùng
+                    alert('Vui lòng chọn dịch vụ để gán nhân viên trước khi chọn nhân viên.');
+                    return false;
+                }
+                
+                const employeeServiceIds = $(this).attr('data-service-ids');
+                const employeeServiceIdsArray = employeeServiceIds ? employeeServiceIds.split(',').filter(id => id && id !== '') : [];
+                
+                // Tìm input của dịch vụ đang active
+                let $targetInput = null;
+                
+                if (activeServiceSelector.startsWith('service_')) {
+                    const serviceId = activeServiceSelector.replace('service_', '');
+                    $targetInput = $('.service-employee-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                } else if (activeServiceSelector.startsWith('variant_')) {
+                    const variantId = activeServiceSelector.replace('variant_', '');
+                    $targetInput = $('.service-employee-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                } else if (activeServiceSelector.startsWith('combo_')) {
+                    const comboId = activeServiceSelector.replace('combo_', '');
+                    $targetInput = $('.service-employee-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                }
+                
+                if ($targetInput && $targetInput.length) {
+                    const serviceType = $targetInput.attr('data-service-type');
+                    let targetServiceId = null;
+                    let canAssign = false;
+                    
+                    if (serviceType === 'service') {
+                        targetServiceId = $targetInput.attr('data-service-id');
+                        canAssign = targetServiceId && employeeServiceIdsArray.includes(targetServiceId.toString());
+                    } else if (serviceType === 'variant') {
+                        targetServiceId = $targetInput.attr('data-service-id');
+                        canAssign = targetServiceId && employeeServiceIdsArray.includes(targetServiceId.toString());
+                    } else if (serviceType === 'combo') {
+                        const comboServiceIds = $targetInput.attr('data-service-ids');
+                        if (comboServiceIds) {
+                            const comboServiceIdsArray = comboServiceIds.split(',').filter(id => id && id !== '');
+                            canAssign = comboServiceIdsArray.some(comboServiceId => 
+                                employeeServiceIdsArray.includes(comboServiceId.toString())
+                            );
+                        }
+                    }
+                    
+                    if (canAssign) {
+                        // Gán nhân viên cho dịch vụ này
+                        $targetInput.val(employeeId);
+                        const displayContainerId = $targetInput.attr('data-display-container');
+                        if (displayContainerId) {
+                            const $displayContainer = $('#' + displayContainerId);
+                            $displayContainer.find('.employee-name').text(employeeName);
+                            if (employeePosition) {
+                                $displayContainer.find('.employee-position').text('(' + employeePosition + ')').show();
+                            } else {
+                                $displayContainer.find('.employee-position').hide();
+                            }
+                            $displayContainer.fadeIn(300);
+                        }
+                        
+                        // Giữ active để người dùng có thể chọn giờ ngay sau khi chọn nhân viên
+                        // Chỉ xóa active khi chọn dịch vụ khác
+                    } else {
+                        alert('Nhân viên này không có chuyên môn phù hợp với dịch vụ đã chọn.');
+                        return false;
+                    }
+                }
+            }
             
             // Trigger change event để load time slots nếu đã chọn ngày
             $('#employee_id').trigger('change');
@@ -1613,6 +2704,55 @@
             
             const $slider = $('.employee-slider');
             const $container = $('.employee-grid');
+            const containerWidth = $container.width();
+            const sliderWidth = $slider[0].scrollWidth;
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const maxX = -(sliderWidth - containerWidth);
+            const newX = Math.max(maxX, currentX - containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            return false;
+        });
+        
+        // Navigation buttons cho service time slots
+        $(document).on('click', '.service-time-slot-prev', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $container = $(this).siblings('.service-time-slot-grid');
+            const $slider = $container.find('.service-time-slot-slider');
+            const containerWidth = $container.width();
+            const currentTransform = $slider.css('transform');
+            
+            let currentX = 0;
+            if (currentTransform && currentTransform !== 'none') {
+                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
+                }
+            }
+            
+            const newX = Math.min(0, currentX + containerWidth);
+            $slider.css('transform', 'translateX(' + newX + 'px)');
+            
+            return false;
+        });
+        
+        $(document).on('click', '.service-time-slot-next', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const $container = $(this).siblings('.service-time-slot-grid');
+            const $slider = $container.find('.service-time-slot-slider');
             const containerWidth = $container.width();
             const sliderWidth = $slider[0].scrollWidth;
             const currentTransform = $slider.css('transform');
@@ -1697,9 +2837,33 @@
             if (dateValue && dateValue.trim() !== '') {
                 $('#appointment_date-error').hide();
                 $(this).removeClass('is-invalid');
-                // Chỉ load time slots nếu đã chọn kỹ thuật viên
+                
+                // Load time slots
+                const serviceCount = countSelectedServices();
+                if (serviceCount >= 2) {
+                    // Nếu có >= 2 dịch vụ, kiểm tra xem có dịch vụ nào đã chọn nhân viên chưa
+                    let hasEmployee = false;
+                    $('.service-employee-input').each(function() {
+                        if ($(this).val()) {
+                            hasEmployee = true;
+                            return false; // break
+                        }
+                    });
+                    
+                    if (hasEmployee) {
+                        loadAvailableTimeSlots();
+                    } else {
+                        $('#time_slot_message').text('Vui lòng chọn dịch vụ và nhân viên trước').show();
+                        $('.time-slot-container').hide();
+                    }
+                } else {
+                    // Nếu chỉ có 1 dịch vụ, kiểm tra employee_id chung
                 if ($('#employee_id').val()) {
                     loadAvailableTimeSlots();
+                    } else {
+                        $('#time_slot_message').text('Vui lòng chọn kỹ thuật viên trước').show();
+                        $('.time-slot-container').hide();
+                    }
                 }
             } else {
                 // Nếu xóa date, hiển thị error
@@ -1754,7 +2918,45 @@
 
         // Load available time slots when employee or date changes
         function loadAvailableTimeSlots() {
-            const employeeId = $('#employee_id').val();
+            // Nếu có >= 2 dịch vụ, lấy employee_id từ dịch vụ đang active
+            const serviceCount = countSelectedServices();
+            let employeeId = null;
+            
+            if (serviceCount >= 2) {
+                // Lấy employee_id từ dịch vụ đang active
+                if (activeServiceSelector) {
+                    let $employeeInput = null;
+                    
+                    if (activeServiceSelector.startsWith('service_')) {
+                        const serviceId = activeServiceSelector.replace('service_', '');
+                        $employeeInput = $('.service-employee-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                    } else if (activeServiceSelector.startsWith('variant_')) {
+                        const variantId = activeServiceSelector.replace('variant_', '');
+                        $employeeInput = $('.service-employee-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                    } else if (activeServiceSelector.startsWith('combo_')) {
+                        const comboId = activeServiceSelector.replace('combo_', '');
+                        $employeeInput = $('.service-employee-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                    }
+                    
+                    if ($employeeInput && $employeeInput.length) {
+                        employeeId = $employeeInput.val();
+                    }
+                }
+                
+                // Nếu không có dịch vụ active, lấy dịch vụ đầu tiên có nhân viên
+                if (!employeeId) {
+                    $('.service-employee-input').each(function() {
+                        if ($(this).val()) {
+                            employeeId = $(this).val();
+                            return false; // break
+                        }
+                    });
+                }
+            } else {
+                // Nếu chỉ có 1 dịch vụ, dùng employee_id chung
+                employeeId = $('#employee_id').val();
+            }
+            
             const appointmentDate = $('#appointment_date').val();
             const timeSlotGrid = $('#time_slot_grid');
             const timeSlotMessage = $('#time_slot_message');
@@ -1770,7 +2972,11 @@
             
             // Check if employee is selected
             if (!employeeId) {
+                if (serviceCount >= 2) {
+                    timeSlotMessage.text('Vui lòng chọn dịch vụ và nhân viên trước');
+                } else {
                 timeSlotMessage.text('Vui lòng chọn kỹ thuật viên trước');
+                }
                 return;
             }
             
@@ -1788,7 +2994,7 @@
                 url: '{{ route("site.appointment.available-time-slots") }}',
                 method: 'GET',
                 data: {
-                    employee_id: employeeId || '',
+                    employee_id: employeeId,
                     appointment_date: appointmentDate
                 },
                 headers: {
@@ -1817,8 +3023,8 @@
                         $slider.empty();
                         
                         // Tính toán số cột và hàng dựa trên số lượng slots
-                        // Từ 7:00 đến 22:00 mỗi 30 phút = 30 slots
-                        // Sử dụng 10 cột x 3 hàng = 30 slots (hoặc 11 cột x 3 hàng = 33 slots để có thêm không gian)
+                        // Từ 7:00 đến 23:00 mỗi 30 phút = 33 slots
+                        // Sử dụng 11 cột x 3 hàng = 33 slots
                         const fixedColumns = 11;
                         const totalSlots = sortedSlots.length;
                         // Tính số hàng cần thiết (làm tròn lên)
@@ -1983,13 +3189,11 @@
         
         // Handle time slot button click
         $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
-            // Kiểm tra xem đã chọn kỹ thuật viên chưa
-            const employeeId = $('#employee_id').val();
-            if (!employeeId) {
-                $('#time_slot_message').text('Vui lòng chọn kỹ thuật viên trước').show();
-                $('.time-slot-container').hide();
-                return false;
-            }
+            const serviceCount = countSelectedServices();
+            const time = $(this).data('time');
+            const wordTimeId = $(this).data('word-time-id');
+            const formattedTime = formatTimeSlot(time);
+            const appointmentDate = $('#appointment_date').val();
             
             // Remove previous selection
             $('.time-slot-btn').removeClass('selected');
@@ -2000,25 +3204,88 @@
             // Clear time slot error
             $('#time_slot-error').hide();
             
-            // Set hidden inputs
-            const time = $(this).data('time');
-            const wordTimeId = $(this).data('word-time-id');
-            
-            // Đảm bảo set giá trị đúng
+            if (serviceCount >= 2) {
+                // Nếu có >= 2 dịch vụ, gán time slot cho dịch vụ đang active hoặc dịch vụ đã có nhân viên
+                let targetServiceSelector = activeServiceSelector;
+                
+                // Nếu không có dịch vụ active, tự động tìm dịch vụ đã có nhân viên đầu tiên
+                if (!targetServiceSelector) {
+                    $('.service-employee-input').each(function() {
+                        if ($(this).val()) {
+                            const serviceType = $(this).attr('data-service-type');
+                            if (serviceType === 'service') {
+                                const serviceId = $(this).attr('data-service-id');
+                                targetServiceSelector = 'service_' + serviceId;
+                            } else if (serviceType === 'variant') {
+                                const variantId = $(this).attr('data-variant-id');
+                                targetServiceSelector = 'variant_' + variantId;
+                            } else if (serviceType === 'combo') {
+                                const comboId = $(this).attr('data-combo-id');
+                                targetServiceSelector = 'combo_' + comboId;
+                            }
+                            return false; // break
+                        }
+                    });
+                }
+                
+                if (targetServiceSelector) {
+                    let $timeInput = null;
+                    let $dateInput = null;
+                    let displayContainerId = null;
+                    
+                    if (targetServiceSelector.startsWith('service_')) {
+                        const serviceId = targetServiceSelector.replace('service_', '');
+                        $timeInput = $('.service-time-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                        $dateInput = $('.service-date-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                        displayContainerId = 'service_time_display_service_' + serviceId;
+                    } else if (targetServiceSelector.startsWith('variant_')) {
+                        const variantId = targetServiceSelector.replace('variant_', '');
+                        $timeInput = $('.service-time-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                        $dateInput = $('.service-date-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                        displayContainerId = 'service_time_display_variant_' + variantId;
+                    } else if (targetServiceSelector.startsWith('combo_')) {
+                        const comboId = targetServiceSelector.replace('combo_', '');
+                        $timeInput = $('.service-time-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                        $dateInput = $('.service-date-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                        displayContainerId = 'service_time_display_combo_' + comboId;
+                    }
+                    
+                    if ($timeInput && $timeInput.length) {
+                        // Lưu time slot và date cho dịch vụ này
+                        $timeInput.val(time);
+                        if ($dateInput && $dateInput.length && appointmentDate) {
+                            $dateInput.val(appointmentDate);
+                        }
+                        
+                        // Hiển thị time slot cạnh tên nhân viên
+                        if (displayContainerId) {
+                            const $displayContainer = $('#' + displayContainerId);
+                            $displayContainer.find('.time-slot-text').text(formattedTime);
+                            $displayContainer.fadeIn(300);
+                        }
+                        
+                        // Xóa active sau khi chọn giờ xong
+                        $('.service-item-selectable').removeClass('active-service');
+                        activeServiceSelector = null;
+                    } else {
+                        // Không tìm thấy dịch vụ có nhân viên
+                        return false;
+                    }
+                } else {
+                    // Không có dịch vụ nào có nhân viên
+                    return false;
+                }
+            } else {
+                // Nếu chỉ có 1 dịch vụ, dùng time slot chung
             if (time) {
                 $('#time_slot').val(time);
             }
             if (wordTimeId) {
                 $('#word_time_id').val(wordTimeId);
+                }
             }
             
-            // Debug: Log để kiểm tra
-            console.log('Time slot selected:', {
-                time: time,
-                wordTimeId: wordTimeId,
-                timeSlotValue: $('#time_slot').val(),
-                wordTimeIdValue: $('#word_time_id').val()
-            });
+            return false;
         });
         
         
@@ -2200,11 +3467,31 @@
             }
             
             // Check time slot - kiểm tra kỹ hơn
+            const serviceCount = countSelectedServices();
+            let hasTimeSlot = false;
+            
+            if (serviceCount >= 2) {
+                // Nếu có >= 2 dịch vụ, kiểm tra service_time cho từng dịch vụ
+                let allServicesHaveTime = true;
+                
+                // Kiểm tra service_time cho từng dịch vụ
+                $('.service-time-input').each(function() {
+                    const timeValue = $(this).val();
+                    if (!timeValue || timeValue.trim() === '') {
+                        allServicesHaveTime = false;
+                        return false; // break
+                    }
+                });
+                
+                hasTimeSlot = allServicesHaveTime;
+            } else {
+                // Nếu chỉ có 1 dịch vụ, kiểm tra word_time_id chung
             const wordTimeId = $('#word_time_id').val();
             const wordTimeIdTrimmed = wordTimeId ? String(wordTimeId).trim() : '';
-            const hasWordTimeId = wordTimeIdTrimmed && wordTimeIdTrimmed !== '' && wordTimeIdTrimmed !== '0' && wordTimeIdTrimmed !== 'null' && wordTimeIdTrimmed !== 'undefined';
+                hasTimeSlot = wordTimeIdTrimmed && wordTimeIdTrimmed !== '' && wordTimeIdTrimmed !== '0' && wordTimeIdTrimmed !== 'null' && wordTimeIdTrimmed !== 'undefined';
+            }
             
-            if (!hasWordTimeId) {
+            if (!hasTimeSlot) {
                 showFieldError('time_slot', 'Mời anh chọn giờ đặt lịch');
                 isValid = false;
             } else {
@@ -2219,7 +3506,8 @@
                 hasService: serviceIds.length > 0 || serviceVariants.length > 0 || comboIds.length > 0,
                 hasEmployeeId: hasEmployeeId,
                 hasAppointmentDate: hasAppointmentDate,
-                hasWordTimeId: hasWordTimeId,
+                hasTimeSlot: hasTimeSlot,
+                serviceCount: serviceCount,
                 isValid: isValid
             });
             
@@ -2294,128 +3582,72 @@
             // Set submitting flag NGAY LẬP TỨC để ngăn chặn submit lại
             isSubmitting = true;
             
-            // Chuẩn bị dữ liệu TRƯỚC KHI disable form
-            const formDataObj = {};
-            
-            // Lấy dữ liệu trực tiếp từ các input (trước khi disable)
-            const name = $('#name').val();
-            if (name && name.trim() !== '') {
-                formDataObj.name = name.trim();
-            }
-            
-            const phone = $('#phone').val();
-            if (phone && phone.trim() !== '') {
-                formDataObj.phone = phone.trim();
-            }
-            
-            const email = $('input[name="email"]').val();
-            if (email && email.trim() !== '') {
-                formDataObj.email = email.trim();
-            }
-            
-            const employeeId = $('#employee_id').val();
-            if (employeeId && employeeId !== '' && employeeId !== '0') {
-                formDataObj.employee_id = employeeId;
-            }
-            
-            const appointmentDate = $('#appointment_date').val();
-            if (appointmentDate && appointmentDate.trim() !== '') {
-                formDataObj.appointment_date = appointmentDate.trim();
-            }
-            
-            const wordTimeId = $('#word_time_id').val();
-            if (wordTimeId && wordTimeId !== '' && wordTimeId !== '0') {
-                formDataObj.word_time_id = wordTimeId;
-            }
-            
-            const note = $('textarea[name="note"]').val();
-            if (note && note.trim() !== '') {
-                formDataObj.note = note.trim();
-            }
-            
-            // Xử lý service arrays
-            // Collect service IDs and remove duplicates
-            const serviceIds = [];
-            const seenServiceIds = new Set(); // Use Set to track duplicates
-            $('input[name="service_id[]"]').each(function() {
-                const val = $(this).val();
-                if (val && val.trim() !== '' && val !== '0') {
-                    const serviceId = val.trim();
-                    // Only add if not already seen (remove duplicates)
-                    if (!seenServiceIds.has(serviceId)) {
-                        seenServiceIds.add(serviceId);
-                        serviceIds.push(serviceId);
-                    }
-                }
-            });
-            if (serviceIds.length > 0) {
-                formDataObj.service_id = serviceIds;
-            }
-            
-            // Collect service variants and remove duplicates
-            const serviceVariants = [];
-            const seenVariants = new Set(); // Use Set to track duplicates
-            $('input[name="service_variants[]"]').each(function() {
-                const val = $(this).val();
-                if (val && val.trim() !== '' && val !== '0') {
-                    const variantId = val.trim();
-                    // Only add if not already seen (remove duplicates)
-                    if (!seenVariants.has(variantId)) {
-                        seenVariants.add(variantId);
-                        serviceVariants.push(variantId);
-                    }
-                }
-            });
-            if (serviceVariants.length > 0) {
-                formDataObj.service_variants = serviceVariants;
-            }
-            
-            // Log để debug
-            console.log('Service variants collected:', {
-                total_inputs: $('input[name="service_variants[]"]').length,
-                unique_variants: serviceVariants.length,
-                variants: serviceVariants
-            });
-            
-            // Collect combo IDs and remove duplicates
-            const comboIds = [];
-            const seenComboIds = new Set(); // Use Set to track duplicates
-            $('input[name="combo_id[]"]').each(function() {
-                const val = $(this).val();
-                if (val && val.trim() !== '' && val !== '0') {
-                    const comboId = val.trim();
-                    // Only add if not already seen (remove duplicates)
-                    if (!seenComboIds.has(comboId)) {
-                        seenComboIds.add(comboId);
-                        comboIds.push(comboId);
-                    }
-                }
-            });
-            if (comboIds.length > 0) {
-                formDataObj.combo_id = comboIds;
-            }
-            
-            console.log('Form data object:', formDataObj);
-            console.log('Form data keys:', Object.keys(formDataObj));
-            console.log('Form data values:', {
-                name: formDataObj.name,
-                phone: formDataObj.phone,
-                email: formDataObj.email,
-                employee_id: formDataObj.employee_id,
-                appointment_date: formDataObj.appointment_date,
-                word_time_id: formDataObj.word_time_id,
-                service_id: formDataObj.service_id,
-                service_variants: formDataObj.service_variants,
-                combo_id: formDataObj.combo_id
-            });
-            
             // Disable form và submit button để ngăn chặn submit lại
             const $submitBtn = $('.submit-appointment-btn');
             const originalBtnText = $submitBtn.html();
             $submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
+            
+            // Collect form data as object
+            const formData = {};
+            
+            // Serialize form to array first
+            const formArray = $form.serializeArray();
+            
+            // Convert to object, properly handling arrays
+            formArray.forEach(function(item) {
+                const name = item.name;
+                const value = item.value;
+                
+                if (name.endsWith('[]')) {
+                    // Array field like service_id[]
+                    const key = name.slice(0, -2);
+                    if (!formData[key]) {
+                        formData[key] = [];
+                    }
+                    if (value && value.trim() !== '') {
+                        formData[key].push(value);
+                    }
+                } else if (name.includes('[') && name.includes(']')) {
+                    // Nested array like service_employee[service_10]
+                    formData[name] = value;
+                } else {
+                    // Simple field
+                    formData[name] = value;
+                }
+            });
+            
+            // Add service_employee, service_time, service_date
+            $('input[name^="service_employee["]').each(function() {
+                const name = $(this).attr('name');
+                const value = $(this).val();
+                if (value && value.trim() !== '' && value !== '0') {
+                    formData[name] = value;
+                }
+            });
+            
+            $('input[name^="service_time["]').each(function() {
+                const name = $(this).attr('name');
+                const value = $(this).val();
+                if (value && value.trim() !== '') {
+                    formData[name] = value;
+                }
+            });
+            
+            $('input[name^="service_date["]').each(function() {
+                const name = $(this).attr('name');
+                const value = $(this).val();
+                if (value && value.trim() !== '') {
+                    formData[name] = value;
+                }
+            });
+            
+            // Disable form inputs after collecting data
             $form.find('input, button, select, textarea').prop('disabled', true);
             
-            // Submit form via AJAX
+            console.log('Form data object:', formData);
+            console.log('Service IDs:', formData.service_id);
+            console.log('Service IDs is array:', Array.isArray(formData.service_id));
+            
             $.ajax({
                 url: $form.attr('action'),
                 method: 'POST',
@@ -2424,7 +3656,8 @@
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json'
                 },
-                data: formDataObj,
+                data: formData,
+                traditional: true,
                 success: function(response) {
                     // Kiểm tra lại để tránh xử lý nhiều lần
                     if (isSubmitting && response.success) {
@@ -2491,27 +3724,44 @@
                             if (value && value.length > 0) {
                                 console.log('Error for field:', key, 'Message:', value[0]);
                                 
-                                // Map backend field names to frontend field IDs
-                                let fieldId = key;
-                                if (key === 'employee_id') fieldId = 'employee';
-                                if (key === 'appointment_date') fieldId = 'appointment_date';
-                                if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
-                                if (key === 'service_id' || key === 'service_id.*') fieldId = 'service';
-                                
-                                // Hiển thị lỗi
-                                const $errorDiv = $('#' + fieldId + '-error');
-                                if ($errorDiv.length) {
-                                    $errorDiv.find('span').text(value[0]);
-                                    $errorDiv.show();
+                                // Handle nested field errors like service_employee.service_10
+                                if (key.includes('.')) {
+                                    const parts = key.split('.');
+                                    const fieldName = parts[0];
+                                    const fieldKey = parts.slice(1).join('.');
+                                    
+                                    // For service_employee and service_time errors, show generic error
+                                    if (fieldName === 'service_employee' || fieldName === 'service_time') {
+                                        // Show error in appropriate place
+                                        if (fieldName === 'service_employee') {
+                                            showFieldError('employee', value[0]);
+                                        } else if (fieldName === 'service_time') {
+                                            showFieldError('time_slot', value[0]);
+                                        }
+                                    }
                                 } else {
-                                    // Nếu không tìm thấy error div, thử showFieldError
-                                    showFieldError(fieldId, value[0]);
-                                }
-                                
-                                // Thêm invalid class cho field
-                                const $field = $('#' + fieldId);
-                                if ($field.length) {
-                                    $field.addClass('is-invalid');
+                                    // Map backend field names to frontend field IDs
+                                    let fieldId = key;
+                                    if (key === 'employee_id') fieldId = 'employee';
+                                    if (key === 'appointment_date') fieldId = 'appointment_date';
+                                    if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
+                                    if (key === 'service_id' || key === 'service_id.*') fieldId = 'service';
+                                    
+                                    // Hiển thị lỗi
+                                    const $errorDiv = $('#' + fieldId + '-error');
+                                    if ($errorDiv.length) {
+                                        $errorDiv.find('span').text(value[0]);
+                                        $errorDiv.show();
+                                    } else {
+                                        // Nếu không tìm thấy error div, thử showFieldError
+                                        showFieldError(fieldId, value[0]);
+                                    }
+                                    
+                                    // Thêm invalid class cho field
+                                    const $field = $('#' + fieldId);
+                                    if ($field.length) {
+                                        $field.addClass('is-invalid');
+                                    }
                                 }
                             }
                         });
