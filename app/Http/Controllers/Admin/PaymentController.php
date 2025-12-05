@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class PaymentController extends Controller
 {
     /**
-     * Display a listing of the payments.
+     * Display a listing of the payments
      */
     public function index()
     {
@@ -70,10 +70,10 @@ class PaymentController extends Controller
                 fputcsv($file, [
                     $payment->id,
                     $payment->invoice_code,
-                    $payment->user->name ?? 'Khách vãng lai',
-                    $payment->user->phone ?? '',
+                    $payment->user?->name ?? 'Khách vãng lai',
+                    $payment->user?->phone ?? '',
                     $type,
-                    number_format($payment->total, 0, '', '.'), // Format số tiền dễ đọc
+                    number_format($payment->total ?? 0, 0, '', '.'), // Format số tiền dễ đọc
                     $payment->created_at ? $payment->created_at->format('d/m/Y H:i') : '',
                     $payment->created_by
                 ]);

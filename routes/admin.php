@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\WorkingScheduleController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\SettingController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\PaymentController;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -47,8 +48,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::delete('appointments/{id}/force-delete', [AppointmentController::class, 'forceDelete'])->name('appointments.force-delete');
     Route::resource('appointments', AppointmentController::class);
     
+    // Hóa đơn (Payments) routes
+    Route::get('payments/export', [PaymentController::class, 'export'])
+        ->name('payments.export');
+    Route::resource('payments', PaymentController::class);
+
     Route::resource('orders', OrderController::class);
-    
     // Users routes - đặt trước resource để tránh conflict
     Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
     Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
