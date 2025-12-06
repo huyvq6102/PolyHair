@@ -35,9 +35,9 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }
 
-        // Redirect employees to their appointments page
+        // Redirect employees to working schedule
         if ($user->isEmployee()) {
-            return redirect()->intended(route('employee.appointments.index', absolute: false));
+            return redirect()->intended(route('admin.working-schedules.index', absolute: false));
         }
 
         return redirect()->intended(route('site.home', absolute: false));
