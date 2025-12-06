@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyHair - Tài liệu hệ thống</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f5f5; min-height: 100vh; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        
+        .header { text-align: center; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; margin-bottom: 25px; }
+        .header h1 { font-size: 2rem; margin-bottom: 5px; }
+        .header p { opacity: 0.9; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; justify-content: center; flex-wrap: wrap; }
+        .tab-btn { padding: 12px 25px; border: none; background: white; color: #333; border-radius: 10px; cursor: pointer; font-weight: 500; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s; }
+        .tab-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+        .tab-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .diagram-container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); overflow-x: auto; }
+        .diagram-title { text-align: center; font-size: 1.5rem; color: #333; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #eee; }
+        
+        .diagram-wrapper { min-width: 1200px; }
+        
+        /* SVG Styles */
+        .actor-stick { stroke: #333; stroke-width: 2; fill: none; }
+        .actor-head { fill: #fff; stroke: #333; stroke-width: 2; }
+        .actor-label { font-size: 14px; font-weight: 600; fill: #333; text-anchor: middle; }
+        
+        .usecase { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; }
+        .usecase-admin { fill: #ffebee; stroke: #c62828; }
+        .usecase-employee { fill: #e8f5e9; stroke: #2e7d32; }
+        .usecase-customer { fill: #fff3e0; stroke: #ef6c00; }
+        .usecase-text { font-size: 11px; fill: #333; text-anchor: middle; }
+        
+        .connector { stroke: #666; stroke-width: 1.5; fill: none; }
+        .connector-dashed { stroke-dasharray: 5,5; }
+        
+        .sitemap-node { fill: #fff; stroke: #333; stroke-width: 2; rx: 8; }
+        .sitemap-home { fill: #4caf50; stroke: #2e7d32; }
+        .sitemap-admin { fill: #f44336; stroke: #c62828; }
+        .sitemap-employee { fill: #2196f3; stroke: #1565c0; }
+        .sitemap-text { font-size: 12px; fill: #333; text-anchor: middle; font-weight: 500; }
+        .sitemap-text-white { fill: white; }
+        
+        .flow-start, .flow-end { fill: #9c27b0; stroke: #6a1b9a; stroke-width: 2; }
+        .flow-process { fill: #fff; stroke: #1976d2; stroke-width: 2; rx: 5; }
+        .flow-decision { fill: #fff3e0; stroke: #ef6c00; stroke-width: 2; }
+        .flow-text { font-size: 11px; fill: #333; text-anchor: middle; }
+        .flow-text-white { fill: white; }
+        .flow-arrow { fill: #666; }
+        
+        .legend { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 10px; }
+        .legend h4 { margin-bottom: 10px; }
+        .legend-item { display: inline-flex; align-items: center; gap: 8px; margin-right: 20px; font-size: 13px; }
+        .legend-color { width: 20px; height: 20px; border-radius: 4px; border: 2px solid; }
+        
+        footer { text-align: center; padding: 20px; color: #666; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>💈 PolyHair - Tài liệu hệ thống</h1>
+            <p>Sơ đồ Use Case, Site Map, Flowchart & Test Cases</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="usecase">📊 Use Case Diagram</button>
+            <button class="tab-btn" data-tab="sitemap">🗺️ Site Map</button>
+            <button class="tab-btn" data-tab="flowchart">🔄 Flowchart</button>
+            <button class="tab-btn" data-tab="testcase">🧪 Test Cases</button>
+        </nav>
+
+        <!-- USE CASE DIAGRAM -->
+        <div id="usecase" class="tab-content active">
+            <div class="diagram-container">
+                <h2 class="diagram-title">📊 Use Case Diagram - Hệ thống PolyHair Barbershop</h2>
+                <div class="diagram-wrapper">
+                    <svg width="1200" height="900" viewBox="0 0 1200 900">
+                        <!-- System boundary -->
+                        <rect x="200" y="30" width="800" height="840" fill="#fafafa" stroke="#333" stroke-width="2" stroke-dasharray="10,5" rx="20"/>
+                        <text x="600" y="60" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Hệ thống PolyHair Barbershop</text>
+                        
+                        <!-- GUEST Actor -->
+                        <circle cx="80" cy="150" r="20" class="actor-head"/>
+                        <line x1="80" y1="170" x2="80" y2="220" class="actor-stick"/>
+                        <line x1="50" y1="190" x2="110" y2="190" class="actor-stick"/>
+                        <line x1="80" y1="220" x2="50" y2="260" class="actor-stick"/>
+                        <line x1="80" y1="220" x2="110" y2="260" class="actor-stick"/>
+                        <text x="80" y="285" class="actor-label">Guest</text>
+                        
+                        <!-- CUSTOMER Actor -->
+                        <circle cx="80" cy="420" r="20" class="actor-head"/>
+                        <line x1="80" y1="440" x2="80" y2="490" class="actor-stick"/>
+                        <line x1="50" y1="460" x2="110" y2="460" class="actor-stick"/>
+                        <line x1="80" y1="490" x2="50" y2="530" class="actor-stick"/>
+                        <line x1="80" y1="490" x2="110" y2="530" class="actor-stick"/>
+                        <text x="80" y="555" class="actor-label">Customer</text>
+                        
+                        <!-- EMPLOYEE Actor -->
+                        <circle cx="1120" cy="200" r="20" class="actor-head"/>
+                        <line x1="1120" y1="220" x2="1120" y2="270" class="actor-stick"/>
+                        <line x1="1090" y1="240" x2="1150" y2="240" class="actor-stick"/>
+                        <line x1="1120" y1="270" x2="1090" y2="310" class="actor-stick"/>
+                        <line x1="1120" y1="270" x2="1150" y2="310" class="actor-stick"/>
+                        <text x="1120" y="335" class="actor-label">Employee</text>
+                        
+                        <!-- ADMIN Actor -->
+                        <circle cx="1120" cy="550" r="20" class="actor-head"/>
+                        <line x1="1120" y1="570" x2="1120" y2="620" class="actor-stick"/>
+                        <line x1="1090" y1="590" x2="1150" y2="590" class="actor-stick"/>
+                        <line x1="1120" y1="620" x2="1090" y2="660" class="actor-stick"/>
+                        <line x1="1120" y1="620" x2="1150" y2="660" class="actor-stick"/>
+                        <text x="1120" y="685" class="actor-label">Admin</text>
+                        
+                        <!-- Guest Use Cases -->
+                        <ellipse cx="320" cy="100" rx="90" ry="25" class="usecase"/>
+                        <text x="320" y="105" class="usecase-text">Xem trang chủ</text>
+                        <line x1="110" y1="160" x2="230" y2="100" class="connector"/>
+                        
+                        <ellipse cx="320" cy="160" rx="90" ry="25" class="usecase"/>
+                        <text x="320" y="165" class="usecase-text">Xem dịch vụ</text>
+                        <line x1="110" y1="180" x2="230" y2="160" class="connector"/>
+                        
+                        <ellipse cx="320" cy="220" rx="90" ry="25" class="usecase"/>
+                        <text x="320" y="225" class="usecase-text">Xem sản phẩm</text>
+                        <line x1="110" y1="200" x2="230" y2="220" class="connector"/>
+                        
+                        <ellipse cx="320" cy="280" rx="90" ry="25" class="usecase"/>
+                        <text x="320" y="285" class="usecase-text">Xem blog</text>
+                        <line x1="110" y1="220" x2="230" y2="280" class="connector"/>
+                        
+                        <ellipse cx="550" cy="100" rx="90" ry="25" class="usecase"/>
+                        <text x="550" y="105" class="usecase-text">Tìm kiếm</text>
+                        <line x1="110" y1="150" x2="460" y2="100" class="connector"/>
+                        
+                        <ellipse cx="550" cy="160" rx="90" ry="25" class="usecase"/>
+                        <text x="550" y="165" class="usecase-text">Liên hệ</text>
+                        
+                        <ellipse cx="550" cy="220" rx="90" ry="25" class="usecase"/>
+                        <text x="550" y="225" class="usecase-text">Đăng ký</text>
+                        
+                        <ellipse cx="550" cy="280" rx="90" ry="25" class="usecase"/>
+                        <text x="550" y="285" class="usecase-text">Đăng nhập</text>
+                        
+                        <!-- Customer Use Cases -->
+                        <ellipse cx="320" cy="380" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="320" y="385" class="usecase-text">Quản lý giỏ hàng</text>
+                        <line x1="110" y1="420" x2="230" y2="380" class="connector"/>
+                        
+                        <ellipse cx="320" cy="440" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="320" y="445" class="usecase-text">Đặt lịch hẹn</text>
+                        <line x1="110" y1="440" x2="230" y2="440" class="connector"/>
+                        
+                        <ellipse cx="550" cy="380" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="550" y="385" class="usecase-text">Chọn dịch vụ</text>
+                        <path d="M410 440 Q480 410 460 380" class="connector connector-dashed"/>
+                        <text x="450" y="400" font-size="10" fill="#666">«include»</text>
+                        
+                        <ellipse cx="550" cy="440" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="550" y="445" class="usecase-text">Chọn nhân viên</text>
+                        <line x1="410" y1="440" x2="460" y2="440" class="connector connector-dashed"/>
+                        
+                        <ellipse cx="550" cy="500" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="550" y="505" class="usecase-text">Chọn thời gian</text>
+                        <path d="M410 440 Q480 470 460 500" class="connector connector-dashed"/>
+                        
+                        <ellipse cx="320" cy="560" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="320" y="565" class="usecase-text">Thanh toán</text>
+                        <line x1="110" y1="500" x2="230" y2="560" class="connector"/>
+                        
+                        <ellipse cx="550" cy="560" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="550" y="565" class="usecase-text">Áp dụng mã KM</text>
+                        <path d="M410 560 L460 560" class="connector connector-dashed"/>
+                        <text x="435" y="550" font-size="10" fill="#666">«extend»</text>
+                        
+                        <ellipse cx="320" cy="620" rx="90" ry="25" class="usecase usecase-customer"/>
+                        <text x="320" y="625" class="usecase-text">Đánh giá dịch vụ</text>
+                        <line x1="110" y1="520" x2="230" y2="620" class="connector"/>
+                        
+                        <!-- Employee Use Cases -->
+                        <ellipse cx="850" cy="80" rx="100" ry="25" class="usecase usecase-employee"/>
+                        <text x="850" y="85" class="usecase-text">Tạo lịch hẹn</text>
+                        <line x1="1090" y1="210" x2="950" y2="80" class="connector"/>
+
+                        <ellipse cx="850" cy="140" rx="100" ry="25" class="usecase usecase-employee"/>
+                        <text x="850" y="145" class="usecase-text">Xem lịch hẹn được phân</text>
+                        <line x1="1090" y1="220" x2="950" y2="140" class="connector"/>
+                        
+                        <ellipse cx="850" cy="200" rx="100" ry="25" class="usecase usecase-employee"/>
+                        <text x="850" y="205" class="usecase-text">Xác nhận lịch hẹn</text>
+                        <line x1="1090" y1="230" x2="950" y2="200" class="connector"/>
+                        
+                        <ellipse cx="850" cy="260" rx="100" ry="25" class="usecase usecase-employee"/>
+                        <text x="850" y="265" class="usecase-text">Bắt đầu dịch vụ</text>
+                        <line x1="1090" y1="240" x2="950" y2="260" class="connector"/>
+                        
+                        <ellipse cx="850" cy="320" rx="100" ry="25" class="usecase usecase-employee"/>
+                        <text x="850" y="325" class="usecase-text">Hoàn thành dịch vụ</text>
+                        <line x1="1090" y1="250" x2="950" y2="320" class="connector"/>
+                        
+                        <ellipse cx="850" cy="380" rx="100" ry="25" class="usecase usecase-employee"/>
+                        <text x="850" y="385" class="usecase-text">Xem lịch làm việc</text>
+                        <line x1="1090" y1="260" x2="950" y2="380" class="connector"/>
+                        
+                        <!-- Admin Use Cases -->
+                        <ellipse cx="850" cy="450" rx="100" ry="25" class="usecase usecase-admin"/>
+                        <text x="850" y="455" class="usecase-text">Dashboard & Thống kê</text>
+                        <line x1="1000" y1="550" x2="950" y2="450" class="connector"/>
+                        
+                        <ellipse cx="850" cy="510" rx="100" ry="25" class="usecase usecase-admin"/>
+                        <text x="850" y="515" class="usecase-text">Quản lý sản phẩm</text>
+                        <line x1="1000" y1="560" x2="950" y2="510" class="connector"/>
+                        
+                        <ellipse cx="850" cy="570" rx="100" ry="25" class="usecase usecase-admin"/>
+                        <text x="850" y="575" class="usecase-text">Quản lý dịch vụ</text>
+                        <line x1="1000" y1="570" x2="950" y2="570" class="connector"/>
+                        
+                        <ellipse cx="850" cy="630" rx="100" ry="25" class="usecase usecase-admin"/>
+                        <text x="850" y="635" class="usecase-text">Quản lý lịch hẹn</text>
+                        <line x1="1000" y1="580" x2="950" y2="630" class="connector"/>
+                        
+                        <ellipse cx="850" cy="690" rx="100" ry="25" class="usecase usecase-admin"/>
+                        <text x="850" y="695" class="usecase-text">Quản lý người dùng</text>
+                        <line x1="1000" y1="600" x2="950" y2="690" class="connector"/>
+                        
+                        <ellipse cx="850" cy="750" rx="100" ry="25" class="usecase usecase-admin"/>
+                        <text x="850" y="755" class="usecase-text">Quản lý nhân viên</text>
+                        <line x1="1000" y1="620" x2="950" y2="750" class="connector"/>
+                        
+                        <ellipse cx="850" cy="810" rx="100" ry="25" class="usecase usecase-admin"/>
+                        <text x="850" y="815" class="usecase-text">Quản lý khuyến mãi</text>
+                        <line x1="1000" y1="640" x2="950" y2="810" class="connector"/>
+                        
+                        <!-- Inheritance arrows -->
+                        <line x1="80" y1="300" x2="80" y2="390" class="connector" stroke-width="2"/>
+                        <polygon points="80,390 75,380 85,380" fill="#333"/>
+                        <text x="95" y="345" font-size="10" fill="#666">extends</text>
+                    </svg>
+                </div>
+                
+                <div class="legend">
+                    <h4>Chú thích:</h4>
+                    <span class="legend-item"><span class="legend-color" style="background:#e3f2fd;border-color:#1976d2"></span> Guest UC</span>
+                    <span class="legend-item"><span class="legend-color" style="background:#fff3e0;border-color:#ef6c00"></span> Customer UC</span>
+                    <span class="legend-item"><span class="legend-color" style="background:#e8f5e9;border-color:#2e7d32"></span> Employee UC</span>
+                    <span class="legend-item"><span class="legend-color" style="background:#ffebee;border-color:#c62828"></span> Admin UC</span>
+                    <span class="legend-item">── Liên kết</span>
+                    <span class="legend-item">- - «include/extend»</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SITEMAP -->
+        <div id="sitemap" class="tab-content">
+            <div class="diagram-container">
+                <h2 class="diagram-title">🗺️ Site Map - Cấu trúc Website PolyHair</h2>
+                <div class="diagram-wrapper">
+                    <svg width="1400" height="850" viewBox="0 0 1400 850">
+                        <!-- HOME -->
+                        <rect x="600" y="20" width="200" height="50" class="sitemap-node sitemap-home" rx="8"/>
+                        <text x="700" y="50" class="sitemap-text sitemap-text-white">🏠 TRANG CHỦ</text>
+                        
+                        <!-- Level 1 connectors -->
+                        <line x1="700" y1="70" x2="700" y2="100" class="connector" stroke-width="2"/>
+                        <line x1="120" y1="100" x2="1280" y2="100" class="connector" stroke-width="2"/>
+                        
+                        <!-- Level 1 nodes - Spaced evenly -->
+                        <!-- Sản phẩm -->
+                        <line x1="120" y1="100" x2="120" y2="130" class="connector"/>
+                        <rect x="40" y="130" width="160" height="40" class="sitemap-node" rx="8"/>
+                        <text x="120" y="155" class="sitemap-text">📦 Sản phẩm</text>
+                        
+                        <!-- Dịch vụ -->
+                        <line x1="320" y1="100" x2="320" y2="130" class="connector"/>
+                        <rect x="240" y="130" width="160" height="40" class="sitemap-node" rx="8"/>
+                        <text x="320" y="155" class="sitemap-text">💈 Dịch vụ</text>
+                        
+                        <!-- Blog -->
+                        <line x1="520" y1="100" x2="520" y2="130" class="connector"/>
+                        <rect x="440" y="130" width="160" height="40" class="sitemap-node" rx="8"/>
+                        <text x="520" y="155" class="sitemap-text">📰 Blog</text>
+                        
+                        <!-- Liên hệ -->
+                        <line x1="700" y1="100" x2="700" y2="130" class="connector"/>
+                        <rect x="620" y="130" width="160" height="40" class="sitemap-node" rx="8"/>
+                        <text x="700" y="155" class="sitemap-text">📞 Liên hệ</text>
+                        
+                        <!-- Giỏ hàng -->
+                        <line x1="880" y1="100" x2="880" y2="130" class="connector"/>
+                        <rect x="800" y="130" width="160" height="40" class="sitemap-node" rx="8"/>
+                        <text x="880" y="155" class="sitemap-text">🛒 Giỏ hàng</text>
+                        
+                        <!-- Đặt lịch -->
+                        <line x1="1080" y1="100" x2="1080" y2="130" class="connector"/>
+                        <rect x="1000" y="130" width="160" height="40" class="sitemap-node" rx="8"/>
+                        <text x="1080" y="155" class="sitemap-text">📅 Đặt lịch</text>
+                        
+                        <!-- Đánh giá -->
+                        <line x1="1280" y1="100" x2="1280" y2="130" class="connector"/>
+                        <rect x="1200" y="130" width="160" height="40" class="sitemap-node" rx="8"/>
+                        <text x="1280" y="155" class="sitemap-text">⭐ Đánh giá</text>
+                        
+                        <!-- Sub-nodes for Sản phẩm - Fixed spacing -->
+                        <line x1="120" y1="170" x2="120" y2="200" class="connector"/>
+                        <rect x="30" y="200" width="80" height="35" class="sitemap-node" style="fill:#e3f2fd" rx="5"/>
+                        <text x="70" y="222" class="sitemap-text" font-size="10">Danh sách</text>
+                        
+                        <rect x="120" y="200" width="80" height="35" class="sitemap-node" style="fill:#e3f2fd" rx="5"/>
+                        <text x="160" y="222" class="sitemap-text" font-size="10">Tìm kiếm</text>
+                        
+                        <rect x="210" y="200" width="80" height="35" class="sitemap-node" style="fill:#e3f2fd" rx="5"/>
+                        <text x="250" y="222" class="sitemap-text" font-size="10">Chi tiết</text>
+                        
+                        <!-- Sub connector -->
+                        <line x1="70" y1="200" x2="250" y2="200" class="connector"/>
+                        <line x1="70" y1="195" x2="70" y2="200" class="connector"/>
+                        <line x1="160" y1="195" x2="160" y2="200" class="connector"/>
+                        <line x1="250" y1="195" x2="250" y2="200" class="connector"/>
+                        
+                        <!-- Sub-nodes for Đặt lịch - Fixed spacing -->
+                        <line x1="1080" y1="170" x2="1080" y2="200" class="connector"/>
+                        <rect x="990" y="200" width="80" height="35" class="sitemap-node" style="fill:#fff3e0" rx="5"/>
+                        <text x="1030" y="222" class="sitemap-text" font-size="10">Chọn DV</text>
+                        
+                        <rect x="1080" y="200" width="80" height="35" class="sitemap-node" style="fill:#fff3e0" rx="5"/>
+                        <text x="1120" y="222" class="sitemap-text" font-size="10">Thanh toán</text>
+                        
+                        <rect x="1170" y="200" width="80" height="35" class="sitemap-node" style="fill:#fff3e0" rx="5"/>
+                        <text x="1210" y="222" class="sitemap-text" font-size="10">Thành công</text>
+                        
+                        <!-- Sub connector -->
+                        <line x1="1030" y1="200" x2="1210" y2="200" class="connector"/>
+                        <line x1="1030" y1="195" x2="1030" y2="200" class="connector"/>
+                        <line x1="1120" y1="195" x2="1120" y2="200" class="connector"/>
+                        <line x1="1210" y1="195" x2="1210" y2="200" class="connector"/>
+                        
+                        <!-- EMPLOYEE PORTAL Section -->
+                        <rect x="50" y="280" width="350" height="320" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2" rx="15"/>
+                        <text x="225" y="310" class="sitemap-text" font-size="16" font-weight="bold" fill="#2e7d32">👨‍💼 EMPLOYEE PORTAL</text>
+                        
+                        <!-- Lịch nhân viên -->
+                        <rect x="80" y="340" width="290" height="40" class="sitemap-node sitemap-employee" rx="8"/>
+                        <text x="225" y="365" class="sitemap-text sitemap-text-white">📅 Lịch nhân viên</text>
+
+                        <!-- Quản lý đơn đặt -->
+                        <rect x="80" y="400" width="290" height="40" class="sitemap-node sitemap-employee" rx="8"/>
+                        <text x="225" y="425" class="sitemap-text sitemap-text-white">📝 Quản lý đơn đặt</text>
+                        
+                        <!-- Connectors for Orders -->
+                        <line x1="225" y1="440" x2="225" y2="470" class="connector"/>
+                        <line x1="80" y1="470" x2="370" y2="470" class="connector"/>
+                        
+                        <!-- Sub nodes row 1 -->
+                        <line x1="80" y1="470" x2="80" y2="485" class="connector"/>
+                        <rect x="60" y="485" width="60" height="30" class="sitemap-node" style="fill:#c8e6c9" rx="5"/>
+                        <text x="90" y="505" class="sitemap-text" font-size="10">Tạo</text>
+                        
+                        <line x1="150" y1="470" x2="150" y2="485" class="connector"/>
+                        <rect x="130" y="485" width="60" height="30" class="sitemap-node" style="fill:#c8e6c9" rx="5"/>
+                        <text x="160" y="505" class="sitemap-text" font-size="10">Xem</text>
+
+                        <line x1="225" y1="470" x2="225" y2="485" class="connector"/>
+                        <rect x="200" y="485" width="60" height="30" class="sitemap-node" style="fill:#c8e6c9" rx="5"/>
+                        <text x="230" y="505" class="sitemap-text" font-size="10">Xác nhận</text>
+                        
+                        <line x1="300" y1="470" x2="300" y2="485" class="connector"/>
+                        <rect x="270" y="485" width="60" height="30" class="sitemap-node" style="fill:#c8e6c9" rx="5"/>
+                        <text x="300" y="505" class="sitemap-text" font-size="10">Bắt đầu</text>
+                        
+                        <line x1="370" y1="470" x2="370" y2="485" class="connector"/>
+                        <rect x="340" y="485" width="60" height="30" class="sitemap-node" style="fill:#c8e6c9" rx="5"/>
+                        <text x="370" y="505" class="sitemap-text" font-size="10">Kết thúc</text>
+                        
+                        <!-- ADMIN DASHBOARD Section -->
+                        <rect x="450" y="280" width="900" height="350" fill="#ffebee" stroke="#c62828" stroke-width="2" rx="15"/>
+                        <text x="900" y="310" class="sitemap-text" font-size="16" font-weight="bold" fill="#c62828">🔧 ADMIN DASHBOARD</text>
+                        
+                        <!-- Admin modules - Row 1 -->
+                        <rect x="480" y="340" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="540" y="365" class="sitemap-text sitemap-text-white">📊 Dashboard</text>
+                        
+                        <rect x="620" y="340" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="680" y="365" class="sitemap-text sitemap-text-white">📁 Danh mục</text>
+                        
+                        <rect x="760" y="340" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="820" y="365" class="sitemap-text sitemap-text-white">📦 Sản phẩm</text>
+                        
+                        <rect x="900" y="340" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="960" y="365" class="sitemap-text sitemap-text-white">💈 Dịch vụ</text>
+                        
+                        <rect x="1040" y="340" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="1100" y="365" class="sitemap-text sitemap-text-white">🎁 Khuyến mãi</text>
+                        
+                        <rect x="1180" y="340" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="1240" y="365" class="sitemap-text sitemap-text-white">📅 Lịch hẹn</text>
+                        
+                        <!-- Admin modules - Row 2 -->
+                        <rect x="480" y="400" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="540" y="425" class="sitemap-text sitemap-text-white">💳 Thanh toán</text>
+                        
+                        <rect x="620" y="400" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="680" y="425" class="sitemap-text sitemap-text-white">📝 Đơn hàng</text>
+                        
+                        <rect x="760" y="400" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="820" y="425" class="sitemap-text sitemap-text-white">👥 Người dùng</text>
+                        
+                        <rect x="900" y="400" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="960" y="425" class="sitemap-text sitemap-text-white">👨‍💼 Nhân viên</text>
+                        
+                        <rect x="1040" y="400" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="1100" y="425" class="sitemap-text sitemap-text-white">📰 Tin tức</text>
+                        
+                        <rect x="1180" y="400" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="1240" y="425" class="sitemap-text sitemap-text-white">📆 Lịch LV</text>
+                        
+                        <!-- Admin modules - Row 3 -->
+                        <rect x="760" y="460" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="820" y="485" class="sitemap-text sitemap-text-white">⭐ Đánh giá</text>
+                        
+                        <rect x="900" y="460" width="120" height="40" class="sitemap-node sitemap-admin" rx="8"/>
+                        <text x="960" y="485" class="sitemap-text sitemap-text-white">⚙️ Cài đặt</text>
+                        
+                        <!-- CRUD Labels -->
+                        <text x="900" y="530" font-size="13" text-anchor="middle" fill="#c62828" font-weight="500">Mỗi module hỗ trợ: Create | Read | Update | Delete</text>
+                        
+                        <!-- Soft Delete feature -->
+                        <rect x="550" y="550" width="700" height="60" fill="#fff" stroke="#c62828" stroke-width="1" rx="10" stroke-dasharray="5,5"/>
+                        <text x="900" y="575" font-size="13" text-anchor="middle" fill="#c62828" font-weight="bold">🗑️ Soft Delete & Restore</text>
+                        <text x="900" y="595" font-size="11" text-anchor="middle" fill="#666">Dịch vụ | Khuyến mãi | Người dùng | Nhân viên | Lịch làm việc → /trash | /restore | /force-delete</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLOWCHART -->
+        <div id="flowchart" class="tab-content">
+            <div class="diagram-container">
+                <h2 class="diagram-title">🔄 Flowchart - Quy trình đặt lịch hẹn</h2>
+                <div class="diagram-wrapper">
+                    <svg width="1200" height="800" viewBox="0 0 1200 800">
+                        <!-- Start -->
+                        <ellipse cx="600" cy="40" rx="60" ry="25" class="flow-start"/>
+                        <text x="600" y="45" class="flow-text flow-text-white" font-weight="bold">BẮT ĐẦU</text>
+                        
+                        <!-- Arrow -->
+                        <line x1="600" y1="65" x2="600" y2="95" class="connector"/>
+                        <polygon points="600,100 595,90 605,90" class="flow-arrow"/>
+                        
+                        <!-- Process 1 -->
+                        <rect x="500" y="100" width="200" height="50" class="flow-process"/>
+                        <text x="600" y="130" class="flow-text">Truy cập trang đặt lịch</text>
+                        
+                        <line x1="600" y1="150" x2="600" y2="180" class="connector"/>
+                        <polygon points="600,185 595,175 605,175" class="flow-arrow"/>
+                        
+                        <!-- Process 2 -->
+                        <rect x="500" y="185" width="200" height="50" class="flow-process"/>
+                        <text x="600" y="215" class="flow-text">Chọn dịch vụ</text>
+                        
+                        <line x1="600" y1="235" x2="600" y2="265" class="connector"/>
+                        <polygon points="600,270 595,260 605,260" class="flow-arrow"/>
+                        
+                        <!-- Decision 1 -->
+                        <polygon points="600,270 700,320 600,370 500,320" class="flow-decision"/>
+                        <text x="600" y="315" class="flow-text">Có dịch vụ</text>
+                        <text x="600" y="330" class="flow-text">phù hợp?</text>
+                        
+                        <!-- No branch -->
+                        <line x1="500" y1="320" x2="350" y2="320" class="connector"/>
+                        <text x="420" y="310" class="flow-text" fill="#c62828">Không</text>
+                        <line x1="350" y1="320" x2="350" y2="210" class="connector"/>
+                        <line x1="350" y1="210" x2="500" y2="210" class="connector"/>
+                        <polygon points="500,210 490,205 490,215" class="flow-arrow"/>
+                        
+                        <!-- Yes branch -->
+                        <line x1="600" y1="370" x2="600" y2="400" class="connector"/>
+                        <text x="620" y="390" class="flow-text" fill="#2e7d32">Có</text>
+                        <polygon points="600,405 595,395 605,395" class="flow-arrow"/>
+                        
+                        <!-- Process 3 -->
+                        <rect x="500" y="405" width="200" height="50" class="flow-process"/>
+                        <text x="600" y="435" class="flow-text">Chọn nhân viên</text>
+                        
+                        <line x1="600" y1="455" x2="600" y2="485" class="connector"/>
+                        <polygon points="600,490 595,480 605,480" class="flow-arrow"/>
+                        
+                        <!-- Decision 2 -->
+                        <polygon points="600,490 700,540 600,590 500,540" class="flow-decision"/>
+                        <text x="600" y="535" class="flow-text">NV còn</text>
+                        <text x="600" y="550" class="flow-text">trống?</text>
+                        
+                        <!-- No branch 2 -->
+                        <line x1="700" y1="540" x2="850" y2="540" class="connector"/>
+                        <text x="770" y="530" class="flow-text" fill="#c62828">Không</text>
+                        <rect x="850" y="515" width="180" height="50" class="flow-process" style="fill:#ffebee"/>
+                        <text x="940" y="545" class="flow-text">Chọn NV/ngày khác</text>
+                        <line x1="940" y1="565" x2="940" y2="650" class="connector"/>
+                        <line x1="940" y1="650" x2="600" y2="650" class="connector"/>
+                        
+                        <!-- Yes branch 2 -->
+                        <line x1="600" y1="590" x2="600" y2="620" class="connector"/>
+                        <text x="620" y="610" class="flow-text" fill="#2e7d32">Có</text>
+                        <polygon points="600,625 595,615 605,615" class="flow-arrow"/>
+                        
+                        <!-- Process 4 -->
+                        <rect x="500" y="625" width="200" height="50" class="flow-process"/>
+                        <text x="600" y="650" class="flow-text">Chọn ngày & giờ</text>
+                        <line x1="600" y1="650" x2="600" y2="650" class="connector"/>
+                        
+                        <!-- Parallel processes -->
+                        <line x1="600" y1="675" x2="600" y2="700" class="connector"/>
+                        <line x1="350" y1="700" x2="850" y2="700" class="connector" stroke-width="2"/>
+                        
+                        <line x1="350" y1="700" x2="350" y2="730" class="connector"/>
+                        <rect x="250" y="730" width="200" height="45" class="flow-process" style="fill:#e3f2fd"/>
+                        <text x="350" y="750" class="flow-text">Nhập thông tin KH</text>
+                        <text x="350" y="765" class="flow-text" font-size="9">(Tên, SĐT, Email)</text>
+                        
+                        <line x1="600" y1="700" x2="600" y2="730" class="connector"/>
+                        <rect x="500" y="730" width="200" height="45" class="flow-process" style="fill:#e8f5e9"/>
+                        <text x="600" y="750" class="flow-text">Xác nhận thông tin</text>
+                        <text x="600" y="765" class="flow-text" font-size="9">(Preview booking)</text>
+                        
+                        <line x1="850" y1="700" x2="850" y2="730" class="connector"/>
+                        <rect x="750" y="730" width="200" height="45" class="flow-process" style="fill:#fff3e0"/>
+                        <text x="850" y="750" class="flow-text">Thanh toán</text>
+                        <text x="850" y="765" class="flow-text" font-size="9">(Nếu có)</text>
+                        
+                        <!-- End -->
+                        <line x1="350" y1="775" x2="350" y2="800" class="connector"/>
+                        <line x1="600" y1="775" x2="600" y2="800" class="connector"/>
+                        <line x1="850" y1="775" x2="850" y2="800" class="connector"/>
+                        <line x1="350" y1="800" x2="850" y2="800" class="connector" stroke-width="2"/>
+                        
+                        <!-- Note: Due to space, we'll show a simplified end -->
+                    </svg>
+                </div>
+                
+                <div class="legend">
+                    <h4>Chú thích:</h4>
+                    <span class="legend-item"><span style="display:inline-block;width:30px;height:15px;background:#9c27b0;border-radius:10px"></span> Bắt đầu/Kết thúc</span>
+                    <span class="legend-item"><span style="display:inline-block;width:30px;height:15px;background:#fff;border:2px solid #1976d2;border-radius:3px"></span> Xử lý</span>
+                    <span class="legend-item"><span style="display:inline-block;width:20px;height:20px;background:#fff3e0;border:2px solid #ef6c00;transform:rotate(45deg)"></span> Quyết định</span>
+                    <span class="legend-item">→ Luồng xử lý</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEST CASES -->
+        <div id="testcase" class="tab-content">
+            <div class="diagram-container">
+                <h2 class="diagram-title">🧪 Test Cases Matrix</h2>
+                
+                <div style="display:flex;gap:20px;justify-content:center;margin-bottom:30px;flex-wrap:wrap">
+                    <div style="background:#ffebee;border:2px solid #c62828;padding:20px 40px;border-radius:15px;text-align:center">
+                        <div style="font-size:2.5rem;font-weight:700;color:#c62828">2</div>
+                        <div style="color:#c62828;font-weight:500">Critical</div>
+                    </div>
+                    <div style="background:#fff3e0;border:2px solid #ef6c00;padding:20px 40px;border-radius:15px;text-align:center">
+                        <div style="font-size:2.5rem;font-weight:700;color:#ef6c00">27</div>
+                        <div style="color:#ef6c00;font-weight:500">High</div>
+                    </div>
+                    <div style="background:#fffde7;border:2px solid #f9a825;padding:20px 40px;border-radius:15px;text-align:center">
+                        <div style="font-size:2.5rem;font-weight:700;color:#f9a825">15</div>
+                        <div style="color:#f9a825;font-weight:500">Medium</div>
+                    </div>
+                    <div style="background:#e3f2fd;border:2px solid #1976d2;padding:20px 40px;border-radius:15px;text-align:center">
+                        <div style="font-size:2.5rem;font-weight:700;color:#1976d2">44</div>
+                        <div style="color:#1976d2;font-weight:500">Total</div>
+                    </div>
+                </div>
+                
+                <div class="diagram-wrapper">
+                    <svg width="1200" height="600" viewBox="0 0 1200 600">
+                        <!-- Module boxes -->
+                        <g transform="translate(50,20)">
+                            <!-- Auth -->
+                            <rect x="0" y="0" width="350" height="180" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="350" height="35" fill="#667eea" rx="10"/>
+                            <text x="175" y="23" fill="white" text-anchor="middle" font-weight="bold">🔐 Authentication (5 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#f97316">● TC-AUTH-001: Đăng ký thành công [HIGH]</text>
+                            <text x="20" y="80" font-size="12" fill="#f97316">● TC-AUTH-002: Email trùng [HIGH]</text>
+                            <text x="20" y="100" font-size="12" fill="#f97316">● TC-AUTH-003: Đăng nhập thành công [HIGH]</text>
+                            <text x="20" y="120" font-size="12" fill="#f97316">● TC-AUTH-004: Sai mật khẩu [HIGH]</text>
+                            <text x="20" y="140" font-size="12" fill="#eab308">● TC-AUTH-005: Quên mật khẩu [MEDIUM]</text>
+                        </g>
+                        
+                        <g transform="translate(420,20)">
+                            <!-- Appointment -->
+                            <rect x="0" y="0" width="350" height="180" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="350" height="35" fill="#ef4444" rx="10"/>
+                            <text x="175" y="23" fill="white" text-anchor="middle" font-weight="bold">📅 Appointment (5 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#ef4444">★ TC-APT-001: Đặt lịch thành công [CRITICAL]</text>
+                            <text x="20" y="80" font-size="12" fill="#f97316">● TC-APT-002: Kiểm tra slot [HIGH]</text>
+                            <text x="20" y="100" font-size="12" fill="#f97316">● TC-APT-003: Slot đã đặt [HIGH]</text>
+                            <text x="20" y="120" font-size="12" fill="#f97316">● TC-APT-004: Hủy lịch [HIGH]</text>
+                            <text x="20" y="140" font-size="12" fill="#eab308">● TC-APT-005: Lấy NV theo DV [MEDIUM]</text>
+                        </g>
+                        
+                        <g transform="translate(790,20)">
+                            <!-- Payment -->
+                            <rect x="0" y="0" width="350" height="180" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="350" height="35" fill="#22c55e" rx="10"/>
+                            <text x="175" y="23" fill="white" text-anchor="middle" font-weight="bold">💳 Payment (4 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#ef4444">★ TC-PAY-001: Thanh toán thành công [CRITICAL]</text>
+                            <text x="20" y="80" font-size="12" fill="#f97316">● TC-PAY-002: Áp dụng mã KM [HIGH]</text>
+                            <text x="20" y="100" font-size="12" fill="#eab308">● TC-PAY-003: Mã KM hết hạn [MEDIUM]</text>
+                            <text x="20" y="120" font-size="12" fill="#eab308">● TC-PAY-004: Xóa mã KM [MEDIUM]</text>
+                        </g>
+                        
+                        <g transform="translate(50,220)">
+                            <!-- Product -->
+                            <rect x="0" y="0" width="350" height="150" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="350" height="35" fill="#3b82f6" rx="10"/>
+                            <text x="175" y="23" fill="white" text-anchor="middle" font-weight="bold">📦 Product (4 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#f97316">● TC-PROD-001: Xem danh sách [HIGH]</text>
+                            <text x="20" y="80" font-size="12" fill="#eab308">● TC-PROD-002: Tìm kiếm [MEDIUM]</text>
+                            <text x="20" y="100" font-size="12" fill="#f97316">● TC-PROD-003: Xem chi tiết [HIGH]</text>
+                            <text x="20" y="120" font-size="12" fill="#eab308">● TC-PROD-004: Lọc danh mục [MEDIUM]</text>
+                        </g>
+                        
+                        <g transform="translate(420,220)">
+                            <!-- Cart -->
+                            <rect x="0" y="0" width="350" height="150" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="350" height="35" fill="#f59e0b" rx="10"/>
+                            <text x="175" y="23" fill="white" text-anchor="middle" font-weight="bold">🛒 Cart (4 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#f97316">● TC-CART-001: Thêm vào giỏ [HIGH]</text>
+                            <text x="20" y="80" font-size="12" fill="#f97316">● TC-CART-002: Cập nhật SL [HIGH]</text>
+                            <text x="20" y="100" font-size="12" fill="#f97316">● TC-CART-003: Xóa SP [HIGH]</text>
+                            <text x="20" y="120" font-size="12" fill="#eab308">● TC-CART-004: Xóa tất cả [MEDIUM]</text>
+                        </g>
+                        
+                        <g transform="translate(790,220)">
+                            <!-- Review -->
+                            <rect x="0" y="0" width="350" height="150" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="350" height="35" fill="#ec4899" rx="10"/>
+                            <text x="175" y="23" fill="white" text-anchor="middle" font-weight="bold">⭐ Review (4 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#f97316">● TC-REV-001: Tạo đánh giá [HIGH]</text>
+                            <text x="20" y="80" font-size="12" fill="#eab308">● TC-REV-002: Có hình ảnh [MEDIUM]</text>
+                            <text x="20" y="100" font-size="12" fill="#eab308">● TC-REV-003: Sửa đánh giá [MEDIUM]</text>
+                            <text x="20" y="120" font-size="12" fill="#f97316">● TC-REV-004: Xem danh sách [HIGH]</text>
+                        </g>
+                        
+                        <g transform="translate(50,390)">
+                            <!-- Admin -->
+                            <rect x="0" y="0" width="540" height="180" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="540" height="35" fill="#c62828" rx="10"/>
+                            <text x="270" y="23" fill="white" text-anchor="middle" font-weight="bold">🔧 Admin (10 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#f97316">● TC-ADM-001: Dashboard [HIGH]</text>
+                            <text x="20" y="80" font-size="12" fill="#f97316">● TC-ADM-002: CRUD Sản phẩm [HIGH]</text>
+                            <text x="20" y="100" font-size="12" fill="#f97316">● TC-ADM-003: CRUD Dịch vụ [HIGH]</text>
+                            <text x="20" y="120" font-size="12" fill="#f97316">● TC-ADM-004: QL Lịch hẹn [HIGH]</text>
+                            <text x="20" y="140" font-size="12" fill="#f97316">● TC-ADM-005: QL Người dùng [HIGH]</text>
+                            <text x="280" y="60" font-size="12" fill="#f97316">● TC-ADM-006: QL Nhân viên [HIGH]</text>
+                            <text x="280" y="80" font-size="12" fill="#eab308">● TC-ADM-007: QL Khuyến mãi [MEDIUM]</text>
+                            <text x="280" y="100" font-size="12" fill="#eab308">● TC-ADM-008: QL Lịch LV [MEDIUM]</text>
+                            <text x="280" y="120" font-size="12" fill="#eab308">● TC-ADM-009: Ẩn/Xóa đánh giá [MEDIUM]</text>
+                            <text x="280" y="140" font-size="12" fill="#eab308">● TC-ADM-010: Xuất báo cáo [MEDIUM]</text>
+                        </g>
+                        
+                        <g transform="translate(610,390)">
+                            <!-- Employee -->
+                            <rect x="0" y="0" width="350" height="180" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="350" height="35" fill="#059669" rx="10"/>
+                            <text x="175" y="23" fill="white" text-anchor="middle" font-weight="bold">👨‍💼 Employee (5 TC)</text>
+                            <text x="20" y="60" font-size="12" fill="#f97316">● TC-EMP-001: Xem lịch hẹn [HIGH]</text>
+                            <text x="20" y="80" font-size="12" fill="#f97316">● TC-EMP-002: Xác nhận [HIGH]</text>
+                            <text x="20" y="100" font-size="12" fill="#f97316">● TC-EMP-003: Bắt đầu DV [HIGH]</text>
+                            <text x="20" y="120" font-size="12" fill="#f97316">● TC-EMP-004: Hoàn thành [HIGH]</text>
+                            <text x="20" y="140" font-size="12" fill="#eab308">● TC-EMP-005: Hủy lịch [MEDIUM]</text>
+                        </g>
+                        
+                        <!-- Service box -->
+                        <g transform="translate(980,390)">
+                            <rect x="0" y="0" width="180" height="110" fill="#f5f5f5" stroke="#333" stroke-width="2" rx="10"/>
+                            <rect x="0" y="0" width="180" height="35" fill="#8b5cf6" rx="10"/>
+                            <text x="90" y="23" fill="white" text-anchor="middle" font-weight="bold">💈 Service (3 TC)</text>
+                            <text x="15" y="60" font-size="11" fill="#f97316">● Xem DS [HIGH]</text>
+                            <text x="15" y="80" font-size="11" fill="#f97316">● Chi tiết [HIGH]</text>
+                            <text x="15" y="100" font-size="11" fill="#eab308">● Lọc DM [MED]</text>
+                        </g>
+                    </svg>
+                </div>
+                
+                <div class="legend">
+                    <h4>Chú thích Priority:</h4>
+                    <span class="legend-item"><span style="color:#ef4444;font-size:16px">★</span> CRITICAL - Phải pass 100%</span>
+                    <span class="legend-item"><span style="color:#f97316;font-size:16px">●</span> HIGH - Quan trọng</span>
+                    <span class="legend-item"><span style="color:#eab308;font-size:16px">●</span> MEDIUM - Trung bình</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2024 PolyHair Barbershop - Documentation | Generated: December 2024</p>
+        </footer>
+    </div>
+
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

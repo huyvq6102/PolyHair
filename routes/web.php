@@ -10,7 +10,7 @@ use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\AppointmentController;
 use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use Illuminate\Support\Facades\Route;
-use  App\Http\Controllers\Site\CustomerController;
+use App\Http\Controllers\Site\CustomerController;
 use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\ReviewController;
 
@@ -68,25 +68,24 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
 Route::prefix('customer')->name('site.customers.')->group(function () {
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
 });
+
 // Payment Routes
 Route::prefix('check-out')->name('site.payments.')->group(function () {
-
     Route::get('/', [CheckoutController::class, 'checkout'])->name('checkout');
     Route::post('/process', [CheckoutController::class, 'processPayment'])->name('process');
     Route::get('/success/{appointmentId}', [CheckoutController::class, 'paymentSuccess'])->name('success');
     Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('applyCoupon');
     Route::post('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('removeCoupon');
-
 });
 
 // Review Routes
 Route::prefix('reviews')->name('site.reviews.')->group(function () {
     Route::get('/', [ReviewController::class, 'index'])->name('index');
+
     Route::middleware('auth')->group(function () {
         Route::get('/create', [ReviewController::class, 'create'])->name('create');
         Route::post('/', [ReviewController::class, 'store'])->name('store');
 
-        // General feedback (not tied to a specific appointment)
         Route::get('/general/create', [ReviewController::class, 'createGeneral'])->name('general.create');
         Route::post('/general', [ReviewController::class, 'storeGeneral'])->name('general.store');
 
@@ -94,7 +93,6 @@ Route::prefix('reviews')->name('site.reviews.')->group(function () {
         Route::put('/{id}', [ReviewController::class, 'update'])->name('update');
     });
 });
-
 
 // Auth Routes
 Route::get('/dashboard', function () {
@@ -106,17 +104,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
-// Employee routes (accessible by employees only, not under admin)
-Route::prefix('employee')->name('employee.')->middleware(['auth', 'employee'])->group(function () {
-    Route::get('appointments', [EmployeeAppointmentController::class, 'index'])->name('appointments.index');
-    Route::get('appointments/create', [EmployeeAppointmentController::class, 'create'])->name('appointments.create');
-    Route::post('appointments', [EmployeeAppointmentController::class, 'store'])->name('appointments.store');
-    Route::get('appointments/{id}', [EmployeeAppointmentController::class, 'show'])->name('appointments.show');
-    Route::post('appointments/{id}/confirm', [EmployeeAppointmentController::class, 'confirm'])->name('appointments.confirm');
-    Route::post('appointments/{id}/start', [EmployeeAppointmentController::class, 'start'])->name('appointments.start');
-    Route::post('appointments/{id}/complete', [EmployeeAppointmentController::class, 'complete'])->name('appointments.complete');
-    Route::post('appointments/{id}/cancel', [EmployeeAppointmentController::class, 'cancel'])->name('appointments.cancel');
-    Route::delete('appointments/{id}', [EmployeeAppointmentController::class, 'destroy'])->name('appointments.destroy');
-});
 
-require __DIR__.'/auth.php';
+
+require __DIR__ . '/auth.php';
