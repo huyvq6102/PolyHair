@@ -31,6 +31,17 @@ class DashboardController extends Controller
 
     public function index()
     {
+        // Get filter parameters
+        $dateFrom = request('date_from', now()->subDays(30)->format('Y-m-d'));
+        $dateTo = request('date_to', now()->format('Y-m-d'));
+        $filterAll = request('date_from') === null && request('date_to') === null;
+        
+        // If "all" is selected or no filter, set wide date range
+        if ($filterAll || request('preset') === 'all') {
+            $dateFrom = null;
+            $dateTo = null;
+        }
+
         // Calculate today's revenue
         $todayRevenue = \App\Models\Payment::whereDate('created_at', today())
             ->whereNotNull('total')
@@ -52,9 +63,17 @@ class DashboardController extends Controller
         $recentOrders = $this->orderService->getAll()->take(5);
         $recentAppointments = $this->appointmentService->getAll()->take(5);
 
-        // Get appointments by day for the last 30 days
-        $appointmentsByDay = \App\Models\Appointment::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-            ->where('created_at', '>=', now()->subDays(30))
+        // Get appointments by day with filter
+        $appointmentsByDayQuery = \App\Models\Appointment::selectRaw('DATE(created_at) as date, COUNT(*) as count');
+        
+        if ($dateFrom) {
+            $appointmentsByDayQuery->where('created_at', '>=', $dateFrom . ' 00:00:00');
+        }
+        if ($dateTo) {
+            $appointmentsByDayQuery->where('created_at', '<=', $dateTo . ' 23:59:59');
+        }
+        
+        $appointmentsByDay = $appointmentsByDayQuery
             ->groupBy('date')
             ->orderBy('date', 'asc')
             ->get();
@@ -63,21 +82,56 @@ class DashboardController extends Controller
         $chartLabels = [];
         $chartData = [];
         
-        // Generate all dates for the last 30 days
-        for ($i = 29; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
-            $chartLabels[] = now()->subDays($i)->format('d/m');
+        // Determine date range for chart
+        if ($dateFrom && $dateTo) {
+            $startDate = \Carbon\Carbon::parse($dateFrom);
+            $endDate = \Carbon\Carbon::parse($dateTo);
+            $daysDiff = $startDate->diffInDays($endDate);
             
-            // Find count for this date
-            $dayData = $appointmentsByDay->firstWhere('date', $date);
-            $chartData[] = $dayData ? $dayData->count : 0;
+            // Limit to max 90 days for performance
+            if ($daysDiff > 90) {
+                $startDate = $endDate->copy()->subDays(90);
+            }
+            
+            $currentDate = $startDate->copy();
+            while ($currentDate <= $endDate) {
+                $dateStr = $currentDate->format('Y-m-d');
+                $chartLabels[] = $currentDate->format('d/m');
+                
+                $dayData = $appointmentsByDay->firstWhere('date', $dateStr);
+                $chartData[] = $dayData ? $dayData->count : 0;
+                
+                $currentDate->addDay();
+            }
+        } else {
+            // Default: last 30 days
+            for ($i = 29; $i >= 0; $i--) {
+                $date = now()->subDays($i)->format('Y-m-d');
+                $chartLabels[] = now()->subDays($i)->format('d/m');
+                
+                $dayData = $appointmentsByDay->firstWhere('date', $date);
+                $chartData[] = $dayData ? $dayData->count : 0;
+            }
         }
 
-        // Get revenue by month for the last 12 months
-        $revenueByMonth = \App\Models\Payment::selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total) as revenue')
-            ->where('created_at', '>=', now()->subMonths(12))
+        // Get revenue by month with filter
+        $revenueByMonthQuery = \App\Models\Payment::selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total) as revenue')
             ->whereNotNull('total')
-            ->where('total', '>', 0)
+            ->where('total', '>', 0);
+        
+        if ($dateFrom) {
+            $revenueByMonthQuery->where('created_at', '>=', $dateFrom . ' 00:00:00');
+        }
+        if ($dateTo) {
+            $revenueByMonthQuery->where('created_at', '<=', $dateTo . ' 23:59:59');
+        }
+        
+        if (!$dateFrom && !$dateTo) {
+            // Default: last 12 months if no filter
+            $revenueByMonthQuery->where('created_at', '>=', now()->subMonths(12));
+        }
+        
+        $revenueByMonth = $revenueByMonthQuery
             ->groupBy('year', 'month')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
@@ -87,28 +141,60 @@ class DashboardController extends Controller
         $revenueLabels = [];
         $revenueData = [];
         
-        // Generate all months for the last 12 months
-        for ($i = 11; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $year = $date->format('Y');
-            $month = $date->format('m');
-            $monthName = $date->format('m/Y');
+        if ($dateFrom && $dateTo) {
+            // Generate months in date range
+            $startDate = \Carbon\Carbon::parse($dateFrom);
+            $endDate = \Carbon\Carbon::parse($dateTo);
+            $currentDate = $startDate->copy()->startOfMonth();
             
-            $revenueLabels[] = $monthName;
-            
-            // Find revenue for this month
-            $monthData = $revenueByMonth->first(function($item) use ($year, $month) {
-                return $item->year == $year && $item->month == $month;
-            });
-            
-            $revenueData[] = $monthData ? (float)$monthData->revenue : 0;
+            while ($currentDate <= $endDate) {
+                $year = $currentDate->format('Y');
+                $month = $currentDate->format('m');
+                $monthName = $currentDate->format('m/Y');
+                
+                $revenueLabels[] = $monthName;
+                
+                $monthData = $revenueByMonth->first(function($item) use ($year, $month) {
+                    return $item->year == $year && $item->month == $month;
+                });
+                
+                $revenueData[] = $monthData ? (float)$monthData->revenue : 0;
+                
+                $currentDate->addMonth();
+            }
+        } else {
+            // Default: last 12 months
+            for ($i = 11; $i >= 0; $i--) {
+                $date = now()->subMonths($i);
+                $year = $date->format('Y');
+                $month = $date->format('m');
+                $monthName = $date->format('m/Y');
+                
+                $revenueLabels[] = $monthName;
+                
+                $monthData = $revenueByMonth->first(function($item) use ($year, $month) {
+                    return $item->year == $year && $item->month == $month;
+                });
+                
+                $revenueData[] = $monthData ? (float)$monthData->revenue : 0;
+            }
         }
 
-        // Get top 5 most booked services
-        $topServices = \App\Models\AppointmentDetail::selectRaw('services.id, services.name, COUNT(*) as booking_count')
+        // Get top 5 most booked services with filter
+        $topServicesQuery = \App\Models\AppointmentDetail::selectRaw('services.id, services.name, COUNT(*) as booking_count')
             ->join('service_variants', 'appointment_details.service_variant_id', '=', 'service_variants.id')
             ->join('services', 'service_variants.service_id', '=', 'services.id')
-            ->whereNotNull('appointment_details.service_variant_id')
+            ->join('appointments', 'appointment_details.appointment_id', '=', 'appointments.id')
+            ->whereNotNull('appointment_details.service_variant_id');
+        
+        if ($dateFrom) {
+            $topServicesQuery->where('appointments.created_at', '>=', $dateFrom . ' 00:00:00');
+        }
+        if ($dateTo) {
+            $topServicesQuery->where('appointments.created_at', '<=', $dateTo . ' 23:59:59');
+        }
+        
+        $topServices = $topServicesQuery
             ->groupBy('services.id', 'services.name')
             ->orderBy('booking_count', 'desc')
             ->limit(5)
@@ -123,27 +209,42 @@ class DashboardController extends Controller
             $topServiceData[] = $service->booking_count;
         }
 
-        // Get employee performance data (appointments count and revenue)
-        $employeePerformance = \App\Models\Employee::selectRaw('
+        // Get employee performance data (appointments count and revenue) with filter
+        $employeePerformanceQuery = \App\Models\Employee::selectRaw('
                 employees.id,
                 users.name as employee_name,
                 COUNT(DISTINCT appointments.id) as appointment_count,
                 COALESCE(SUM(payments.total), 0) as revenue
             ')
             ->join('users', 'employees.user_id', '=', 'users.id')
-            ->leftJoin('appointments', 'employees.id', '=', 'appointments.employee_id')
-            ->leftJoin('payments', function($join) {
+            ->leftJoin('appointments', function($join) use ($dateFrom, $dateTo) {
+                $join->on('employees.id', '=', 'appointments.employee_id');
+                if ($dateFrom) {
+                    $join->where('appointments.created_at', '>=', $dateFrom . ' 00:00:00');
+                }
+                if ($dateTo) {
+                    $join->where('appointments.created_at', '<=', $dateTo . ' 23:59:59');
+                }
+            })
+            ->leftJoin('payments', function($join) use ($dateFrom, $dateTo) {
                 $join->on('appointments.id', '=', 'payments.appointment_id')
                      ->whereNotNull('payments.total')
                      ->where('payments.total', '>', 0);
+                if ($dateFrom) {
+                    $join->where('payments.created_at', '>=', $dateFrom . ' 00:00:00');
+                }
+                if ($dateTo) {
+                    $join->where('payments.created_at', '<=', $dateTo . ' 23:59:59');
+                }
             })
             ->whereNull('employees.deleted_at')
             ->groupBy('employees.id', 'users.name')
             ->havingRaw('appointment_count > 0 OR revenue > 0')
             ->orderBy('appointment_count', 'desc')
             ->orderBy('revenue', 'desc')
-            ->limit(10)
-            ->get();
+            ->limit(10);
+        
+        $employeePerformance = $employeePerformanceQuery->get();
 
         // Prepare data for chart
         $employeeLabels = [];
@@ -156,8 +257,17 @@ class DashboardController extends Controller
             $employeeRevenueData[] = (float)$employee->revenue;
         }
 
-        // Get appointment status distribution
-        $appointmentStatusData = \App\Models\Appointment::selectRaw('status, COUNT(*) as count')
+        // Get appointment status distribution with filter
+        $appointmentStatusQuery = \App\Models\Appointment::selectRaw('status, COUNT(*) as count');
+        
+        if ($dateFrom) {
+            $appointmentStatusQuery->where('created_at', '>=', $dateFrom . ' 00:00:00');
+        }
+        if ($dateTo) {
+            $appointmentStatusQuery->where('created_at', '<=', $dateTo . ' 23:59:59');
+        }
+        
+        $appointmentStatusData = $appointmentStatusQuery
             ->groupBy('status')
             ->get()
             ->pluck('count', 'status')
@@ -172,30 +282,37 @@ class DashboardController extends Controller
             $appointmentStatusData['Không đến'] ?? 0,
         ];
 
-        // Get new vs returning customers data (last 30 days)
-        // New customers: users with exactly 1 appointment in last 30 days
-        // Returning customers: users with more than 1 appointment in last 30 days
-        $thirtyDaysAgo = now()->subDays(30);
+        // Get new vs returning customers data with filter
+        // New customers: users with exactly 1 appointment in date range
+        // Returning customers: users with more than 1 appointment in date range
+        $filterStartDate = $dateFrom ? \Carbon\Carbon::parse($dateFrom) : now()->subDays(30);
+        $filterEndDate = $dateTo ? \Carbon\Carbon::parse($dateTo) : now();
         
-        $newCustomers = \App\Models\User::where('role_id', 2) // Assuming role_id 2 is customer
-            ->whereHas('appointments', function($query) use ($thirtyDaysAgo) {
-                $query->where('created_at', '>=', $thirtyDaysAgo);
+        $newCustomersQuery = \App\Models\User::where('role_id', 2) // Assuming role_id 2 is customer
+            ->whereHas('appointments', function($query) use ($filterStartDate, $filterEndDate) {
+                $query->where('created_at', '>=', $filterStartDate->format('Y-m-d') . ' 00:00:00')
+                      ->where('created_at', '<=', $filterEndDate->format('Y-m-d') . ' 23:59:59');
             })
-            ->withCount(['appointments' => function($query) use ($thirtyDaysAgo) {
-                $query->where('created_at', '>=', $thirtyDaysAgo);
+            ->withCount(['appointments' => function($query) use ($filterStartDate, $filterEndDate) {
+                $query->where('created_at', '>=', $filterStartDate->format('Y-m-d') . ' 00:00:00')
+                      ->where('created_at', '<=', $filterEndDate->format('Y-m-d') . ' 23:59:59');
             }])
-            ->having('appointments_count', '=', 1)
-            ->count();
+            ->having('appointments_count', '=', 1);
+        
+        $newCustomers = $newCustomersQuery->count();
 
-        $returningCustomers = \App\Models\User::where('role_id', 2)
-            ->whereHas('appointments', function($query) use ($thirtyDaysAgo) {
-                $query->where('created_at', '>=', $thirtyDaysAgo);
+        $returningCustomersQuery = \App\Models\User::where('role_id', 2)
+            ->whereHas('appointments', function($query) use ($filterStartDate, $filterEndDate) {
+                $query->where('created_at', '>=', $filterStartDate->format('Y-m-d') . ' 00:00:00')
+                      ->where('created_at', '<=', $filterEndDate->format('Y-m-d') . ' 23:59:59');
             })
-            ->withCount(['appointments' => function($query) use ($thirtyDaysAgo) {
-                $query->where('created_at', '>=', $thirtyDaysAgo);
+            ->withCount(['appointments' => function($query) use ($filterStartDate, $filterEndDate) {
+                $query->where('created_at', '>=', $filterStartDate->format('Y-m-d') . ' 00:00:00')
+                      ->where('created_at', '<=', $filterEndDate->format('Y-m-d') . ' 23:59:59');
             }])
-            ->having('appointments_count', '>', 1)
-            ->count();
+            ->having('appointments_count', '>', 1);
+        
+        $returningCustomers = $returningCustomersQuery->count();
 
         $totalCustomers = $newCustomers + $returningCustomers;
         
@@ -210,8 +327,17 @@ class DashboardController extends Controller
         $customerData = [$newCustomers, $returningCustomers];
         $showCustomerChart = $totalCustomers >= 5;
 
-        // Get peak hours data (appointments by hour of creation) - grouped into time periods
-        $appointmentsByHour = \App\Models\Appointment::selectRaw('HOUR(created_at) as hour, COUNT(*) as count')
+        // Get peak hours data (appointments by hour of creation) - grouped into time periods with filter
+        $peakHoursQuery = \App\Models\Appointment::selectRaw('HOUR(created_at) as hour, COUNT(*) as count');
+        
+        if ($dateFrom) {
+            $peakHoursQuery->where('created_at', '>=', $dateFrom . ' 00:00:00');
+        }
+        if ($dateTo) {
+            $peakHoursQuery->where('created_at', '<=', $dateTo . ' 23:59:59');
+        }
+        
+        $appointmentsByHour = $peakHoursQuery
             ->groupBy('hour')
             ->orderBy('hour', 'asc')
             ->get()

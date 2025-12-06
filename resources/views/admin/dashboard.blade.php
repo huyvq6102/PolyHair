@@ -8,6 +8,53 @@
     <h1 class="h3 mb-0 text-gray-800">Thống kê</h1>
 </div>
 
+<!-- Filter Section -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-filter"></i> Bộ lọc thống kê
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ route('admin.dashboard') }}" id="filterForm">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="date_from">Từ ngày</label>
+                        <input type="date" name="date_from" id="date_from" class="form-control" 
+                               value="{{ request('date_from', now()->subDays(30)->format('Y-m-d')) }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="date_to">Đến ngày</label>
+                        <input type="date" name="date_to" id="date_to" class="form-control" 
+                               value="{{ request('date_to', now()->format('Y-m-d')) }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div class="d-flex flex-wrap" style="gap: 0.5rem;">
+                            <button type="button" class="btn btn-sm btn-outline-primary preset-btn" data-days="7">7 ngày</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary preset-btn" data-days="30">30 ngày</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary preset-btn" data-days="90">90 ngày</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary preset-btn" data-days="365">1 năm</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary preset-btn" data-days="all">Tất cả</button>
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                <i class="fas fa-filter"></i> Áp dụng
+                            </button>
+                            <a href="{{ route('admin.dashboard') }}" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-redo"></i> Làm mới
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Content Row -->
 <div class="row">
     <!-- Employees Card -->
@@ -168,7 +215,7 @@
     <div class="col-xl-6 col-lg-6">
         <div class="card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Biểu đồ lịch hẹn theo ngày (30 ngày gần đây)</h6>
+                <h6 class="m-0 font-weight-bold text-primary">Biểu đồ lịch hẹn  </h6>
             </div>
             <div class="card-body">
                 <div style="position: relative; height: 300px;">
@@ -182,7 +229,7 @@
     <div class="col-xl-6 col-lg-6">
         <div class="card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Biểu đồ doanh thu theo tháng (12 tháng gần đây)</h6>
+                <h6 class="m-0 font-weight-bold text-primary">Biểu đồ doanh thu </h6>
             </div>
             <div class="card-body">
                 <div style="position: relative; height: 300px;">
@@ -230,7 +277,7 @@
     <div class="col-xl-6 col-lg-6">
         <div class="card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Khách mới vs Khách quay lại (30 ngày gần nhất)</h6>
+                <h6 class="m-0 font-weight-bold text-primary">Khách mới vs Khách quay lại </h6>
             </div>
             <div class="card-body">
                 @if($showCustomerChart)
@@ -1062,6 +1109,29 @@
                 }
             });
         }
+    });
+
+    // Preset date range buttons
+    $('.preset-btn').on('click', function(e) {
+        e.preventDefault();
+        var days = $(this).data('days');
+        var dateFrom = $('#date_from');
+        var dateTo = $('#date_to');
+        
+        if (days === 'all') {
+            dateFrom.val('');
+            dateTo.val('');
+        } else {
+            var today = new Date();
+            var fromDate = new Date();
+            fromDate.setDate(today.getDate() - days);
+            
+            dateFrom.val(fromDate.toISOString().split('T')[0]);
+            dateTo.val(today.toISOString().split('T')[0]);
+        }
+        
+        // Auto submit form
+        $('#filterForm').submit();
     });
 </script>
 @endpush
