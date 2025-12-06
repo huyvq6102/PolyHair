@@ -244,6 +244,9 @@ class CheckoutController extends Controller
             // Gọi Service để tạo đơn hàng (Status sẽ là Pending nếu là vnpay)
             $payment = $paymentService->processPayment($user, $cart, $paymentMethod, $couponCode);
 
+            // Backup cart before clearing
+            Session::put('cart_backup', $cart);
+
             Session::forget('cart');
             Session::forget('coupon_code');
 
@@ -256,6 +259,7 @@ class CheckoutController extends Controller
             }
 
             // Các phương thức khác (Tiền mặt, Credit Card giả định...)
+            Session::forget('cart_backup'); // Success for non-vnpay
             return view('site.payments.success', [
                 'appointmentId' => $payment->appointment_id,
                 'invoiceCode'   => $payment->invoice_code,
@@ -276,10 +280,15 @@ class CheckoutController extends Controller
         if ($vnpayService->checkSignature($inputData)) {
             if (isset($inputData['vnp_ResponseCode']) && $inputData['vnp_ResponseCode'] == '00') {
                 // Thanh toán THÀNH CÔNG
+                Session::forget('cart_backup');
                 $orderId = $inputData['vnp_TxnRef'];
                 $payment = \App\Models\Payment::where('invoice_code', $orderId)->first();
                 
                 if ($payment) {
+                    // Cập nhật trạng thái Payment
+                    $payment->status = 'completed';
+                    $payment->save();
+
                      // Cập nhật Appointment
                     if ($payment->appointment_id) {
                         $appointment = \App\Models\Appointment::find($payment->appointment_id);
@@ -315,8 +324,31 @@ class CheckoutController extends Controller
                 }
 
             } else {
+                // Thanh toán THẤT BẠI
+                $orderId = $inputData['vnp_TxnRef'] ?? null;
+                if ($orderId) {
+                    $payment = \App\Models\Payment::where('invoice_code', $orderId)->first();
+                    if ($payment) {
+                        $payment->status = 'failed';
+                        $payment->save();
+
+                        if ($payment->appointment_id) {
+                            $appointment = \App\Models\Appointment::find($payment->appointment_id);
+                            if ($appointment) {
+                                $appointment->status = 'Chưa thanh toán';
+                                $appointment->save();
+                            }
+                        }
+                    }
+                }
+
+                // Restore cart
+                if (Session::has('cart_backup')) {
+                    Session::put('cart', Session::get('cart_backup'));
+                }
+
                 return redirect()->route('site.payments.checkout')
-                    ->with('error', 'Giao dịch không thành công hoặc bị hủy.');
+                    ->with('error', 'Giao dịch không thành công hoặc bị hủy. Quý khách có thể thử lại.');
             }
         } else {
             return redirect()->route('site.payments.checkout')

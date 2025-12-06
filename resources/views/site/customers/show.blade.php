@@ -40,7 +40,7 @@
 
                 </div>
             </div>
-            <div class="card border-0 shadow-sm mt-4">
+            <!-- <div class="card border-0 shadow-sm mt-4">
                 <div class="card-header bg-white border-0">
                     <h5 class="mb-0">Barber yêu thích</h5>
                 </div>
@@ -53,7 +53,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
 
         <!-- Cột nội dung chính với các tab -->
@@ -372,7 +372,26 @@
                                             <small class="text-muted">{{ $payment->created_at ? $payment->created_at->format('H:i d/m/Y') : 'N/A' }}</small>
                                         </div>
                                         <p class="mb-1">Tổng tiền: <strong class="text-danger">{{ number_format($payment->total) }}đ</strong></p>
-                                        <p class="mb-1"><small>Phương thức: {{ $payment->payment_type }}</small></p>
+                                        <div class="d-flex justify-content-between">
+                                            <p class="mb-1"><small>Phương thức: {{ $payment->payment_type }}</small></p>
+                                            @php
+                                                $status = $payment->status ?? 'pending';
+                                                $badgeClass = 'bg-secondary';
+                                                $statusText = 'Chờ xử lý';
+                                                
+                                                if ($status == 'completed') {
+                                                    $badgeClass = 'bg-success';
+                                                    $statusText = 'Thành công';
+                                                } elseif ($status == 'failed') {
+                                                    $badgeClass = 'bg-danger';
+                                                    $statusText = 'Thất bại';
+                                                } elseif ($status == 'refunded') {
+                                                    $badgeClass = 'bg-warning';
+                                                    $statusText = 'Hoàn tiền';
+                                                }
+                                            @endphp
+                                            <span class="badge {{ $badgeClass }}">{{ $statusText }}</span>
+                                        </div>
                                         
                                         @php
                                             $appliedPromo = null;

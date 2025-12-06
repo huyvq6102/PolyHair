@@ -18,6 +18,7 @@ class Payment extends Model
         'total',
         'created_by',
         'payment_type',
+        'status',
     ];
 
     protected $casts = [

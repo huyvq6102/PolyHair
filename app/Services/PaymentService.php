@@ -237,6 +237,7 @@ class PaymentService
                 'total'          => $grandTotal,
                 'created_by'     => $user->name,
                 'payment_type'   => $paymentMethod,
+                'status'         => 'pending',
             ]);
 
             // Save Promotion Usage (chỉ lưu nếu có promotion được áp dụng)
