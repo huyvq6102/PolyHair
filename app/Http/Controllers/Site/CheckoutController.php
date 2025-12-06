@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Services\PaymentService;
+use App\Services\PromotionService;
 use App\Models\Combo;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
