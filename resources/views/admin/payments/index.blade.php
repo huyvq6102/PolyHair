@@ -18,6 +18,7 @@
                         <th>Mã hóa đơn</th>
                         <th>Khách hàng</th>
                         <th>Loại</th>
+                        <th>Trạng thái</th>
                         <th>Tổng tiền</th>
                         <th>Ngày tạo</th>
                         <th>Người tạo</th>
@@ -37,6 +38,25 @@
                             @else
                                 <span class="badge badge-secondary">Khác</span>
                             @endif
+                        </td>
+                        <td>
+                            @php
+                                $status = $payment->status ?? 'pending';
+                                $badgeClass = 'secondary';
+                                $statusText = 'Chờ xử lý';
+                                
+                                if ($status == 'completed') {
+                                    $badgeClass = 'success';
+                                    $statusText = 'Thành công';
+                                } elseif ($status == 'failed') {
+                                    $badgeClass = 'danger';
+                                    $statusText = 'Thất bại';
+                                } elseif ($status == 'refunded') {
+                                    $badgeClass = 'warning';
+                                    $statusText = 'Hoàn tiền';
+                                }
+                            @endphp
+                            <span class="badge badge-{{ $badgeClass }}">{{ $statusText }}</span>
                         </td>
                         <td>{{ number_format($payment->total) }} VNĐ</td>
                         <td>{{ $payment->created_at ? $payment->created_at->format('d/m/Y H:i') : 'N/A' }}</td>
