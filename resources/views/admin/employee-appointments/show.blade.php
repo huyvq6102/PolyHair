@@ -79,6 +79,33 @@
             </div>
         </div>
 
+        @if($appointment->promotionUsages && $appointment->promotionUsages->count() > 0)
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label class="font-weight-bold">Khuyến mãi áp dụng:</label>
+                    <ul class="list-unstyled mb-0">
+                        @foreach($appointment->promotionUsages as $usage)
+                            @if($usage->promotion)
+                                <li>
+                                    <span class="badge badge-info">
+                                        {{ $usage->promotion->code }}
+                                    </span>
+                                    - {{ $usage->promotion->name }}
+                                    @if($usage->promotion->discount_percent)
+                                        ({{ $usage->promotion->discount_percent }}%)
+                                    @elseif($usage->promotion->discount_amount)
+                                        ({{ number_format($usage->promotion->discount_amount, 0, ',', '.') }}đ)
+                                    @endif
+                                </li>
+                            @endif
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+        @endif
+
         @if($appointment->note)
         <div class="form-group">
             <label class="font-weight-bold">Ghi chú:</label>

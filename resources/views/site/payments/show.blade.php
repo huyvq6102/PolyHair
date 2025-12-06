@@ -114,7 +114,14 @@
                     <div class="mb-4">
                         @if(isset($appliedCoupon) && $appliedCoupon)
                             <div class="alert alert-info d-flex justify-content-between align-items-center">
-                                <span>Mã giảm giá: <strong>{{ $appliedCoupon->code }}</strong> (-{{ $appliedCoupon->discount_percent }}%)</span>
+                                <span>
+                                    Mã giảm giá: <strong>{{ $appliedCoupon->code }}</strong> 
+                                    @if($appliedCoupon->discount_type === 'percent')
+                                        (-{{ $appliedCoupon->discount_percent }}%)
+                                    @else
+                                        (-{{ number_format($appliedCoupon->discount_amount, 0, ',', '.') }}₫)
+                                    @endif
+                                </span>
                                 <form action="{{ route('site.payments.removeCoupon') }}" method="POST" class="m-0">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Gỡ bỏ</button>
@@ -123,7 +130,7 @@
                         @else
                             <form action="{{ route('site.payments.applyCoupon') }}" method="POST" class="input-group mb-3">
                                 @csrf
-                                <input type="text" class="form-control" name="coupon_code" placeholder="Nhập mã khuyến mại" required>
+                                <input type="text" class="form-control" name="coupon_code" placeholder="Nhập mã khuyến mại" value="{{ old('coupon_code') }}" required>
                                 <button class="btn btn-outline-secondary" type="submit">Áp dụng</button>
                             </form>
                         @endif
@@ -140,6 +147,21 @@
                                 <span>-{{ number_format($promotion) }}đ</span>
                             </li>
                         @endif
+                        
+                        @php
+                            // Tính lại nếu chưa có
+                            $displayTaxablePrice = $taxablePrice ?? ($subtotal - $promotion);
+                            $displayVAT = $vat ?? ($displayTaxablePrice * 0.1);
+                        @endphp
+                        
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Tạm tính</span>
+                            <span>{{ number_format($displayTaxablePrice) }}đ</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>VAT (10%)</span>
+                            <span>{{ number_format($displayVAT) }}đ</span>
+                        </li>
                         
                         <li class="list-group-item d-flex justify-content-between align-items-center border-top pt-3 px-0"><strong>Tổng cộng</strong><strong style="font-size: 1.2rem;">{{ number_format($total) }}đ</strong></li>
                     </ul>

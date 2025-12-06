@@ -58,6 +58,9 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');
     Route::get('/employees-by-service', [AppointmentController::class, 'getEmployeesByService'])->name('employees-by-service');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
+    Route::middleware('auth')->group(function () {
+        Route::post('/{id}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');
+    });
     Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
 });
 
@@ -82,6 +85,11 @@ Route::prefix('reviews')->name('site.reviews.')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/create', [ReviewController::class, 'create'])->name('create');
         Route::post('/', [ReviewController::class, 'store'])->name('store');
+
+        // General feedback (not tied to a specific appointment)
+        Route::get('/general/create', [ReviewController::class, 'createGeneral'])->name('general.create');
+        Route::post('/general', [ReviewController::class, 'storeGeneral'])->name('general.store');
+
         Route::get('/{id}/edit', [ReviewController::class, 'edit'])->name('edit');
         Route::put('/{id}', [ReviewController::class, 'update'])->name('update');
     });

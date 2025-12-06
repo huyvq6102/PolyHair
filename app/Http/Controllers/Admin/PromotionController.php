@@ -212,7 +212,8 @@ class PromotionController extends Controller
                 ]);
             }
         } else {
-            $data['discount_percent'] = null;
+            // Set discount_percent = 0 thay vì null để tránh lỗi database
+            $data['discount_percent'] = 0;
             if ($data['discount_amount'] === null) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'discount_amount' => 'Vui lòng nhập số tiền giảm giá khi chọn loại giảm giá theo số tiền.',

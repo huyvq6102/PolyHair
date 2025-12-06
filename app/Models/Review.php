@@ -25,6 +25,22 @@ class Review extends Model
     ];
 
     /**
+     * Check if this is a comment (no appointment, no rating required)
+     */
+    public function isComment(): bool
+    {
+        return $this->appointment_id === null;
+    }
+
+    /**
+     * Check if this is a review (has appointment and rating)
+     */
+    public function isReview(): bool
+    {
+        return $this->appointment_id !== null && $this->rating !== null;
+    }
+
+    /**
      * Get the appointment that owns the review.
      */
     public function appointment(): BelongsTo

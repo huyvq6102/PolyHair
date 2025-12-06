@@ -154,8 +154,11 @@
                                 @foreach($categoryServices as $service)
                                     <div class="ml-3 mb-2">
                                         <strong class="text-dark">{{ $service->name }}</strong>
-                                        @if($service->serviceVariants && $service->serviceVariants->where('is_active', true)->count() > 0)
-                                            @foreach($service->serviceVariants->where('is_active', true) as $variant)
+                                        @php
+                                            $activeVariants = $service->serviceVariants?->where('is_active', true) ?? collect();
+                                        @endphp
+                                        @if($activeVariants->count() > 0)
+                                            @foreach($activeVariants as $variant)
                                                 <div class="form-check ml-4">
                                                     <input class="form-check-input service-variant-checkbox" 
                                                            type="checkbox" 
@@ -175,7 +178,26 @@
                                                 </div>
                                             @endforeach
                                         @else
-                                            <div class="ml-4 text-muted small">Chưa có biến thể dịch vụ</div>
+                                            <div class="form-check ml-4">
+                                                <input class="form-check-input service-simple-checkbox" 
+                                                       type="checkbox" 
+                                                       name="simple_services[]" 
+                                                       value="{{ $service->id }}" 
+                                                       id="service_{{ $service->id }}"
+                                                       data-price="{{ $service->base_price ?? 0 }}"
+                                                       data-duration="{{ $service->base_duration ?? 60 }}"
+                                                       {{ in_array($service->id, old('simple_services', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="service_{{ $service->id }}">
+                                                    {{ $service->name }} 
+                                                    @if(!is_null($service->base_price))
+                                                        - <strong class="text-success">{{ number_format($service->base_price, 0, ',', '.') }}đ</strong>
+                                                    @endif
+                                                    @if(!is_null($service->base_duration))
+                                                        <span class="text-muted">({{ $service->base_duration }} phút)</span>
+                                                    @endif
+                                                    <span class="text-muted small d-block">Dịch vụ cơ bản (không có biến thể)</span>
+                                                </label>
+                                            </div>
                                         @endif
                                     </div>
                                 @endforeach
@@ -219,6 +241,26 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
                 <small class="form-text text-muted">Ví dụ: 09:00, 14:30</small>
+            </div>
+
+            <!-- Khuyến mãi / giảm giá -->
+            <div class="form-group">
+                <label for="promotion_code">Mã khuyến mãi áp dụng cho khách này (nếu có)</label>
+                <select name="promotion_code" id="promotion_code" class="form-control @error('promotion_code') is-invalid @enderror">
+                    <option value="">-- Không áp dụng khuyến mãi --</option>
+                    @foreach($promotions as $promotion)
+                        <option value="{{ $promotion->code }}" {{ old('promotion_code') == $promotion->code ? 'selected' : '' }}>
+                            {{ $promotion->code }} - {{ $promotion->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('promotion_code')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="form-text text-muted">
+                    Nhân viên có thể chọn một mã giảm giá hiện có để áp dụng sẵn cho lịch hẹn này. 
+                    Khi thanh toán, khách dùng đúng mã này sẽ được giảm giá.
+                </small>
             </div>
 
             <!-- Ghi chú -->
@@ -273,10 +315,11 @@
             $('#new_customer_name, #new_customer_phone').prop('required', true);
         }
 
-        // Validate at least one service variant is selected
+        // Validate at least one service or variant is selected
         $('#appointmentForm').on('submit', function(e) {
-            var checked = $('.service-variant-checkbox:checked').length;
-            if (checked === 0) {
+            var checkedVariants = $('.service-variant-checkbox:checked').length;
+            var checkedSimple = $('.service-simple-checkbox:checked').length;
+            if (checkedVariants === 0 && checkedSimple === 0) {
                 e.preventDefault();
                 alert('Vui lòng chọn ít nhất một dịch vụ!');
                 return false;

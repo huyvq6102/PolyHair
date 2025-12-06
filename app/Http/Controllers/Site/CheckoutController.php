@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Services\PaymentService;
+use App\Services\PromotionService;
 use App\Models\Combo;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
@@ -74,14 +75,16 @@ class CheckoutController extends Controller
             // APPOINTMENT
             // -------------------------
             if (isset($item['type']) && $item['type'] === 'appointment') {
-                $appointment = \App\Models\Appointment::with('appointmentDetails.serviceVariant.service')
-                    ->find($item['id']);
+                $appointment = \App\Models\Appointment::with([
+                    'appointmentDetails.serviceVariant.service',
+                    'appointmentDetails.combo'
+                ])->find($item['id']);
 
                 if ($appointment) {
                     $appointmentTotal = 0;
 
                     foreach ($appointment->appointmentDetails as $detail) {
-                        // Handle Standard Services in Appointment
+                        // Handle Service Variants in Appointment
                         if ($detail->serviceVariant && $detail->serviceVariant->service) {
                             $price = $detail->price_snapshot 
                                 ?? ($detail->serviceVariant->price ?? 0);
@@ -95,9 +98,33 @@ class CheckoutController extends Controller
                                 'type'  => 'appointment_item'
                             ];
                         }
-                        // Handle Combos in Appointment (if stored directly or via logic)
-                        // Note: Current AppointmentDetail logic primarily links to serviceVariant. 
-                        // If combos are broken down into variants, they are handled above.
+                        // Handle Single Services (no variant) in Appointment
+                        // These are stored with service_variant_id = null and service name in notes
+                        elseif (!$detail->serviceVariant && !$detail->combo_id && $detail->notes) {
+                            $price = $detail->price_snapshot ?? 0;
+
+                            $appointmentTotal += $price;
+
+                            $services[] = [
+                                'cart_id' => $cartKey,
+                                'name' => '[Lịch hẹn] ' . $detail->notes,
+                                'price' => $price,
+                                'type'  => 'appointment_item'
+                            ];
+                        }
+                        // Handle Combos in Appointment
+                        elseif ($detail->combo_id && $detail->combo) {
+                            $price = $detail->price_snapshot ?? ($detail->combo->price ?? 0);
+
+                            $appointmentTotal += $price;
+
+                            $services[] = [
+                                'cart_id' => $cartKey,
+                                'name' => '[Lịch hẹn] Combo: ' . $detail->combo->name,
+                                'price' => $price,
+                                'type'  => 'appointment_item'
+                            ];
+                        }
                     }
 
                     $subtotal += $appointmentTotal;
@@ -110,28 +137,36 @@ class CheckoutController extends Controller
         // -------------------------
         $couponCode = Session::get('coupon_code');
         $appliedCoupon = null;
+        $promotionMessage = null;
 
         if ($couponCode) {
-            $promo = Promotion::where('code', $couponCode)
-                ->where('status', 1)
-                ->whereDate('start_date', '<=', now())
-                ->whereDate('end_date', '>=', now())
-                ->first();
+            $promotionService = app(PromotionService::class);
+            $result = $promotionService->validateAndCalculateDiscount(
+                $couponCode,
+                $cart,
+                $subtotal,
+                $user->id
+            );
 
-            if ($promo) {
-                // Tính giảm giá theo phần trăm
-                $promotionAmount = $subtotal * ($promo->discount_percent / 100);
-                $appliedCoupon = $promo;
+            if ($result['valid']) {
+                $promotionAmount = $result['discount_amount'];
+                $appliedCoupon = $result['promotion'];
+                $promotionMessage = $result['message'];
             } else {
-                // Mã không hợp lệ hoặc hết hạn -> xóa khỏi session
+                // Mã không hợp lệ -> xóa khỏi session
                 Session::forget('coupon_code');
+                $promotionMessage = $result['message'];
             }
         }
 
         // -------------------------
-        // TÍNH TỔNG
+        // TÍNH TỔNG (giống như PaymentService)
         // -------------------------
-        $total = max(0, $subtotal - $promotionAmount);
+        $taxablePrice = max(0, $subtotal - $promotionAmount);
+        
+        // VAT Calculation (giống như PaymentService)
+        $VAT = $taxablePrice * 0.1;
+        $total = $taxablePrice + $VAT;
 
         return view('site.payments.show', [
             'customer' => [
@@ -142,8 +177,11 @@ class CheckoutController extends Controller
             'services' => $services,
             'promotion' => $promotionAmount,
             'appliedCoupon' => $appliedCoupon, // Để hiển thị mã đã dùng ở view
+            'promotionMessage' => $promotionMessage, // Thông báo về promotion
             'subtotal' => $subtotal,
-            'total' => $total,
+            'taxablePrice' => $taxablePrice, // Giá sau giảm giá (trước VAT)
+            'vat' => $VAT, // VAT
+            'total' => $total, // Tổng cuối cùng (sau VAT)
             'payment_methods' => [
                 ['id' => 'card', 'name' => 'Thẻ tín dụng'],
                 ['id' => 'momo', 'name' => 'Ví MoMo'],
@@ -162,7 +200,7 @@ class CheckoutController extends Controller
         $code = $request->input('coupon_code');
 
         $promo = Promotion::where('code', $code)
-            ->where('status', 1)
+            ->where('status', 'active')
             ->whereDate('start_date', '<=', now())
             ->whereDate('end_date', '>=', now())
             ->first();

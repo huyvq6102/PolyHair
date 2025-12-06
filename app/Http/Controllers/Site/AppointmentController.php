@@ -39,28 +39,43 @@ class AppointmentController extends Controller
      */
     public function selectServices()
     {
-        // Lấy tất cả danh mục có dịch vụ, sắp xếp theo bảng chữ cái
-        $categories = \App\Models\ServiceCategory::with(['services' => function($query) {
-                $query->whereNull('deleted_at')
-                    ->where('status', 'Hoạt động')
-                    ->with('serviceVariants')
-                    ->orderBy('name', 'asc'); // Sắp xếp dịch vụ theo bảng chữ cái
-            }])
-            ->whereHas('services', function($query) {
-                $query->whereNull('deleted_at')
-                    ->where('status', 'Hoạt động');
+        // Lấy tất cả danh mục có dịch vụ hoặc combo, sắp xếp theo bảng chữ cái
+        $categories = \App\Models\ServiceCategory::with([
+                'services' => function($query) {
+                    $query->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động')
+                        ->with('serviceVariants')
+                        ->orderBy('name', 'asc'); // Sắp xếp dịch vụ theo bảng chữ cái
+                },
+                'combos' => function($query) {
+                    $query->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động')
+                        ->with('comboItems.serviceVariant')
+                        ->orderBy('name', 'asc'); // Sắp xếp combo theo bảng chữ cái
+                }
+            ])
+            ->where(function($query) {
+                // Danh mục có dịch vụ hoặc combo
+                $query->whereHas('services', function($q) {
+                    $q->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động');
+                })->orWhereHas('combos', function($q) {
+                    $q->whereNull('deleted_at')
+                        ->where('status', 'Hoạt động');
+                });
             })
             ->orderBy('name', 'asc') // Sắp xếp danh mục theo bảng chữ cái
             ->get();
 
-        // Lấy tất cả combo, sắp xếp theo bảng chữ cái
-        $combos = \App\Models\Combo::with('comboItems.serviceVariant')
+        // Lấy các combo không có category (để hiển thị riêng nếu cần)
+        $combosWithoutCategory = \App\Models\Combo::with('comboItems.serviceVariant')
             ->whereNull('deleted_at')
             ->where('status', 'Hoạt động')
+            ->whereNull('category_id')
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('site.appointment.select-services', compact('categories', 'combos'));
+        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory'));
     }
 
     /**
@@ -113,46 +128,14 @@ class AppointmentController extends Controller
             return redirect()->route('site.appointment.create', $queryParams);
         }
         
-        // Lấy tất cả nhân viên từ database
-        $allEmployees = \App\Models\Employee::with(['user.role', 'services'])
-            ->whereNotNull('user_id')
-            ->orderBy('id', 'desc')
-            ->get();
-        
-        // Lọc nhân viên: loại trừ admin và nhân viên bị vô hiệu hóa
-        $employees = $allEmployees->filter(function($employee) {
-            // Bỏ qua nếu không có user
-            if (!$employee->user) {
-                return false;
-            }
-            
-            // Loại trừ admin - kiểm tra role_id
-            if ($employee->user->role_id == 1) {
-                return false;
-            }
-            
-            // Kiểm tra role name nếu có
-            if ($employee->user->role) {
-                $roleName = strtolower(trim($employee->user->role->name ?? ''));
-                if (in_array($roleName, ['admin', 'administrator'])) {
-                    return false;
-                }
-            }
-            
-            // Loại trừ nhân viên bị vô hiệu hóa
-            if ($employee->status === 'Vô hiệu hóa') {
-                return false;
-            }
-            
-            return true;
-        });
-
         // Filter employees by service expertise - chỉ hiển thị nhân viên có chuyên môn phù hợp
-        $serviceIds = $request->input('service_id', []);
-        $variantIds = $request->input('service_variants', []);
-        $comboIds = $request->input('combo_id', []);
+        // Lấy service_id từ query string hoặc input
+        // Sử dụng request()->query() để lấy từ query string, request()->input() để lấy từ POST
+        $serviceIds = $request->query('service_id', $request->input('service_id', []));
+        $variantIds = $request->query('service_variants', $request->input('service_variants', []));
+        $comboIds = $request->query('combo_id', $request->input('combo_id', []));
         
-        // Chuyển đổi thành array nếu là single value
+        // Nếu service_id là từ query string (single value), chuyển thành array
         if (!is_array($serviceIds)) {
             $serviceIds = $serviceIds ? [$serviceIds] : [];
         }
@@ -163,32 +146,57 @@ class AppointmentController extends Controller
             $comboIds = $comboIds ? [$comboIds] : [];
         }
         
-        // Thu thập tất cả service IDs từ các nguồn
-        $allServiceIds = [];
+        // Lọc bỏ các giá trị null hoặc rỗng, nhưng giữ lại giá trị 0 nếu có
+        $serviceIds = array_filter($serviceIds, function($value) {
+            return $value !== null && $value !== '';
+        });
+        $variantIds = array_filter($variantIds, function($value) {
+            return $value !== null && $value !== '';
+        });
+        $comboIds = array_filter($comboIds, function($value) {
+            return $value !== null && $value !== '';
+        });
         
-        // Lấy service IDs từ service_id
+        // Thu thập service IDs và phân biệt dịch vụ đơn vs dịch vụ biến thể
+        $singleServiceIds = []; // Dịch vụ đơn (không có variants)
+        $variantServiceIds = []; // Dịch vụ biến thể (có variants)
+        
+        // Lấy service IDs từ service_id (dịch vụ đơn)
         if (!empty($serviceIds)) {
-            $allServiceIds = array_merge($allServiceIds, $serviceIds);
+            $singleServiceIds = array_merge($singleServiceIds, $serviceIds);
         }
         
-        // Lấy service IDs từ service_variants
+        // Lấy service IDs từ service_variants (dịch vụ biến thể)
         if (!empty($variantIds)) {
             $variants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->get();
             $variantServiceIds = $variants->pluck('service_id')->unique()->toArray();
-            $allServiceIds = array_merge($allServiceIds, $variantServiceIds);
         }
         
-        // Lấy service IDs từ combo
+        // Lấy service IDs từ combo (có thể là dịch vụ biến thể)
         if (!empty($comboIds)) {
-            $combos = \App\Models\Combo::with('comboItems.serviceVariant.service')
+            $combos = \App\Models\Combo::with(['comboItems.serviceVariant.service', 'comboItems.service'])
                 ->whereIn('id', $comboIds)
                 ->get();
             
             foreach ($combos as $combo) {
                 if ($combo && $combo->comboItems) {
                     foreach ($combo->comboItems as $item) {
+                        // Lấy service ID từ service_variant nếu có
                         if ($item->serviceVariant && $item->serviceVariant->service) {
-                            $allServiceIds[] = $item->serviceVariant->service->id;
+                            $variantServiceIds[] = $item->serviceVariant->service->id;
+                        }
+                        // Lấy service ID trực tiếp nếu có (combo item có service_id nhưng không có variant)
+                        elseif ($item->service_id) {
+                            // Kiểm tra xem service này có variants không để phân loại
+                            $service = \App\Models\Service::find($item->service_id);
+                            if ($service) {
+                                $hasVariants = $service->serviceVariants()->whereNull('deleted_at')->exists();
+                                if ($hasVariants) {
+                                    $variantServiceIds[] = $item->service_id;
+                                } else {
+                                    $singleServiceIds[] = $item->service_id;
+                                }
+                            }
                         }
                     }
                 }
@@ -196,20 +204,173 @@ class AppointmentController extends Controller
         }
         
         // Loại bỏ trùng lặp
-        $allServiceIds = array_unique($allServiceIds);
+        $singleServiceIds = array_unique($singleServiceIds);
+        $variantServiceIds = array_unique($variantServiceIds);
         
-        // Chỉ lọc nhân viên nếu có dịch vụ được chọn
-        if (!empty($allServiceIds)) {
-            // Lọc nhân viên có chuyên môn với ít nhất một service trong danh sách
-            $employees = $employees->filter(function($employee) use ($allServiceIds) {
-                return $employee->services->whereIn('id', $allServiceIds)->count() > 0;
-            });
-        } else {
-            // Nếu không có dịch vụ nào được chọn, không hiển thị nhân viên nào
-            $employees = collect([]);
+        // Khởi tạo $employees là collection rỗng
+        $employees = collect([]);
+        
+        // Query nhân viên dựa trên chuyên môn được set trong admin
+        // Phân biệt dịch vụ đơn và dịch vụ biến thể
+        if (!empty($singleServiceIds) || !empty($variantServiceIds)) {
+            $employeeIds = [];
+            
+            // Nếu có dịch vụ đơn được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ đơn
+            if (!empty($singleServiceIds)) {
+                $singleServiceIds = array_map('intval', $singleServiceIds);
+                $singleServiceIds = array_filter($singleServiceIds);
+                $singleServiceIds = array_values($singleServiceIds);
+                
+                if (!empty($singleServiceIds)) {
+                    // Lấy danh sách service_id là dịch vụ đơn (không có variants)
+                    $validSingleServiceIds = \App\Models\Service::whereIn('id', $singleServiceIds)
+                        ->whereNull('deleted_at')
+                        ->whereDoesntHave('serviceVariants')
+                        ->pluck('id')
+                        ->toArray();
+                    
+                    if (!empty($validSingleServiceIds)) {
+                        // Lấy employee_id từ employee_skills có service_id là dịch vụ đơn
+                        $singleEmployeeIds = \DB::table('employee_skills')
+                            ->whereIn('service_id', $validSingleServiceIds)
+                            ->whereNotNull('employee_id')
+                            ->whereNotNull('service_id')
+                            ->distinct()
+                            ->pluck('employee_id')
+                            ->toArray();
+                        
+                        $employeeIds = array_merge($employeeIds, $singleEmployeeIds);
+                    }
+                }
+            }
+            
+            // Nếu có dịch vụ biến thể được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ biến thể
+            if (!empty($variantServiceIds)) {
+                $variantServiceIds = array_map('intval', $variantServiceIds);
+                $variantServiceIds = array_filter($variantServiceIds);
+                $variantServiceIds = array_values($variantServiceIds);
+                
+                if (!empty($variantServiceIds)) {
+                    // Lấy danh sách service_id là dịch vụ biến thể (có variants)
+                    $validVariantServiceIds = \App\Models\Service::whereIn('id', $variantServiceIds)
+                        ->whereNull('deleted_at')
+                        ->whereHas('serviceVariants')
+                        ->pluck('id')
+                        ->toArray();
+                    
+                    if (!empty($validVariantServiceIds)) {
+                        // Lấy employee_id từ employee_skills có service_id là dịch vụ biến thể
+                        $variantEmployeeIds = \DB::table('employee_skills')
+                            ->whereIn('service_id', $validVariantServiceIds)
+                            ->whereNotNull('employee_id')
+                            ->whereNotNull('service_id')
+                            ->distinct()
+                            ->pluck('employee_id')
+                            ->toArray();
+                        
+                        $employeeIds = array_merge($employeeIds, $variantEmployeeIds);
+                    }
+                }
+            }
+            
+            // Loại bỏ trùng lặp
+            $employeeIds = array_unique($employeeIds);
+            $employeeIds = array_map('intval', $employeeIds);
+            $employeeIds = array_filter($employeeIds);
+            $employeeIds = array_values($employeeIds);
+            
+            if (!empty($employeeIds)) {
+                // Query nhân viên dựa trên employee_id từ employee_skills
+                $employees = \App\Models\Employee::with(['user.role', 'services'])
+                    ->whereIn('id', $employeeIds)
+                    ->whereNotNull('user_id')
+                    ->where('status', '!=', 'Vô hiệu hóa')
+                    ->whereHas('user', function($query) {
+                        // Loại trừ admin
+                        $query->where('role_id', '!=', 1);
+                    })
+                    ->get()
+                    // Lọc lại để đảm bảo nhân viên chỉ có chuyên môn phù hợp với loại dịch vụ đã chọn
+                    ->filter(function($employee) use ($singleServiceIds, $variantServiceIds) {
+                        $employeeServiceIds = $employee->services->pluck('id')->toArray();
+                        
+                        if (empty($employeeServiceIds)) {
+                            return false;
+                        }
+                        
+                        // Nếu chọn dịch vụ đơn, chỉ giữ lại nhân viên có chuyên môn là dịch vụ đơn
+                        if (!empty($singleServiceIds) && empty($variantServiceIds)) {
+                            // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ đơn đã chọn không
+                            $hasMatchingService = !empty(array_intersect($employeeServiceIds, $singleServiceIds));
+                            
+                            if (!$hasMatchingService) {
+                                return false;
+                            }
+                            
+                            // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ đơn không
+                            // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ biến thể nào không
+                            // Sử dụng whereHas để kiểm tra xem có service nào có variants không
+                            $servicesWithVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                ->whereNull('deleted_at')
+                                ->whereHas('serviceVariants', function($query) {
+                                    $query->whereNull('deleted_at');
+                                })
+                                ->pluck('id')
+                                ->toArray();
+                            
+                            // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ biến thể, loại bỏ
+                            if (!empty($servicesWithVariants)) {
+                                return false;
+                            }
+                            
+                            // Tất cả chuyên môn đều là dịch vụ đơn và có service_id trùng
+                            return true;
+                        }
+                        
+                        // Nếu chọn dịch vụ biến thể, chỉ giữ lại nhân viên có chuyên môn là dịch vụ biến thể
+                        if (!empty($variantServiceIds) && empty($singleServiceIds)) {
+                            // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ biến thể đã chọn không
+                            $hasMatchingService = !empty(array_intersect($employeeServiceIds, $variantServiceIds));
+                            
+                            if (!$hasMatchingService) {
+                                return false;
+                            }
+                            
+                            // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ biến thể không
+                            // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ đơn nào không
+                            // Sử dụng whereDoesntHave để kiểm tra xem có service nào không có variants không
+                            $servicesWithoutVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                ->whereNull('deleted_at')
+                                ->whereDoesntHave('serviceVariants', function($query) {
+                                    $query->whereNull('deleted_at');
+                                })
+                                ->pluck('id')
+                                ->toArray();
+                            
+                            // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ đơn, loại bỏ
+                            if (!empty($servicesWithoutVariants)) {
+                                return false;
+                            }
+                            
+                            // Tất cả chuyên môn đều là dịch vụ biến thể và có service_id trùng
+                            return true;
+                        }
+                        
+                        // Nếu chọn cả hai loại, giữ lại nhân viên có service_id trùng với bất kỳ dịch vụ nào đã chọn
+                        if (!empty($singleServiceIds) && !empty($variantServiceIds)) {
+                            $allSelectedServiceIds = array_merge($singleServiceIds, $variantServiceIds);
+                            return !empty(array_intersect($employeeServiceIds, $allSelectedServiceIds));
+                        }
+                        
+                        return false;
+                    })
+                    ->values();
+            } else {
+                // Không có nhân viên nào có chuyên môn phù hợp
+                $employees = collect([]);
+            }
         }
-
-        $employees = $employees->values();
+        // Nếu không có dịch vụ nào được chọn, $employees đã được khởi tạo là collection rỗng ở trên
         
         $wordTimes = $this->wordTimeService->getAll();
         $serviceCategories = \App\Models\ServiceCategory::whereNull('deleted_at')
@@ -311,25 +472,75 @@ class AppointmentController extends Controller
             $totalDuration = 0;
             $serviceVariantData = [];
             
+            // Log để debug
+            \Log::info('Appointment store - Received data', [
+                'service_variants' => $validated['service_variants'] ?? [],
+                'service_id' => $validated['service_id'] ?? [],
+                'combo_id' => $validated['combo_id'] ?? [],
+                'raw_request' => $request->all(),
+            ]);
+            
             // Process service variants if selected (priority: variants over service/combo)
+            // IMPORTANT: Only process the service_variants that were actually selected
             if (!empty($validated['service_variants'])) {
-                foreach ($validated['service_variants'] as $variantId) {
-                    $variant = \App\Models\ServiceVariant::findOrFail($variantId);
-                    $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
-                    
-                    $serviceVariantData[] = [
-                        'service_variant_id' => $variantId,
-                        'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $variant->price,
-                        'duration' => $variant->duration ?? 60,
-                        'status' => 'Chờ',
-                    ];
+                // Ensure it's an array and filter out any empty/null values
+                $variantIds = is_array($validated['service_variants']) 
+                    ? array_filter($validated['service_variants'], function($id) {
+                        return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                    })
+                    : [];
+                
+                // Remove duplicates and re-index array
+                $variantIds = array_values(array_unique($variantIds));
+                
+                // CRITICAL: If we have more than 10 variants, something is wrong - log warning
+                if (count($variantIds) > 10) {
+                    \Log::warning('Appointment store - Suspicious number of variants', [
+                        'count' => count($variantIds),
+                        'variant_ids' => $variantIds,
+                        'request_url' => $request->fullUrl(),
+                    ]);
+                }
+                
+                \Log::info('Appointment store - Processing variants', [
+                    'variant_ids' => $variantIds,
+                    'count' => count($variantIds),
+                ]);
+                
+                foreach ($variantIds as $variantId) {
+                    try {
+                        $variant = \App\Models\ServiceVariant::findOrFail($variantId);
+                        $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
+                        
+                        $serviceVariantData[] = [
+                            'service_variant_id' => $variantId,
+                            'employee_id' => $validated['employee_id'] ?? null,
+                            'price_snapshot' => $variant->price,
+                            'duration' => $variant->duration ?? 60,
+                            'status' => 'Chờ',
+                        ];
+                    } catch (\Exception $e) {
+                        \Log::error('Appointment store - Failed to process variant', [
+                            'variant_id' => $variantId,
+                            'error' => $e->getMessage(),
+                        ]);
+                        // Skip invalid variant
+                    }
                 }
             }
             
             // Process combos if selected
             if (!empty($validated['combo_id'])) {
-                $comboIds = is_array($validated['combo_id']) ? $validated['combo_id'] : [$validated['combo_id']];
+                // Ensure it's an array and filter out any empty/null values
+                $comboIds = is_array($validated['combo_id']) 
+                    ? array_filter($validated['combo_id'], function($id) {
+                        return !empty($id) && $id !== '0' && $id !== 0;
+                    })
+                    : (($validated['combo_id'] && $validated['combo_id'] !== '0') ? [$validated['combo_id']] : []);
+                
+                // Remove duplicates
+                $comboIds = array_unique($comboIds);
+                
                 foreach ($comboIds as $comboId) {
                     $combo = \App\Models\Combo::with('comboItems.serviceVariant')->findOrFail($comboId);
                     
@@ -356,7 +567,16 @@ class AppointmentController extends Controller
             
             // Process services if selected
             if (!empty($validated['service_id'])) {
-                $serviceIds = is_array($validated['service_id']) ? $validated['service_id'] : [$validated['service_id']];
+                // Ensure it's an array and filter out any empty/null values
+                $serviceIds = is_array($validated['service_id']) 
+                    ? array_filter($validated['service_id'], function($id) {
+                        return !empty($id) && $id !== '0' && $id !== 0;
+                    })
+                    : (($validated['service_id'] && $validated['service_id'] !== '0') ? [$validated['service_id']] : []);
+                
+                // Remove duplicates
+                $serviceIds = array_unique($serviceIds);
+                
                 foreach ($serviceIds as $serviceId) {
                     $service = \App\Models\Service::findOrFail($serviceId);
                     $totalDuration += $service->base_duration ?? 60; // Default 60 minutes if not set
@@ -379,41 +599,88 @@ class AppointmentController extends Controller
             
             $endAt = $startAt->copy()->addMinutes($totalDuration);
 
-            // Check for duplicate appointment (same user, same date, same time)
-            $existingAppointment = \App\Models\Appointment::where('user_id', $user->id)
-                ->where('start_at', $startAt)
-                ->where('employee_id', $validated['employee_id'] ?? null)
-                ->where('status', '!=', 'Đã hủy')
-                ->first();
+            // Log final serviceVariantData before creating appointment
+            \Log::info('Appointment store - Final serviceVariantData', [
+                'count' => count($serviceVariantData),
+                'data' => $serviceVariantData,
+            ]);
             
-            if ($existingAppointment) {
-                // Appointment already exists, use it instead of creating new one
-                $appointment = $existingAppointment;
-            } else {
-                // Create appointment
-                $appointment = $this->appointmentService->create([
+            // CRITICAL: Validate that we're not creating too many appointment details
+            // Reasonable limit: 20 services (allowing for multiple services, combos, etc.)
+            // If more than 20, something is definitely wrong
+            if (count($serviceVariantData) > 20) {
+                \Log::error('Appointment store - Too many service variants detected', [
+                    'count' => count($serviceVariantData),
+                    'service_variant_data' => $serviceVariantData,
+                ]);
+                
+                // Return error instead of creating appointment with wrong data
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Có lỗi xảy ra: Quá nhiều dịch vụ được chọn. Vui lòng thử lại.',
+                    'error' => 'Too many service variants: ' . count($serviceVariantData)
+                ], 422);
+            }
+            
+            // Warning if more than 5 (unusual but not necessarily wrong)
+            if (count($serviceVariantData) > 5) {
+                \Log::warning('Appointment store - Unusual number of service variants', [
+                    'count' => count($serviceVariantData),
+                    'service_variant_data' => $serviceVariantData,
+                ]);
+            }
+
+            // Always create a new appointment for each booking
+            // This ensures each booking has its own appointment with only the selected services
+            $appointment = $this->appointmentService->create([
                 'user_id' => $user->id,
                 'employee_id' => $validated['employee_id'] ?? null,
                 'status' => 'Chờ xử lý',
                 'start_at' => $startAt,
                 'end_at' => $endAt,
                 'note' => $validated['note'] ?? null,
-                ], $serviceVariantData);
+            ], $serviceVariantData);
+            
+            \Log::info('Appointment store - Created appointment', [
+                'appointment_id' => $appointment->id,
+                'details_count' => $appointment->appointmentDetails->count(),
+                'expected_count' => count($serviceVariantData),
+            ]);
+            
+            // Verify appointment details count matches expected
+            if ($appointment->appointmentDetails->count() !== count($serviceVariantData)) {
+                \Log::error('Appointment store - Mismatch in appointment details count', [
+                    'appointment_id' => $appointment->id,
+                    'expected' => count($serviceVariantData),
+                    'actual' => $appointment->appointmentDetails->count(),
+                ]);
             }
 
-            // Add appointment to cart (check if already exists to prevent duplicates)
+            // CRITICAL: Remove any existing appointments from cart before adding new one
+            // This ensures we don't have old appointments with wrong data in cart
             $cart = Session::get('cart', []);
-            $cartKey = 'appointment_' . $appointment->id;
             
-            // Only add if not already in cart
-            if (!isset($cart[$cartKey])) {
-                $cart[$cartKey] = [
-                    'type' => 'appointment',
-                    'id' => $appointment->id,
-                    'quantity' => 1,
-                ];
-                Session::put('cart', $cart);
+            // Remove all existing appointments from cart
+            foreach ($cart as $key => $item) {
+                if (isset($item['type']) && $item['type'] === 'appointment') {
+                    unset($cart[$key]);
+                }
             }
+            
+            // Add new appointment to cart
+            $cartKey = 'appointment_' . $appointment->id;
+            $cart[$cartKey] = [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1,
+            ];
+            Session::put('cart', $cart);
+            
+            \Log::info('Appointment store - Cart updated', [
+                'appointment_id' => $appointment->id,
+                'cart_keys' => array_keys($cart),
+            ]);
 
             DB::commit();
 
@@ -781,49 +1048,61 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Cancel an appointment.
+     */
+    public function cancel(Request $request, $id)
+    {
+        try {
+            $appointment = \App\Models\Appointment::findOrFail($id);
+            
+            // Kiểm tra quyền: chỉ chủ sở hữu mới được hủy
+            if (auth()->id() != $appointment->user_id && !auth()->user()->isAdmin()) {
+                return back()->with('error', 'Bạn không có quyền hủy lịch hẹn này.');
+            }
+            
+            // Kiểm tra xem có thể hủy không
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 phút
+            if ($appointment->status !== 'Chờ xử lý') {
+                return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
+            }
+            
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 phút kể từ khi đặt
+            $createdAt = \Carbon\Carbon::parse($appointment->created_at);
+            $now = now();
+            $minutesSinceCreated = $createdAt->diffInMinutes($now);
+            
+            if ($minutesSinceCreated > 30) {
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+            }
+            
+            // Lấy lý do hủy từ form hoặc dùng mặc định
+            $reason = $request->input('cancellation_reason', 'Khách hàng tự hủy');
+            if (empty(trim($reason))) {
+                $reason = 'Khách hàng tự hủy';
+            }
+            
+            // Hủy lịch hẹn
+            $this->appointmentService->cancelAppointment($id, $reason, auth()->id());
+            
+            return back()->with('success', 'Lịch hẹn đã được hủy thành công.');
+            
+        } catch (\Exception $e) {
+            \Log::error('Error canceling appointment: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi hủy lịch hẹn. Vui lòng thử lại.');
+        }
+    }
+
+    /**
      * Get employees by service (chuyên môn).
      */
     public function getEmployeesByService(Request $request)
     {
         try {
-            // Lấy tất cả nhân viên từ database
-            $allEmployees = \App\Models\Employee::with(['user.role', 'services'])
-                ->whereNotNull('user_id')
-                ->orderBy('id', 'desc')
-                ->get();
-            
-            // Lọc nhân viên: loại trừ admin và nhân viên bị vô hiệu hóa
-            $employees = $allEmployees->filter(function($employee) {
-                // Bỏ qua nếu không có user
-                if (!$employee->user) {
-                    return false;
-                }
-                
-                // Loại trừ admin - kiểm tra role_id
-                if ($employee->user->role_id == 1) {
-                    return false;
-                }
-                
-                // Kiểm tra role name nếu có
-                if ($employee->user->role) {
-                    $roleName = strtolower(trim($employee->user->role->name ?? ''));
-                    if (in_array($roleName, ['admin', 'administrator'])) {
-                        return false;
-                    }
-                }
-                
-                // Loại trừ nhân viên bị vô hiệu hóa
-                if ($employee->status === 'Vô hiệu hóa') {
-                    return false;
-                }
-                
-                return true;
-            });
-
             // Filter by service expertise - chỉ hiển thị nhân viên có chuyên môn phù hợp
-            $serviceIds = $request->input('service_id', []);
-            $variantIds = $request->input('service_variants', []);
-            $comboIds = $request->input('combo_id', []);
+            // Sử dụng request()->query() để lấy từ query string, request()->input() để lấy từ POST
+            $serviceIds = $request->query('service_id', $request->input('service_id', []));
+            $variantIds = $request->query('service_variants', $request->input('service_variants', []));
+            $comboIds = $request->query('combo_id', $request->input('combo_id', []));
             
             // Chuyển đổi thành array nếu là single value
             if (!is_array($serviceIds)) {
@@ -836,32 +1115,57 @@ class AppointmentController extends Controller
                 $comboIds = $comboIds ? [$comboIds] : [];
             }
             
-            // Thu thập tất cả service IDs từ các nguồn
-            $allServiceIds = [];
+            // Lọc bỏ các giá trị null hoặc rỗng, nhưng giữ lại giá trị 0 nếu có
+            $serviceIds = array_filter($serviceIds, function($value) {
+                return $value !== null && $value !== '';
+            });
+            $variantIds = array_filter($variantIds, function($value) {
+                return $value !== null && $value !== '';
+            });
+            $comboIds = array_filter($comboIds, function($value) {
+                return $value !== null && $value !== '';
+            });
             
-            // Lấy service IDs từ service_id
+            // Thu thập service IDs và phân biệt dịch vụ đơn vs dịch vụ biến thể
+            $singleServiceIds = []; // Dịch vụ đơn (không có variants)
+            $variantServiceIds = []; // Dịch vụ biến thể (có variants)
+            
+            // Lấy service IDs từ service_id (dịch vụ đơn)
             if (!empty($serviceIds)) {
-                $allServiceIds = array_merge($allServiceIds, $serviceIds);
+                $singleServiceIds = array_merge($singleServiceIds, $serviceIds);
             }
             
-            // Lấy service IDs từ service_variants
+            // Lấy service IDs từ service_variants (dịch vụ biến thể)
             if (!empty($variantIds)) {
                 $variants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->get();
                 $variantServiceIds = $variants->pluck('service_id')->unique()->toArray();
-                $allServiceIds = array_merge($allServiceIds, $variantServiceIds);
             }
             
-            // Lấy service IDs từ combo
+            // Lấy service IDs từ combo (có thể là dịch vụ biến thể)
             if (!empty($comboIds)) {
-                $combos = \App\Models\Combo::with('comboItems.serviceVariant.service')
+                $combos = \App\Models\Combo::with(['comboItems.serviceVariant.service', 'comboItems.service'])
                     ->whereIn('id', $comboIds)
                     ->get();
                 
                 foreach ($combos as $combo) {
                     if ($combo && $combo->comboItems) {
                         foreach ($combo->comboItems as $item) {
+                            // Lấy service ID từ service_variant nếu có
                             if ($item->serviceVariant && $item->serviceVariant->service) {
-                                $allServiceIds[] = $item->serviceVariant->service->id;
+                                $variantServiceIds[] = $item->serviceVariant->service->id;
+                            }
+                            // Lấy service ID trực tiếp nếu có (combo item có service_id nhưng không có variant)
+                            elseif ($item->service_id) {
+                                // Kiểm tra xem service này có variants không để phân loại
+                                $service = \App\Models\Service::find($item->service_id);
+                                if ($service) {
+                                    $hasVariants = $service->serviceVariants()->whereNull('deleted_at')->exists();
+                                    if ($hasVariants) {
+                                        $variantServiceIds[] = $item->service_id;
+                                    } else {
+                                        $singleServiceIds[] = $item->service_id;
+                                    }
+                                }
                             }
                         }
                     }
@@ -869,20 +1173,172 @@ class AppointmentController extends Controller
             }
             
             // Loại bỏ trùng lặp
-            $allServiceIds = array_unique($allServiceIds);
+            $singleServiceIds = array_unique($singleServiceIds);
+            $variantServiceIds = array_unique($variantServiceIds);
             
-            // Chỉ lọc nhân viên nếu có dịch vụ được chọn
-            if (!empty($allServiceIds)) {
-                // Lọc nhân viên có chuyên môn với ít nhất một service trong danh sách
-                $employees = $employees->filter(function($employee) use ($allServiceIds) {
-                    return $employee->services->whereIn('id', $allServiceIds)->count() > 0;
-                });
-            } else {
-                // Nếu không có dịch vụ nào được chọn, không hiển thị nhân viên nào
-                $employees = collect([]);
+            // Khởi tạo $employees là collection rỗng
+            $employees = collect([]);
+            
+            // Query nhân viên dựa trên chuyên môn được set trong admin
+            // Phân biệt dịch vụ đơn và dịch vụ biến thể
+            if (!empty($singleServiceIds) || !empty($variantServiceIds)) {
+                $employeeIds = [];
+                
+                // Nếu có dịch vụ đơn được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ đơn
+                if (!empty($singleServiceIds)) {
+                    $singleServiceIds = array_map('intval', $singleServiceIds);
+                    $singleServiceIds = array_filter($singleServiceIds);
+                    $singleServiceIds = array_values($singleServiceIds);
+                    
+                    if (!empty($singleServiceIds)) {
+                        // Lấy danh sách service_id là dịch vụ đơn (không có variants)
+                        $validSingleServiceIds = \App\Models\Service::whereIn('id', $singleServiceIds)
+                            ->whereNull('deleted_at')
+                            ->whereDoesntHave('serviceVariants')
+                            ->pluck('id')
+                            ->toArray();
+                        
+                        if (!empty($validSingleServiceIds)) {
+                            // Lấy employee_id từ employee_skills có service_id là dịch vụ đơn
+                            $singleEmployeeIds = \DB::table('employee_skills')
+                                ->whereIn('service_id', $validSingleServiceIds)
+                                ->whereNotNull('employee_id')
+                                ->whereNotNull('service_id')
+                                ->distinct()
+                                ->pluck('employee_id')
+                                ->toArray();
+                            
+                            $employeeIds = array_merge($employeeIds, $singleEmployeeIds);
+                        }
+                    }
+                }
+                
+                // Nếu có dịch vụ biến thể được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ biến thể
+                if (!empty($variantServiceIds)) {
+                    $variantServiceIds = array_map('intval', $variantServiceIds);
+                    $variantServiceIds = array_filter($variantServiceIds);
+                    $variantServiceIds = array_values($variantServiceIds);
+                    
+                    if (!empty($variantServiceIds)) {
+                        // Lấy danh sách service_id là dịch vụ biến thể (có variants)
+                        $validVariantServiceIds = \App\Models\Service::whereIn('id', $variantServiceIds)
+                            ->whereNull('deleted_at')
+                            ->whereHas('serviceVariants')
+                            ->pluck('id')
+                            ->toArray();
+                        
+                        if (!empty($validVariantServiceIds)) {
+                            // Lấy employee_id từ employee_skills có service_id là dịch vụ biến thể
+                            $variantEmployeeIds = \DB::table('employee_skills')
+                                ->whereIn('service_id', $validVariantServiceIds)
+                                ->whereNotNull('employee_id')
+                                ->whereNotNull('service_id')
+                                ->distinct()
+                                ->pluck('employee_id')
+                                ->toArray();
+                            
+                            $employeeIds = array_merge($employeeIds, $variantEmployeeIds);
+                        }
+                    }
+                }
+                
+                // Loại bỏ trùng lặp
+                $employeeIds = array_unique($employeeIds);
+                $employeeIds = array_map('intval', $employeeIds);
+                $employeeIds = array_filter($employeeIds);
+                $employeeIds = array_values($employeeIds);
+                
+                if (!empty($employeeIds)) {
+                    // Query nhân viên dựa trên employee_id từ employee_skills
+                    $employees = \App\Models\Employee::with(['user.role', 'services'])
+                        ->whereIn('id', $employeeIds)
+                        ->whereNotNull('user_id')
+                        ->where('status', '!=', 'Vô hiệu hóa')
+                        ->whereHas('user', function($query) {
+                            // Loại trừ admin
+                            $query->where('role_id', '!=', 1);
+                        })
+                        ->get()
+                        // Lọc lại để đảm bảo nhân viên chỉ có chuyên môn phù hợp với loại dịch vụ đã chọn
+                        ->filter(function($employee) use ($singleServiceIds, $variantServiceIds) {
+                            $employeeServiceIds = $employee->services->pluck('id')->toArray();
+                            
+                            if (empty($employeeServiceIds)) {
+                                return false;
+                            }
+                            
+                            // Nếu chọn dịch vụ đơn, chỉ giữ lại nhân viên có chuyên môn là dịch vụ đơn
+                            if (!empty($singleServiceIds) && empty($variantServiceIds)) {
+                                // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ đơn đã chọn không
+                                $hasMatchingService = !empty(array_intersect($employeeServiceIds, $singleServiceIds));
+                                
+                                if (!$hasMatchingService) {
+                                    return false;
+                                }
+                                
+                                // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ đơn không
+                                // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ biến thể nào không
+                                // Sử dụng whereHas để kiểm tra xem có service nào có variants không
+                                $servicesWithVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                    ->whereNull('deleted_at')
+                                    ->whereHas('serviceVariants', function($query) {
+                                        $query->whereNull('deleted_at');
+                                    })
+                                    ->pluck('id')
+                                    ->toArray();
+                                
+                                // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ biến thể, loại bỏ
+                                if (!empty($servicesWithVariants)) {
+                                    return false;
+                                }
+                                
+                                // Tất cả chuyên môn đều là dịch vụ đơn và có service_id trùng
+                                return true;
+                            }
+                            
+                            // Nếu chọn dịch vụ biến thể, chỉ giữ lại nhân viên có chuyên môn là dịch vụ biến thể
+                            if (!empty($variantServiceIds) && empty($singleServiceIds)) {
+                                // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ biến thể đã chọn không
+                                $hasMatchingService = !empty(array_intersect($employeeServiceIds, $variantServiceIds));
+                                
+                                if (!$hasMatchingService) {
+                                    return false;
+                                }
+                                
+                                // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ biến thể không
+                                // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ đơn nào không
+                                // Sử dụng whereDoesntHave để kiểm tra xem có service nào không có variants không
+                                $servicesWithoutVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                    ->whereNull('deleted_at')
+                                    ->whereDoesntHave('serviceVariants', function($query) {
+                                        $query->whereNull('deleted_at');
+                                    })
+                                    ->pluck('id')
+                                    ->toArray();
+                                
+                                // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ đơn, loại bỏ
+                                if (!empty($servicesWithoutVariants)) {
+                                    return false;
+                                }
+                                
+                                // Tất cả chuyên môn đều là dịch vụ biến thể và có service_id trùng
+                                return true;
+                            }
+                            
+                            // Nếu chọn cả hai loại, giữ lại nhân viên có service_id trùng với bất kỳ dịch vụ nào đã chọn
+                            if (!empty($singleServiceIds) && !empty($variantServiceIds)) {
+                                $allSelectedServiceIds = array_merge($singleServiceIds, $variantServiceIds);
+                                return !empty(array_intersect($employeeServiceIds, $allSelectedServiceIds));
+                            }
+                            
+                            return false;
+                        })
+                        ->values();
+                } else {
+                    // Không có nhân viên nào có chuyên môn phù hợp
+                    $employees = collect([]);
+                }
             }
-
-            $employees = $employees->values();
 
             return response()->json([
                 'success' => true,
