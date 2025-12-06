@@ -807,8 +807,11 @@ class AppointmentController extends Controller
                 ]);
             }
 
+            DB::commit();
+
             // CRITICAL: Remove any existing appointments from cart before adding new one
             // This ensures we don't have old appointments with wrong data in cart
+            // Update Session AFTER commit to ensure no race condition with database transaction
             $cart = Session::get('cart', []);
             
             // Remove all existing appointments from cart
@@ -826,13 +829,12 @@ class AppointmentController extends Controller
                 'quantity' => 1,
             ];
             Session::put('cart', $cart);
+            Session::save(); // Force save session
             
             \Log::info('Appointment store - Cart updated', [
                 'appointment_id' => $appointment->id,
                 'cart_keys' => array_keys($cart),
             ]);
-
-            DB::commit();
 
             // Gửi email xác nhận đặt lịch - chỉ gửi một lần cho mỗi appointment
             // Sử dụng cache để đảm bảo chỉ gửi email một lần

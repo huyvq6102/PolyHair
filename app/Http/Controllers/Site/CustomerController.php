@@ -9,7 +9,7 @@ use App\Models\User;
 class CustomerController extends Controller
 {
     /**
-     * Hiển thị thông tin chi tiết của khách hàng đang đăng nhập.
+     * Hiển thị thông tin chi tiết của khách hàng đang đăng nhập !.
      */
     public function show($id)
     {
