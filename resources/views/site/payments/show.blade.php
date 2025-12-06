@@ -95,12 +95,6 @@
                         </div>
                         <div id="vnpayForm" class="payment-details mt-4 text-center" style="display: none;">
                             <p class="text-muted">Bạn sẽ được chuyển hướng đến cổng thanh toán VNPAY.</p>
-                            <img src="https://vnpay.vn/s1/upload-image/images/qr-code.png" alt="QR Code VNPAY"
-                                style="width: 180px;">
-                        </div>
-                        <div id="zaloPayForm" class="payment-details mt-4 text-center" style="display: none;">
-                            <p>Quét mã QR bằng ứng dụng ZaloPay để thanh toán.</p>
-                            <img src="https://i.imgur.com/g8f3fT4.png" alt="QR Code ZaloPay" style="width: 180px;">
                         </div>
                         <div id="cashForm" class="payment-details mt-4">
                             <p class="text-muted">Bạn sẽ thanh toán trực tiếp tại quầy sau khi sử dụng dịch vụ.</p>
