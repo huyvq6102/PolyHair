@@ -76,6 +76,7 @@ Route::prefix('check-out')->name('site.payments.')->group(function () {
     Route::get('/success/{appointmentId}', [CheckoutController::class, 'paymentSuccess'])->name('success');
     Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('applyCoupon');
     Route::post('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('removeCoupon');
+    Route::get('/vnpay-return', [CheckoutController::class, 'vnpayReturn'])->name('vnpay.return'); // Callback VNPAY
 
 });
 

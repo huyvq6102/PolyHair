@@ -58,8 +58,8 @@ class PaymentService
                     $price = $variant->price * $quantity;
 
                     // Create a new appointment for this service
-                    // Nếu thanh toán tại quầy, status = 'Chờ xử lý', ngược lại = 'Đã thanh toán'
-                    $appointmentStatus = ($paymentMethod === 'cash') ? 'Chờ xử lý' : 'Đã thanh toán';
+                    // Nếu thanh toán tại quầy hoặc Online, status = 'Chờ xử lý'
+                    $appointmentStatus = in_array($paymentMethod, ['cash', 'momo', 'vnpay']) ? 'Chờ xử lý' : 'Đã thanh toán';
                     $appointment = Appointment::create([
                         'user_id'    => $user->id,
                         'status'     => $appointmentStatus,
@@ -94,8 +94,8 @@ class PaymentService
 
                         // Create a new appointment for this combo
                         // Note: Combos might not have a specific duration field, defaulting to 60 mins or 0
-                        // Nếu thanh toán tại quầy, status = 'Chờ xử lý', ngược lại = 'Đã thanh toán'
-                        $appointmentStatus = ($paymentMethod === 'cash') ? 'Chờ xử lý' : 'Đã thanh toán';
+                        // Nếu thanh toán tại quầy hoặc Online, status = 'Chờ xử lý'
+                        $appointmentStatus = in_array($paymentMethod, ['cash', 'momo', 'vnpay']) ? 'Chờ xử lý' : 'Đã thanh toán';
                         $appointment = Appointment::create([
                             'user_id'    => $user->id,
                             'status'     => $appointmentStatus,
@@ -147,8 +147,8 @@ class PaymentService
 
                         $total += $appointmentTotal;
 
-                        // Nếu thanh toán tại quầy, status = 'Chờ xử lý', ngược lại = 'Đã thanh toán'
-                        $appointmentStatus = ($paymentMethod === 'cash') ? 'Chờ xử lý' : 'Đã thanh toán';
+                        // Nếu thanh toán tại quầy hoặc Online, status = 'Chờ xử lý'
+                        $appointmentStatus = in_array($paymentMethod, ['cash', 'momo', 'vnpay']) ? 'Chờ xử lý' : 'Đã thanh toán';
                         $appointment->status = $appointmentStatus;
                         $appointment->save();
                     }

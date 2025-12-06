@@ -354,11 +354,15 @@ if (typeof $.fn.pgwSlideshow !== 'undefined' && $('.pgwSlideshow').length > 0) {
 }
 
   //input
-$("input[type='number']").inputSpinner();
+if (typeof $.fn.inputSpinner === 'function') {
+    $("input[type='number']").inputSpinner();
+}
 
 //------- Mailchimp js --------//  
 function mailChimp() {
-  $('#mc_embed_signup').find('form').ajaxChimp();
+  if (typeof $.fn.ajaxChimp === 'function') {
+    $('#mc_embed_signup').find('form').ajaxChimp();
+  }
 }
 mailChimp();
 
@@ -383,22 +387,19 @@ mailChimp();
         /**
          * Hien thi thong báo toast
          */
-        toastr.options = {
-          "closeButton": true,
-          "debug": false,
-          "newestOnTop": false,
-          "progressBar": false,
-          "positionClass": "toast-top-center",
-          "preventDuplicates": false,
-          "onclick": null,
-          "showDuration": "300",
-          "hideDuration": "1000",
-          "timeOut": "5000",
-          "extendedTimeOut": "1000",
-          "showEasing": "swing",
-          "hideEasing": "linear",
-          "showMethod": "fadeIn",
-          "hideMethod": "fadeOut"
+        if (typeof toastr !== 'undefined') {
+            toastr.options = {
+              "closeButton": true,
+              "debug": false,
+              "newestOnTop": false,
+              "progressBar": false,
+              "positionClass": "toast-top-center",
+              "preventDuplicates": false,
+              "onclick": null,
+              "showDuration": "300",
+              "hideDuration": "1000",
+              "timeOut": "5000",
+            }
         }
           /*-------------------
 		Quantity change
