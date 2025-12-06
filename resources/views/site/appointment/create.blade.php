@@ -264,7 +264,7 @@
                                 @endphp
                                 @if($selectedServices->count() > 0)
                                     @foreach($selectedServices as $selectedService)
-                                        <div class="selected-service-display service-item-selectable" data-service-id="{{ $selectedService->id }}" data-service-type="service" data-service-selector="service_{{ $selectedService->id }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
+                                        <div class="selected-service-display service-item-selectable" data-service-id="{{ $selectedService->id }}" data-service-type="service" data-service-selector="service_{{ $selectedService->id }}" data-service-duration="{{ $selectedService->base_duration ?? 60 }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
                                                     <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -294,17 +294,20 @@
                                                                data-service-id="{{ $selectedService->id }}"
                                                                data-service-type="service"
                                                                data-display-container="service_employee_display_service_{{ $selectedService->id }}"
+                                                               data-duration="{{ $selectedService->base_duration ?? 60 }}"
                                                                value="">
                                                         <input type="hidden" name="service_time[service_{{ $selectedService->id }}]" 
                                                                class="service-time-input" 
                                                                data-service-id="{{ $selectedService->id }}"
                                                                data-service-type="service"
                                                                data-display-container="service_time_display_service_{{ $selectedService->id }}"
+                                                               data-duration="{{ $selectedService->base_duration ?? 60 }}"
                                                                value="">
                                                         <input type="hidden" name="service_date[service_{{ $selectedService->id }}]" 
                                                                class="service-date-input" 
                                                                data-service-id="{{ $selectedService->id }}"
                                                                data-service-type="service"
+                                                               data-duration="{{ $selectedService->base_duration ?? 60 }}"
                                                                value="">
                                                     @endif
                                                 </div>
@@ -360,7 +363,7 @@
                                 @endphp
                                 @if($selectedVariants->count() > 0)
                                     @foreach($selectedVariants as $variant)
-                                        <div class="selected-variant-display service-item-selectable" data-variant-id="{{ $variant->id }}" data-service-id="{{ $variant->service_id }}" data-service-type="variant" data-service-selector="variant_{{ $variant->id }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
+                                        <div class="selected-variant-display service-item-selectable" data-variant-id="{{ $variant->id }}" data-service-id="{{ $variant->service_id }}" data-service-type="variant" data-service-selector="variant_{{ $variant->id }}" data-variant-duration="{{ $variant->duration ?? 60 }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
                                                     <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -402,17 +405,20 @@
                                                                 data-service-id="{{ $variant->service_id }}"
                                                                 data-service-type="variant"
                                                                 data-display-container="service_employee_display_variant_{{ $variant->id }}"
+                                                                data-duration="{{ $variant->duration ?? 60 }}"
                                                                 value="">
                                                         <input type="hidden" name="service_time[variant_{{ $variant->id }}]" 
                                                                class="service-time-input" 
                                                                data-variant-id="{{ $variant->id }}"
                                                                data-service-type="variant"
                                                                data-display-container="service_time_display_variant_{{ $variant->id }}"
+                                                               data-duration="{{ $variant->duration ?? 60 }}"
                                                                value="">
                                                         <input type="hidden" name="service_date[variant_{{ $variant->id }}]" 
                                                                class="service-date-input" 
                                                                data-variant-id="{{ $variant->id }}"
                                                                data-service-type="variant"
+                                                               data-duration="{{ $variant->duration ?? 60 }}"
                                                                value="">
                                                     @endif
                                                 </div>
@@ -450,7 +456,7 @@
                                                 $comboServiceIds = array_unique($comboServiceIds);
                                             }
                                         @endphp
-                                        <div class="selected-combo-display service-item-selectable" data-combo-id="{{ $selectedCombo->id }}" data-service-type="combo" data-service-selector="combo_{{ $selectedCombo->id }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
+                                        <div class="selected-combo-display service-item-selectable" data-combo-id="{{ $selectedCombo->id }}" data-service-type="combo" data-service-selector="combo_{{ $selectedCombo->id }}" data-combo-duration="{{ $comboDuration }}" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s ease; cursor: pointer;">
                                             <div class="d-flex align-items-center justify-content-between">
                                                 <div style="flex: 1;">
                                                     <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -482,17 +488,20 @@
                                                                data-service-ids="{{ implode(',', $comboServiceIds) }}"
                                                                data-service-type="combo"
                                                                data-display-container="service_employee_display_combo_{{ $selectedCombo->id }}"
+                                                               data-duration="{{ $comboDuration }}"
                                                                value="">
                                                         <input type="hidden" name="service_time[combo_{{ $selectedCombo->id }}]" 
                                                                class="service-time-input" 
                                                                data-combo-id="{{ $selectedCombo->id }}"
                                                                data-service-type="combo"
                                                                data-display-container="service_time_display_combo_{{ $selectedCombo->id }}"
+                                                               data-duration="{{ $comboDuration }}"
                                                                value="">
                                                         <input type="hidden" name="service_date[combo_{{ $selectedCombo->id }}]" 
                                                                class="service-date-input" 
                                                                data-combo-id="{{ $selectedCombo->id }}"
                                                                data-service-type="combo"
+                                                               data-duration="{{ $comboDuration }}"
                                                                value="">
                                                     @endif
                                                 </div>
@@ -2169,10 +2178,120 @@
                     if (response.success && response.time_slots && response.time_slots.length > 0) {
                         const currentlySelectedTime = $timeInput.val();
                         
+                        // Tìm tất cả các dịch vụ đã chọn giờ để tính thời gian kết thúc
+                        // Lưu danh sách các khoảng thời gian đã được sử dụng
+                        const usedTimeRanges = [];
+                        $('.service-time-input').each(function() {
+                            const $otherTimeInput = $(this);
+                            
+                            // Bỏ qua chính dịch vụ đang chọn giờ
+                            if ($otherTimeInput[0] === $timeInput[0]) {
+                                return true; // continue
+                            }
+                            
+                            const otherTime = $otherTimeInput.val();
+                            if (!otherTime) {
+                                return true; // continue - dịch vụ này chưa chọn giờ
+                            }
+                            
+                            // Tìm date input tương ứng với time input này
+                            const otherServiceType = $otherTimeInput.attr('data-service-type');
+                            let $otherDateInput = null;
+                            
+                            if (otherServiceType === 'service') {
+                                const otherServiceId = $otherTimeInput.attr('data-service-id');
+                                $otherDateInput = $('.service-date-input[data-service-type="service"][data-service-id="' + otherServiceId + '"]');
+                            } else if (otherServiceType === 'variant') {
+                                const otherVariantId = $otherTimeInput.attr('data-variant-id');
+                                $otherDateInput = $('.service-date-input[data-service-type="variant"][data-variant-id="' + otherVariantId + '"]');
+                            } else if (otherServiceType === 'combo') {
+                                const otherComboId = $otherTimeInput.attr('data-combo-id');
+                                $otherDateInput = $('.service-date-input[data-service-type="combo"][data-combo-id="' + otherComboId + '"]');
+                            }
+                            
+                            if (!$otherDateInput || !$otherDateInput.length) {
+                                return true; // continue - không tìm thấy date input
+                            }
+                            
+                            const otherDate = $otherDateInput.val();
+                            
+                            // Nếu dịch vụ này đã chọn giờ và cùng ngày
+                            if (otherTime && otherDate && otherDate === appointmentDate) {
+                                // Lấy duration từ data attribute hoặc từ service item
+                                let duration = parseInt($otherTimeInput.attr('data-duration'));
+                                
+                                // Nếu không có trong input hoặc = 0, tìm từ service item
+                                if (!duration || duration === 0 || isNaN(duration)) {
+                                    const otherServiceType = $otherTimeInput.attr('data-service-type');
+                                    if (otherServiceType === 'service') {
+                                        const otherServiceId = $otherTimeInput.attr('data-service-id');
+                                        const $serviceItem = $('.selected-service-display[data-service-id="' + otherServiceId + '"]');
+                                        duration = parseInt($serviceItem.attr('data-service-duration')) || 60;
+                                    } else if (otherServiceType === 'variant') {
+                                        const otherVariantId = $otherTimeInput.attr('data-variant-id');
+                                        const $variantItem = $('.selected-variant-display[data-variant-id="' + otherVariantId + '"]');
+                                        duration = parseInt($variantItem.attr('data-variant-duration')) || 60;
+                                    } else if (otherServiceType === 'combo') {
+                                        const otherComboId = $otherTimeInput.attr('data-combo-id');
+                                        const $comboItem = $('.selected-combo-display[data-combo-id="' + otherComboId + '"]');
+                                        duration = parseInt($comboItem.attr('data-combo-duration')) || 60;
+                                    } else {
+                                        duration = 60; // Default
+                                    }
+                                }
+                                
+                                // Parse thời gian bắt đầu (HH:mm)
+                                const [hours, minutes] = otherTime.split(':').map(Number);
+                                const startMinutes = hours * 60 + minutes;
+                                
+                                // Tính thời gian kết thúc (phút)
+                                const endMinutes = startMinutes + duration;
+                                
+                                // Lưu khoảng thời gian đã sử dụng
+                                usedTimeRanges.push({
+                                    start: startMinutes,
+                                    end: endMinutes,
+                                    startTime: otherTime,
+                                    endTime: String(Math.floor(endMinutes / 60)).padStart(2, '0') + ':' + String(endMinutes % 60).padStart(2, '0')
+                                });
+                            }
+                        });
+                        
                         // Sort time slots by time
-                        const sortedSlots = response.time_slots.sort(function(a, b) {
+                        let sortedSlots = response.time_slots.sort(function(a, b) {
                             return a.time.localeCompare(b.time);
                         });
+                        
+                        // Filter time slots: chỉ hiển thị những slot >= thời gian kết thúc lớn nhất
+                        if (usedTimeRanges.length > 0) {
+                            // Tìm thời gian kết thúc lớn nhất (dịch vụ cuối cùng kết thúc) - tính bằng phút
+                            let maxEndMinutes = 0;
+                            usedTimeRanges.forEach(function(range) {
+                                if (range.end > maxEndMinutes) {
+                                    maxEndMinutes = range.end;
+                                }
+                            });
+                            
+                            // Debug log
+                            console.log('Filter time slots - usedTimeRanges:', usedTimeRanges);
+                            console.log('Filter time slots - maxEndMinutes:', maxEndMinutes, '(', String(Math.floor(maxEndMinutes / 60)).padStart(2, '0') + ':' + String(maxEndMinutes % 60).padStart(2, '0'), ')');
+                            
+                            // Filter chỉ hiển thị slot >= thời gian kết thúc lớn nhất (so sánh bằng phút)
+                            const beforeFilter = sortedSlots.length;
+                            sortedSlots = sortedSlots.filter(function(slot) {
+                                // Parse thời gian slot thành phút
+                                const [slotHours, slotMinutes] = slot.time.split(':').map(Number);
+                                const slotStartMinutes = slotHours * 60 + slotMinutes;
+                                
+                                // Slot hợp lệ nếu bắt đầu >= thời gian kết thúc lớn nhất
+                                const isValid = slotStartMinutes >= maxEndMinutes;
+                                if (!isValid) {
+                                    console.log('Filtered out slot:', slot.time, '(', slotStartMinutes, 'minutes) because it is <', maxEndMinutes, 'minutes');
+                                }
+                                return isValid;
+                            });
+                            console.log('Filter time slots - before:', beforeFilter, 'after:', sortedSlots.length);
+                        }
                         
                         $timeSlotSlider.empty();
                         
@@ -2277,16 +2396,20 @@
         
         // Event handler khi chọn time slot cho từng dịch vụ
         $(document).on('click', '.service-time-slot-btn', function(e) {
+            console.log('🔵 CLICKED ON TIME SLOT BUTTON');
             e.preventDefault();
             e.stopPropagation();
             
             if ($(this).hasClass('unavailable')) {
+                console.log('Button is unavailable, returning');
                 return false;
             }
             
             const time = $(this).attr('data-time');
             const wordTimeId = $(this).attr('data-word-time-id');
             const formattedTime = formatTimeSlot(time);
+            
+            console.log('Time slot clicked:', time, 'formatted:', formattedTime);
             
             // Tìm time input và date input tương ứng
             const $timeContainer = $(this).closest('.service-time-container');
@@ -2313,7 +2436,277 @@
                 displayContainerId = 'service_time_display_combo_' + comboId;
             }
             
+            console.log('Looking for time input. serviceType:', serviceType);
+            console.log('$timeInput found:', $timeInput && $timeInput.length ? 'YES' : 'NO');
+            console.log('$dateInput found:', $dateInput && $dateInput.length ? 'YES' : 'NO');
+            
             if ($timeInput && $timeInput.length) {
+                const appointmentDate = $dateInput.val();
+                console.log('appointmentDate:', appointmentDate);
+                
+                // Kiểm tra appointmentDate
+                if (!appointmentDate) {
+                    console.error('ERROR: appointmentDate is empty!', {
+                        dateInput: $dateInput,
+                        dateInputVal: $dateInput.val(),
+                        serviceType: serviceType
+                    });
+                    alert('Vui lòng chọn ngày đặt lịch trước khi chọn giờ!');
+                    return false;
+                }
+                
+                // Bọc toàn bộ validation trong try-catch để bắt lỗi
+                try {
+                
+                // Lấy duration của dịch vụ đang chọn giờ
+                let duration = parseInt($timeInput.attr('data-duration'));
+                
+                // Nếu không có trong input hoặc = 0, tìm từ service item
+                if (!duration || duration === 0 || isNaN(duration)) {
+                    if (serviceType === 'service') {
+                        const serviceId = $datePicker.attr('data-service-id');
+                        const $serviceItem = $('.selected-service-display[data-service-id="' + serviceId + '"]');
+                        duration = parseInt($serviceItem.attr('data-service-duration')) || 60;
+                    } else if (serviceType === 'variant') {
+                        const variantId = $datePicker.attr('data-variant-id');
+                        const $variantItem = $('.selected-variant-display[data-variant-id="' + variantId + '"]');
+                        duration = parseInt($variantItem.attr('data-variant-duration')) || 60;
+                    } else if (serviceType === 'combo') {
+                        const comboId = $datePicker.attr('data-combo-id');
+                        const $comboItem = $('.selected-combo-display[data-combo-id="' + comboId + '"]');
+                        duration = parseInt($comboItem.attr('data-combo-duration')) || 60;
+                    } else {
+                        duration = 60; // Default
+                    }
+                }
+                
+                // Parse thời gian bắt đầu (HH:mm)
+                const [hours, minutes] = time.split(':').map(Number);
+                const startMinutes = hours * 60 + minutes;
+                
+                // Tính thời gian kết thúc (phút)
+                const endMinutes = startMinutes + duration;
+                
+                // Chuyển về giờ:phút
+                const endHours = Math.floor(endMinutes / 60);
+                const endMins = endMinutes % 60;
+                const endTimeStr = String(endHours).padStart(2, '0') + ':' + String(endMins).padStart(2, '0');
+                
+                // Kiểm tra xem có trùng với dịch vụ khác không
+                let hasConflict = false;
+                let conflictServiceName = '';
+                let conflictDetails = '';
+                
+                // Debug log
+                console.log('=== CHECKING TIME CONFLICT ===');
+                console.log('Selected time:', time, 'on date:', appointmentDate);
+                console.log('Current service duration:', duration, 'minutes');
+                console.log('Time range:', time, '-', endTimeStr, '(', startMinutes, 'to', endMinutes, 'minutes)');
+                console.log('Total service-time-input elements:', $('.service-time-input').length);
+                
+                // Debug: In ra tất cả time inputs và giá trị của chúng
+                console.log('--- ALL TIME INPUTS ---');
+                $('.service-time-input').each(function(index) {
+                    const $input = $(this);
+                    const timeVal = $input.val();
+                    const serviceType = $input.attr('data-service-type');
+                    const serviceId = $input.attr('data-service-id');
+                    const variantId = $input.attr('data-variant-id');
+                    const comboId = $input.attr('data-combo-id');
+                    console.log(`Time input ${index + 1}:`, {
+                        time: timeVal,
+                        serviceType: serviceType,
+                        serviceId: serviceId,
+                        variantId: variantId,
+                        comboId: comboId,
+                        isCurrent: $input[0] === $timeInput[0]
+                    });
+                });
+                
+                // Kiểm tra từ time inputs
+                let checkedCount = 0;
+                $('.service-time-input').each(function() {
+                    checkedCount++;
+                    const $otherTimeInput = $(this);
+                    
+                    // Bỏ qua chính dịch vụ đang chọn giờ
+                    if ($otherTimeInput[0] === $timeInput[0]) {
+                        console.log('Skipping current service input');
+                        return true; // continue
+                    }
+                    
+                    const otherTime = $otherTimeInput.val();
+                    console.log('Checking other service:', {
+                        otherTime: otherTime,
+                        serviceType: $otherTimeInput.attr('data-service-type'),
+                        serviceId: $otherTimeInput.attr('data-service-id'),
+                        variantId: $otherTimeInput.attr('data-variant-id'),
+                        comboId: $otherTimeInput.attr('data-combo-id')
+                    });
+                    
+                    if (!otherTime || otherTime.trim() === '') {
+                        console.log('Other service has no time selected, skipping');
+                        return true; // continue - dịch vụ này chưa chọn giờ
+                    }
+                    
+                    // Tìm date input tương ứng với time input này
+                    const otherServiceType = $otherTimeInput.attr('data-service-type');
+                    let $otherDateInput = null;
+                    
+                    if (otherServiceType === 'service') {
+                        const otherServiceId = $otherTimeInput.attr('data-service-id');
+                        $otherDateInput = $('.service-date-input[data-service-type="service"][data-service-id="' + otherServiceId + '"]');
+                        console.log('Looking for date input for service:', otherServiceId, 'Found:', $otherDateInput.length);
+                    } else if (otherServiceType === 'variant') {
+                        const otherVariantId = $otherTimeInput.attr('data-variant-id');
+                        $otherDateInput = $('.service-date-input[data-service-type="variant"][data-variant-id="' + otherVariantId + '"]');
+                        console.log('Looking for date input for variant:', otherVariantId, 'Found:', $otherDateInput.length);
+                    } else if (otherServiceType === 'combo') {
+                        const otherComboId = $otherTimeInput.attr('data-combo-id');
+                        $otherDateInput = $('.service-date-input[data-service-type="combo"][data-combo-id="' + otherComboId + '"]');
+                        console.log('Looking for date input for combo:', otherComboId, 'Found:', $otherDateInput.length);
+                    }
+                    
+                    if (!$otherDateInput || !$otherDateInput.length) {
+                        console.log('Could not find date input for other service, skipping');
+                        return true; // continue - không tìm thấy date input
+                    }
+                    
+                    const otherDate = $otherDateInput.val();
+                    
+                    // Normalize dates để so sánh (chuyển về format YYYY-MM-DD)
+                    const normalizeDate = function(dateStr) {
+                        if (!dateStr) return '';
+                        // Nếu là format DD/MM/YYYY, chuyển về YYYY-MM-DD
+                        if (dateStr.includes('/')) {
+                            const parts = dateStr.split('/');
+                            if (parts.length === 3) {
+                                // parts[0] = DD, parts[1] = MM, parts[2] = YYYY
+                                const day = parts[0].padStart(2, '0');
+                                const month = parts[1].padStart(2, '0');
+                                const year = parts[2];
+                                return year + '-' + month + '-' + day;
+                            }
+                        }
+                        // Nếu đã là format YYYY-MM-DD, giữ nguyên
+                        return dateStr;
+                    };
+                    
+                    const normalizedAppointmentDate = normalizeDate(appointmentDate);
+                    const normalizedOtherDate = normalizeDate(otherDate);
+                    
+                    console.log('Other service date:', otherDate, '-> normalized:', normalizedOtherDate);
+                    console.log('Current appointment date:', appointmentDate, '-> normalized:', normalizedAppointmentDate);
+                    console.log('Date match:', normalizedOtherDate === normalizedAppointmentDate);
+                    
+                    // Nếu dịch vụ khác đã chọn giờ và cùng ngày
+                    if (otherTime && otherDate && normalizedOtherDate === normalizedAppointmentDate) {
+                        console.log('✓ Found other service with time:', otherTime, 'on date:', otherDate, '- Checking for conflict...');
+                        // Lấy duration của dịch vụ khác
+                        let otherDuration = parseInt($otherTimeInput.attr('data-duration'));
+                        
+                        // Nếu không có trong input hoặc = 0, tìm từ service item
+                        if (!otherDuration || otherDuration === 0 || isNaN(otherDuration)) {
+                            const otherServiceType = $otherTimeInput.attr('data-service-type');
+                            if (otherServiceType === 'service') {
+                                const otherServiceId = $otherTimeInput.attr('data-service-id');
+                                const $serviceItem = $('.selected-service-display[data-service-id="' + otherServiceId + '"]');
+                                otherDuration = parseInt($serviceItem.attr('data-service-duration')) || 60;
+                            } else if (otherServiceType === 'variant') {
+                                const otherVariantId = $otherTimeInput.attr('data-variant-id');
+                                const $variantItem = $('.selected-variant-display[data-variant-id="' + otherVariantId + '"]');
+                                otherDuration = parseInt($variantItem.attr('data-variant-duration')) || 60;
+                            } else if (otherServiceType === 'combo') {
+                                const otherComboId = $otherTimeInput.attr('data-combo-id');
+                                const $comboItem = $('.selected-combo-display[data-combo-id="' + otherComboId + '"]');
+                                otherDuration = parseInt($comboItem.attr('data-combo-duration')) || 60;
+                            } else {
+                                otherDuration = 60; // Default
+                            }
+                        }
+                        
+                        // Parse thời gian bắt đầu của dịch vụ khác
+                        const [otherHours, otherMinutes] = otherTime.split(':').map(Number);
+                        const otherStartMinutes = otherHours * 60 + otherMinutes;
+                        
+                        // Tính thời gian kết thúc của dịch vụ khác
+                        const otherEndMinutes = otherStartMinutes + otherDuration;
+                        
+                        // Kiểm tra xem có trùng không
+                        // Trùng nếu có overlap giữa 2 khoảng thời gian:
+                        // - Dịch vụ mới bắt đầu trước khi dịch vụ khác kết thúc: startMinutes < otherEndMinutes
+                        // - Dịch vụ mới kết thúc sau khi dịch vụ khác bắt đầu: endMinutes > otherStartMinutes
+                        // Dịch vụ sau phải bắt đầu >= thời gian kết thúc của dịch vụ trước
+                        console.log('--- COMPARING TIME RANGES ---');
+                        console.log('Current service:', time, '(', startMinutes, 'to', endMinutes, 'minutes)');
+                        console.log('Other service:', otherTime, '(', otherStartMinutes, 'to', otherEndMinutes, 'minutes)');
+                        console.log('Check 1: startMinutes < otherEndMinutes?', startMinutes, '<', otherEndMinutes, '=', startMinutes < otherEndMinutes);
+                        console.log('Check 2: endMinutes > otherStartMinutes?', endMinutes, '>', otherStartMinutes, '=', endMinutes > otherStartMinutes);
+                        
+                        // Kiểm tra overlap: có trùng nếu 2 khoảng thời gian giao nhau
+                        const hasOverlap = (startMinutes < otherEndMinutes && endMinutes > otherStartMinutes);
+                        console.log('HAS OVERLAP?', hasOverlap);
+                        
+                        if (hasOverlap) {
+                            console.log('🚨 CONFLICT DETECTED! 🚨');
+                            hasConflict = true;
+                            
+                            // Lấy tên dịch vụ để hiển thị trong thông báo
+                            const otherServiceType = $otherTimeInput.attr('data-service-type');
+                            if (otherServiceType === 'service') {
+                                const otherServiceId = $otherTimeInput.attr('data-service-id');
+                                const $serviceDisplay = $('.selected-service-display[data-service-id="' + otherServiceId + '"]');
+                                conflictServiceName = $serviceDisplay.find('span:first').text().trim() || 'dịch vụ khác';
+                            } else if (otherServiceType === 'variant') {
+                                const otherVariantId = $otherTimeInput.attr('data-variant-id');
+                                const $variantDisplay = $('.selected-variant-display[data-variant-id="' + otherVariantId + '"]');
+                                conflictServiceName = $variantDisplay.find('span:first').text().trim() || 'dịch vụ khác';
+                            } else if (otherServiceType === 'combo') {
+                                const otherComboId = $otherTimeInput.attr('data-combo-id');
+                                const $comboDisplay = $('.selected-combo-display[data-combo-id="' + otherComboId + '"]');
+                                conflictServiceName = $comboDisplay.find('span:first').text().trim() || 'dịch vụ khác';
+                            }
+                            
+                            // Tính thời gian kết thúc để hiển thị trong thông báo
+                            const otherEndHours = Math.floor(otherEndMinutes / 60);
+                            const otherEndMins = otherEndMinutes % 60;
+                            const otherEndTimeStr = String(otherEndHours).padStart(2, '0') + ':' + String(otherEndMins).padStart(2, '0');
+                            
+                            // Tính thời gian kết thúc của dịch vụ đang chọn
+                            const currentEndHours = Math.floor(endMinutes / 60);
+                            const currentEndMins = endMinutes % 60;
+                            const currentEndTimeStr = String(currentEndHours).padStart(2, '0') + ':' + String(currentEndMins).padStart(2, '0');
+                            
+                            // Tạo thông báo chi tiết
+                            conflictDetails = '⚠️ KHÔNG THỂ CHỌN GIỜ NÀY!\n\n' +
+                                'Giờ bạn chọn (' + formattedTime + ' - ' + currentEndTimeStr + ') trùng với thời gian thực hiện dịch vụ:\n' +
+                                '📋 "' + conflictServiceName + '"\n' +
+                                '⏰ Thời gian: ' + otherTime + ' - ' + otherEndTimeStr + '\n\n' +
+                                '✅ Vui lòng chọn giờ từ ' + otherEndTimeStr + ' trở đi.';
+                            
+                            console.log('CONFLICT DETECTED:', conflictServiceName, 'from', otherTime, 'to', otherEndTimeStr, 'conflicts with', formattedTime, 'to', currentEndTimeStr);
+                            return false; // break
+                        }
+                    }
+                });
+                
+                console.log('Total time inputs checked:', checkedCount);
+                console.log('=== VALIDATION RESULT ===');
+                console.log('hasConflict:', hasConflict);
+                console.log('conflictServiceName:', conflictServiceName);
+                console.log('conflictDetails:', conflictDetails);
+                
+                // Nếu có trùng, hiển thị thông báo và không cho lưu
+                if (hasConflict) {
+                    const message = conflictDetails || ('Không thể chọn giờ này! Giờ bạn chọn trùng với thời gian thực hiện dịch vụ "' + conflictServiceName + '". Vui lòng chọn giờ sau khi dịch vụ đó kết thúc.');
+                    console.log('🚫 BLOCKING: Showing alert and preventing save');
+                    alert(message);
+                    console.log('BLOCKED: Time conflict detected');
+                    return false;
+                }
+                
+                console.log('✅ VALID: No time conflict, saving time slot');
+                
                 // Lưu time slot
                 $timeInput.val(time);
                 
@@ -2329,6 +2722,56 @@
                     $displayContainer.find('.time-slot-text').text(formattedTime);
                     $displayContainer.fadeIn(300);
                 }
+                
+                // Reload time slots cho các dịch vụ khác chưa chọn giờ để cập nhật filter
+                setTimeout(function() {
+                    $('.service-date-picker').each(function() {
+                        const $otherDatePicker = $(this);
+                        const otherServiceType = $otherDatePicker.attr('data-service-type');
+                        let $otherTimeInput = null;
+                        let otherTimeInputSelector = null;
+                        
+                        if (otherServiceType === 'service') {
+                            const otherServiceId = $otherDatePicker.attr('data-service-id');
+                            $otherTimeInput = $('.service-time-input[data-service-type="service"][data-service-id="' + otherServiceId + '"]');
+                            otherTimeInputSelector = '.service-time-input[data-service-type="service"][data-service-id="' + otherServiceId + '"]';
+                        } else if (otherServiceType === 'variant') {
+                            const otherVariantId = $otherDatePicker.attr('data-variant-id');
+                            $otherTimeInput = $('.service-time-input[data-service-type="variant"][data-variant-id="' + otherVariantId + '"]');
+                            otherTimeInputSelector = '.service-time-input[data-service-type="variant"][data-variant-id="' + otherVariantId + '"]';
+                        } else if (otherServiceType === 'combo') {
+                            const otherComboId = $otherDatePicker.attr('data-combo-id');
+                            $otherTimeInput = $('.service-time-input[data-service-type="combo"][data-combo-id="' + otherComboId + '"]');
+                            otherTimeInputSelector = '.service-time-input[data-service-type="combo"][data-combo-id="' + otherComboId + '"]';
+                        }
+                        
+                        // Bỏ qua chính dịch vụ vừa chọn giờ
+                        if ($otherTimeInput && $otherTimeInput[0] !== $timeInput[0]) {
+                            const otherEmployeeId = $otherDatePicker.attr('data-employee-id');
+                            const otherDate = $otherDatePicker.val();
+                            
+                            // Chỉ reload nếu dịch vụ này đã chọn nhân viên và ngày, nhưng chưa chọn giờ
+                            if (otherEmployeeId && otherDate && (!$otherTimeInput.val() || $otherTimeInput.val() === '')) {
+                                // Reload time slots với filter mới
+                                loadTimeSlotsForService($otherDatePicker, otherDate, otherEmployeeId, otherTimeInputSelector);
+                            }
+                        }
+                    });
+                }, 150);
+                } catch (error) {
+                    console.error('❌ ERROR in time slot validation:', error);
+                    console.error('Error stack:', error.stack);
+                    alert('Có lỗi xảy ra khi kiểm tra giờ. Vui lòng thử lại hoặc liên hệ hỗ trợ.');
+                    return false;
+                }
+            } else {
+                console.error('❌ ERROR: $timeInput not found!', {
+                    serviceType: serviceType,
+                    timeInput: $timeInput,
+                    dateInput: $dateInput
+                });
+                alert('Không tìm thấy thông tin dịch vụ. Vui lòng thử lại.');
+                return false;
             }
             
             return false;
@@ -3497,6 +3940,132 @@
             } else {
                 // Clear error nếu đã chọn
                 $('#time_slot-error').hide();
+            }
+            
+            // Kiểm tra trùng giờ giữa các dịch vụ (nếu có >= 2 dịch vụ)
+            if (serviceCount >= 2 && hasTimeSlot) {
+                const timeConflicts = [];
+                const allTimeRanges = [];
+                
+                // Thu thập tất cả các khoảng thời gian đã chọn
+                $('.service-time-input').each(function() {
+                    const $timeInput = $(this);
+                    const time = $timeInput.val();
+                    
+                    if (!time || time.trim() === '') {
+                        return true; // continue
+                    }
+                    
+                    // Tìm date input tương ứng
+                    const serviceType = $timeInput.attr('data-service-type');
+                    let $dateInput = null;
+                    
+                    if (serviceType === 'service') {
+                        const serviceId = $timeInput.attr('data-service-id');
+                        $dateInput = $('.service-date-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                    } else if (serviceType === 'variant') {
+                        const variantId = $timeInput.attr('data-variant-id');
+                        $dateInput = $('.service-date-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                    } else if (serviceType === 'combo') {
+                        const comboId = $timeInput.attr('data-combo-id');
+                        $dateInput = $('.service-date-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                    }
+                    
+                    if (!$dateInput || !$dateInput.length) {
+                        return true; // continue
+                    }
+                    
+                    const date = $dateInput.val();
+                    if (!date || date.trim() === '') {
+                        return true; // continue
+                    }
+                    
+                    // Lấy duration
+                    let duration = parseInt($timeInput.attr('data-duration'));
+                    if (!duration || duration === 0 || isNaN(duration)) {
+                        if (serviceType === 'service') {
+                            const serviceId = $timeInput.attr('data-service-id');
+                            const $serviceItem = $('.selected-service-display[data-service-id="' + serviceId + '"]');
+                            duration = parseInt($serviceItem.attr('data-service-duration')) || 60;
+                        } else if (serviceType === 'variant') {
+                            const variantId = $timeInput.attr('data-variant-id');
+                            const $variantItem = $('.selected-variant-display[data-variant-id="' + variantId + '"]');
+                            duration = parseInt($variantItem.attr('data-variant-duration')) || 60;
+                        } else if (serviceType === 'combo') {
+                            const comboId = $timeInput.attr('data-combo-id');
+                            const $comboItem = $('.selected-combo-display[data-combo-id="' + comboId + '"]');
+                            duration = parseInt($comboItem.attr('data-combo-duration')) || 60;
+                        } else {
+                            duration = 60;
+                        }
+                    }
+                    
+                    // Parse thời gian
+                    const [hours, minutes] = time.split(':').map(Number);
+                    const startMinutes = hours * 60 + minutes;
+                    const endMinutes = startMinutes + duration;
+                    
+                    allTimeRanges.push({
+                        timeInput: $timeInput,
+                        serviceType: serviceType,
+                        time: time,
+                        date: date,
+                        startMinutes: startMinutes,
+                        endMinutes: endMinutes,
+                        duration: duration
+                    });
+                });
+                
+                // Normalize dates để so sánh
+                const normalizeDate = function(dateStr) {
+                    if (!dateStr) return '';
+                    if (dateStr.includes('/')) {
+                        const parts = dateStr.split('/');
+                        if (parts.length === 3) {
+                            const day = parts[0].padStart(2, '0');
+                            const month = parts[1].padStart(2, '0');
+                            const year = parts[2];
+                            return year + '-' + month + '-' + day;
+                        }
+                    }
+                    return dateStr;
+                };
+                
+                // Kiểm tra overlap giữa các khoảng thời gian trên cùng ngày
+                for (let i = 0; i < allTimeRanges.length; i++) {
+                    for (let j = i + 1; j < allTimeRanges.length; j++) {
+                        const range1 = allTimeRanges[i];
+                        const range2 = allTimeRanges[j];
+                        
+                        // Normalize dates
+                        const normalizedDate1 = normalizeDate(range1.date);
+                        const normalizedDate2 = normalizeDate(range2.date);
+                        
+                        // Chỉ kiểm tra nếu cùng ngày
+                        if (normalizedDate1 === normalizedDate2) {
+                            // Kiểm tra overlap
+                            const hasOverlap = (range1.startMinutes < range2.endMinutes && range1.endMinutes > range2.startMinutes);
+                            
+                            if (hasOverlap) {
+                                timeConflicts.push({
+                                    range1: range1,
+                                    range2: range2
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Nếu có conflict, hiển thị lỗi
+                if (timeConflicts.length > 0) {
+                    const conflict = timeConflicts[0];
+                    const endTime1 = String(Math.floor(conflict.range1.endMinutes / 60)).padStart(2, '0') + ':' + String(conflict.range1.endMinutes % 60).padStart(2, '0');
+                    const endTime2 = String(Math.floor(conflict.range2.endMinutes / 60)).padStart(2, '0') + ':' + String(conflict.range2.endMinutes % 60).padStart(2, '0');
+                    
+                    showFieldError('time_slot', 'Các dịch vụ không được trùng giờ! Vui lòng chọn lại giờ cho các dịch vụ.');
+                    isValid = false;
+                    console.log('Time conflict detected in form validation:', timeConflicts);
+                }
             }
             
             // Debug log để kiểm tra
