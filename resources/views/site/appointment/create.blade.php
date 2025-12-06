@@ -556,7 +556,7 @@
                                 </label>
 
                                 <!-- Hidden input để lưu employee_id (dùng khi chỉ có 1 dịch vụ) -->
-                                <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id') }}">
+                                <input type="hidden" name="employee_id" id="employee_id" value="">
 
                                 <!-- Container hiển thị nhân viên giống time slot -->
                                 <div class="employee-container" id="employeeContainer" style="position: relative; display: none; margin-top: 10px;">
@@ -567,8 +567,12 @@
                                         <div class="employee-slider" style="transition: transform 0.3s ease; display: flex; gap: 15px;">
                                             @if(count($employees) > 0)
                                                 @foreach($employees as $employee)
-                                                    <div class="employee-item-btn{{ old('employee_id') == $employee->id ? ' selected' : '' }}" data-employee-id="{{ $employee->id }}" data-employee-name="{{ $employee->user->name }}" data-employee-position="{{ $employee->position ?? '' }}" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
-                                                        <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ old('employee_id') == $employee->id ? '#007bff' : '#ddd' }};">
+                                                    @php
+                                                        // Chỉ thêm class selected nếu đã có dịch vụ được chọn
+                                                        $isEmployeeSelected = $hasAnyService && old('employee_id') == $employee->id;
+                                                    @endphp
+                                                    <div class="employee-item-btn{{ $isEmployeeSelected ? ' selected' : '' }}" data-employee-id="{{ $employee->id }}" data-employee-name="{{ $employee->user->name }}" data-employee-position="{{ $employee->position ?? '' }}" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
+                                                        <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ $isEmployeeSelected ? '#007bff' : '#ddd' }};">
                                                             @if($employee->avatar)
                                                                 <img src="{{ asset('legacy/images/avatars/' . $employee->avatar) }}" alt="{{ $employee->user->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                                                             @else
@@ -1555,27 +1559,48 @@
                 if (formData.note) {
                     $('textarea[name="note"]').val(formData.note);
                 }
-                // Khôi phục thông tin đặt lịch nếu có
-                if (formData.employee_id) {
-                    $('#employee_id').val(formData.employee_id);
-                    restoredEmployeeId = formData.employee_id;
-                    // Enable input date nếu đã có employee
-                    $('#appointment_date').prop('disabled', false);
-                }
-                if (formData.appointment_date) {
-                    $('#appointment_date').val(formData.appointment_date);
-                    restoredAppointmentDate = formData.appointment_date;
-                }
-                if (formData.word_time_id) {
-                    $('#word_time_id').val(formData.word_time_id);
-                }
-                if (formData.time_slot) {
-                    $('#time_slot').val(formData.time_slot);
-                }
+                // KHÔNG khôi phục thông tin đặt lịch (employee, date, time) - để người dùng tự chọn lại mỗi lần
+                // Chỉ khôi phục thông tin khách hàng (name, phone, email, note)
+                $('#employee_id').val('');
+                $('#appointment_date').val('').prop('disabled', true);
+                $('#word_time_id').val('');
+                $('#time_slot').val('');
             } catch (e) {
                 console.error('Error restoring form data:', e);
             }
         }
+        
+        // Reset employee selection nếu chưa có dịch vụ (chạy sau khi khôi phục từ localStorage)
+        function resetEmployeeSelectionIfNoService() {
+            const serviceCount = countSelectedServices();
+            if (serviceCount === 0) {
+                // Xóa selected class từ tất cả nhân viên
+                $('.employee-item-btn').removeClass('selected');
+                $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+                // Xóa giá trị employee_id
+                $('#employee_id').val('');
+                // Disable input ngày
+                $('#appointment_date').prop('disabled', true).val('');
+                // Reset time slots
+                $('.time-slot-container').hide();
+                $('#time_slot_message').text('Vui lòng chọn dịch vụ trước').show();
+                $('#time_slot').val('');
+                $('#word_time_id').val('');
+            }
+        }
+        
+        // Chạy ngay sau khi khôi phục từ localStorage
+        resetEmployeeSelectionIfNoService();
+        
+        // Chạy lại sau một chút để đảm bảo tất cả code đã chạy xong
+        setTimeout(function() {
+            resetEmployeeSelectionIfNoService();
+        }, 100);
+        
+        // Chạy lại sau khi DOM đã load xong hoàn toàn
+        $(window).on('load', function() {
+            resetEmployeeSelectionIfNoService();
+        });
         
         // Lưu thông tin form vào localStorage trước khi chuyển trang chọn dịch vụ
         $('.select-services-link').on('click', function(e) {
@@ -2083,7 +2108,38 @@
             }
             
             // Update hidden input
-            $('input[name="' + inputName + '"]').val(employeeId);
+            const $employeeInput = $('input[name="' + inputName + '"]');
+            $employeeInput.val(employeeId);
+            
+            // Tìm date picker tương ứng với dịch vụ này
+            const serviceType = $employeeInput.attr('data-service-type');
+            let $datePicker = null;
+            let timeInputSelector = null;
+            
+            if (serviceType === 'service') {
+                const serviceId = $employeeInput.attr('data-service-id');
+                $datePicker = $('.service-date-picker[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                timeInputSelector = '.service-time-input[data-service-type="service"][data-service-id="' + serviceId + '"]';
+            } else if (serviceType === 'variant') {
+                const variantId = $employeeInput.attr('data-variant-id');
+                $datePicker = $('.service-date-picker[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                timeInputSelector = '.service-time-input[data-service-type="variant"][data-variant-id="' + variantId + '"]';
+            } else if (serviceType === 'combo') {
+                const comboId = $employeeInput.attr('data-combo-id');
+                $datePicker = $('.service-date-picker[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                timeInputSelector = '.service-time-input[data-service-type="combo"][data-combo-id="' + comboId + '"]';
+            }
+            
+            // Cập nhật data-employee-id của date picker
+            if ($datePicker && $datePicker.length) {
+                $datePicker.attr('data-employee-id', employeeId);
+                
+                // Nếu đã chọn ngày, tự động load time slots
+                const appointmentDate = $datePicker.val();
+                if (appointmentDate && appointmentDate.trim() !== '' && timeInputSelector) {
+                    loadTimeSlotsForService($datePicker, appointmentDate, employeeId, timeInputSelector);
+                }
+            }
             
             // Remove selected class from all items in this carousel
             $(this).closest('.service-employee-slider').find('.service-employee-item-btn').removeClass('selected');
@@ -2110,9 +2166,27 @@
             return false;
         });
         
-        // Load employees by service on page load - luôn dùng carousel chung
-        loadEmployeesByService();
-        loadEmployeesForCarousel();
+        // Load employees by service on page load - chỉ load khi có dịch vụ
+        const serviceCountOnLoad = countSelectedServices();
+        if (serviceCountOnLoad > 0) {
+            loadEmployeesByService();
+            loadEmployeesForCarousel();
+        } else {
+            // Nếu chưa có dịch vụ, hiển thị thông báo
+            const $slider = $('.employee-slider');
+            if ($slider.length) {
+                $slider.empty();
+                $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
+            }
+            $('#employee_id').val('');
+            // Reset employee selection
+            resetEmployeeSelectionIfNoService();
+        }
+        
+        // Đảm bảo reset sau khi tất cả code đã chạy xong
+        setTimeout(function() {
+            resetEmployeeSelectionIfNoService();
+        }, 500);
         
         // Nếu có >= 2 dịch vụ, tự động chọn dịch vụ đầu tiên làm active
         const serviceCount = countSelectedServices();
@@ -2778,12 +2852,7 @@
         });
         
         // Nếu đã khôi phục employee_id và appointment_date từ localStorage, load time slots
-        if (restoredEmployeeId && restoredAppointmentDate) {
-            // Đợi một chút để đảm bảo employees đã load xong
-            setTimeout(function() {
-                loadAvailableTimeSlots();
-            }, 500);
-        }
+        // KHÔNG tự động load time slots từ lần trước - để người dùng tự chọn lại
         
         // Function to load employees by service (for select dropdown - not used anymore but kept for compatibility)
         function loadEmployeesByService() {
@@ -2886,10 +2955,15 @@
                 $slider.empty();
                 $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
                 $('#employee_id').val('');
+                // Reset employee selection
+                $('.employee-item-btn').removeClass('selected');
+                $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
                 return;
             }
             
-            const currentEmployeeId = $('#employee_id').val();
+            // Chỉ lấy currentEmployeeId nếu đã có dịch vụ
+            const serviceCount = countSelectedServices();
+            const currentEmployeeId = (serviceCount > 0) ? $('#employee_id').val() : '';
             
             $.ajax({
                 url: '{{ route("site.appointment.employees-by-service") }}',
@@ -2934,10 +3008,21 @@
                                 $slider.append(itemHtml);
                             });
                             
+                            // Đảm bảo không có nhân viên nào được chọn nếu chưa có dịch vụ
+                            const finalServiceCount = countSelectedServices();
+                            if (finalServiceCount === 0) {
+                                $('.employee-item-btn').removeClass('selected');
+                                $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+                                $('#employee_id').val('');
+                            }
+                            
                             // Nếu employee đã chọn không còn trong danh sách, reset
                             if (currentEmployeeId && !response.employees.find(e => e.id == currentEmployeeId)) {
                                 $('#employee_id').val('');
                             }
+                            
+                            // Reset slider position về đầu
+                            $slider.css('transform', 'translateX(0px)');
                         } else {
                             // Không có nhân viên phù hợp
                             $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Không có kỹ thuật viên nào có chuyên môn phù hợp với dịch vụ đã chọn</div>');
@@ -2980,14 +3065,44 @@
         });
         
         
-        // Xử lý old value nếu có
-        const oldEmployeeId = $('#employee_id').val();
-        if (oldEmployeeId) {
-            const selectedEmployee = $('.employee-item-btn[data-employee-id="' + oldEmployeeId + '"]');
-            if (selectedEmployee.length) {
-                selectedEmployee.addClass('selected');
-                selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
+        // KHÔNG khôi phục old value của employee - xóa luôn để người dùng tự chọn lại
+        $('#employee_id').val('');
+        $('.employee-item-btn').removeClass('selected');
+        $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+        
+        // Reset employee selection một lần nữa sau khi xử lý old value (đảm bảo không có nhân viên nào được chọn khi chưa có dịch vụ)
+        resetEmployeeSelectionIfNoService();
+        
+        // Chạy lại sau một chút để đảm bảo tất cả code đã chạy xong
+        setTimeout(function() {
+            resetEmployeeSelectionIfNoService();
+        }, 200);
+        
+        // Chạy lại sau khi tất cả AJAX requests đã hoàn thành
+        setTimeout(function() {
+            resetEmployeeSelectionIfNoService();
+        }, 1000);
+        
+        // Theo dõi thay đổi của DOM và reset employee selection nếu chưa có dịch vụ
+        const observer = new MutationObserver(function(mutations) {
+            const serviceCount = countSelectedServices();
+            if (serviceCount === 0) {
+                // Kiểm tra xem có nhân viên nào đang được chọn không
+                const hasSelectedEmployee = $('.employee-item-btn.selected').length > 0;
+                if (hasSelectedEmployee) {
+                    resetEmployeeSelectionIfNoService();
+                }
             }
+        });
+        
+        // Bắt đầu quan sát thay đổi trong body
+        if (document.body) {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class']
+            });
         }
         
         // Xử lý chọn employee - đặt priority cao để chạy trước document click
@@ -3001,6 +3116,13 @@
             const employeePosition = $(this).data('employee-position') || $(this).attr('data-employee-position') || '';
             
             if (!employeeId) {
+                return false;
+            }
+            
+            // Kiểm tra xem đã chọn dịch vụ chưa
+            const serviceCount = countSelectedServices();
+            if (serviceCount === 0) {
+                alert('Vui lòng chọn dịch vụ trước khi chọn kỹ thuật viên.');
                 return false;
             }
             
@@ -3028,7 +3150,6 @@
             $('#employeeToggleBtn').css('color', '');
             
             // Nếu có >= 2 dịch vụ, gán nhân viên cho dịch vụ đang active
-            const serviceCount = countSelectedServices();
             if (serviceCount >= 2) {
                 // Nếu chưa chọn dịch vụ nào, tự động chọn dịch vụ đầu tiên
                 if (!activeServiceSelector) {
@@ -3283,7 +3404,9 @@
                 
                 // Load time slots
                 const serviceCount = countSelectedServices();
-                if (serviceCount >= 2) {
+                const hasServiceEmployeeInputs = $('.service-employee-input').length > 0;
+                
+                if (serviceCount >= 2 && hasServiceEmployeeInputs) {
                     // Nếu có >= 2 dịch vụ, kiểm tra xem có dịch vụ nào đã chọn nhân viên chưa
                     let hasEmployee = false;
                     $('.service-employee-input').each(function() {
@@ -3301,8 +3424,8 @@
                     }
                 } else {
                     // Nếu chỉ có 1 dịch vụ, kiểm tra employee_id chung
-                if ($('#employee_id').val()) {
-                    loadAvailableTimeSlots();
+                    if ($('#employee_id').val()) {
+                        loadAvailableTimeSlots();
                     } else {
                         $('#time_slot_message').text('Vui lòng chọn kỹ thuật viên trước').show();
                         $('.time-slot-container').hide();
@@ -3365,7 +3488,10 @@
             const serviceCount = countSelectedServices();
             let employeeId = null;
             
-            if (serviceCount >= 2) {
+            // Kiểm tra xem có service-employee-input không (chỉ có khi >= 2 dịch vụ)
+            const hasServiceEmployeeInputs = $('.service-employee-input').length > 0;
+            
+            if (serviceCount >= 2 && hasServiceEmployeeInputs) {
                 // Lấy employee_id từ dịch vụ đang active
                 if (activeServiceSelector) {
                     let $employeeInput = null;
@@ -3396,7 +3522,7 @@
                     });
                 }
             } else {
-                // Nếu chỉ có 1 dịch vụ, dùng employee_id chung
+                // Nếu chỉ có 1 dịch vụ hoặc không có service-employee-input, dùng employee_id chung
                 employeeId = $('#employee_id').val();
             }
             
@@ -3415,7 +3541,7 @@
             
             // Check if employee is selected
             if (!employeeId) {
-                if (serviceCount >= 2) {
+                if (serviceCount >= 2 && hasServiceEmployeeInputs) {
                     timeSlotMessage.text('Vui lòng chọn dịch vụ và nhân viên trước');
                 } else {
                 timeSlotMessage.text('Vui lòng chọn kỹ thuật viên trước');
