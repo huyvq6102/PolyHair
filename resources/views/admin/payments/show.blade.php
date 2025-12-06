@@ -29,6 +29,26 @@
                 <div><strong>Ngày tạo:</strong> {{ $payment->created_at ? $payment->created_at->format('d/m/Y H:i') : 'N/A' }}</div>
                 <div><strong>Người lập:</strong> {{ $payment->created_by }}</div>
                 <div><strong>Hình thức:</strong> {{ $payment->payment_type == 'cash' ? 'Tiền mặt' : 'Chuyển khoản/Online' }}</div>
+                <div class="mt-2">
+                    <strong>Trạng thái:</strong>
+                    @php
+                        $status = $payment->status ?? 'pending';
+                        $badgeClass = 'secondary';
+                        $statusText = 'Chờ xử lý';
+                        
+                        if ($status == 'completed') {
+                            $badgeClass = 'success';
+                            $statusText = 'Thành công';
+                        } elseif ($status == 'failed') {
+                            $badgeClass = 'danger';
+                            $statusText = 'Thất bại';
+                        } elseif ($status == 'refunded') {
+                            $badgeClass = 'warning';
+                            $statusText = 'Hoàn tiền';
+                        }
+                    @endphp
+                    <span class="badge badge-{{ $badgeClass }}">{{ $statusText }}</span>
+                </div>
             </div>
         </div>
 

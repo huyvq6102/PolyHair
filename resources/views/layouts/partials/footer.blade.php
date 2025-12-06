@@ -147,8 +147,10 @@
 <script src="{{ asset('legacy/content/js/ajax-form.js') }}"></script>
 <script src="{{ asset('legacy/content/js/waypoints.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.counterup.min.js') }}"></script>
+<script src="{{ asset('legacy/content/js/jquery.ajaxchimp.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/imagesloaded.pkgd.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/scrollIt.js') }}"></script>
+<script src="{{ asset('legacy/content/js/toastr.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/jquery.scrollUp.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/wow.min.js') }}"></script>
 <script src="{{ asset('legacy/content/js/nice-select.min.js') }}"></script>
@@ -158,6 +160,7 @@
 <script src="{{ asset('legacy/content/js/plugins.js') }}"></script>
 <script src="{{ asset('legacy/content/js/gijgo.min.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script src="{{ asset('legacy/content/js/bootstrap-input-spinner.js') }}"></script>
 <script src="{{ asset('legacy/content/js/main.js') }}"></script>
 @stack('scripts')
 
