@@ -2477,10 +2477,19 @@
                 
                 if (displayContainerId) {
                     const $displayContainer = $('#' + displayContainerId);
-                    if ($displayContainer.length) {
-                        const formattedTime = formatTimeSlot(selectedTime);
-                        $displayContainer.find('.time-slot-text').text(formattedTime);
-                        $displayContainer.fadeIn(300);
+                    if ($displayContainer.length === 1) {
+                        // QUAN TRỌNG: Kiểm tra lại container ID để đảm bảo không cập nhật nhầm
+                        const containerIdCheck = $displayContainer.attr('id');
+                        if (containerIdCheck === displayContainerId) {
+                            const formattedTime = formatTimeSlot(selectedTime);
+                            $displayContainer.find('.time-slot-text').text(formattedTime);
+                            $displayContainer.fadeIn(300);
+                            console.log('✅ Updated display container from localStorage:', displayContainerId, 'with time:', formattedTime);
+                        } else {
+                            console.error('❌ Container ID mismatch in localStorage restore:', displayContainerId, 'Actual:', containerIdCheck);
+                        }
+                    } else {
+                        console.error('❌ Multiple or no display containers found:', displayContainerId, 'Count:', $displayContainer.length);
                     }
                 }
                 
@@ -2811,34 +2820,111 @@
             let $dateInput = null;
             let displayContainerId = null;
             
+            // QUAN TRỌNG: Tìm đúng input và container dựa trên date picker trong cùng time container
+            // KHÔNG dùng .first() khi tìm toàn cục để tránh lấy nhầm input của dịch vụ khác
+            if (!serviceType) {
+                console.error('❌ Cannot find service type');
+                return false;
+            }
+            
             if (serviceType === 'service') {
                 const serviceId = $datePicker.attr('data-service-id');
-                $timeInput = $('.service-time-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
-                $dateInput = $('.service-date-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                console.log('🔍 Finding inputs for service ID:', serviceId);
+                
+                // Tìm input trong cùng container trước
+                $timeInput = $timeContainer.find('.service-time-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                console.log('Time input found in container:', $timeInput.length);
+                
+                // Nếu không tìm thấy trong container, tìm toàn cục nhưng PHẢI đúng service ID
+                if (!$timeInput.length) {
+                    // Tìm bằng name attribute để đảm bảo chính xác
+                    $timeInput = $('input[name="service_time[service_' + serviceId + ']"].service-time-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                    console.log('Time input found by name:', $timeInput.length, 'name="service_time[service_' + serviceId + ']"');
+                }
+                
+                $dateInput = $timeContainer.find('.service-date-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                if (!$dateInput.length) {
+                    $dateInput = $('input[name="service_date[service_' + serviceId + ']"].service-date-input[data-service-type="service"][data-service-id="' + serviceId + '"]');
+                }
+                
                 displayContainerId = 'service_time_display_service_' + serviceId;
+                console.log('Display container ID:', displayContainerId);
             } else if (serviceType === 'variant') {
                 const variantId = $datePicker.attr('data-variant-id');
-                $timeInput = $('.service-time-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
-                $dateInput = $('.service-date-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                console.log('🔍 Finding inputs for variant ID:', variantId);
+                $timeInput = $timeContainer.find('.service-time-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                if (!$timeInput.length) {
+                    $timeInput = $('input[name="service_time[variant_' + variantId + ']"].service-time-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                }
+                $dateInput = $timeContainer.find('.service-date-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                if (!$dateInput.length) {
+                    $dateInput = $('input[name="service_date[variant_' + variantId + ']"].service-date-input[data-service-type="variant"][data-variant-id="' + variantId + '"]');
+                }
                 displayContainerId = 'service_time_display_variant_' + variantId;
+                console.log('Display container ID:', displayContainerId);
             } else if (serviceType === 'combo') {
                 const comboId = $datePicker.attr('data-combo-id');
-                $timeInput = $('.service-time-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
-                $dateInput = $('.service-date-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                console.log('🔍 Finding inputs for combo ID:', comboId);
+                $timeInput = $timeContainer.find('.service-time-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                if (!$timeInput.length) {
+                    $timeInput = $('input[name="service_time[combo_' + comboId + ']"].service-time-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                }
+                $dateInput = $timeContainer.find('.service-date-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                if (!$dateInput.length) {
+                    $dateInput = $('input[name="service_date[combo_' + comboId + ']"].service-date-input[data-service-type="combo"][data-combo-id="' + comboId + '"]');
+                }
                 displayContainerId = 'service_time_display_combo_' + comboId;
+                console.log('Display container ID:', displayContainerId);
             }
             
             console.log('=== TIME SLOT CLICK DEBUG ===');
             console.log('serviceType:', serviceType);
+            console.log('serviceId/variantId/comboId:', serviceType === 'service' ? $datePicker.attr('data-service-id') : (serviceType === 'variant' ? $datePicker.attr('data-variant-id') : $datePicker.attr('data-combo-id')));
             console.log('$timeInput found:', $timeInput && $timeInput.length ? 'YES (' + $timeInput.length + ')' : 'NO');
             console.log('$dateInput found:', $dateInput && $dateInput.length ? 'YES (' + $dateInput.length + ')' : 'NO');
             console.log('displayContainerId:', displayContainerId);
             if ($timeInput && $timeInput.length) {
-                console.log('Current $timeInput value:', $timeInput.val());
-                console.log('$timeInput selector:', $timeInput.attr('data-service-type'), $timeInput.attr('data-service-id') || $timeInput.attr('data-variant-id') || $timeInput.attr('data-combo-id'));
+                console.log('Current $timeInput value BEFORE update:', $timeInput.val());
+                console.log('$timeInput data-service-id:', $timeInput.attr('data-service-id'));
+                console.log('$timeInput data-variant-id:', $timeInput.attr('data-variant-id'));
+                console.log('$timeInput data-combo-id:', $timeInput.attr('data-combo-id'));
             }
             
             if ($timeInput && $timeInput.length) {
+                // QUAN TRỌNG: Kiểm tra xem $timeInput có đúng với service/variant/combo đang chọn không
+                // Đặc biệt quan trọng với combo để tránh cập nhật nhầm index 0
+                let isValidInput = false;
+                if (serviceType === 'service') {
+                    const serviceId = $datePicker.attr('data-service-id');
+                    const inputServiceId = $timeInput.attr('data-service-id');
+                    if (String(serviceId) === String(inputServiceId)) {
+                        isValidInput = true;
+                    } else {
+                        console.error('❌ Service ID mismatch. Date picker service ID:', serviceId, 'Time input service ID:', inputServiceId);
+                    }
+                } else if (serviceType === 'variant') {
+                    const variantId = $datePicker.attr('data-variant-id');
+                    const inputVariantId = $timeInput.attr('data-variant-id');
+                    if (String(variantId) === String(inputVariantId)) {
+                        isValidInput = true;
+                    } else {
+                        console.error('❌ Variant ID mismatch. Date picker variant ID:', variantId, 'Time input variant ID:', inputVariantId);
+                    }
+                } else if (serviceType === 'combo') {
+                    const comboId = $datePicker.attr('data-combo-id');
+                    const inputComboId = $timeInput.attr('data-combo-id');
+                    if (String(comboId) === String(inputComboId)) {
+                        isValidInput = true;
+                    } else {
+                        console.error('❌ Combo ID mismatch. Date picker combo ID:', comboId, 'Time input combo ID:', inputComboId);
+                    }
+                }
+                
+                if (!isValidInput) {
+                    console.error('❌ Input validation failed. Not updating time slot to prevent wrong service update.');
+                    return false;
+                }
+                
                 const appointmentDate = $dateInput.val();
                 console.log('appointmentDate:', appointmentDate);
                 
@@ -3125,62 +3211,243 @@
                     }
                     
                     if (isValidInput) {
-                        // Lưu time vào input
-                        $timeInput.val(time);
-                        console.log('✅ Saved time to input:', {
-                            selector: timeInputSelector || 'N/A',
-                            serviceType: serviceType,
-                            serviceId: serviceType === 'service' ? $datePicker.attr('data-service-id') : (serviceType === 'variant' ? $datePicker.attr('data-variant-id') : $datePicker.attr('data-combo-id')),
-                            time: time,
-                            inputValue: $timeInput.val()
-                        });
+                        // QUAN TRỌNG: Kiểm tra lại một lần nữa trước khi lưu
+                        // Đảm bảo rằng đây là input đúng bằng cách kiểm tra name attribute
+                        let finalInputCheck = false;
+                        if (serviceType === 'service') {
+                            const serviceId = $datePicker.attr('data-service-id');
+                            const inputName = $timeInput.attr('name');
+                            const expectedName = 'service_time[service_' + serviceId + ']';
+                            finalInputCheck = inputName === expectedName && $timeInput.attr('data-service-id') === serviceId;
+                            console.log('Final input check:', {
+                                inputName: inputName,
+                                expectedName: expectedName,
+                                serviceId: serviceId,
+                                inputServiceId: $timeInput.attr('data-service-id'),
+                                finalInputCheck: finalInputCheck
+                            });
+                        } else if (serviceType === 'variant') {
+                            const variantId = $datePicker.attr('data-variant-id');
+                            const inputName = $timeInput.attr('name');
+                            const expectedName = 'service_time[variant_' + variantId + ']';
+                            finalInputCheck = inputName === expectedName && $timeInput.attr('data-variant-id') === variantId;
+                        } else if (serviceType === 'combo') {
+                            const comboId = $datePicker.attr('data-combo-id');
+                            const inputName = $timeInput.attr('name');
+                            const expectedName = 'service_time[combo_' + comboId + ']';
+                            finalInputCheck = inputName === expectedName && $timeInput.attr('data-combo-id') === comboId;
+                        }
+                        
+                        if (finalInputCheck) {
+                            // Lưu time vào input
+                            $timeInput.val(time);
+                            console.log('✅ Saved time to input:', {
+                                selector: timeInputSelector || 'N/A',
+                                serviceType: serviceType,
+                                serviceId: serviceType === 'service' ? $datePicker.attr('data-service-id') : (serviceType === 'variant' ? $datePicker.attr('data-variant-id') : $datePicker.attr('data-combo-id')),
+                                time: time,
+                                inputValue: $timeInput.val(),
+                                inputName: $timeInput.attr('name')
+                            });
+                        } else {
+                            console.error('❌ Final input check failed! Not saving to prevent wrong service update.');
+                            console.error('Input name:', $timeInput.attr('name'), 'Service type:', serviceType);
+                            // KHÔNG cập nhật display container nếu input check fail
+                            displayContainerId = null;
+                        }
                     } else {
                         console.error('❌ Invalid time input! Service ID mismatch:', {
                             serviceType: serviceType,
                             datePickerId: serviceType === 'service' ? $datePicker.attr('data-service-id') : (serviceType === 'variant' ? $datePicker.attr('data-variant-id') : $datePicker.attr('data-combo-id')),
                             inputId: serviceType === 'service' ? $timeInput.attr('data-service-id') : (serviceType === 'variant' ? $timeInput.attr('data-variant-id') : $timeInput.attr('data-combo-id'))
                         });
+                        // KHÔNG cập nhật display container nếu input check fail
+                        displayContainerId = null;
                     }
                 } else {
                     console.error('❌ Time input not found!', {
                         serviceType: serviceType,
                         selector: timeInputSelector || 'N/A'
                     });
+                    // KHÔNG cập nhật display container nếu không tìm thấy input
+                    displayContainerId = null;
                 }
                 
-                // Xóa selected của tất cả time slots trong container này
-                $timeContainer.find('.service-time-slot-btn').removeClass('selected');
-                
-                // Thêm selected cho time slot được chọn
-                $(this).addClass('selected');
+                // CHỈ cập nhật selected class và display container nếu input đã được lưu thành công
+                if (displayContainerId) {
+                    // Xóa selected của tất cả time slots trong container này
+                    $timeContainer.find('.service-time-slot-btn').removeClass('selected');
+                    
+                    // Thêm selected cho time slot được chọn
+                    $(this).addClass('selected');
+                } else {
+                    // Nếu input check fail, không cập nhật selected class
+                    console.error('❌ Skipping display update because input validation failed');
+                    return false;
+                }
                 
                 // Hiển thị time slot cạnh tên nhân viên - CHỈ cập nhật container của dịch vụ này
                 // QUAN TRỌNG: Đảm bảo chỉ cập nhật đúng container của dịch vụ được chọn
+                // ĐẶC BIỆT: KHÔNG BAO GIỜ cập nhật container của dịch vụ khác (như index 0)
                 if (displayContainerId) {
-                    // Tìm display container bằng ID chính xác
+                    console.log('🔍 Looking for display container:', displayContainerId);
+                    console.log('🔍 Current service being updated:', {
+                        serviceType: serviceType,
+                        serviceId: serviceType === 'service' ? $datePicker.attr('data-service-id') : (serviceType === 'variant' ? $datePicker.attr('data-variant-id') : $datePicker.attr('data-combo-id')),
+                        timeContainerServiceId: serviceType === 'service' ? $timeContainer.find('.service-date-picker').attr('data-service-id') : null
+                    });
+                    
+                    // Tìm display container bằng ID chính xác - CHỈ tìm 1 container duy nhất
                     const $displayContainer = $('#' + displayContainerId);
-                    if ($displayContainer.length) {
-                        // Xác nhận lại rằng đây là container đúng bằng cách kiểm tra service ID
-                        let isValidContainer = false;
-                        if (serviceType === 'service') {
-                            const serviceId = $datePicker.attr('data-service-id');
-                            isValidContainer = displayContainerId === 'service_time_display_service_' + serviceId;
-                        } else if (serviceType === 'variant') {
-                            const variantId = $datePicker.attr('data-variant-id');
-                            isValidContainer = displayContainerId === 'service_time_display_variant_' + variantId;
-                        } else if (serviceType === 'combo') {
-                            const comboId = $datePicker.attr('data-combo-id');
-                            isValidContainer = displayContainerId === 'service_time_display_combo_' + comboId;
+                    console.log('Found display containers:', $displayContainer.length);
+                    
+                    // QUAN TRỌNG: Kiểm tra ngay từ đầu - nếu container này không thuộc về service đang chọn, KHÔNG cập nhật
+                    if ($displayContainer.length > 0) {
+                        const $containerParent = $displayContainer.closest('.service-item-selectable');
+                        const containerParentServiceId = $containerParent.attr('data-service-id');
+                        const currentServiceIdForCheck = serviceType === 'service' ? $datePicker.attr('data-service-id') : null;
+                        
+                        if (currentServiceIdForCheck && containerParentServiceId && String(currentServiceIdForCheck) !== String(containerParentServiceId)) {
+                            console.error('🚫 BLOCKED: Attempted to update wrong service container!');
+                            console.error('Current service ID:', currentServiceIdForCheck, 'Container parent service ID:', containerParentServiceId);
+                            console.error('This would update service:', containerParentServiceId, 'but we are selecting time for service:', currentServiceIdForCheck);
+                            return false; // DỪNG NGAY - không cập nhật container sai
+                        }
+                    }
+                    
+                    if ($displayContainer.length === 1) {
+                        // QUAN TRỌNG: Kiểm tra lại một lần nữa - container này phải thuộc về đúng service
+                        const $containerParentCheck = $displayContainer.closest('.service-item-selectable');
+                        const containerParentServiceIdCheck = $containerParentCheck.attr('data-service-id');
+                        const currentServiceIdForValidation = serviceType === 'service' ? $datePicker.attr('data-service-id') : null;
+                        
+                        if (currentServiceIdForValidation && containerParentServiceIdCheck && String(currentServiceIdForValidation) !== String(containerParentServiceIdCheck)) {
+                            console.error('🚫 BLOCKED AT VALIDATION: Container belongs to different service!');
+                            console.error('Current service ID:', currentServiceIdForValidation, 'Container parent service ID:', containerParentServiceIdCheck);
+                            return false; // DỪNG NGAY - không tiếp tục validation
                         }
                         
-                        if (isValidContainer) {
-                            // CHỈ cập nhật container này, không cập nhật container khác
-                            $displayContainer.find('.time-slot-text').text(formattedTime);
-                            $displayContainer.fadeIn(300);
-                            console.log('✅ Updated display container:', displayContainerId, 'with time:', formattedTime, 'for service:', serviceType, $datePicker.attr('data-service-id') || $datePicker.attr('data-variant-id') || $datePicker.attr('data-combo-id'));
-                        } else {
-                            console.error('❌ Invalid display container ID! Expected:', displayContainerId, 'for service:', serviceType);
+                        // Xác nhận lại rằng đây là container đúng bằng cách kiểm tra service ID
+                        let isValidContainer = false;
+                        let expectedId = '';
+                        let currentServiceId = null;
+                        
+                        if (serviceType === 'service') {
+                            currentServiceId = $datePicker.attr('data-service-id');
+                            expectedId = 'service_time_display_service_' + currentServiceId;
+                            isValidContainer = displayContainerId === expectedId;
+                        } else if (serviceType === 'variant') {
+                            currentServiceId = $datePicker.attr('data-variant-id');
+                            expectedId = 'service_time_display_variant_' + currentServiceId;
+                            isValidContainer = displayContainerId === expectedId;
+                        } else if (serviceType === 'combo') {
+                            currentServiceId = $datePicker.attr('data-combo-id');
+                            expectedId = 'service_time_display_combo_' + currentServiceId;
+                            isValidContainer = displayContainerId === expectedId;
                         }
+                        
+                        console.log('Container validation:', {
+                            displayContainerId: displayContainerId,
+                            expectedId: expectedId,
+                            isValidContainer: isValidContainer,
+                            currentServiceId: currentServiceId
+                        });
+                        
+                        if (isValidContainer) {
+                            // QUAN TRỌNG: Kiểm tra lại một lần nữa rằng đây là container đúng
+                            // Bằng cách kiểm tra xem container này có thuộc về đúng service ID không
+                            let isCorrectContainer = false;
+                            let parentServiceId = null;
+                            
+                            if (serviceType === 'service') {
+                                // Kiểm tra xem container này có nằm trong service item đúng không
+                                const $parentServiceItem = $displayContainer.closest('.service-item-selectable[data-service-id="' + currentServiceId + '"]');
+                                isCorrectContainer = $parentServiceItem.length > 0;
+                                parentServiceId = $parentServiceItem.length > 0 ? $parentServiceItem.attr('data-service-id') : null;
+                                
+                                // QUAN TRỌNG: Kiểm tra thêm bằng cách so sánh ID từ container với service ID
+                                const containerIdFromElement = $displayContainer.attr('id');
+                                const expectedContainerId = 'service_time_display_service_' + currentServiceId;
+                                // QUAN TRỌNG: Chỉ cập nhật nếu container ID khớp CHÍNH XÁC và parent service ID khớp
+                                // Điều này đảm bảo không cập nhật nhầm vào dịch vụ khác (như index 0)
+                                if (containerIdFromElement === expectedContainerId && currentServiceId === parentServiceId && String(currentServiceId) === String(parentServiceId)) {
+                                    isCorrectContainer = true;
+                                } else {
+                                    isCorrectContainer = false;
+                                    console.error('❌ Container validation failed for service:', currentServiceId, {
+                                        containerIdFromElement: containerIdFromElement,
+                                        expectedContainerId: expectedContainerId,
+                                        currentServiceId: currentServiceId,
+                                        parentServiceId: parentServiceId,
+                                        idsMatch: String(currentServiceId) === String(parentServiceId)
+                                    });
+                                }
+                                
+                                console.log('Parent service item check:', {
+                                    found: $parentServiceItem.length > 0,
+                                    currentServiceId: currentServiceId,
+                                    parentServiceId: parentServiceId,
+                                    containerIdFromElement: containerIdFromElement,
+                                    expectedContainerId: expectedContainerId,
+                                    isCorrectContainer: isCorrectContainer
+                                });
+                            } else if (serviceType === 'variant') {
+                                const $parentServiceItem = $displayContainer.closest('.service-item-selectable[data-variant-id="' + currentServiceId + '"]');
+                                const containerIdFromElement = $displayContainer.attr('id');
+                                const expectedContainerId = 'service_time_display_variant_' + currentServiceId;
+                                isCorrectContainer = $parentServiceItem.length > 0 && containerIdFromElement === expectedContainerId;
+                            } else if (serviceType === 'combo') {
+                                const $parentServiceItem = $displayContainer.closest('.service-item-selectable[data-combo-id="' + currentServiceId + '"]');
+                                const containerIdFromElement = $displayContainer.attr('id');
+                                const expectedContainerId = 'service_time_display_combo_' + currentServiceId;
+                                isCorrectContainer = $parentServiceItem.length > 0 && containerIdFromElement === expectedContainerId;
+                            }
+                            
+                            if (isCorrectContainer) {
+                                // CHỈ cập nhật text trong container này
+                                const $timeSlotText = $displayContainer.find('.time-slot-text');
+                                if ($timeSlotText.length === 1) {
+                                    // Lưu giá trị cũ để debug
+                                    const oldValue = $timeSlotText.text();
+                                    
+                                    // QUAN TRỌNG: Kiểm tra lại một lần nữa trước khi cập nhật
+                                    // Đảm bảo rằng đây là container đúng bằng cách kiểm tra ID và service ID
+                                    const finalCheck = $displayContainer.attr('id') === displayContainerId;
+                                    // QUAN TRỌNG: Kiểm tra thêm service ID từ parent để đảm bảo không cập nhật nhầm vào dịch vụ khác (như index 0)
+                                    let serviceIdMatch = true;
+                                    if (serviceType === 'service') {
+                                        const $parentCheck = $displayContainer.closest('.service-item-selectable[data-service-id]');
+                                        const parentServiceIdCheck = $parentCheck.attr('data-service-id');
+                                        serviceIdMatch = String(currentServiceId) === String(parentServiceIdCheck);
+                                        console.log('Final service ID check:', {
+                                            currentServiceId: currentServiceId,
+                                            parentServiceIdCheck: parentServiceIdCheck,
+                                            match: serviceIdMatch
+                                        });
+                                    }
+                                    
+                                    if (finalCheck && serviceIdMatch) {
+                                        // CHỈ cập nhật text trong container này, KHÔNG cập nhật container khác
+                                        $timeSlotText.text(formattedTime);
+                                        $displayContainer.fadeIn(300);
+                                        console.log('✅ Updated display container:', displayContainerId, 'with time:', formattedTime, '(old:', oldValue, ')', 'for service:', serviceType, currentServiceId);
+                                    } else {
+                                        console.error('❌ Final check failed! Container ID or service ID mismatch. Not updating.');
+                                        console.error('Expected ID:', displayContainerId, 'Actual ID:', $displayContainer.attr('id'));
+                                        console.error('Service ID match:', serviceIdMatch, 'Final check:', finalCheck);
+                                    }
+                                } else {
+                                    console.error('❌ Time slot text element not found or multiple found in container:', displayContainerId, 'Found:', $timeSlotText.length);
+                                }
+                            } else {
+                                console.error('❌ Container validation failed! Container does not belong to correct service. Not updating to prevent wrong service update.');
+                                console.error('displayContainerId:', displayContainerId, 'serviceType:', serviceType, 'currentServiceId:', currentServiceId, 'parentServiceId:', parentServiceId);
+                            }
+                        } else {
+                            console.error('❌ Invalid display container ID! Expected:', expectedId, 'but got:', displayContainerId, 'for service:', serviceType);
+                        }
+                    } else if ($displayContainer.length > 1) {
+                        console.error('❌ Multiple display containers found with ID:', displayContainerId, 'Count:', $displayContainer.length);
                     } else {
                         console.error('❌ Display container not found:', displayContainerId);
                     }
@@ -4095,27 +4362,14 @@
             $('#time_slot-error').hide();
             
             if (serviceCount >= 2) {
-                // Nếu có >= 2 dịch vụ, gán time slot cho dịch vụ đang active hoặc dịch vụ đã có nhân viên
+                // QUAN TRỌNG: CHỈ cập nhật time slot cho dịch vụ đang active
+                // KHÔNG tự động tìm dịch vụ đầu tiên có nhân viên để tránh cập nhật nhầm index 0
                 let targetServiceSelector = activeServiceSelector;
                 
-                // Nếu không có dịch vụ active, tự động tìm dịch vụ đã có nhân viên đầu tiên
+                // Nếu không có dịch vụ active, KHÔNG làm gì cả - không tự động cập nhật
                 if (!targetServiceSelector) {
-                    $('.service-employee-input').each(function() {
-                        if ($(this).val()) {
-                            const serviceType = $(this).attr('data-service-type');
-                            if (serviceType === 'service') {
-                                const serviceId = $(this).attr('data-service-id');
-                                targetServiceSelector = 'service_' + serviceId;
-                            } else if (serviceType === 'variant') {
-                                const variantId = $(this).attr('data-variant-id');
-                                targetServiceSelector = 'variant_' + variantId;
-                            } else if (serviceType === 'combo') {
-                                const comboId = $(this).attr('data-combo-id');
-                                targetServiceSelector = 'combo_' + comboId;
-                            }
-                            return false; // break
-                        }
-                    });
+                    console.log('⚠️ No active service selected. Skipping time slot update to prevent wrong service update.');
+                    return false;
                 }
                 
                 if (targetServiceSelector) {
@@ -4141,6 +4395,73 @@
                     }
                     
                     if ($timeInput && $timeInput.length) {
+                        // QUAN TRỌNG: Kiểm tra xem $timeInput có đúng với targetServiceSelector không
+                        // Đặc biệt quan trọng với combo để tránh cập nhật nhầm index 0
+                        let isValidInput = false;
+                        if (targetServiceSelector.startsWith('service_')) {
+                            const serviceId = targetServiceSelector.replace('service_', '');
+                            const inputServiceId = $timeInput.attr('data-service-id');
+                            if (String(serviceId) === String(inputServiceId)) {
+                                isValidInput = true;
+                            } else {
+                                console.error('❌ Service ID mismatch. Target service ID:', serviceId, 'Time input service ID:', inputServiceId);
+                            }
+                        } else if (targetServiceSelector.startsWith('variant_')) {
+                            const variantId = targetServiceSelector.replace('variant_', '');
+                            const inputVariantId = $timeInput.attr('data-variant-id');
+                            if (String(variantId) === String(inputVariantId)) {
+                                isValidInput = true;
+                            } else {
+                                console.error('❌ Variant ID mismatch. Target variant ID:', variantId, 'Time input variant ID:', inputVariantId);
+                            }
+                        } else if (targetServiceSelector.startsWith('combo_')) {
+                            const comboId = targetServiceSelector.replace('combo_', '');
+                            const inputComboId = $timeInput.attr('data-combo-id');
+                            if (String(comboId) === String(inputComboId)) {
+                                isValidInput = true;
+                            } else {
+                                console.error('❌ Combo ID mismatch. Target combo ID:', comboId, 'Time input combo ID:', inputComboId);
+                            }
+                        }
+                        
+                        if (!isValidInput) {
+                            console.error('❌ Input validation failed. Not updating time slot to prevent wrong service update (especially index 0).');
+                            return false;
+                        }
+                        
+                        // QUAN TRỌNG: Kiểm tra xem dịch vụ này đã có time slot chưa
+                        // Nếu đã có và không phải là dịch vụ đang active, KHÔNG cập nhật
+                        const existingTime = $timeInput.val();
+                        if (existingTime && existingTime.trim() !== '') {
+                            // Kiểm tra xem đây có phải là dịch vụ đang active không
+                            const $serviceItem = $('.service-item-selectable.active-service');
+                            if ($serviceItem.length === 0) {
+                                console.log('⚠️ Service already has time slot and is not active. Skipping update to prevent overwrite.');
+                                return false;
+                            }
+                            
+                            // Kiểm tra service/variant/combo ID của active service
+                            let activeServiceId = null;
+                            let targetServiceId = null;
+                            
+                            if (targetServiceSelector.startsWith('service_')) {
+                                activeServiceId = $serviceItem.attr('data-service-id');
+                                targetServiceId = targetServiceSelector.replace('service_', '');
+                            } else if (targetServiceSelector.startsWith('variant_')) {
+                                activeServiceId = $serviceItem.attr('data-variant-id');
+                                targetServiceId = targetServiceSelector.replace('variant_', '');
+                            } else if (targetServiceSelector.startsWith('combo_')) {
+                                activeServiceId = $serviceItem.attr('data-combo-id');
+                                targetServiceId = targetServiceSelector.replace('combo_', '');
+                            }
+                            
+                            if (activeServiceId && String(activeServiceId) !== String(targetServiceId)) {
+                                console.log('⚠️ Active service ID mismatch. Skipping update to prevent wrong service update.');
+                                console.log('Active service ID:', activeServiceId, 'Target service ID:', targetServiceId, 'Selector:', targetServiceSelector);
+                                return false;
+                            }
+                        }
+                        
                         // Lưu time slot và date cho dịch vụ này
                         $timeInput.val(time);
                         if ($dateInput && $dateInput.length && appointmentDate) {
@@ -4150,27 +4471,88 @@
                         // Hiển thị time slot cạnh tên nhân viên
                         if (displayContainerId) {
                             const $displayContainer = $('#' + displayContainerId);
-                            $displayContainer.find('.time-slot-text').text(formattedTime);
-                            $displayContainer.fadeIn(300);
+                            if ($displayContainer.length === 1) {
+                                // QUAN TRỌNG: Kiểm tra lại container ID và service/variant/combo ID để đảm bảo không cập nhật nhầm
+                                const containerIdCheck = $displayContainer.attr('id');
+                                const $containerParent = $displayContainer.closest('.service-item-selectable');
+                                
+                                // Kiểm tra validation dựa trên loại service
+                                let isValidUpdate = false;
+                                
+                                if (targetServiceSelector.startsWith('service_')) {
+                                    const targetServiceId = targetServiceSelector.replace('service_', '');
+                                    const containerParentServiceId = $containerParent.attr('data-service-id');
+                                    
+                                    if (containerIdCheck === displayContainerId && 
+                                        (!containerParentServiceId || String(containerParentServiceId) === String(targetServiceId))) {
+                                        isValidUpdate = true;
+                                    } else {
+                                        console.error('❌ Container validation failed for service:', {
+                                            containerIdCheck: containerIdCheck,
+                                            displayContainerId: displayContainerId,
+                                            containerParentServiceId: containerParentServiceId,
+                                            targetServiceId: targetServiceId
+                                        });
+                                    }
+                                } else if (targetServiceSelector.startsWith('variant_')) {
+                                    const targetVariantId = targetServiceSelector.replace('variant_', '');
+                                    const containerParentVariantId = $containerParent.attr('data-variant-id');
+                                    
+                                    if (containerIdCheck === displayContainerId && 
+                                        (!containerParentVariantId || String(containerParentVariantId) === String(targetVariantId))) {
+                                        isValidUpdate = true;
+                                    } else {
+                                        console.error('❌ Container validation failed for variant:', {
+                                            containerIdCheck: containerIdCheck,
+                                            displayContainerId: displayContainerId,
+                                            containerParentVariantId: containerParentVariantId,
+                                            targetVariantId: targetVariantId
+                                        });
+                                    }
+                                } else if (targetServiceSelector.startsWith('combo_')) {
+                                    const targetComboId = targetServiceSelector.replace('combo_', '');
+                                    const containerParentComboId = $containerParent.attr('data-combo-id');
+                                    
+                                    if (containerIdCheck === displayContainerId && 
+                                        (!containerParentComboId || String(containerParentComboId) === String(targetComboId))) {
+                                        isValidUpdate = true;
+                                    } else {
+                                        console.error('❌ Container validation failed for combo:', {
+                                            containerIdCheck: containerIdCheck,
+                                            displayContainerId: displayContainerId,
+                                            containerParentComboId: containerParentComboId,
+                                            targetComboId: targetComboId
+                                        });
+                                    }
+                                }
+                                
+                                if (isValidUpdate) {
+                                    $displayContainer.find('.time-slot-text').text(formattedTime);
+                                    $displayContainer.fadeIn(300);
+                                    console.log('✅ Updated display container:', displayContainerId, 'with time:', formattedTime, 'for active service:', targetServiceSelector);
+                                } else {
+                                    console.error('❌ Container validation failed. Not updating display container.');
+                                }
+                            } else {
+                                console.error('❌ Multiple or no display containers found:', displayContainerId, 'Count:', $displayContainer.length);
+                            }
                         }
                         
                         // KHÔNG xóa active sau khi chọn giờ - giữ lại để người dùng có thể thấy dịch vụ nào đang được chọn
                         // Active class sẽ chỉ bị xóa khi click vào dịch vụ khác hoặc click lại vào cùng dịch vụ
                     } else {
                         // Không tìm thấy dịch vụ có nhân viên
+                        console.error('❌ Time input not found for active service:', targetServiceSelector);
                         return false;
                     }
-                } else {
-                    // Không có dịch vụ nào có nhân viên
-                    return false;
                 }
             } else {
                 // Nếu chỉ có 1 dịch vụ, dùng time slot chung
-            if (time) {
-                $('#time_slot').val(time);
-            }
-            if (wordTimeId) {
-                $('#word_time_id').val(wordTimeId);
+                if (time) {
+                    $('#time_slot').val(time);
+                }
+                if (wordTimeId) {
+                    $('#word_time_id').val(wordTimeId);
                 }
             }
             
