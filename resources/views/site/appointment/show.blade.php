@@ -3,258 +3,7 @@
 @section('title', 'Chi tiết lịch đặt')
 
 @push('styles')
-<style>
-    .appointment-detail-section {
-        padding: 120px 0 80px;
-        background: #f8f9fa;
-        min-height: 70vh;
-    }
-    
-    .appointment-header {
-        background: #fff;
-        padding: 30px;
-        border-radius: 10px;
-        margin-bottom: 30px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    
-    .appointment-title {
-        font-size: 32px;
-        font-weight: 600;
-        color: #4A3600;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    
-    .appointment-title i {
-        color: #BC9321;
-    }
-    
-    .appointment-id {
-        font-size: 16px;
-        color: #666;
-        margin-top: 10px;
-    }
-    
-    .appointment-content {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 30px;
-        margin-bottom: 30px;
-    }
-    
-    @media (max-width: 991px) {
-        .appointment-content {
-            grid-template-columns: 1fr;
-        }
-    }
-    
-    .appointment-card {
-        background: #fff;
-        border-radius: 10px;
-        padding: 30px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    
-    .card-title {
-        font-size: 20px;
-        font-weight: 600;
-        color: #4A3600;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #f0f0f0;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .card-title i {
-        color: #BC9321;
-    }
-    
-    .info-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 15px 0;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .info-row:last-child {
-        border-bottom: none;
-    }
-    
-    .info-label {
-        font-weight: 500;
-        color: #666;
-        min-width: 150px;
-    }
-    
-    .info-value {
-        color: #333;
-        font-weight: 500;
-        text-align: right;
-        flex: 1;
-    }
-    
-    .status-badge {
-        display: inline-block;
-        padding: 6px 15px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 500;
-    }
-    
-    .status-pending {
-        background: #fff3cd;
-        color: #856404;
-    }
-    
-    .status-confirmed {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .status-processing {
-        background: #cfe2ff;
-        color: #084298;
-    }
-    
-    .status-completed {
-        background: #d1e7dd;
-        color: #0f5132;
-    }
-    
-    .status-cancelled {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    
-    .service-list {
-        margin-top: 20px;
-    }
-    
-    .service-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 15px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
-    
-    .service-item:last-child {
-        margin-bottom: 0;
-    }
-    
-    .service-info {
-        flex: 1;
-    }
-    
-    .service-name {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 5px;
-    }
-    
-    .service-details {
-        font-size: 13px;
-        color: #666;
-    }
-    
-    .service-price {
-        font-size: 18px;
-        font-weight: 600;
-        color: #BC9321;
-        margin-left: 15px;
-    }
-    
-    .total-section {
-        background: linear-gradient(135deg, #4A3600 0%, #5a4a00 100%);
-        color: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        margin-top: 20px;
-    }
-    
-    .total-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 18px;
-        margin-bottom: 10px;
-    }
-    
-    .total-label {
-        font-weight: 500;
-    }
-    
-    .total-value {
-        font-weight: 700;
-        font-size: 24px;
-    }
-    
-    .action-buttons {
-        display: flex;
-        gap: 15px;
-        margin-top: 30px;
-    }
-    
-    .btn-action {
-        flex: 1;
-        padding: 12px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        text-decoration: none;
-    }
-    
-    .btn-back {
-        background: #6c757d;
-        color: #fff;
-    }
-    
-    .btn-back:hover {
-        background: #5a6268;
-        transform: translateY(-2px);
-    }
-    
-    .btn-print {
-        background: #BC9321;
-        color: #fff;
-    }
-    
-    .btn-print:hover {
-        background: #a8821a;
-        transform: translateY(-2px);
-    }
-    
-    .note-box {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 15px;
-        border-left: 4px solid #BC9321;
-    }
-    
-    .note-label {
-        font-weight: 600;
-        color: #4A3600;
-        margin-bottom: 8px;
-    }
-    
-    .note-text {
-        color: #666;
-        line-height: 1.6;
-    }
-</style>
+<link rel="stylesheet" href="{{ asset('css/appointment-show.css') }}">
 @endpush
 
 @section('content')
@@ -372,29 +121,110 @@
                     
                     <div class="service-list">
                         @foreach($appointment->appointmentDetails as $detail)
-                            @if($detail->serviceVariant)
-                            <div class="service-item">
-                                <div class="service-info">
-                                    <div class="service-name">
-                                        {{ $detail->serviceVariant->name }}
+                            @php
+                                $serviceImage = null;
+                                $serviceId = null;
+                                $serviceName = '';
+                                $serviceUrl = '#';
+                                
+                                if ($detail->serviceVariant && $detail->serviceVariant->service) {
+                                    $serviceImage = $detail->serviceVariant->service->image;
+                                    $serviceId = $detail->serviceVariant->service->id;
+                                    $serviceName = $detail->serviceVariant->service->name . ' - ' . $detail->serviceVariant->name;
+                                    $serviceUrl = route('site.services.show', $serviceId);
+                                } elseif ($detail->combo_id && $detail->combo) {
+                                    $serviceImage = $detail->combo->image;
+                                    $serviceId = $detail->combo->id;
+                                    $serviceName = $detail->combo->name;
+                                    // Combo có thể không có route riêng, dùng service route nếu có
+                                    $serviceUrl = route('site.services.show', $serviceId);
+                                } elseif ($detail->notes) {
+                                    // Tìm service đơn theo tên
+                                    $singleService = \App\Models\Service::where('name', $detail->notes)
+                                        ->whereDoesntHave('serviceVariants')
+                                        ->first();
+                                    if ($singleService) {
+                                        $serviceImage = $singleService->image;
+                                        $serviceId = $singleService->id;
+                                        $serviceName = $singleService->name;
+                                        $serviceUrl = route('site.services.show', $serviceId);
+                                    }
+                                }
+                                
+                                // Ảnh được lưu ở legacy/images/products/
+                                $imageUrl = $serviceImage 
+                                    ? asset('legacy/images/products/' . $serviceImage) 
+                                    : asset('legacy/images/products/default.jpg');
+                                
+                                // Lấy thuộc tính của service variant
+                                $attributes = [];
+                                if ($detail->serviceVariant && $detail->serviceVariant->variantAttributes) {
+                                    foreach ($detail->serviceVariant->variantAttributes as $attr) {
+                                        $attributes[] = [
+                                            'name' => $attr->attribute_name,
+                                            'value' => $attr->attribute_value
+                                        ];
+                                    }
+                                }
+                            @endphp
+                            <a href="{{ $serviceUrl }}" class="service-item-link" style="text-decoration: none; color: inherit;">
+                                <div class="service-item" 
+                                     data-service-id="{{ $serviceId }}"
+                                     data-service-type="{{ $detail->serviceVariant ? 'variant' : ($detail->combo_id ? 'combo' : 'single') }}">
+                                    <div class="service-info">
+                                        <div class="service-name">
+                                            @if($detail->serviceVariant && $detail->serviceVariant->service)
+                                                {{ $detail->serviceVariant->service->name }} - {{ $detail->serviceVariant->name }}
+                                            @elseif($detail->combo_id && $detail->combo)
+                                                Combo: {{ $detail->combo->name }}
+                                            @elseif($detail->notes)
+                                                {{ $detail->notes }}
+                                            @else
+                                                Dịch vụ không xác định
+                                            @endif
+                                        </div>
+                                        <div class="service-details">
+                                            @if($detail->serviceVariant && $detail->serviceVariant->service)
+                                                Danh mục: {{ $detail->serviceVariant->service->name }}
+                                            @elseif($detail->combo_id && $detail->combo)
+                                                Loại: Combo
+                                            @elseif($detail->notes)
+                                                Loại: Dịch vụ đơn
+                                            @endif
+                                            @if($detail->duration)
+                                                | Thời lượng: {{ $detail->duration }} phút
+                                            @endif
+                                            @if($detail->status)
+                                                | Trạng thái: {{ $detail->status }}
+                                            @endif
+                                        </div>
                                     </div>
-                                    <div class="service-details">
-                                        @if($detail->serviceVariant->service)
-                                            Danh mục: {{ $detail->serviceVariant->service->name }}
+                                    <div class="service-price">
+                                        {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ
+                                    </div>
+                                    @if($serviceImage || count($attributes) > 0)
+                                    <div class="service-tooltip">
+                                        @if($serviceImage)
+                                        <div class="tooltip-image">
+                                            <img src="{{ $imageUrl }}" alt="{{ $serviceName }}" onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}'">
+                                        </div>
                                         @endif
-                                        @if($detail->duration)
-                                            | Thời lượng: {{ $detail->duration }} phút
-                                        @endif
-                                        @if($detail->status)
-                                            | Trạng thái: {{ $detail->status }}
+                                        @if(count($attributes) > 0)
+                                        <div class="tooltip-attributes">
+                                            <div class="tooltip-attributes-title">Thuộc tính:</div>
+                                            <div class="tooltip-attributes-list">
+                                                @foreach($attributes as $attr)
+                                                <span class="attribute-badge">
+                                                    {{ $attr['name'] }}: {{ $attr['value'] }}
+                                                </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
                                         @endif
                                     </div>
+                                    @endif
                                 </div>
-                                <div class="service-price">
-                                    {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ
-                                </div>
-                            </div>
-                            @endif
+                            </a>
                         @endforeach
                     </div>
                     
@@ -421,9 +251,6 @@
                         <a href="{{ route('site.cart.index') }}" class="btn-action btn-back">
                             <i class="fa fa-arrow-left"></i> Quay lại
                         </a>
-                        <button type="button" class="btn-action btn-print" onclick="window.print()">
-                            <i class="fa fa-print"></i> In
-                        </button>
                         @if(isset($canReview) && $canReview)
                             <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn-action" style="background: #ffc107; color: #000;">
                                 <i class="fa fa-star"></i> Đánh giá dịch vụ
@@ -453,5 +280,6 @@
         </div>
     </div>
 </div>
+
 @endsection
 

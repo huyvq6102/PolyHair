@@ -8,7 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Chạy mỗi phút để kiểm tra và tự động xác nhận lịch hẹn sau 30 phút
+// Chạy mỗi phút để kiểm tra và tự động xác nhận lịch hẹn sau 5 phút
 Schedule::command('appointments:auto-confirm')
     ->everyMinute()
     ->withoutOverlapping()

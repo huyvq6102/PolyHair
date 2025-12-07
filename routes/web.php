@@ -66,6 +66,7 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
 
 // Customer Routes
 Route::prefix('customer')->name('site.customers.')->group(function () {
+    Route::get('/{id}/appointments-status', [CustomerController::class, 'getAppointmentsStatus'])->name('appointments-status');
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
 });
 
