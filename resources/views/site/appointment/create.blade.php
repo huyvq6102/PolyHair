@@ -204,128 +204,101 @@
 
                             @php
                                 $hasAnyService = request('service_id') || request('service_variants') || request('combo_id');
-                            @endphp
-                            
-                            @if(request('service_id'))
-                                @php
+                                
+                                // Collect all selected items
+                                $allSelectedItems = [];
+                                $totalPrice = 0;
+                                $totalCount = 0;
+                                
+                                // Get services
+                                if (request('service_id')) {
                                     $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
                                     $selectedServices = \App\Models\Service::whereIn('id', $serviceIds)->get();
-                                @endphp
-                                @if($selectedServices->count() > 0)
-                                    @foreach($selectedServices as $selectedService)
-                                        <div class="selected-service-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px;">
-                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i> {{ $selectedService->name }}
-                                                    </div>
-                                                    <div style="color: #666; font-size: 13px;">
-                                                        <span style="margin-right: 20px;">
-                                                            <i class="fa fa-money" style="color: #c08a3f;"></i> <strong style="color: #c08a3f;">{{ number_format($selectedService->base_price ?? 0, 0, ',', '.') }}vnđ</strong>
-                                                        </span>
-                                                        <span>
-                                                            <i class="fa fa-clock-o"></i> <strong>{{ $selectedService->base_duration ?? 60 }} phút</strong>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_service_id' => $selectedService->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 6px 12px; font-size: 12px; border-radius: 6px; margin-left: 15px;">
-                                                    <i class="fa fa-times"></i> Xóa
-                                                </a>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                @endif
-                            @endif
-                            
-                            @if(request('service_variants'))
-                                @php
+                                    foreach ($selectedServices as $service) {
+                                        $allSelectedItems[] = [
+                                            'name' => $service->name,
+                                            'price' => $service->base_price ?? 0,
+                                            'type' => 'service',
+                                            'id' => $service->id
+                                        ];
+                                        $totalPrice += $service->base_price ?? 0;
+                                        $totalCount++;
+                                    }
+                                }
+                                
+                                // Get variants
+                                if (request('service_variants')) {
                                     $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
                                     $selectedVariants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->with('service')->get();
-                                @endphp
-                                @if($selectedVariants->count() > 0)
-                                    @foreach($selectedVariants as $variant)
-                                        <div class="selected-variant-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px;">
-                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i> {{ $variant->name }}
-                                                        @if($variant->service)
-                                                            <span style="color: #666; font-size: 12px; font-weight: 400;">({{ $variant->service->name }})</span>
-                                                        @endif
-                                                    </div>
-                                                    <div style="color: #666; font-size: 13px;">
-                                                        <span style="margin-right: 20px;">
-                                                            <i class="fa fa-money" style="color: #c08a3f;"></i> <strong style="color: #c08a3f;">{{ number_format($variant->price ?? 0, 0, ',', '.') }}vnđ</strong>
-                                                        </span>
-                                                        <span>
-                                                            <i class="fa fa-clock-o"></i> <strong>{{ $variant->duration ?? 60 }} phút</strong>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_variant_id' => $variant->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 6px 12px; font-size: 12px; border-radius: 6px; margin-left: 15px;">
-                                                    <i class="fa fa-times"></i> Xóa
-                                                </a>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                @endif
-                            @endif
-                            
-                            @if(request('combo_id'))
-                                @php
+                                    foreach ($selectedVariants as $variant) {
+                                        $name = $variant->service ? $variant->service->name . ' - ' . $variant->name : $variant->name;
+                                        $allSelectedItems[] = [
+                                            'name' => $name,
+                                            'price' => $variant->price ?? 0,
+                                            'type' => 'variant',
+                                            'id' => $variant->id
+                                        ];
+                                        $totalPrice += $variant->price ?? 0;
+                                        $totalCount++;
+                                    }
+                                }
+                                
+                                // Get combos
+                                if (request('combo_id')) {
                                     $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
-                                    $selectedCombos = \App\Models\Combo::whereIn('id', $comboIds)->with('comboItems.serviceVariant')->get();
-                                @endphp
-                                @if($selectedCombos->count() > 0)
-                                    @foreach($selectedCombos as $selectedCombo)
-                                        @php
-                                            $comboDuration = 60;
-                                            if ($selectedCombo->comboItems && $selectedCombo->comboItems->count() > 0) {
-                                                $comboDuration = $selectedCombo->comboItems->sum(function($item) {
-                                                    return $item->serviceVariant->duration ?? 60;
-                                                });
-                                            }
-                                        @endphp
-                                        <div class="selected-combo-display" style="background: #f8f9fa; border: 2px solid #000; border-radius: 10px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <div style="flex: 1;">
-                                                    <div style="color: #000; font-size: 15px; font-weight: 700; margin-bottom: 6px;">
-                                                        <i class="fa fa-check-circle" style="color: #28a745; font-size: 16px; margin-right: 8px;"></i> {{ $selectedCombo->name }}
-                                                        <span style="color: #666; font-size: 12px; font-weight: 400; margin-left: 5px;">(COMBO)</span>
-                                                    </div>
-                                                    <div style="color: #666; font-size: 13px;">
-                                                        <span style="margin-right: 20px;">
-                                                            <i class="fa fa-money" style="color: #c08a3f;"></i> <strong style="color: #c08a3f;">{{ number_format($selectedCombo->price ?? 0, 0, ',', '.') }}vnđ</strong>
-                                                        </span>
-                                                        <span>
-                                                            <i class="fa fa-clock-o"></i> <strong>{{ $comboDuration }} phút</strong>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <a href="{{ route('site.appointment.create', array_filter(array_merge(request()->all(), ['remove_combo_id' => $selectedCombo->id]))) }}" class="btn btn-sm" style="background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 6px 12px; font-size: 12px; border-radius: 6px; margin-left: 15px;">
-                                                    <i class="fa fa-times"></i> Xóa
-                                                </a>
-                                            </div>
+                                    $selectedCombos = \App\Models\Combo::whereIn('id', $comboIds)->get();
+                                    foreach ($selectedCombos as $combo) {
+                                        $allSelectedItems[] = [
+                                            'name' => $combo->name,
+                                            'price' => $combo->price ?? 0,
+                                            'type' => 'combo',
+                                            'id' => $combo->id
+                                        ];
+                                        $totalPrice += $combo->price ?? 0;
+                                        $totalCount++;
+                                    }
+                                }
+                            @endphp
+                            
+                            @if($hasAnyService && count($allSelectedItems) > 0)
+                                <!-- Header với icon và số lượng -->
+                                <div style="background: #f8f9fa; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e0e0e0; border-bottom: none;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="fa fa-scissors" style="color: #000; font-size: 16px;"></i>
+                                        <span style="color: #000; font-size: 14px; font-weight: 600;">Đã chọn {{ $totalCount }} dịch vụ</span>
+                                    </div>
+                                    <i class="fa fa-chevron-right" style="color: #000; font-size: 12px;"></i>
+                                </div>
+                                
+                                <!-- Danh sách dịch vụ dạng tags -->
+                                <div style="background: #fff; padding: 12px 16px; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px;">
+                                    @foreach($allSelectedItems as $item)
+                                        <div style="background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 20px; padding: 8px 14px; display: inline-block; font-size: 13px; color: #333;">
+                                            {{ $item['name'] }}
                                         </div>
                                     @endforeach
-                                @endif
-                            @endif
-                            
-                            @if($hasAnyService)
-                                <div style="margin-top: 6px;">
-                                    <a href="{{ route('site.appointment.select-services', array_merge(request()->all(), ['add_more' => true])) }}" 
-                                       class="btn btn-sm w-100 select-services-link" 
-                                       style="background: #000; border: 1px solid #000; color: #fff; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; text-decoration: none; display: inline-block; text-align: center; height: 38px;">
-                                        <i class="fa fa-plus"></i> Chọn thêm dịch vụ
-                                    </a>
                                 </div>
+                                
+                                <!-- Tổng số tiền -->
+                                <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="color: #000; font-size: 14px; font-weight: 500;">Tổng số tiền anh cần thanh toán:</span>
+                                        <span style="color: #28a745; font-size: 16px; font-weight: 700;">{{ number_format($totalPrice, 0, ',', '.') }} VNĐ</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Nút chọn thêm dịch vụ -->
+                                <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}" 
+                                   class="btn w-100" 
+                                   style="background: #fff; border: 1px solid #0066cc; color: #0066cc; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center; margin-top: 12px;">
+                                    <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn thêm dịch vụ ({{ $totalCount }})
+                                </a>
                             @else
-                                <a href="{{ route('site.appointment.select-services') }}" 
-                                   class="btn btn-primary w-100 select-services-link" 
-                                   style="background: #000; border: 1px solid #000; color: #fff; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; height: 38px;">
-                                    <i class="fa fa-book"></i> Chọn dịch vụ
+                                <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
+                                    <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn dịch vụ
                                 </a>
                             @endif
+                            
                             <div class="field-error" id="service-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
                                 <i class="fa fa-exclamation-circle"></i> <span></span>
                             </div>
