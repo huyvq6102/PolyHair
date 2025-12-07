@@ -5,7 +5,7 @@
 @section('content')
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Chi tiết đơn đặt #{{ $appointment->id }}</h1>
+    <h1 class="h3 mb-0 text-gray-800">Chi tiết đơn đặt {{ $appointment->booking_code ?? '#' . $appointment->id }}</h1>
     <a href="{{ route('employee.appointments.index') }}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Quay lại
     </a>
@@ -21,7 +21,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label class="font-weight-bold">Mã đơn đặt:</label>
-                    <p class="form-control-plaintext">#{{ $appointment->id }}</p>
+                    <p class="form-control-plaintext">{{ $appointment->booking_code ?? '#' . $appointment->id }}</p>
                 </div>
             </div>
             <div class="col-md-6">

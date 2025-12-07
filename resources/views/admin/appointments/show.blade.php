@@ -5,7 +5,7 @@
 @section('content')
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Chi tiết lịch hẹn #{{ $appointment->id }}</h1>
+    <h1 class="h3 mb-0 text-gray-800">Chi tiết lịch hẹn {{ $appointment->booking_code ?? '#' . $appointment->id }}</h1>
     <a href="{{ route('admin.appointments.index') }}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Quay lại
     </a>

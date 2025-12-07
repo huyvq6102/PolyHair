@@ -80,67 +80,96 @@
             </div>
 
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <div class="form-group">
-                        <label for="service_type">Loại dịch vụ <span class="text-danger">*</span></label>
-                        <select name="service_type" id="service_type" class="form-control @error('service_type') is-invalid @enderror" required>
-                            <option value="">-- Chọn loại dịch vụ --</option>
-                            <option value="single" {{ old('service_type') == 'single' ? 'selected' : '' }}>Dịch vụ đơn</option>
-                            <option value="variant" {{ old('service_type') == 'variant' ? 'selected' : '' }}>Dịch vụ biến thể</option>
-                            <option value="combo" {{ old('service_type') == 'combo' ? 'selected' : '' }}>Combo</option>
-                        </select>
-                        @error('service_type')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @else
-                            <div class="invalid-feedback">Vui lòng chọn loại dịch vụ</div>
-                        @enderror
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="service_id">Dịch vụ <span class="text-danger">*</span></label>
-                        <!-- Dịch vụ đơn -->
-                        <select name="service_id" id="service_single" class="form-control service-select" style="display: none;" disabled>
-                            <option value="">-- Chọn dịch vụ đơn --</option>
-                            @foreach($singleServices as $service)
-                                <option value="{{ $service->id }}" data-service-id="{{ $service->id }}" data-price="{{ $service->base_price ?? 0 }}" data-duration="{{ $service->base_duration ?? 0 }}">
-                                    {{ $service->name }} - {{ number_format($service->base_price ?? 0, 0, ',', '.') }} đ
-                                </option>
-                            @endforeach
-                        </select>
-                        
-                        <!-- Dịch vụ biến thể -->
-                        <select name="service_variant_id" id="service_variant" class="form-control service-select" style="display: none;" disabled>
-                            <option value="">-- Chọn dịch vụ biến thể --</option>
-                            @foreach($variantServices as $service)
-                                <optgroup label="{{ $service->name }}" data-service-id="{{ $service->id }}">
-                                    @foreach($service->serviceVariants as $variant)
-                                        <option value="{{ $variant->id }}" data-service-id="{{ $service->id }}" data-price="{{ $variant->price }}" data-duration="{{ $variant->duration }}">
-                                            {{ $variant->name }} - {{ number_format($variant->price, 0, ',', '.') }} đ
-                                        </option>
+                        <label>Chọn dịch vụ <span class="text-danger">*</span></label>
+                        <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Dịch vụ đơn -->
+                            @if($singleServices->count() > 0)
+                                <div class="mb-3">
+                                    <h6 class="text-primary">Dịch vụ đơn</h6>
+                                    <div class="row">
+                                        @foreach($singleServices as $service)
+                                            <div class="col-md-4 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input service-checkbox" type="checkbox" 
+                                                           name="services[]" 
+                                                           value="single_{{ $service->id }}" 
+                                                           id="service_single_{{ $service->id }}"
+                                                           data-type="single"
+                                                           data-id="{{ $service->id }}"
+                                                           data-price="{{ $service->base_price ?? 0 }}"
+                                                           data-duration="{{ $service->base_duration ?? 0 }}">
+                                                    <label class="form-check-label" for="service_single_{{ $service->id }}">
+                                                        {{ $service->name }} - {{ number_format($service->base_price ?? 0, 0, ',', '.') }} đ
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                            
+                            <!-- Dịch vụ biến thể -->
+                            @if($variantServices->count() > 0)
+                                <div class="mb-3">
+                                    <h6 class="text-primary">Dịch vụ biến thể</h6>
+                                    @foreach($variantServices as $service)
+                                        <div class="mb-2">
+                                            <strong>{{ $service->name }}</strong>
+                                            <div class="row ml-3">
+                                                @foreach($service->serviceVariants as $variant)
+                                                    <div class="col-md-4 mb-2">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input service-checkbox" type="checkbox" 
+                                                                   name="services[]" 
+                                                                   value="variant_{{ $variant->id }}" 
+                                                                   id="service_variant_{{ $variant->id }}"
+                                                                   data-type="variant"
+                                                                   data-id="{{ $variant->id }}"
+                                                                   data-service-id="{{ $service->id }}"
+                                                                   data-price="{{ $variant->price }}"
+                                                                   data-duration="{{ $variant->duration }}">
+                                                            <label class="form-check-label" for="service_variant_{{ $variant->id }}">
+                                                                {{ $variant->name }} - {{ number_format($variant->price, 0, ',', '.') }} đ
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
                                     @endforeach
-                                </optgroup>
-                            @endforeach
-                        </select>
-                        
-                        <!-- Combo -->
-                        <select name="combo_id" id="service_combo" class="form-control service-select" style="display: none;" disabled>
-                            <option value="">-- Chọn combo --</option>
-                            @foreach($combos as $combo)
-                                <option value="{{ $combo->id }}" data-price="{{ $combo->price }}" data-duration="0">
-                                    {{ $combo->name }} - {{ number_format($combo->price, 0, ',', '.') }} đ
-                                </option>
-                            @endforeach
-                        </select>
-                        
-                        <div id="service_error" class="invalid-feedback" style="display: none;">Vui lòng chọn dịch vụ</div>
-                        @error('service_id')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                        @error('service_variant_id')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                        @error('combo_id')
+                                </div>
+                            @endif
+                            
+                            <!-- Combo -->
+                            @if($combos->count() > 0)
+                                <div class="mb-3">
+                                    <h6 class="text-primary">Combo</h6>
+                                    <div class="row">
+                                        @foreach($combos as $combo)
+                                            <div class="col-md-4 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input service-checkbox" type="checkbox" 
+                                                           name="services[]" 
+                                                           value="combo_{{ $combo->id }}" 
+                                                           id="service_combo_{{ $combo->id }}"
+                                                           data-type="combo"
+                                                           data-id="{{ $combo->id }}"
+                                                           data-price="{{ $combo->price }}"
+                                                           data-duration="0">
+                                                    <label class="form-check-label" for="service_combo_{{ $combo->id }}">
+                                                        {{ $combo->name }} - {{ number_format($combo->price, 0, ',', '.') }} đ
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                        <div id="service_error" class="invalid-feedback" style="display: none;">Vui lòng chọn ít nhất một dịch vụ</div>
+                        @error('services')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
@@ -156,8 +185,6 @@
                             <option value="Đã xác nhận" {{ old('status') == 'Đã xác nhận' ? 'selected' : '' }}>Đã xác nhận</option>
                             <option value="Đang thực hiện" {{ old('status') == 'Đang thực hiện' ? 'selected' : '' }}>Đang thực hiện</option>
                             <option value="Hoàn thành" {{ old('status') == 'Hoàn thành' ? 'selected' : '' }}>Hoàn thành</option>
-                            <option value="Chưa thanh toán" {{ old('status') == 'Chưa thanh toán' ? 'selected' : '' }}>Chưa thanh toán</option>
-                            <option value="Đã thanh toán" {{ old('status') == 'Đã thanh toán' ? 'selected' : '' }}>Đã thanh toán</option>
                         </select>
                         @error('status')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -232,184 +259,21 @@
         }, false);
     })();
     
-    // Xử lý chọn loại dịch vụ và lọc theo nhân viên
+    // Xử lý validation cho checkbox dịch vụ
     document.addEventListener('DOMContentLoaded', function() {
-        var serviceTypeSelect = document.getElementById('service_type');
-        var serviceSingle = document.getElementById('service_single');
-        var serviceVariant = document.getElementById('service_variant');
-        var serviceCombo = document.getElementById('service_combo');
         var serviceError = document.getElementById('service_error');
-        var employeeSelect = document.getElementById('employee_id');
-        
-        // Lưu tất cả dịch vụ ban đầu
-        var allSingleServices = Array.from(serviceSingle.options).map(opt => ({
-            value: opt.value,
-            text: opt.text,
-            html: opt.outerHTML,
-            serviceId: opt.getAttribute('data-service-id'),
-            price: opt.getAttribute('data-price'),
-            duration: opt.getAttribute('data-duration')
-        }));
-        
-        var allVariantServices = [];
-        Array.from(serviceVariant.querySelectorAll('optgroup')).forEach(optgroup => {
-            var variants = Array.from(optgroup.querySelectorAll('option')).map(opt => ({
-                value: opt.value,
-                text: opt.text,
-                html: opt.outerHTML,
-                serviceId: opt.getAttribute('data-service-id'),
-                price: opt.getAttribute('data-price'),
-                duration: opt.getAttribute('data-duration')
-            }));
-            allVariantServices.push({
-                label: optgroup.label,
-                serviceId: optgroup.getAttribute('data-service-id'),
-                variants: variants,
-                html: optgroup.outerHTML
-            });
-        });
-        
-        var allCombos = Array.from(serviceCombo.options).map(opt => ({
-            value: opt.value,
-            text: opt.text,
-            html: opt.outerHTML,
-            price: opt.getAttribute('data-price'),
-            duration: opt.getAttribute('data-duration')
-        }));
-        
-        // Xử lý khi chọn nhân viên
-        if (employeeSelect) {
-            employeeSelect.addEventListener('change', function() {
-                var employeeId = this.value;
-                if (employeeId) {
-                    // Gọi API để lấy dịch vụ của nhân viên
-                    fetch('/admin/appointments/employee/' + employeeId + '/services')
-                        .then(response => response.json())
-                        .then(data => {
-                            updateServices(data);
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                        });
-                } else {
-                    // Nếu không chọn nhân viên, hiển thị tất cả dịch vụ
-                    restoreAllServices();
-                }
-            });
-        }
-        
-        function updateServices(data) {
-            // Cập nhật dịch vụ đơn
-            serviceSingle.innerHTML = '<option value="">-- Chọn dịch vụ đơn --</option>';
-            data.singleServices.forEach(function(service) {
-                var option = document.createElement('option');
-                option.value = service.id;
-                option.textContent = service.name + ' - ' + new Intl.NumberFormat('vi-VN').format(service.price) + ' đ';
-                option.setAttribute('data-service-id', service.id);
-                option.setAttribute('data-price', service.price);
-                option.setAttribute('data-duration', service.duration);
-                serviceSingle.appendChild(option);
-            });
-            
-            // Cập nhật dịch vụ biến thể
-            serviceVariant.innerHTML = '<option value="">-- Chọn dịch vụ biến thể --</option>';
-            data.variantServices.forEach(function(service) {
-                var optgroup = document.createElement('optgroup');
-                optgroup.label = service.name;
-                optgroup.setAttribute('data-service-id', service.id);
-                service.variants.forEach(function(variant) {
-                    var option = document.createElement('option');
-                    option.value = variant.id;
-                    option.textContent = variant.name + ' - ' + new Intl.NumberFormat('vi-VN').format(variant.price) + ' đ';
-                    option.setAttribute('data-service-id', service.id);
-                    option.setAttribute('data-price', variant.price);
-                    option.setAttribute('data-duration', variant.duration);
-                    optgroup.appendChild(option);
-                });
-                serviceVariant.appendChild(optgroup);
-            });
-            
-            // Combo giữ nguyên (hiển thị tất cả)
-            // Không cần cập nhật vì combo có thể chứa nhiều dịch vụ
-        }
-        
-        function restoreAllServices() {
-            // Khôi phục dịch vụ đơn
-            serviceSingle.innerHTML = '<option value="">-- Chọn dịch vụ đơn --</option>';
-            allSingleServices.forEach(function(service) {
-                if (service.value) {
-                    serviceSingle.innerHTML += service.html;
-                }
-            });
-            
-            // Khôi phục dịch vụ biến thể
-            serviceVariant.innerHTML = '<option value="">-- Chọn dịch vụ biến thể --</option>';
-            allVariantServices.forEach(function(service) {
-                serviceVariant.innerHTML += service.html;
-            });
-        }
-        
-        // Khôi phục giá trị cũ nếu có
-        var oldServiceType = '{{ old("service_type") }}';
-        if (oldServiceType) {
-            showServiceSelect(oldServiceType);
-        }
-        
-        serviceTypeSelect.addEventListener('change', function() {
-            var selectedType = this.value;
-            showServiceSelect(selectedType);
-        });
-        
-        function showServiceSelect(type) {
-            // Ẩn tất cả các select
-            serviceSingle.style.display = 'none';
-            serviceSingle.disabled = true;
-            serviceSingle.removeAttribute('required');
-            
-            serviceVariant.style.display = 'none';
-            serviceVariant.disabled = true;
-            serviceVariant.removeAttribute('required');
-            
-            serviceCombo.style.display = 'none';
-            serviceCombo.disabled = true;
-            serviceCombo.removeAttribute('required');
-            
-            // Hiển thị select tương ứng
-            if (type === 'single') {
-                serviceSingle.style.display = 'block';
-                serviceSingle.disabled = false;
-                serviceSingle.setAttribute('required', 'required');
-            } else if (type === 'variant') {
-                serviceVariant.style.display = 'block';
-                serviceVariant.disabled = false;
-                serviceVariant.setAttribute('required', 'required');
-            } else if (type === 'combo') {
-                serviceCombo.style.display = 'block';
-                serviceCombo.disabled = false;
-                serviceCombo.setAttribute('required', 'required');
-            }
-        }
+        var form = document.querySelector('.needs-validation');
         
         // Validation khi submit
-        var form = document.querySelector('.needs-validation');
         if (form) {
             form.addEventListener('submit', function(e) {
-                var serviceType = serviceTypeSelect.value;
-                var hasService = false;
+                var checkedServices = document.querySelectorAll('.service-checkbox:checked');
                 
-                if (serviceType === 'single' && serviceSingle.value) {
-                    hasService = true;
-                } else if (serviceType === 'variant' && serviceVariant.value) {
-                    hasService = true;
-                } else if (serviceType === 'combo' && serviceCombo.value) {
-                    hasService = true;
-                }
-                
-                if (serviceType && !hasService) {
+                if (checkedServices.length === 0) {
                     e.preventDefault();
                     e.stopPropagation();
                     serviceError.style.display = 'block';
-                    serviceError.textContent = 'Vui lòng chọn dịch vụ';
+                    serviceError.textContent = 'Vui lòng chọn ít nhất một dịch vụ';
                 } else {
                     serviceError.style.display = 'none';
                 }
