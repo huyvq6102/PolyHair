@@ -73,7 +73,14 @@ class EmployeeAppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.employee-appointments.create', compact('customers', 'categories', 'services', 'employee', 'promotions'));
+        // Get Stylists and Barbers for selection
+        $staffMembers = \App\Models\Employee::whereHas('user')
+            ->whereIn('position', ['Stylist', 'Barber'])
+            ->with('user')
+            ->get()
+            ->sortBy('user.name');
+
+        return view('admin.employee-appointments.create', compact('customers', 'categories', 'services', 'employee', 'promotions', 'staffMembers'));
     }
 
     /**
@@ -92,7 +99,7 @@ class EmployeeAppointmentController extends Controller
         // Get validated data (validation is handled by Form Request)
         $validated = $request->validated();
         $customerType = $request->input('customer_type', 'existing');
-        
+
         if ($customerType === 'existing') {
             $userId = $validated['user_id'];
         } else {
@@ -108,6 +115,10 @@ class EmployeeAppointmentController extends Controller
             $userId = $newUser->id;
         }
 
+        $request->validate([
+            'staff_id' => 'required|exists:employees,id',
+        ]);
+
         try {
             // Validate time format manually
             $timeString = $validated['appointment_time'];
@@ -115,24 +126,24 @@ class EmployeeAppointmentController extends Controller
                 return back()->withInput()
                     ->withErrors(['appointment_time' => 'Định dạng giờ không hợp lệ. Vui lòng nhập theo định dạng HH:mm (ví dụ: 09:00, 14:30).']);
             }
-            
+
             // Parse appointment date and time
             $appointmentDate = Carbon::parse($validated['appointment_date']);
             $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
-            
+
             // Calculate total duration from selected service variants / base services
             $totalDuration = 0;
             $serviceVariantData = [];
-            
+
             // Biến thể dịch vụ (nếu có)
             $variantIds = $validated['service_variants'] ?? [];
             foreach ($variantIds as $variantId) {
                 $variant = ServiceVariant::findOrFail($variantId);
                 $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
-                
+
                 $serviceVariantData[] = [
                     'service_variant_id' => $variantId,
-                    'employee_id' => $employee->id,
+                    'employee_id' => $validated['staff_id'] ?? $employee->id,
                     'price_snapshot' => $variant->price,
                     'duration' => $variant->duration ?? 60,
                     'status' => 'Chờ',
@@ -150,16 +161,16 @@ class EmployeeAppointmentController extends Controller
 
                 $serviceVariantData[] = [
                     'service_variant_id' => null,
-                    'employee_id' => $employee->id,
+                    'employee_id' => $validated['staff_id'] ?? $employee->id,
                     'price_snapshot' => $price,
                     'duration' => $duration,
                     'status' => 'Chờ',
                     'notes' => $service->name,
                 ];
             }
-            
+
             $endAt = $startAt->copy()->addMinutes($totalDuration);
-            
+
             // Optional: check time conflicts with existing appointments
             // Hiện tại tạm tắt check để tránh chặn đặt lịch khi không mong muốn.
             // Nếu sau này cần bật lại, đặt $enableConflictCheck = true.
@@ -168,22 +179,22 @@ class EmployeeAppointmentController extends Controller
             if ($enableConflictCheck) {
                 // Rule: Appointments must be at least 1 hour apart
                 $bufferMinutes = 60; // 1 hour buffer between appointments
-                
+
                 $existingAppointments = \App\Models\Appointment::where('employee_id', $employee->id)
                     ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
                     ->whereNotIn('status', ['Đã hủy', 'Hoàn thành'])
                     ->get();
-                
+
                 foreach ($existingAppointments as $existing) {
                     $existingStart = Carbon::parse($existing->start_at);
                     $existingEnd = Carbon::parse($existing->end_at);
-                    
+
                     // Calculate minimum start time (existing end + 1 hour)
                     $minStartTime = $existingEnd->copy()->addMinutes($bufferMinutes);
-                    
+
                     // Calculate maximum end time (existing start - 1 hour)
                     $maxEndTime = $existingStart->copy()->subMinutes($bufferMinutes);
-                    
+
                     // Conflict occurs if:
                     // New appointment starts before minStartTime AND ends after maxEndTime
                     if ($startAt < $minStartTime && $endAt > $maxEndTime) {
@@ -200,7 +211,7 @@ class EmployeeAppointmentController extends Controller
             // Create appointment
             $appointment = $this->appointmentService->create([
                 'user_id' => $userId,
-                'employee_id' => $employee->id,
+                'employee_id' => $validated['staff_id'] ?? $employee->id,
                 'status' => 'Chờ xử lý',
                 'start_at' => $startAt,
                 'end_at' => $endAt,
@@ -220,14 +231,13 @@ class EmployeeAppointmentController extends Controller
                         'promotion_id'   => $promotion->id,
                         'user_id'        => $userId,
                         'appointment_id' => $appointment->id,
-                        'used_at'        => null, // sẽ được ghi nhận khi thực tế sử dụng/ thanh toán
+                        'used_at' => now(),
                     ]);
                 }
             }
 
             return redirect()->route('employee.appointments.show', $appointment->id)
                 ->with('success', 'Đã tạo lịch hẹn thành công!');
-
         } catch (\Exception $e) {
             // Ghi log rồi ném lại exception để hiển thị lỗi cụ thể (trong môi trường dev)
             \Log::error('Error creating appointment by employee', [
@@ -287,9 +297,9 @@ class EmployeeAppointmentController extends Controller
         $appointment = $this->appointmentService->getOne($id);
 
         // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id || 
-                     $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-        
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
         if (!$hasAccess) {
             return redirect()->route('employee.appointments.index')
                 ->with('error', 'Bạn không có quyền xem đơn đặt này.');
@@ -314,9 +324,9 @@ class EmployeeAppointmentController extends Controller
         $appointment = $this->appointmentService->getOne($id);
 
         // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id || 
-                     $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-        
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
         if (!$hasAccess) {
             return redirect()->route('employee.appointments.index')
                 ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
@@ -349,9 +359,9 @@ class EmployeeAppointmentController extends Controller
         $appointment = $this->appointmentService->getOne($id);
 
         // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id || 
-                     $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-        
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
         if (!$hasAccess) {
             return redirect()->route('employee.appointments.index')
                 ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
@@ -384,9 +394,9 @@ class EmployeeAppointmentController extends Controller
         $appointment = $this->appointmentService->getOne($id);
 
         // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id || 
-                     $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-        
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
         if (!$hasAccess) {
             return redirect()->route('employee.appointments.index')
                 ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
@@ -419,9 +429,9 @@ class EmployeeAppointmentController extends Controller
         $appointment = $this->appointmentService->getOne($id);
 
         // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id || 
-                     $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-        
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
         if (!$hasAccess) {
             return redirect()->route('employee.appointments.index')
                 ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
@@ -457,9 +467,9 @@ class EmployeeAppointmentController extends Controller
         $appointment = $this->appointmentService->getOne($id);
 
         // Check if appointment belongs to this employee
-        $hasAccess = $appointment->employee_id == $employee->id || 
-                     $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-        
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
         if (!$hasAccess) {
             return redirect()->route('employee.appointments.index')
                 ->with('error', 'Bạn không có quyền xóa đơn đặt này.');
@@ -486,4 +496,3 @@ class EmployeeAppointmentController extends Controller
         }
     }
 }
-

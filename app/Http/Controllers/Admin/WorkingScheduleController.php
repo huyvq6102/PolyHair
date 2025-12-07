@@ -20,7 +20,7 @@ class WorkingScheduleController extends Controller
 
         if ($request->filled('employee_name')) {
             $query->whereHas('employee.user', function ($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->employee_name.'%');
+                $q->where('name', 'like', '%' . $request->employee_name . '%');
             });
         }
 
@@ -66,7 +66,7 @@ class WorkingScheduleController extends Controller
         $currentPage = (int) $request->get('page', 1);
         $currentItems = $groupedSchedules->slice(($currentPage - 1) * $perPage, $perPage)->values();
         $total = $groupedSchedules->count();
-        
+
         // Tạo paginator với query string đầy đủ
         $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
             $currentItems,
@@ -79,7 +79,7 @@ class WorkingScheduleController extends Controller
                 'pageName' => 'page',
             ]
         );
-        
+
         // Set paginator path để giữ query string
         $paginator->setPath($request->url());
 
@@ -99,7 +99,7 @@ class WorkingScheduleController extends Controller
         $barbers = Employee::with('user')->where('position', 'Barber')->orderBy('id', 'desc')->get();
         $shampooers = Employee::with('user')->where('position', 'Shampooer')->orderBy('id', 'desc')->get();
         $receptionists = Employee::with('user')->where('position', 'Receptionist')->orderBy('id', 'desc')->get();
-        
+
         $shifts = WorkingShift::orderBy('start_time')->get();
 
         return view('admin.working-schedules.create', [
@@ -228,7 +228,7 @@ class WorkingScheduleController extends Controller
         }
 
         if (empty($conflicts)) {
-        return redirect()->route('admin.working-schedules.index')
+            return redirect()->route('admin.working-schedules.index')
                 ->with('success', $message ?: 'Lịch nhân viên đã được tạo thành công!');
         } else {
             return redirect()->back()
@@ -244,6 +244,14 @@ class WorkingScheduleController extends Controller
     public function show(string $id)
     {
         $schedule = WorkingSchedule::with(['employee.user', 'shift'])->findOrFail($id);
+
+        // Check permission if user is employee
+        if (auth()->user()->isEmployee() && !auth()->user()->isAdmin()) {
+            $currentEmployee = \App\Models\Employee::where('user_id', auth()->id())->first();
+            if (!$currentEmployee || $schedule->employee_id !== $currentEmployee->id) {
+                abort(403, 'Bạn chỉ có thể xem chi tiết lịch làm việc của chính mình.');
+            }
+        }
         $workDate = $schedule->work_date;
 
         // Lấy tất cả lịch của ngày đó, nhóm theo ca làm việc
@@ -334,7 +342,7 @@ class WorkingScheduleController extends Controller
     public function deleteAll(Request $request)
     {
         $count = WorkingSchedule::count();
-        
+
         if ($count === 0) {
             return redirect()->route('admin.working-schedules.index')
                 ->with('info', 'Không có lịch nào để xóa!');
@@ -391,7 +399,7 @@ class WorkingScheduleController extends Controller
     public function deleteAllTrash(Request $request)
     {
         $count = WorkingSchedule::onlyTrashed()->count();
-        
+
         if ($count === 0) {
             return redirect()->route('admin.working-schedules.trash')
                 ->with('info', 'Thùng rác trống!');
@@ -445,7 +453,7 @@ class WorkingScheduleController extends Controller
             if ($this->isTimeOverlapping($newStartTime, $newEndTime, $existingStartTime, $existingEndTime)) {
                 $shiftName = $schedule->shift->name ?? '';
                 $shiftTime = $schedule->shift->display_time ?? '';
-                
+
                 return "Trùng với ca '{$shiftName}' ({$shiftTime}) trong cùng ngày.";
             }
         }
@@ -466,7 +474,7 @@ class WorkingScheduleController extends Controller
         }
 
         $time = (string) $time;
-        
+
         // Loại bỏ phần ngày nếu có
         if (strpos($time, ' ') !== false) {
             $parts = explode(' ', $time);
@@ -505,4 +513,3 @@ class WorkingScheduleController extends Controller
         return $start1 < $end2 && $start2 < $end1;
     }
 }
-
