@@ -12,36 +12,61 @@
             // Merge với các dịch vụ đã chọn
             $mergedParams = $currentParams;
             
-            // Merge service_id
+            // Merge service_id - đảm bảo convert về string để so sánh đúng
             if (isset($newParams['service_id'])) {
                 $existingIds = isset($mergedParams['service_id']) ? (is_array($mergedParams['service_id']) ? $mergedParams['service_id'] : [$mergedParams['service_id']]) : [];
-                $newId = is_array($newParams['service_id']) ? $newParams['service_id'][0] : $newParams['service_id'];
-                if (!in_array($newId, $existingIds)) {
-                    $existingIds[] = $newId;
+                // Convert existing IDs to strings for comparison
+                $existingIds = array_map('strval', $existingIds);
+                $newIds = is_array($newParams['service_id']) ? $newParams['service_id'] : [$newParams['service_id']];
+                foreach ($newIds as $newId) {
+                    $newIdStr = (string)$newId;
+                    if (!in_array($newIdStr, $existingIds, true)) {
+                        $existingIds[] = $newIdStr;
+                    }
                 }
                 $mergedParams['service_id'] = $existingIds;
             }
             
-            // Merge service_variants
+            // Merge service_variants - đảm bảo convert về string để so sánh đúng
             if (isset($newParams['service_variants'])) {
                 $existingVariants = isset($mergedParams['service_variants']) ? (is_array($mergedParams['service_variants']) ? $mergedParams['service_variants'] : [$mergedParams['service_variants']]) : [];
+                // Convert existing variants to strings for comparison
+                $existingVariants = array_map('strval', $existingVariants);
                 $newVariants = is_array($newParams['service_variants']) ? $newParams['service_variants'] : [$newParams['service_variants']];
                 foreach ($newVariants as $variant) {
-                    if (!in_array($variant, $existingVariants)) {
-                        $existingVariants[] = $variant;
+                    $variantStr = (string)$variant;
+                    if (!in_array($variantStr, $existingVariants, true)) {
+                        $existingVariants[] = $variantStr;
                     }
                 }
                 $mergedParams['service_variants'] = $existingVariants;
             }
             
-            // Merge combo_id
+            // Merge combo_id - đảm bảo convert về string để so sánh đúng
             if (isset($newParams['combo_id'])) {
                 $existingCombos = isset($mergedParams['combo_id']) ? (is_array($mergedParams['combo_id']) ? $mergedParams['combo_id'] : [$mergedParams['combo_id']]) : [];
-                $newCombo = is_array($newParams['combo_id']) ? $newParams['combo_id'][0] : $newParams['combo_id'];
-                if (!in_array($newCombo, $existingCombos)) {
-                    $existingCombos[] = $newCombo;
+                // Convert existing combos to strings for comparison
+                $existingCombos = array_map('strval', $existingCombos);
+                $newCombos = is_array($newParams['combo_id']) ? $newParams['combo_id'] : [$newParams['combo_id']];
+                foreach ($newCombos as $newCombo) {
+                    $newComboStr = (string)$newCombo;
+                    if (!in_array($newComboStr, $existingCombos, true)) {
+                        $existingCombos[] = $newComboStr;
+                    }
                 }
                 $mergedParams['combo_id'] = $existingCombos;
+            }
+            
+            // Đảm bảo giữ lại tất cả các dịch vụ hiện có (không chỉ merge khi có newParams)
+            // Nếu không có newParams nhưng có existing params, vẫn giữ lại
+            if (!isset($newParams['service_id']) && isset($mergedParams['service_id'])) {
+                $mergedParams['service_id'] = is_array($mergedParams['service_id']) ? $mergedParams['service_id'] : [$mergedParams['service_id']];
+            }
+            if (!isset($newParams['service_variants']) && isset($mergedParams['service_variants'])) {
+                $mergedParams['service_variants'] = is_array($mergedParams['service_variants']) ? $mergedParams['service_variants'] : [$mergedParams['service_variants']];
+            }
+            if (!isset($newParams['combo_id']) && isset($mergedParams['combo_id'])) {
+                $mergedParams['combo_id'] = is_array($mergedParams['combo_id']) ? $mergedParams['combo_id'] : [$mergedParams['combo_id']];
             }
             
             // Xóa add_more khỏi params
@@ -594,27 +619,49 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (isAddMore) {
             // Get service_ids from URL and lock them
-            const serviceIdsParam = urlParams.getAll('service_id[]');
-            if (serviceIdsParam.length > 0) {
-                const ids = serviceIdsParam.map(id => parseInt(id)).filter(id => !isNaN(id));
-                selectedServices.serviceIds = [...ids];
-                lockedServices.serviceIds = [...ids]; // Lock these services
+            // Handle both formats: service_id[] and service_id[0], service_id[1], etc.
+            let serviceIds = [];
+            urlParams.forEach((value, key) => {
+                if (key === 'service_id[]' || /^service_id\[\d+\]$/.test(key)) {
+                    const id = parseInt(value);
+                    if (!isNaN(id) && !serviceIds.includes(id)) {
+                        serviceIds.push(id);
+                    }
+                }
+            });
+            if (serviceIds.length > 0) {
+                selectedServices.serviceIds = [...serviceIds];
+                lockedServices.serviceIds = [...serviceIds]; // Lock these services
             }
             
             // Get service_variants from URL and lock them
-            const variantIdsParam = urlParams.getAll('service_variants[]');
-            if (variantIdsParam.length > 0) {
-                const ids = variantIdsParam.map(id => parseInt(id)).filter(id => !isNaN(id));
-                selectedServices.variantIds = [...ids];
-                lockedServices.variantIds = [...ids]; // Lock these variants
+            let variantIds = [];
+            urlParams.forEach((value, key) => {
+                if (key === 'service_variants[]' || /^service_variants\[\d+\]$/.test(key)) {
+                    const id = parseInt(value);
+                    if (!isNaN(id) && !variantIds.includes(id)) {
+                        variantIds.push(id);
+                    }
+                }
+            });
+            if (variantIds.length > 0) {
+                selectedServices.variantIds = [...variantIds];
+                lockedServices.variantIds = [...variantIds]; // Lock these variants
             }
             
             // Get combo_ids from URL and lock them
-            const comboIdsParam = urlParams.getAll('combo_id[]');
-            if (comboIdsParam.length > 0) {
-                const ids = comboIdsParam.map(id => parseInt(id)).filter(id => !isNaN(id));
-                selectedServices.comboIds = [...ids];
-                lockedServices.comboIds = [...ids]; // Lock these combos
+            let comboIds = [];
+            urlParams.forEach((value, key) => {
+                if (key === 'combo_id[]' || /^combo_id\[\d+\]$/.test(key)) {
+                    const id = parseInt(value);
+                    if (!isNaN(id) && !comboIds.includes(id)) {
+                        comboIds.push(id);
+                    }
+                }
+            });
+            if (comboIds.length > 0) {
+                selectedServices.comboIds = [...comboIds];
+                lockedServices.comboIds = [...comboIds]; // Lock these combos
             }
             
             // Load full item details for selected services (use setTimeout to ensure DOM is ready)
@@ -1007,9 +1054,36 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (isAddMore) {
             // Get existing services from URL (these MUST be kept - always include them)
-            const existingServiceIds = urlParams.getAll('service_id[]').map(id => parseInt(id)).filter(id => !isNaN(id));
-            const existingVariantIds = urlParams.getAll('service_variants[]').map(id => parseInt(id)).filter(id => !isNaN(id));
-            const existingComboIds = urlParams.getAll('combo_id[]').map(id => parseInt(id)).filter(id => !isNaN(id));
+            // Handle both formats: service_id[] and service_id[0], service_id[1], etc.
+            let existingServiceIds = [];
+            urlParams.forEach((value, key) => {
+                if (key === 'service_id[]' || /^service_id\[\d+\]$/.test(key)) {
+                    const id = parseInt(value);
+                    if (!isNaN(id) && !existingServiceIds.includes(id)) {
+                        existingServiceIds.push(id);
+                    }
+                }
+            });
+            
+            let existingVariantIds = [];
+            urlParams.forEach((value, key) => {
+                if (key === 'service_variants[]' || /^service_variants\[\d+\]$/.test(key)) {
+                    const id = parseInt(value);
+                    if (!isNaN(id) && !existingVariantIds.includes(id)) {
+                        existingVariantIds.push(id);
+                    }
+                }
+            });
+            
+            let existingComboIds = [];
+            urlParams.forEach((value, key) => {
+                if (key === 'combo_id[]' || /^combo_id\[\d+\]$/.test(key)) {
+                    const id = parseInt(value);
+                    if (!isNaN(id) && !existingComboIds.includes(id)) {
+                        existingComboIds.push(id);
+                    }
+                }
+            });
             
             // Get ALL currently selected services (includes both existing from URL + newly selected)
             // Use Set to automatically remove duplicates when merging

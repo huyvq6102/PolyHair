@@ -1331,9 +1331,19 @@ class AppointmentController extends Controller
             // Khởi tạo $employees là collection rỗng
             $employees = collect([]);
             
-            // Query nhân viên dựa trên chuyên môn được set trong admin
-            // Phân biệt dịch vụ đơn và dịch vụ biến thể
-            if (!empty($singleServiceIds) || !empty($variantServiceIds)) {
+            // Nếu không có service_id, trả về TẤT CẢ nhân viên
+            if (empty($singleServiceIds) && empty($variantServiceIds)) {
+                $employees = \App\Models\Employee::with(['user.role', 'services:id,name'])
+                    ->whereNotNull('user_id')
+                    ->where('status', '!=', 'Vô hiệu hóa')
+                    ->whereHas('user', function($query) {
+                        $query->where('role_id', '!=', 1);
+                    })
+                    ->get()
+                    ->values();
+            } else {
+                // Query nhân viên dựa trên chuyên môn được set trong admin
+                // Phân biệt dịch vụ đơn và dịch vụ biến thể
                 $employeeIds = [];
                 
                 // Nếu có dịch vụ đơn được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ đơn
@@ -1514,43 +1524,48 @@ class AppointmentController extends Controller
             
             $targetServiceIds = array_unique(array_filter($targetServiceIds));
             
+            // Nếu không có service_id, trả về TẤT CẢ nhân viên
             if (empty($targetServiceIds)) {
-                return response()->json([
-                    'success' => true,
-                    'employees' => [],
-                ]);
+                $employees = \App\Models\Employee::with(['user.role', 'services:id,name'])
+                    ->whereNotNull('user_id')
+                    ->where('status', '!=', 'Vô hiệu hóa')
+                    ->whereHas('user', function($query) {
+                        $query->where('role_id', '!=', 1);
+                    })
+                    ->get()
+                    ->values();
+            } else {
+                // Lấy nhân viên có chuyên môn là các service này
+                $employeeIds = \DB::table('employee_skills')
+                    ->whereIn('service_id', $targetServiceIds)
+                    ->whereNotNull('employee_id')
+                    ->whereNotNull('service_id')
+                    ->distinct()
+                    ->pluck('employee_id')
+                    ->toArray();
+                
+                if (empty($employeeIds)) {
+                    return response()->json([
+                        'success' => true,
+                        'employees' => [],
+                    ]);
+                }
+                
+                // Query nhân viên
+                $employees = \App\Models\Employee::with(['user.role', 'services:id,name'])
+                    ->whereIn('id', $employeeIds)
+                    ->whereNotNull('user_id')
+                    ->where('status', '!=', 'Vô hiệu hóa')
+                    ->whereHas('user', function($query) {
+                        $query->where('role_id', '!=', 1);
+                    })
+                    ->get()
+                    ->filter(function($employee) use ($targetServiceIds) {
+                        $employeeServiceIds = $employee->services->pluck('id')->toArray();
+                        return !empty(array_intersect($employeeServiceIds, $targetServiceIds));
+                    })
+                    ->values();
             }
-            
-            // Lấy nhân viên có chuyên môn là các service này
-            $employeeIds = \DB::table('employee_skills')
-                ->whereIn('service_id', $targetServiceIds)
-                ->whereNotNull('employee_id')
-                ->whereNotNull('service_id')
-                ->distinct()
-                ->pluck('employee_id')
-                ->toArray();
-            
-            if (empty($employeeIds)) {
-                return response()->json([
-                    'success' => true,
-                    'employees' => [],
-                ]);
-            }
-            
-            // Query nhân viên
-            $employees = \App\Models\Employee::with(['user.role', 'services:id,name'])
-                ->whereIn('id', $employeeIds)
-                ->whereNotNull('user_id')
-                ->where('status', '!=', 'Vô hiệu hóa')
-                ->whereHas('user', function($query) {
-                    $query->where('role_id', '!=', 1);
-                })
-                ->get()
-                ->filter(function($employee) use ($targetServiceIds) {
-                    $employeeServiceIds = $employee->services->pluck('id')->toArray();
-                    return !empty(array_intersect($employeeServiceIds, $targetServiceIds));
-                })
-                ->values();
             
             return response()->json([
                 'success' => true,
