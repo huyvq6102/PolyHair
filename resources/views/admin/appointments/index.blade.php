@@ -141,15 +141,15 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 @if($appointment->status != 'Đã hủy')
-                                    <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
-                                            <i class="fas fa-ban"></i>
-                                        </button>
-                                    </form>
+                                <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
                                 @else
                                     <span class="btn btn-sm btn-secondary" title="Lịch đã hủy" disabled>
                                         <i class="fas fa-ban"></i>

@@ -7,51 +7,101 @@
         <!-- Cột thông tin cá nhân và hành động -->
         <div class="col-lg-4 mb-4">
             <div class="card border-0 shadow-sm text-center">
-                <div class="card-body">
-                    <img src="https://img.freepik.com/free-vector/smiling-young-man-illustration_1308-174669.jpg?semt=ais_hybrid&w=740&q=80" alt="Avatar"
-                         class="rounded-circle img-fluid mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                    <h4 class="mb-1">{{ $user->name }}</h4>
-                    <p class="text-muted mb-3">
+                <div class="card-body p-4">
+                    <!-- Avatar -->
+                    @if($user->avatar)
+                        <img src="{{ asset('storage/' . $user->avatar) }}" 
+                             alt="{{ $user->name }}"
+                             class="rounded-circle img-fluid mb-3 shadow-sm" 
+                             style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #f8f9fa;">
+                    @else
+                        <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm" 
+                             style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                        </div>
+                    @endif
+                    
+                    <h4 class="mb-2 fw-bold">{{ $user->name }}</h4>
+                    <p class="text-muted mb-4">
                         <i class="fas fa-medal me-1 text-warning"></i>Thành viên Vàng
                     </p>
 
                     <!-- Thống kê -->
-                    <div class="d-flex justify-content-around mb-4 p-3 bg-light rounded">
-                        <div>
-                            <h5 class="mb-0">{{ $user->appointments->count() }}</h5>
-                            <small class="text-muted">Lần cắt</small>
-                        </div>
-                        <div>
-                            <h5 class="mb-0">1.250</h5>
-                            <small class="text-muted">Điểm thưởng</small>
+                    <div class="mb-4 p-4 bg-gradient-light rounded-3 shadow-sm" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="mb-2">
+                                <i class="fas fa-cut fa-2x text-primary mb-2"></i>
+                            </div>
+                            <h3 class="mb-0 fw-bold text-primary">{{ $user->appointments->where('status', '!=', 'Đã hủy')->count() }}</h3>
+                            <small class="text-muted fw-semibold">Lần cắt</small>
                         </div>
                     </div>
 
                     <!-- Nút hành động chính -->
-                    <div class="d-flex">
-                        <a href="#" class="mr-3 btn btn-primary rounded-pill w-100 fw-bold d-flex align-items-center justify-content-center py-2">
-                            <i class="fas fa-calendar-plus mr-2"></i>Đặt lịch
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('site.appointment.create') }}" 
+                           class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm">
+                            <i class="fas fa-calendar-plus me-2"></i>Đặt lịch ngay
                         </a>
-                        <a href="{{ route('profile.edit') }}" class="mr-2 btn btn-outline-secondary rounded-pill w-100 d-flex align-items-center justify-content-center py-2">
-                            <i class="fas fa-user-edit mr-2"></i>Sửa hồ sơ
+                        <a href="{{ route('profile.edit') }}" 
+                           class="btn btn-outline-secondary rounded-pill d-flex align-items-center justify-content-center py-2">
+                            <i class="fas fa-user-edit me-2"></i>Sửa hồ sơ
                         </a>
                     </div>
-
-
                 </div>
             </div>
             <div class="card border-0 shadow-sm mt-4">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">Barber yêu thích</h5>
+                <div class="card-header bg-white border-0 pb-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-heart text-danger me-2"></i>Barber yêu thích
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <img src="{{$user->avatar}}" alt="Barber" class="rounded-circle me-3" style="width: 50px; height: 50px;">
-                        <div>
-                            <h6 class="mb-0">Anh Minh Tuấn</h6>
-                            <small class="text-muted">Senior Barber</small>
+                <div class="card-body p-4">
+                    @if($favoriteBarber && $favoriteBarber->user)
+                        <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                            @if($favoriteBarber->avatar)
+                                <img src="{{ asset('storage/' . $favoriteBarber->avatar) }}" 
+                                     alt="{{ $favoriteBarber->user->name }}" 
+                                     class="rounded-circle me-3 shadow-sm" 
+                                     style="width: 70px; height: 70px; object-fit: cover; border: 3px solid #fff;">
+                            @else
+                                <div class="rounded-circle me-3 d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm" 
+                                     style="width: 70px; height: 70px; font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #fff;">
+                                    {{ strtoupper(substr($favoriteBarber->user->name, 0, 1)) }}
+                                </div>
+                            @endif
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-bold text-dark">{{ $favoriteBarber->user->name }}</h6>
+                                <small class="text-muted d-block mb-2">
+                                    <i class="fas fa-user-tag me-1"></i>
+                                    @if($favoriteBarber->position)
+                                        {{ $favoriteBarber->position }}
+                                    @elseif($favoriteBarber->level)
+                                        {{ $favoriteBarber->level }}
+                                    @else
+                                        Barber
+                                    @endif
+                                </small>
+                                @php
+                                    $appointmentCount = $user->appointments()
+                                        ->where('employee_id', $favoriteBarber->id)
+                                        ->where('status', '!=', 'Đã hủy')
+                                        ->count();
+                                @endphp
+                                <small class="text-primary fw-semibold">
+                                    <i class="fas fa-calendar-check me-1"></i>{{ $appointmentCount }} lần đặt lịch
+                                </small>
+                            </div>
                         </div>
-                    </div>
+                    @else
+                        <div class="text-center py-4">
+                            <div class="mb-3">
+                                <i class="fas fa-user-slash fa-3x text-muted opacity-50"></i>
+                            </div>
+                            <p class="text-muted mb-1 fw-semibold">Chưa có barber yêu thích</p>
+                            <small class="text-muted">Đặt lịch để tìm barber yêu thích của bạn</small>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -100,7 +150,7 @@
                                 @endphp
                                 
                                 @forelse($upcomingAppointments as $appointment)
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="list-group-item d-flex justify-content-between align-items-center" data-appointment-id="{{ $appointment->id }}">
                                     <div>
                                         <h6 class="mb-1">
                                             @if($appointment->appointmentDetails->count() > 0)
@@ -144,23 +194,23 @@
                                                 $statusBadgeClass = 'bg-primary';
                                             }
                                         @endphp
-                                        <span class="badge {{ $statusBadgeClass }} ms-2">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
+                                        <span class="badge {{ $statusBadgeClass }} ms-2 appointment-status-badge" data-status="{{ $appointment->status }}">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
                                     </div>
-                                    <div class="ms-3">
+                                    <div class="ms-3 appointment-actions" data-appointment-id="{{ $appointment->id }}">
                                         <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary me-2">Xem</a>
                                         @php
                                             // Chỉ hiển thị nút hủy nếu:
                                             // 1. Status = 'Chờ xử lý'
-                                            // 2. Chưa quá 30 phút kể từ khi đặt
+                                            // 2. Chưa quá 5 phút kể từ khi đặt
                                             $canCancel = false;
                                             if ($appointment->status === 'Chờ xử lý' && $appointment->created_at) {
                                                 $createdAt = \Carbon\Carbon::parse($appointment->created_at);
                                                 $minutesSinceCreated = $createdAt->diffInMinutes(now());
-                                                $canCancel = $minutesSinceCreated <= 30;
+                                                $canCancel = $minutesSinceCreated <= 5;
                                             }
                                         @endphp
                                         @if($canCancel)
-                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ $appointment->id }}">
+                                            <button type="button" class="btn btn-sm btn-outline-danger appointment-cancel-btn" data-bs-toggle="modal" data-bs-target="#cancelModal{{ $appointment->id }}">
                                                 Hủy
                                             </button>
                                             
@@ -413,9 +463,271 @@
 <script>
     // Đảm bảo Bootstrap JS được tải
     var tabEl = document.querySelector('button[data-bs-toggle="tab"]')
-    tabEl.addEventListener('show.bs.tab', function (event) {
-      // event.target // newly activated tab
-      // event.relatedTarget // previous active tab
-    })
+    if (tabEl) {
+        tabEl.addEventListener('show.bs.tab', function (event) {
+          // event.target // newly activated tab
+          // event.relatedTarget // previous active tab
+        })
+    }
+
+    // Tự động cập nhật trạng thái lịch hẹn
+    (function() {
+        const userId = {{ $user->id }};
+        let updateInterval = null;
+        let lastStatuses = {}; // Lưu trạng thái cuối cùng để so sánh
+
+        function updateAppointmentStatus() {
+            const url = `{{ route('site.customers.appointments-status', $user->id) }}`;
+            console.log('[Polling] Fetching appointment status from:', url);
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin',
+                cache: 'no-cache'
+            })
+                .then(response => {
+                    console.log('[Polling] Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('[Polling] Appointment status update:', data);
+                    if (data.success && data.appointments) {
+                        console.log('[Polling] Found', data.appointments.length, 'appointments');
+                        
+                        // Cập nhật lastStatuses trước khi xử lý
+                        data.appointments.forEach(function(appointment) {
+                            lastStatuses[appointment.id] = appointment.status;
+                        });
+                        
+                        data.appointments.forEach(function(appointment) {
+                            // Đảm bảo ID là string để so sánh
+                            const appointmentId = String(appointment.id);
+                            console.log('[Polling] Processing appointment:', appointmentId, 'Status:', appointment.status);
+                            
+                            // Tìm element với data-appointment-id
+                            const appointmentElement = document.querySelector(`[data-appointment-id="${appointmentId}"]`);
+                            if (!appointmentElement) {
+                                console.warn('[Polling] Appointment element not found for ID:', appointmentId);
+                                // Thử tìm lại với tất cả elements
+                                const allElements = document.querySelectorAll('[data-appointment-id]');
+                                console.log('[Polling] Available appointment IDs in DOM:', Array.from(allElements).map(el => el.getAttribute('data-appointment-id')));
+                                return;
+                            }
+
+                            const statusBadge = appointmentElement.querySelector('.appointment-status-badge');
+                            const actionsContainer = appointmentElement.querySelector('.appointment-actions');
+                            
+                            if (!statusBadge) {
+                                console.warn('[Polling] Status badge not found for appointment:', appointment.id);
+                                return;
+                            }
+                            
+                            const currentStatus = statusBadge.getAttribute('data-status') || statusBadge.textContent.trim();
+                            const newStatus = appointment.status;
+                            console.log('[Polling] Appointment', appointment.id, '- Current:', currentStatus, 'New:', newStatus);
+                            
+                            // Chỉ cập nhật nếu trạng thái thay đổi
+                            if (currentStatus !== newStatus) {
+                                console.log('[Polling] ⚠️ STATUS CHANGED! Updating appointment', appointment.id, 'from', currentStatus, 'to', newStatus);
+                                
+                                // Cập nhật badge text
+                                statusBadge.textContent = newStatus;
+                                statusBadge.setAttribute('data-status', newStatus);
+                                
+                                // Cập nhật class badge
+                                statusBadge.className = 'badge ms-2 appointment-status-badge';
+                                if (newStatus === 'Đã xác nhận') {
+                                    statusBadge.classList.add('bg-success');
+                                } else if (newStatus === 'Chờ xử lý') {
+                                    statusBadge.classList.add('bg-warning');
+                                } else if (newStatus === 'Đang thực hiện') {
+                                    statusBadge.classList.add('bg-primary');
+                                } else if (newStatus === 'Chưa thanh toán') {
+                                    statusBadge.classList.add('bg-danger');
+                                } else if (newStatus === 'Đã thanh toán') {
+                                    statusBadge.classList.add('bg-success');
+                                } else {
+                                    statusBadge.classList.add('bg-info');
+                                }
+
+                                // Cập nhật nút hủy
+                                if (actionsContainer) {
+                                    const cancelBtn = actionsContainer.querySelector('.appointment-cancel-btn');
+                                    if (newStatus === 'Đã xác nhận' || !appointment.can_cancel || newStatus === 'Đã thanh toán' || newStatus === 'Chưa thanh toán') {
+                                        // Ẩn nút hủy nếu đã xác nhận hoặc không thể hủy
+                                        if (cancelBtn) {
+                                            console.log('[Polling] Removing cancel button for appointment:', appointment.id);
+                                            cancelBtn.remove();
+                                        }
+                                    }
+                                }
+                                
+                                // Hiển thị thông báo trạng thái đã thay đổi
+                                showStatusChangeNotification(currentStatus, newStatus);
+                                
+                                console.log('[Polling] ✅ Status updated successfully for appointment:', appointment.id);
+                            } else {
+                                console.log('[Polling] Status unchanged for appointment:', appointment.id);
+                            }
+                        });
+                    } else {
+                        console.warn('[Polling] No appointments or invalid response:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('[Polling] ❌ Error updating appointment status:', error);
+                });
+        }
+
+        // Chạy polling cho tất cả lịch hẹn sắp tới
+        // Đợi DOM ready trước khi khởi tạo polling
+        function initPolling() {
+            const allAppointments = document.querySelectorAll('.appointment-status-badge');
+            console.log('[Polling] Initializing... Total appointments found:', allAppointments.length);
+            
+            // Khởi tạo lastStatuses từ DOM
+            allAppointments.forEach(function(badge) {
+                const appointmentElement = badge.closest('[data-appointment-id]');
+                if (appointmentElement) {
+                    const appointmentId = String(appointmentElement.getAttribute('data-appointment-id'));
+                    const currentStatus = badge.getAttribute('data-status') || badge.textContent.trim();
+                    lastStatuses[appointmentId] = currentStatus;
+                    console.log('[Polling] Initial status for appointment', appointmentId, ':', currentStatus);
+                }
+            });
+            
+            // Luôn chạy polling nếu có lịch hẹn sắp tới
+            if (allAppointments.length > 0) {
+                console.log('[Polling] ✅ Starting appointment status polling for', allAppointments.length, 'appointments...');
+                // Cập nhật ngay lập tức
+                updateAppointmentStatus();
+                
+                // Cập nhật mỗi 3 giây để phát hiện thay đổi trạng thái từ admin nhanh hơn
+                updateInterval = setInterval(function() {
+                    console.log('[Polling] Running scheduled update...');
+                    updateAppointmentStatus();
+                }, 3000);
+                
+                // Dừng polling sau 2 giờ (để tránh polling vô hạn, nhưng đủ lâu để theo dõi)
+                setTimeout(function() {
+                    if (updateInterval) {
+                        clearInterval(updateInterval);
+                        console.log('[Polling] ⏹️ Stopped appointment status polling after 2 hours');
+                    }
+                }, 7200000); // 2 giờ
+            } else {
+                console.log('[Polling] ⚠️ No appointments found, skipping polling');
+            }
+        }
+
+        // Khởi tạo khi DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPolling);
+        } else {
+            // DOM đã sẵn sàng
+            initPolling();
+        }
+        
+        // Hàm hiển thị thông báo khi trạng thái thay đổi
+        function showStatusChangeNotification(oldStatus, newStatus) {
+            const statusMessages = {
+                'Chờ xử lý': 'đang chờ xử lý',
+                'Đã xác nhận': 'đã được xác nhận',
+                'Đang thực hiện': 'đang được thực hiện',
+                'Hoàn thành': 'đã hoàn thành',
+                'Đã thanh toán': 'đã thanh toán',
+                'Chưa thanh toán': 'chưa thanh toán',
+                'Đã hủy': 'đã bị hủy'
+            };
+            
+            const oldStatusText = statusMessages[oldStatus] || oldStatus;
+            const newStatusText = statusMessages[newStatus] || newStatus;
+            
+            // Tạo thông báo
+            const message = `Trạng thái lịch hẹn đã thay đổi từ "${oldStatus}" sang "${newStatus}"`;
+            
+            // Kiểm tra xem có toastr không
+            if (typeof toastr !== 'undefined') {
+                toastr.success(message, 'Thông báo', {
+                    timeOut: 5000,
+                    closeButton: true,
+                    progressBar: true,
+                    positionClass: 'toast-top-right'
+                });
+            } else {
+                // Fallback: sử dụng Bootstrap toast
+                showBootstrapToast(message, newStatus);
+            }
+        }
+        
+        // Hàm hiển thị Bootstrap toast
+        function showBootstrapToast(message, status) {
+            // Tạo toast container nếu chưa có
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '9999';
+                document.body.appendChild(toastContainer);
+            }
+            
+            // Tạo toast element
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header ${getStatusColorClass(status)}">
+                        <i class="fa fa-bell me-2"></i>
+                        <strong class="me-auto">Thông báo</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Hiển thị toast
+            const toastElement = document.getElementById(toastId);
+            if (toastElement && typeof bootstrap !== 'undefined') {
+                const toast = new bootstrap.Toast(toastElement, {
+                    autohide: true,
+                    delay: 5000
+                });
+                toast.show();
+                
+                // Xóa toast element sau khi ẩn
+                toastElement.addEventListener('hidden.bs.toast', function() {
+                    toastElement.remove();
+                });
+            }
+        }
+        
+        // Hàm lấy class màu theo trạng thái
+        function getStatusColorClass(status) {
+            if (status === 'Đã xác nhận') {
+                return 'bg-success text-white';
+            } else if (status === 'Chờ xử lý') {
+                return 'bg-warning text-dark';
+            } else if (status === 'Đang thực hiện') {
+                return 'bg-primary text-white';
+            } else if (status === 'Hoàn thành' || status === 'Đã thanh toán') {
+                return 'bg-success text-white';
+            } else if (status === 'Đã hủy') {
+                return 'bg-danger text-white';
+            }
+            return 'bg-info text-white';
+        }
+    })();
 </script>
 @endsection
