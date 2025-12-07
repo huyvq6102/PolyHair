@@ -784,6 +784,8 @@ class AppointmentController extends Controller
             'user', 
             'employee.user', 
             'appointmentDetails.serviceVariant.service',
+            'appointmentDetails.serviceVariant.variantAttributes',
+            'appointmentDetails.combo',
             'payments',
             'reviews'
         ])->findOrFail($id);
@@ -1063,18 +1065,18 @@ class AppointmentController extends Controller
             }
             
             // Kiểm tra xem có thể hủy không
-            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 phút
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 5 phút
             if ($appointment->status !== 'Chờ xử lý') {
                 return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
             }
             
-            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 phút kể từ khi đặt
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 5 phút kể từ khi đặt
             $createdAt = \Carbon\Carbon::parse($appointment->created_at);
             $now = now();
             $minutesSinceCreated = $createdAt->diffInMinutes($now);
             
-            if ($minutesSinceCreated > 30) {
-                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+            if ($minutesSinceCreated > 5) {
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 5 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
             }
             
             // Lấy lý do hủy từ form hoặc dùng mặc định

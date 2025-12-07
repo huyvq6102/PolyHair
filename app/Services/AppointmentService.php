@@ -482,6 +482,8 @@ class AppointmentService
             ]);
 
             // Update service variants if provided
+            // CHỈ xóa và tạo lại appointment details nếu có serviceVariantData mới
+            // Nếu serviceVariantData rỗng, giữ lại appointment details hiện có
             if (!empty($serviceVariantData)) {
                 // Delete existing appointment details
                 $appointment->appointmentDetails()->delete();
@@ -500,6 +502,7 @@ class AppointmentService
                     ]);
                 }
             }
+            // Nếu serviceVariantData rỗng, không làm gì - giữ lại appointment details hiện có
 
             // Log status change if status changed
             if (isset($data['status']) && $data['status'] !== $oldStatus) {

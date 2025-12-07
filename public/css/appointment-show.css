@@ -1,0 +1,341 @@
+/* Appointment Detail Page Styles */
+
+.appointment-detail-section {
+    padding: 120px 0 80px;
+    background: #f8f9fa;
+    min-height: 70vh;
+}
+
+.appointment-header {
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.appointment-title {
+    font-size: 32px;
+    font-weight: 600;
+    color: #4A3600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.appointment-title i {
+    color: #BC9321;
+}
+
+.appointment-id {
+    font-size: 16px;
+    color: #666;
+    margin-top: 10px;
+}
+
+.appointment-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 991px) {
+    .appointment-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+.appointment-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #4A3600;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-title i {
+    color: #BC9321;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 500;
+    color: #666;
+    min-width: 150px;
+}
+
+.info-value {
+    color: #333;
+    font-weight: 500;
+    text-align: right;
+    flex: 1;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-confirmed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-processing {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.status-completed {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.service-list {
+    margin-top: 20px;
+}
+
+.service-item-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.service-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.service-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.service-item-link:hover .service-item {
+    background: #e9ecef;
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.service-item:last-child {
+    margin-bottom: 0;
+}
+
+.service-info {
+    flex: 1;
+}
+
+.service-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.service-details {
+    font-size: 13px;
+    color: #666;
+}
+
+.service-price {
+    font-size: 18px;
+    font-weight: 600;
+    color: #BC9321;
+    margin-left: 15px;
+}
+
+/* Tooltip với ảnh và thuộc tính */
+.service-tooltip {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 15px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 15px;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    width: 250px;
+    max-width: 90vw;
+}
+
+.service-item:hover .service-tooltip,
+.service-item-link:hover .service-tooltip {
+    opacity: 1;
+}
+
+.tooltip-image {
+    margin-bottom: 10px;
+}
+
+.tooltip-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    max-height: 200px;
+    object-fit: cover;
+}
+
+.tooltip-attributes {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+}
+
+.tooltip-attributes-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4A3600;
+    margin-bottom: 8px;
+}
+
+.tooltip-attributes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.attribute-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #495057;
+    white-space: nowrap;
+}
+
+.service-tooltip::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 8px solid transparent;
+    border-right-color: #fff;
+}
+
+.total-section {
+    background: linear-gradient(135deg, #4A3600 0%, #5a4a00 100%);
+    color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.total-label {
+    font-weight: 500;
+}
+
+.total-value {
+    font-weight: 700;
+    font-size: 24px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-action {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-back {
+    background: #6c757d;
+    color: #fff;
+}
+
+.btn-back:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.note-box {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border-left: 4px solid #BC9321;
+}
+
+.note-label {
+    font-weight: 600;
+    color: #4A3600;
+    margin-bottom: 8px;
+}
+
+.note-text {
+    color: #666;
+    line-height: 1.6;
+}
+
+
