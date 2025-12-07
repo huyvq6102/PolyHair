@@ -236,7 +236,7 @@
                         <tbody>
                             @forelse($recentAppointments as $appointment)
                                 <tr>
-                                    <td>#{{ $appointment->id }}</td>
+                                    <td>{{ $appointment->booking_code ?? '#' . $appointment->id }}</td>
                                     <td>{{ $appointment->user->name ?? 'N/A' }}</td>
                                     <td>{{ $appointment->employee->user->name ?? 'Chưa phân công' }}</td>
                                     <td>
