@@ -37,20 +37,29 @@ class AppointmentController extends Controller
     /**
      * Show the service selection page.
      */
-    public function selectServices()
+    public function selectServices(Request $request)
     {
+        // Load selected promotion if exists
+        $selectedPromotion = null;
+        if ($request->has('promotion_id') && $request->promotion_id) {
+            $selectedPromotion = \App\Models\Promotion::where('id', $request->promotion_id)
+                ->where('status', 'active')
+                ->whereNull('deleted_at')
+                ->first();
+        }
+        
         // Lấy tất cả danh mục có dịch vụ hoặc combo, sắp xếp theo bảng chữ cái
         $categories = \App\Models\ServiceCategory::with([
                 'services' => function($query) {
                     $query->whereNull('deleted_at')
                         ->where('status', 'Hoạt động')
-                        ->with('serviceVariants')
+                        ->with(['serviceVariants.variantAttributes'])
                         ->orderBy('name', 'asc'); // Sắp xếp dịch vụ theo bảng chữ cái
                 },
                 'combos' => function($query) {
                     $query->whereNull('deleted_at')
                         ->where('status', 'Hoạt động')
-                        ->with('comboItems.serviceVariant')
+                        ->with(['comboItems.serviceVariant.service', 'comboItems.service'])
                         ->orderBy('name', 'asc'); // Sắp xếp combo theo bảng chữ cái
                 }
             ])
@@ -68,14 +77,14 @@ class AppointmentController extends Controller
             ->get();
 
         // Lấy các combo không có category (để hiển thị riêng nếu cần)
-        $combosWithoutCategory = \App\Models\Combo::with('comboItems.serviceVariant')
+        $combosWithoutCategory = \App\Models\Combo::with(['comboItems.serviceVariant.service', 'comboItems.service'])
             ->whereNull('deleted_at')
             ->where('status', 'Hoạt động')
             ->whereNull('category_id')
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory'));
+        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory', 'selectedPromotion'));
     }
 
     /**
@@ -1365,5 +1374,81 @@ class AppointmentController extends Controller
                 'message' => 'Có lỗi xảy ra: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Show the offers selection page.
+     */
+    public function selectOffers(Request $request)
+    {
+        // Get selected services from query params to preserve them
+        $serviceIds = $request->query('service_id', []);
+        $variantIds = $request->query('service_variants', []);
+        $comboIds = $request->query('combo_id', []);
+        
+        // Convert to arrays if needed
+        if (!is_array($serviceIds)) {
+            $serviceIds = $serviceIds ? [$serviceIds] : [];
+        }
+        if (!is_array($variantIds)) {
+            $variantIds = $variantIds ? [$variantIds] : [];
+        }
+        if (!is_array($comboIds)) {
+            $comboIds = $comboIds ? [$comboIds] : [];
+        }
+        
+        // Filter out empty values
+        $serviceIds = array_filter($serviceIds, function($value) {
+            return !empty($value) && $value !== '0';
+        });
+        $variantIds = array_filter($variantIds, function($value) {
+            return !empty($value) && $value !== '0';
+        });
+        $comboIds = array_filter($comboIds, function($value) {
+            return !empty($value) && $value !== '0';
+        });
+        
+        // Load promotions/offers from database
+        $now = now();
+        
+        // Public offers (Ưu đãi từ 30Shine) - All active promotions
+        $publicOffers = \App\Models\Promotion::where('status', 'active')
+            ->whereNull('deleted_at')
+            ->where(function($query) use ($now) {
+                $query->whereNull('start_date')
+                      ->orWhere('start_date', '<=', $now);
+            })
+            ->where(function($query) use ($now) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', $now);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Personal offers (Ưu đãi của riêng anh) - For logged in users
+        $personalOffers = collect([]);
+        if (Auth::check()) {
+            // Load user-specific promotions if any (can be extended later)
+            $personalOffers = \App\Models\Promotion::where('status', 'active')
+                ->whereNull('deleted_at')
+                ->where(function($query) use ($now) {
+                    $query->whereNull('start_date')
+                          ->orWhere('start_date', '<=', $now);
+                })
+                ->where(function($query) use ($now) {
+                    $query->whereNull('end_date')
+                          ->orWhere('end_date', '>=', $now);
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+        
+        return view('site.appointment.select-offers', compact(
+            'serviceIds',
+            'variantIds',
+            'comboIds',
+            'publicOffers',
+            'personalOffers'
+        ));
     }
 }

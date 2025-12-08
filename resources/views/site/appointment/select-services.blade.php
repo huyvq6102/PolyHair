@@ -153,7 +153,26 @@
         }
     }
     
+    // Tính discount từ promotion
+    $discountAmount = 0;
+    $finalPrice = $totalPrice;
+    if (isset($selectedPromotion) && $selectedPromotion) {
+        if ($selectedPromotion->discount_type === 'percent') {
+            $discountPercent = $selectedPromotion->discount_percent ?? 0;
+            $discountAmount = ($totalPrice * $discountPercent) / 100;
+            // Apply max discount if exists
+            if ($selectedPromotion->max_discount_amount) {
+                $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
+            }
+        } else {
+            $discountAmount = $selectedPromotion->discount_amount ?? 0;
+        }
+        $finalPrice = max(0, $totalPrice - $discountAmount);
+    }
+    
     $formattedTotalPrice = number_format($totalPrice, 0, ',', '.');
+    $formattedDiscountAmount = number_format($discountAmount, 0, ',', '.');
+    $formattedFinalPrice = number_format($finalPrice, 0, ',', '.');
 @endphp
 
 @section('content')
@@ -244,7 +263,7 @@
                                 </div>
                                 
                                 <!-- Service Grid for this Category -->
-                                <div class="service-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px;">
+                                <div class="service-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
                                     <!-- Services in this Category -->
                                     @foreach($category->services as $service)
                                         @php
@@ -271,10 +290,12 @@
                                             
                                             <!-- Card Image -->
                                             <div class="svc-img" style="overflow: hidden; display: block; height: 180px; background: #f5f5f5; position: relative;">
-                                                <!-- Duration Badge -->
-                                                <div class="duration-badge" style="position: absolute; top: 8px; left: 8px; background: #0066cc; color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
-                                                    {{ $serviceDuration }}p
-                                                </div>
+                                                <!-- Duration Badge - Only show if no variants -->
+                                                @if(!$hasVariants)
+                                                    <div class="duration-badge" style="position: absolute; top: 8px; left: 8px; background: #0066cc; color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                                                        {{ $serviceDuration }}p
+                                                    </div>
+                                                @endif
                                                 @if($imagePath && file_exists(public_path($imagePath)))
                                                     <img src="{{ asset($imagePath) }}" alt="{{ $service->name }}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
                                                 @elseif($service->image)
@@ -293,91 +314,89 @@
                                             
                                             <!-- Card Body -->
                                             <div class="svc-body" style="padding: 12px; display: flex; flex-direction: column; flex-grow: 1;">
-                                                <div class="svc-info" style="flex-grow: 1; margin-bottom: 10px;">
-                                                    <h4 class="svc-name" style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px; line-height: 1.3; color: #000; min-height: 36px;">
+                                                <div class="svc-info" style="flex-grow: 1; margin-bottom: 8px;">
+                                                    <h4 class="svc-name" style="margin: 0 0 6px 0; font-weight: 600; font-size: 14px; line-height: 1.3; color: #000; text-align: left;">
                                                         <a href="{{ route('site.services.show', $service->id) }}" style="color: inherit; text-decoration: none;">{{ $service->name }}</a>
                                                     </h4>
                                                     @if(!$hasVariants)
-                                                        <div class="svc-price" style="font-size: 13px; color: #333; font-weight: 600;">
+                                                        <div class="svc-price" style="font-size: 15px; color: #333; font-weight: 600; text-align: left; margin-bottom: 0;">
                                                             <span style="color: #BC9321; font-weight: 700;">{{ $formattedPrice }} VND</span>
                                                         </div>
                                                     @else
-                                                        <div class="svc-variants" style="font-size: 11px; color: #666; margin-bottom: 4px;">
-                                                            <i class="fa fa-info-circle"></i> Có {{ $service->serviceVariants->count() }} dịch vụ
-                                                        </div>
-                                                        <div class="svc-price" style="font-size: 12px; color: #666;">
-                                                            Từ <span style="color: #BC9321; font-weight: 700;">{{ $formattedPrice }} VND</span>
+                                                        <!-- Button to show variants -->
+                                                        <button type="button" 
+                                                                class="select-variant-btn" 
+                                                                data-service-id="{{ $service->id }}"
+                                                                style="width: 100%; padding: 10px 16px; margin-bottom: 12px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; transition: all 0.3s ease; text-align: left; display: flex; align-items: center; justify-content: space-between;">
+                                                            <span>Chọn biến thể</span>
+                                                            <i class="fa fa-chevron-down" style="font-size: 11px; transition: transform 0.3s ease;"></i>
+                                                        </button>
+                                                        
+                                                        <!-- Display Variants (hidden by default) -->
+                                                        <div class="variants-list variants-list-hidden" 
+                                                             data-service-id="{{ $service->id }}"
+                                                             style="display: none; flex-direction: column; gap: 8px; margin-bottom: 12px; width: 100%; min-width: 100%; max-width: 100%; margin-left: 0; margin-right: 0; padding: 0; box-sizing: border-box;">
+                                                            @foreach($service->serviceVariants as $variant)
+                                                                @php
+                                                                    $variantPrice = number_format($variant->price ?? 0, 0, ',', '.');
+                                                                    // Load variant attributes if not already loaded
+                                                                    $attributes = $variant->variantAttributes ?? collect();
+                                                                @endphp
+                                                                <div class="variant-item-box variant-item-link" 
+                                                                     data-variant-id="{{ $variant->id }}"
+                                                                     data-service-id="{{ $service->id }}"
+                                                                     data-variant-price="{{ $variant->price ?? 0 }}"
+                                                                     data-variant-name="{{ $service->name }} - {{ $variant->name }}"
+                                                                     style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 16px; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; gap: 6px; width: 100%; min-width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; flex-shrink: 0;">
+                                                                    <!-- Dòng 1: Tên biến thể + Tag thuộc tính -->
+                                                                    <div style="display: flex; flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                                                        <!-- Variant Name -->
+                                                                        <span style="font-size: 13px; font-weight: 600; color: #000; flex-shrink: 0;">
+                                                                            {{ $variant->name }}
+                                                                        </span>
+                                                                        
+                                                                        <!-- Variant Attributes (tags) - always shown, right after name -->
+                                                                        @if($attributes && $attributes->count() > 0)
+                                                                            <div class="variant-attributes" style="display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: center;">
+                                                                                @foreach($attributes as $attr)
+                                                                                    <span style="background: #e3f2fd; color: #0066cc; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; white-space: nowrap;">
+                                                                                        {{ $attr->attribute_value }}
+                                                                                    </span>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                    
+                                                                    <!-- Dòng 2: Thời gian + Giá -->
+                                                                    <div style="display: flex; flex-direction: row; align-items: center; gap: 8px;">
+                                                                        <!-- Duration -->
+                                                                        <span style="font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                                                                            <i class="fa fa-clock-o" style="font-size: 10px;"></i>
+                                                                            <span>{{ $variant->duration ?? 60 }} phút</span>
+                                                                        </span>
+                                                                        
+                                                                        <!-- Separator -->
+                                                                        <span style="color: #ccc; font-size: 12px;">•</span>
+                                                                        
+                                                                        <!-- Price -->
+                                                                        <span style="font-size: 14px; font-weight: 700; color: #BC9321; flex-shrink: 0;">
+                                                                            {{ $variantPrice }} VNĐ
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
                                                         </div>
                                                     @endif
                                                 </div>
                                                 
                                                 <!-- Card Actions -->
-                                                <div class="svc-actions" style="margin-top: auto; position: relative;">
+                                                <div class="svc-actions" style="margin-top: auto; position: relative; width: 100%; margin-left: 0; margin-right: 0; padding: 0;">
                                                     @if($hasVariants)
-                                                        <!-- Variants Tooltip -->
-                                                        <div class="variants-tooltip" 
-                                                             data-service-id="{{ $service->id }}"
-                                                             style="display: none; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); background: #fff; border: 2px solid #007bff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 1000; min-width: 320px; max-width: 400px; padding: 0; overflow: hidden;">
-                                                            <!-- Tooltip Arrow -->
-                                                            <div style="position: absolute; left: -10px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 10px solid #007bff;"></div>
-                                                            <div style="position: absolute; left: -8px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 10px solid #fff;"></div>
-                                                            
-                                                            <!-- Hover Bridge -->
-                                                            <div class="hover-bridge" style="position: absolute; left: -8px; top: 0; bottom: 0; width: 8px; z-index: 999; pointer-events: auto;"></div>
-                                                            
-                                                            <!-- Header -->
-                                                            <div class="tooltip-header" style="background: #007bff; padding: 12px 16px; border-bottom: 2px solid #007bff;">
-                                                                <h5 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff; text-transform: uppercase;">
-                                                                    <i class="fa fa-list-ul" style="margin-right: 6px;"></i> Các dịch vụ
-                                                                </h5>
-                                                                <p style="margin: 4px 0 0 0; font-size: 11px; color: #e0f0ff;">{{ $service->name }}</p>
-                                                            </div>
-                                                            
-                                                            <!-- Body -->
-                                                            <div class="tooltip-body" style="padding: 10px; max-height: 280px; overflow-y: auto;">
-                                                                @foreach($service->serviceVariants as $variant)
-                                                                    @php
-                                                                        $variantPrice = number_format($variant->price ?? 0, 0, ',', '.');
-                                                                    @endphp
-                                                                    <div class="variant-item-link" 
-                                                                         data-variant-id="{{ $variant->id }}"
-                                                                         data-variant-price="{{ $variant->price ?? 0 }}"
-                                                                         data-variant-name="{{ $service->name }} - {{ $variant->name }}"
-                                                                         style="text-decoration: none; display: block; cursor: pointer;">
-                                                                        <div class="variant-item" style="padding: 10px; margin-bottom: 6px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; transition: all 0.3s ease; cursor: pointer;">
-                                                                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                                                                <div style="flex: 1;">
-                                                                                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                                                                                        <div style="width: 4px; height: 4px; background: #007bff; border-radius: 50%; margin-right: 6px;"></div>
-                                                                                        <div style="font-weight: 600; color: #000; font-size: 13px; line-height: 1.3;">{{ $variant->name }}</div>
-                                                                                    </div>
-                                                                                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
-                                                                                        <div style="display: flex; align-items: center; font-size: 11px; color: #666; background: #f5f5f5; padding: 3px 6px; border-radius: 4px;">
-                                                                                            <i class="fa fa-clock-o" style="margin-right: 3px; color: #888;"></i>
-                                                                                            <span style="font-weight: 500;">{{ $variant->duration ?? 60 }} phút</span>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div style="text-align: right; margin-left: 10px;">
-                                                                                    <div style="font-weight: 700; color: #007bff; font-size: 14px; line-height: 1.2;">
-                                                                                        {{ $variantPrice }}<span style="font-size: 11px; font-weight: 600;">VND</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
-                                                    @endif
-                                                    
-                                                    @if($hasVariants)
+                                                        <!-- Button for variants - will be handled by variant-item-link clicks -->
                                                         <button type="button"
                                                                 class="btn btn-primary w-100 select-service-btn" 
-                                                                data-has-variants="true"
-                                                                data-service-id="{{ $service->id }}"
-                                                                style="background: #000; border: 1px solid #000; color: #fff; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%;">
-                                                            <i class="fa fa-check"></i> Chọn
+                                                                style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-align: center; cursor: pointer; width: 100%; display: block; box-sizing: border-box; margin: 0;">
+                                                            Chọn
                                                         </button>
                                                     @else
                                                         <button type="button"
@@ -386,7 +405,7 @@
                                                                 data-service-id="{{ $service->id }}"
                                                                 data-service-price="{{ $service->base_price ?? 0 }}"
                                                                 data-service-name="{{ $service->name }}"
-                                                                style="background: #000; border: 1px solid #000; color: #fff; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%;">
+                                                                style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%; display: block;">
                                                             <i class="fa fa-check"></i> Chọn
                                                         </button>
                                                     @endif
@@ -434,26 +453,45 @@
                                                     @endif
                                                 </div>
                                                 <div class="svc-body" style="padding: 12px; display: flex; flex-direction: column; flex-grow: 1;">
-                                                    <div class="svc-info" style="flex-grow: 1; margin-bottom: 10px;">
-                                                        <h4 class="svc-name" style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px; line-height: 1.3; color: #000; min-height: 36px;">
+                                                    <div class="svc-info" style="flex-grow: 1; margin-bottom: 12px;">
+                                                        <h4 class="svc-name" style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px; line-height: 1.3; color: #000; min-height: 36px; text-align: left;">
                                                             <a href="#" style="color: inherit; text-decoration: none;">{{ $combo->name }}</a>
                                                             <span style="color: #BC9321; font-size: 11px; font-weight: 600; margin-left: 4px;">(COMBO)</span>
                                                         </h4>
-                                                        <div class="svc-price" style="font-size: 13px; color: #333; font-weight: 600; margin-bottom: 4px;">
+                                                        @if($combo->comboItems && $combo->comboItems->count() > 0)
+                                                            @php
+                                                                $serviceNames = [];
+                                                                foreach($combo->comboItems as $item) {
+                                                                    $serviceName = null;
+                                                                    if ($item->serviceVariant && $item->serviceVariant->service) {
+                                                                        $serviceName = $item->serviceVariant->service->name;
+                                                                    } elseif ($item->service) {
+                                                                        $serviceName = $item->service->name;
+                                                                    }
+                                                                    if($serviceName) {
+                                                                        $serviceNames[] = $serviceName;
+                                                                    }
+                                                                }
+                                                            @endphp
+                                                            @if(count($serviceNames) > 0)
+                                                                <div class="combo-services-list" style="margin-bottom: 8px; font-size: 12px; line-height: 1.6; color: #666;">
+                                                                    <i class="fa fa-check-circle" style="color: #28a745; font-size: 11px; margin-right: 6px;"></i>
+                                                                    <span>{{ implode(' + ', $serviceNames) }}</span>
+                                                                </div>
+                                                            @endif
+                                                        @endif
+                                                        <div class="svc-price" style="font-size: 15px; color: #333; font-weight: 600; margin-bottom: 8px; text-align: left;">
                                                             <span style="color: #BC9321; font-weight: 700;">{{ $formattedPrice }} VND</span>
                                                         </div>
-                                                        <div style="font-size: 11px; color: #666;">
-                                                            <i class="fa fa-clock-o"></i> Thời gian: <strong>{{ $comboDuration }} phút</strong>
-                                                        </div>
                                                     </div>
-                                                    <div class="svc-actions" style="margin-top: auto; position: relative;">
+                                                    <div class="svc-actions" style="margin-top: auto; position: relative; width: 100%;">
                                                         <button type="button"
                                                                 class="btn btn-primary w-100 select-service-btn" 
                                                                 data-has-variants="false"
                                                                 data-combo-id="{{ $combo->id }}"
                                                                 data-combo-price="{{ $combo->price ?? 0 }}"
                                                                 data-combo-name="{{ $combo->name }}"
-                                                                style="background: #000; border: 1px solid #000; color: #fff; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%;">
+                                                                style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%; display: block;">
                                                             <i class="fa fa-check"></i> Chọn
                                                         </button>
                                                     </div>
@@ -481,7 +519,7 @@
                             </div>
                             
                             <!-- Combo Grid -->
-                            <div class="service-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px;">
+                            <div class="service-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
                                 @foreach($combosWithoutCategory as $combo)
                                     @php
                                         $imagePath = $combo->image ? 'legacy/images/products/' . $combo->image : null;
@@ -515,15 +553,34 @@
                                         </div>
                                         <div class="svc-body" style="padding: 12px; display: flex; flex-direction: column; flex-grow: 1;">
                                             <div class="svc-info" style="flex-grow: 1; margin-bottom: 10px;">
-                                                <h4 class="svc-name" style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px; line-height: 1.3; color: #000; min-height: 36px;">
+                                                <h4 class="svc-name" style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px; line-height: 1.3; color: #000; min-height: 36px; text-align: left;">
                                                     <a href="#" style="color: inherit; text-decoration: none;">{{ $combo->name }}</a>
                                                     <span style="color: #BC9321; font-size: 11px; font-weight: 600; margin-left: 4px;">(COMBO)</span>
                                                 </h4>
-                                                <div class="svc-price" style="font-size: 13px; color: #333; font-weight: 600; margin-bottom: 4px;">
+                                                @if($combo->comboItems && $combo->comboItems->count() > 0)
+                                                    @php
+                                                        $serviceNames = [];
+                                                        foreach($combo->comboItems as $item) {
+                                                            $serviceName = null;
+                                                            if ($item->serviceVariant && $item->serviceVariant->service) {
+                                                                $serviceName = $item->serviceVariant->service->name;
+                                                            } elseif ($item->service) {
+                                                                $serviceName = $item->service->name;
+                                                            }
+                                                            if($serviceName) {
+                                                                $serviceNames[] = $serviceName;
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @if(count($serviceNames) > 0)
+                                                        <div class="combo-services-list" style="margin-bottom: 8px; font-size: 12px; line-height: 1.6; color: #666;">
+                                                            <i class="fa fa-check-circle" style="color: #28a745; font-size: 11px; margin-right: 6px;"></i>
+                                                            <span>{{ implode(' + ', $serviceNames) }}</span>
+                                                        </div>
+                                                    @endif
+                                                @endif
+                                                <div class="svc-price" style="font-size: 13px; color: #333; font-weight: 600; margin-bottom: 4px; text-align: left;">
                                                     <span style="color: #BC9321; font-weight: 700;">{{ $formattedPrice }} VND</span>
-                                                </div>
-                                                <div style="font-size: 11px; color: #666;">
-                                                    <i class="fa fa-clock-o"></i> Thời gian: <strong>{{ $comboDuration }} phút</strong>
                                                 </div>
                                             </div>
                                             <div class="svc-actions" style="margin-top: auto; position: relative;">
@@ -562,10 +619,18 @@
                             </a>
                         </div>
                         <div class="summary-right" style="display: flex; align-items: center; gap: 20px;">
-                            <div class="total-price-section" style="text-align: right;">
-                                <div style="font-size: 12px; color: #666; margin-bottom: 2px;">Tổng thanh toán</div>
-                                <div id="totalPrice" style="font-size: 18px; font-weight: 700; color: #333;">
-                                    {{ $formattedTotalPrice }} VNĐ
+                            <div class="total-price-section" style="display: flex; flex-direction: column; align-items: flex-end;">
+                                @if(isset($selectedPromotion) && $selectedPromotion && $discountAmount > 0)
+                                    <div class="original-price-strike" style="font-size: 11px; color: #999; text-decoration: line-through; line-height: 1.3; margin-bottom: 1px;">
+                                        {{ $formattedTotalPrice }} VNĐ
+                                    </div>
+                                    <div class="discount-amount" style="font-size: 11px; color: #28a745; line-height: 1.3; margin-bottom: 3px;">
+                                        Giảm: {{ $formattedDiscountAmount }} VNĐ
+                                    </div>
+                                @endif
+                                <div class="total-label" style="font-size: 11px; color: #666; line-height: 1.3; margin-bottom: 1px;">Tổng thanh toán</div>
+                                <div id="totalPrice" style="font-size: 20px; font-weight: 700; color: #000; line-height: 1.2;">
+                                    {{ $formattedFinalPrice }} VNĐ
                                 </div>
                             </div>
                             <button type="button"
@@ -596,11 +661,83 @@
                                     <span style="color: #fff; font-size: 20px; font-weight: 700;">%</span>
                                 </div>
                                 <div>
-                                    <div style="font-size: 14px; font-weight: 600; color: #0066cc; margin-bottom: 2px;">Ưu đãi của anh</div>
-                                    <div style="font-size: 11px; color: #999;">Nhân viên sẽ giúp anh chọn dịch vụ tại cửa hàng</div>
+                                    <div style="font-size: 14px; font-weight: 400; color: #0066cc; margin-bottom: 2px;">
+                                        @if(isset($selectedPromotion) && $selectedPromotion)
+                                            {{ $selectedPromotion->name ?? 'Ưu đãi' }}
+                                        @else
+                                            Ưu đãi của anh
+                                        @endif
+                                    </div>
+                                    @if(isset($selectedPromotion) && $selectedPromotion)
+                                        <div style="font-size: 12px; color: #666;">
+                                            @if($selectedPromotion->discount_type === 'percent')
+                                                Giảm {{ $selectedPromotion->discount_percent ?? 0 }}%
+                                            @else
+                                                Giảm {{ number_format($selectedPromotion->discount_amount ?? 0, 0, ',', '.') }} VNĐ
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
-                            <a href="#" style="display: flex; align-items: center; color: #0066cc; text-decoration: none; font-size: 14px; font-weight: 600; gap: 4px;">
+                            @php
+                                // Build URL with selected services to preserve them
+                                $urlParams = [];
+                                if (request('service_id')) {
+                                    $queryServices = request()->query('service_id', []);
+                                    if (!is_array($queryServices)) {
+                                        $queryServices = $queryServices ? [$queryServices] : [];
+                                    }
+                                    foreach ($queryServices as $serviceId) {
+                                        $urlParams[] = 'service_id[]=' . urlencode($serviceId);
+                                    }
+                                }
+                                if (request()->has('service_variants')) {
+                                    $url = request()->fullUrl();
+                                    $parsedUrl = parse_url($url);
+                                    $queryParams = [];
+                                    if (isset($parsedUrl['query'])) {
+                                        parse_str($parsedUrl['query'], $queryParams);
+                                    }
+                                    $queryVariants = [];
+                                    if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
+                                        $queryVariants = $queryParams['service_variants'];
+                                    } elseif (isset($queryParams['service_variants'])) {
+                                        $queryVariants = [$queryParams['service_variants']];
+                                    }
+                                    foreach ($queryParams as $key => $value) {
+                                        if (preg_match('/^service_variants\[(\d+)\]$/', $key, $matches)) {
+                                            $queryVariants[] = $value;
+                                        }
+                                    }
+                                    foreach (array_unique($queryVariants) as $variantId) {
+                                        if (!empty($variantId) && $variantId !== '0') {
+                                            $urlParams[] = 'service_variants[]=' . urlencode($variantId);
+                                        }
+                                    }
+                                }
+                                if (request('combo_id')) {
+                                    $queryCombos = request()->query('combo_id', []);
+                                    if (!is_array($queryCombos)) {
+                                        $queryCombos = $queryCombos ? [$queryCombos] : [];
+                                    }
+                                    foreach ($queryCombos as $comboId) {
+                                        if (!empty($comboId) && $comboId !== '0') {
+                                            $urlParams[] = 'combo_id[]=' . urlencode($comboId);
+                                        }
+                                    }
+                                }
+                                // Add promotion_id if exists
+                                if (request('promotion_id')) {
+                                    $urlParams[] = 'promotion_id=' . urlencode(request('promotion_id'));
+                                }
+                                $offersUrl = route('site.appointment.select-offers');
+                                if (!empty($urlParams)) {
+                                    $offersUrl .= '?' . implode('&', $urlParams);
+                                }
+                            @endphp
+                            <a href="{{ $offersUrl }}" 
+                               id="selectOffersLink"
+                               style="display: flex; align-items: center; color: #0066cc; text-decoration: none; font-size: 14px; font-weight: 400; gap: 4px;">
                                 Chọn ưu đãi
                                 <i class="fa fa-chevron-right" style="font-size: 12px;"></i>
                             </a>
@@ -639,7 +776,16 @@
         transform: scale(1.05);
     }
     
-    .btn-primary:hover {
+    .btn-primary:hover,
+    .select-service-btn:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+        border-color: #FFC107 !important;
+    }
+    
+    /* Button hover for variant services */
+    .svc-actions .btn-primary:hover,
+    .svc-actions .select-service-btn:hover {
         background: #FFC107 !important;
         color: #000 !important;
         border-color: #FFC107 !important;
@@ -720,11 +866,47 @@
         display: block;
     }
     
-    .variant-item-link:hover .variant-item {
+    .variant-item-box {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .variant-item-box:hover {
         background: #e3f2fd !important;
-        border-color: #007bff !important;
-        transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2) !important;
+        border-color: #0066cc !important;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2) !important;
+    }
+    
+    /* Toggle button styles */
+    .select-variant-btn {
+        position: relative;
+    }
+    
+    .select-variant-btn:hover {
+        background: #e9ecef !important;
+        border-color: #ccc !important;
+    }
+    
+    .select-variant-btn.active .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+    
+    .variants-list-hidden {
+        display: none !important;
+    }
+    
+    .variants-list-visible {
+        display: flex !important;
+    }
+    
+    .variants-list {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
     
     .variant-item:last-child {
@@ -838,7 +1020,7 @@
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .service-grid {
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+            grid-template-columns: repeat(2, 1fr) !important;
             gap: 12px !important;
         }
         
@@ -1084,21 +1266,206 @@ document.addEventListener('DOMContentLoaded', function() {
         names: {} // Store service names for display
     };
     
-    // Load from sessionStorage or URL
+    // Load from URL params first (source of truth from appointment form), then sessionStorage
     function loadSelectedServices() {
-        const stored = sessionStorage.getItem('selectedServices');
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                selectedServices = {
-                    serviceIds: parsed.serviceIds || [],
-                    variantIds: parsed.variantIds || [],
-                    comboIds: parsed.comboIds || [],
-                    prices: parsed.prices || {},
-                    names: parsed.names || {}
-                };
-            } catch (e) {
-                // If parsing fails, reset
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Check if URL has service params (means coming from appointment form)
+        // Try different ways to check for params
+        const hasServiceIds = urlParams.getAll('service_id[]').length > 0 || 
+                              urlParams.getAll('service_id').length > 0 ||
+                              Array.from(urlParams.keys()).some(key => key.startsWith('service_id'));
+        const hasVariants = urlParams.getAll('service_variants[]').length > 0 || 
+                            urlParams.getAll('service_variants').length > 0 ||
+                            Array.from(urlParams.keys()).some(key => key.startsWith('service_variants'));
+        const hasCombos = urlParams.getAll('combo_id[]').length > 0 || 
+                          urlParams.getAll('combo_id').length > 0 ||
+                          Array.from(urlParams.keys()).some(key => key.startsWith('combo_id'));
+        
+        const hasUrlParams = hasServiceIds || hasVariants || hasCombos;
+        
+        if (hasUrlParams) {
+            // Priority: Load from URL params (from appointment form)
+            // Save old prices and names from sessionStorage before reset
+            let oldPrices = {};
+            let oldNames = {};
+            const stored = sessionStorage.getItem('selectedServices');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    oldPrices = parsed.prices || {};
+                    oldNames = parsed.names || {};
+                } catch (e) {
+                    // Ignore parse errors
+                }
+            }
+            
+            // Reset toàn bộ selectedServices trước khi load từ URL
+            selectedServices = {
+                serviceIds: [],
+                variantIds: [],
+                comboIds: [],
+                prices: {},
+                names: {}
+            };
+            
+            // Get service IDs - try both formats
+            const serviceIds1 = urlParams.getAll('service_id[]');
+            const serviceIds2 = urlParams.getAll('service_id');
+            selectedServices.serviceIds = [...serviceIds1, ...serviceIds2].filter(id => id && id !== '0');
+            
+            // Get variants - try different formats
+            const variants1 = urlParams.getAll('service_variants[]');
+            const variants2 = urlParams.getAll('service_variants');
+            [...variants1, ...variants2].forEach(id => {
+                if (id && id !== '0' && !selectedServices.variantIds.includes(id)) {
+                    selectedServices.variantIds.push(id);
+                }
+            });
+            // Check for indexed format service_variants[0], etc.
+            for (let i = 0; i < 100; i++) {
+                const param = urlParams.get(`service_variants[${i}]`);
+                if (param && param !== '0' && !selectedServices.variantIds.includes(param)) {
+                    selectedServices.variantIds.push(param);
+                } else if (!param && i > 10) break;
+            }
+            
+            // Get combo IDs - try both formats
+            const combos1 = urlParams.getAll('combo_id[]');
+            const combos2 = urlParams.getAll('combo_id');
+            selectedServices.comboIds = [...combos1, ...combos2].filter(id => id && id !== '0');
+            
+            // Restore names and prices from old data if available
+            // This preserves data when coming back from appointment form
+            if (Object.keys(oldPrices).length > 0 || Object.keys(oldNames).length > 0) {
+                Object.keys(oldNames).forEach(key => {
+                    // Restore if we don't have it yet or if current price is 0 but old price exists
+                    if (!selectedServices.names[key] || (selectedServices.prices[key] === 0 && oldPrices[key] > 0)) {
+                        selectedServices.names[key] = oldNames[key];
+                        selectedServices.prices[key] = oldPrices[key] || 0;
+                    }
+                });
+            }
+            
+            // Try to get names and prices from DOM elements if available
+            // Use a function to wait for DOM to be ready
+            function loadNamesAndPricesFromDOM() {
+                let hasUpdates = false;
+                
+                selectedServices.serviceIds.forEach(id => {
+                    // Try button first, then any element with data-service-id
+                    let btn = document.querySelector(`.select-service-btn[data-service-id="${id}"]`) ||
+                             document.querySelector(`[data-service-id="${id}"]`);
+                    if (btn) {
+                        const name = btn.getAttribute('data-service-name') || 'Dịch vụ #' + id;
+                        const price = parseFloat(btn.getAttribute('data-service-price') || 0);
+                        if (!selectedServices.names['service_' + id] || selectedServices.prices['service_' + id] === 0) {
+                            selectedServices.names['service_' + id] = name;
+                            selectedServices.prices['service_' + id] = price;
+                            hasUpdates = true;
+                        }
+                    } else if (!selectedServices.names['service_' + id]) {
+                        // If button not found, still keep the ID and use default name/price
+                        selectedServices.names['service_' + id] = 'Dịch vụ #' + id;
+                        selectedServices.prices['service_' + id] = 0;
+                        hasUpdates = true;
+                    }
+                });
+                
+                selectedServices.variantIds.forEach(id => {
+                    // Try variant-item-box first (most common), then any element with data-variant-id
+                    let variantBox = document.querySelector(`.variant-item-box[data-variant-id="${id}"]`) ||
+                                    document.querySelector(`[data-variant-id="${id}"]`);
+                    if (variantBox) {
+                        const name = variantBox.getAttribute('data-variant-name') || 'Biến thể #' + id;
+                        const price = parseFloat(variantBox.getAttribute('data-variant-price') || 0);
+                        // Only update if we don't have the data or if price is 0 (meaning we didn't find it before)
+                        if (!selectedServices.names['variant_' + id] || selectedServices.prices['variant_' + id] === 0) {
+                            selectedServices.names['variant_' + id] = name;
+                            selectedServices.prices['variant_' + id] = price;
+                            hasUpdates = true;
+                        }
+                    } else if (!selectedServices.names['variant_' + id]) {
+                        // If variant box not found, still keep the ID and use default name/price
+                        selectedServices.names['variant_' + id] = 'Biến thể #' + id;
+                        selectedServices.prices['variant_' + id] = 0;
+                        hasUpdates = true;
+                    }
+                });
+                
+                selectedServices.comboIds.forEach(id => {
+                    // Try button first, then any element with data-combo-id
+                    let btn = document.querySelector(`.select-service-btn[data-combo-id="${id}"]`) ||
+                             document.querySelector(`[data-combo-id="${id}"]`);
+                    if (btn) {
+                        const name = btn.getAttribute('data-combo-name') || 'Combo #' + id;
+                        const price = parseFloat(btn.getAttribute('data-combo-price') || 0);
+                        if (!selectedServices.names['combo_' + id] || selectedServices.prices['combo_' + id] === 0) {
+                            selectedServices.names['combo_' + id] = name;
+                            selectedServices.prices['combo_' + id] = price;
+                            hasUpdates = true;
+                        }
+                    } else if (!selectedServices.names['combo_' + id]) {
+                        // If button not found, still keep the ID and use default name/price
+                        selectedServices.names['combo_' + id] = 'Combo #' + id;
+                        selectedServices.prices['combo_' + id] = 0;
+                        hasUpdates = true;
+                    }
+                });
+                
+                // Save after loading names and prices if there were updates
+                if (hasUpdates) {
+                    saveSelectedServices();
+                    updateSummaryBar();
+                    updateSelectedServicesList();
+                }
+            }
+            
+            // Try immediately
+            loadNamesAndPricesFromDOM();
+            
+            // Also try after DOM is fully loaded (in case elements load late)
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    loadNamesAndPricesFromDOM();
+                });
+            }
+            
+            // Also try after delays to catch any dynamic content
+            setTimeout(loadNamesAndPricesFromDOM, 300);
+            setTimeout(loadNamesAndPricesFromDOM, 1000);
+        } else {
+            // Trường hợp 2: Không có URL params
+            // Kiểm tra xem có phải refresh trang (giữ lại sessionStorage) hay vào trang từ nơi khác (reset)
+            const stored = sessionStorage.getItem('selectedServices');
+            const pageNavigation = performance.getEntriesByType('navigation')[0];
+            const isRefresh = pageNavigation && pageNavigation.type === 'reload';
+            
+            if (isRefresh && stored) {
+                // Refresh trang: giữ lại sessionStorage để không mất lựa chọn đang chọn
+                try {
+                    const parsed = JSON.parse(stored);
+                    selectedServices = {
+                        serviceIds: parsed.serviceIds || [],
+                        variantIds: parsed.variantIds || [],
+                        comboIds: parsed.comboIds || [],
+                        prices: parsed.prices || {},
+                        names: parsed.names || {}
+                    };
+                } catch (e) {
+                    // Parse error: reset
+                    selectedServices = {
+                        serviceIds: [],
+                        variantIds: [],
+                        comboIds: [],
+                        prices: {},
+                        names: {}
+                    };
+                    sessionStorage.removeItem('selectedServices');
+                }
+            } else {
+                // Vào trang từ nơi khác (không phải refresh) = thoát ra và vào lại
+                // Bắt đầu từ đầu theo yêu cầu: chọn lại từ đầu khi chưa ấn Xong mà thoát ra
                 selectedServices = {
                     serviceIds: [],
                     variantIds: [],
@@ -1106,43 +1473,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     prices: {},
                     names: {}
                 };
+                // Xóa sessionStorage cũ để đảm bảo bắt đầu mới
+                sessionStorage.removeItem('selectedServices');
             }
-        } else {
-            // Load from URL params
-            const urlParams = new URLSearchParams(window.location.search);
-            selectedServices.serviceIds = urlParams.getAll('service_id[]').filter(id => id && id !== '0');
-            
-            // Get variants
-            urlParams.getAll('service_variants[]').forEach(id => {
-                if (id && id !== '0' && !selectedServices.variantIds.includes(id)) {
-                    selectedServices.variantIds.push(id);
-                }
-            });
-            for (let i = 0; i < 100; i++) {
-                const param = urlParams.get(`service_variants[${i}]`);
-                if (param && param !== '0' && !selectedServices.variantIds.includes(param)) {
-                    selectedServices.variantIds.push(param);
-                } else if (i > 10) break;
-            }
-            
-            selectedServices.comboIds = urlParams.getAll('combo_id[]').filter(id => id && id !== '0');
-            
-            // Try to get names from DOM elements if available
-            selectedServices.serviceIds.forEach(id => {
-                const btn = document.querySelector(`[data-service-id="${id}"]`);
-                if (btn && !selectedServices.names['service_' + id]) {
-                    selectedServices.names['service_' + id] = btn.getAttribute('data-service-name') || 'Dịch vụ #' + id;
-                    selectedServices.prices['service_' + id] = parseFloat(btn.getAttribute('data-service-price') || 0);
-                }
-            });
-            
-            selectedServices.comboIds.forEach(id => {
-                const btn = document.querySelector(`[data-combo-id="${id}"]`);
-                if (btn && !selectedServices.names['combo_' + id]) {
-                    selectedServices.names['combo_' + id] = btn.getAttribute('data-combo-name') || 'Combo #' + id;
-                    selectedServices.prices['combo_' + id] = parseFloat(btn.getAttribute('data-combo-price') || 0);
-                }
-            });
         }
         saveSelectedServices();
     }
@@ -1150,6 +1483,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveSelectedServices() {
         sessionStorage.setItem('selectedServices', JSON.stringify(selectedServices));
     }
+    
+    // Promotion data from server
+    @php
+        $promotionForJs = null;
+        if (isset($selectedPromotion) && $selectedPromotion) {
+            $promotionForJs = [
+                'id' => $selectedPromotion->id,
+                'name' => $selectedPromotion->name,
+                'discount_type' => $selectedPromotion->discount_type,
+                'discount_percent' => $selectedPromotion->discount_percent ?? 0,
+                'discount_amount' => $selectedPromotion->discount_amount ?? 0,
+                'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null
+            ];
+        }
+    @endphp
+    const promotionData = @json($promotionForJs);
     
     // Update summary bar
     function updateSummaryBar() {
@@ -1161,6 +1510,21 @@ document.addEventListener('DOMContentLoaded', function() {
             totalPrice += parseFloat(price) || 0;
         });
         
+        // Calculate discount if promotion exists
+        let discountAmount = 0;
+        let finalPrice = totalPrice;
+        if (promotionData) {
+            if (promotionData.discount_type === 'percent') {
+                discountAmount = (totalPrice * promotionData.discount_percent) / 100;
+                if (promotionData.max_discount_amount) {
+                    discountAmount = Math.min(discountAmount, promotionData.max_discount_amount);
+                }
+            } else {
+                discountAmount = promotionData.discount_amount;
+            }
+            finalPrice = Math.max(0, totalPrice - discountAmount);
+        }
+        
         const selectedCountEl = document.getElementById('selectedCount');
         const totalPriceEl = document.getElementById('totalPrice');
         const doneButton = document.getElementById('doneButton');
@@ -1170,7 +1534,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (totalPriceEl) {
-            totalPriceEl.textContent = formatPrice(totalPrice) + ' VNĐ';
+            const priceSection = totalPriceEl.closest('.total-price-section');
+            if (!priceSection) return;
+            
+            // Find or create label
+            let labelEl = priceSection.querySelector('.total-label');
+            if (!labelEl) {
+                labelEl = document.createElement('div');
+                labelEl.className = 'total-label';
+                labelEl.style.cssText = 'font-size: 11px; color: #666; line-height: 1.3; margin-bottom: 1px;';
+                priceSection.insertBefore(labelEl, totalPriceEl);
+            }
+            labelEl.textContent = 'Tổng thanh toán';
+            
+            // Update discount display if promotion exists
+            if (promotionData && discountAmount > 0) {
+                let existingStrike = priceSection.querySelector('.original-price-strike');
+                let existingDiscount = priceSection.querySelector('.discount-amount');
+                
+                if (!existingStrike) {
+                    existingStrike = document.createElement('div');
+                    existingStrike.className = 'original-price-strike';
+                    existingStrike.style.cssText = 'font-size: 11px; color: #999; text-decoration: line-through; line-height: 1.3; margin-bottom: 1px;';
+                    priceSection.insertBefore(existingStrike, labelEl);
+                }
+                existingStrike.textContent = formatPrice(totalPrice) + ' VNĐ';
+                existingStrike.style.display = 'block';
+                
+                if (!existingDiscount) {
+                    existingDiscount = document.createElement('div');
+                    existingDiscount.className = 'discount-amount';
+                    existingDiscount.style.cssText = 'font-size: 11px; color: #28a745; line-height: 1.3; margin-bottom: 3px;';
+                    priceSection.insertBefore(existingDiscount, labelEl);
+                }
+                existingDiscount.textContent = 'Giảm: ' + formatPrice(discountAmount) + ' VNĐ';
+                existingDiscount.style.display = 'block';
+            } else {
+                // Hide discount display if no promotion
+                const existingStrike = priceSection.querySelector('.original-price-strike');
+                const existingDiscount = priceSection.querySelector('.discount-amount');
+                if (existingStrike) existingStrike.style.display = 'none';
+                if (existingDiscount) existingDiscount.style.display = 'none';
+            }
+            
+            // Update final price
+            totalPriceEl.textContent = formatPrice(finalPrice) + ' VNĐ';
+            totalPriceEl.style.cssText = 'font-size: 20px; font-weight: 700; color: #000; line-height: 1.2;';
         }
         
         // Update button style
@@ -1192,7 +1601,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle service selection
-    function handleServiceSelection(serviceId, price, type, name = '') {
+    function handleServiceSelection(serviceId, price, type, name = '', serviceParentId = null) {
         const id = serviceId.toString();
         
         if (type === 'service') {
@@ -1207,7 +1616,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedServices.names['service_' + id] = name || 'Dịch vụ #' + id;
             }
         } else if (type === 'variant') {
+            // If selecting a variant, remove all other variants from the same service
+            if (serviceParentId) {
+                const parentServiceId = serviceParentId.toString();
+                // Find all variants of this service and remove them
+                const allVariantBoxes = document.querySelectorAll(`[data-service-id="${parentServiceId}"].variant-item-box`);
+                allVariantBoxes.forEach(box => {
+                    const variantId = box.getAttribute('data-variant-id');
+                    if (variantId && variantId !== id) {
+                        // Remove other variants from selection
+                        selectedServices.variantIds = selectedServices.variantIds.filter(vid => vid !== variantId);
+                        delete selectedServices.prices['variant_' + variantId];
+                        delete selectedServices.names['variant_' + variantId];
+                        // Reset visual state
+                        box.style.background = '#f8f9fa';
+                        box.style.borderColor = '#e0e0e0';
+                    }
+                });
+            }
+            
             if (selectedServices.variantIds.includes(id)) {
+                // Toggle: if already selected, deselect it
                 selectedServices.variantIds = selectedServices.variantIds.filter(vid => vid !== id);
                 delete selectedServices.prices['variant_' + id];
                 delete selectedServices.names['variant_' + id];
@@ -1236,6 +1665,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveSelectedServices();
         updateSummaryBar();
         updateSelectedServicesList();
+        updateVariantBoxesDisplay();
     }
     
     // Remove service from selection
@@ -1326,6 +1756,7 @@ document.addEventListener('DOMContentLoaded', function() {
             removeBtn.innerHTML = '<i class="fa fa-times"></i>';
             removeBtn.onclick = function(e) {
                 e.preventDefault();
+                e.stopPropagation(); // Ngăn event bubble lên để không đóng form
                 removeService(item.id, item.type);
             };
             
@@ -1359,6 +1790,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('search')) {
             params.append('search', urlParams.get('search'));
+        }
+        
+        // Keep promotion_id if exists
+        if (urlParams.get('promotion_id')) {
+            params.append('promotion_id', urlParams.get('promotion_id'));
         }
         
         const queryString = params.toString();
@@ -1401,20 +1837,53 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Close list when clicking outside
     document.addEventListener('click', function(e) {
-        if (selectedServicesList && selectedServicesLink && 
-            !selectedServicesList.contains(e.target) && 
-            !selectedServicesLink.contains(e.target)) {
-            selectedServicesList.style.display = 'none';
-            if (toggleServicesListBtn) {
-                toggleServicesListBtn.style.transform = 'rotate(0deg)';
+        // Chỉ đóng form nếu click bên ngoài selectedServicesList và selectedServicesLink
+        // Không đóng khi click vào bất kỳ phần tử nào bên trong selectedServicesList (bao gồm nút xóa)
+        if (selectedServicesList && selectedServicesLink) {
+            const clickedInsideList = selectedServicesList.contains(e.target);
+            const clickedOnLink = selectedServicesLink.contains(e.target);
+            
+            if (!clickedInsideList && !clickedOnLink) {
+                selectedServicesList.style.display = 'none';
+                if (toggleServicesListBtn) {
+                    toggleServicesListBtn.style.transform = 'rotate(0deg)';
+                }
             }
         }
     });
     
     // Initialize
+    // Update variant boxes display on load
+    function updateVariantBoxesDisplay() {
+        document.querySelectorAll('.variant-item-box').forEach(box => {
+            const variantId = box.getAttribute('data-variant-id');
+            const isSelected = selectedServices.variantIds.includes(variantId);
+            
+            if (isSelected) {
+                box.style.background = '#e3f2fd';
+                box.style.borderColor = '#0066cc';
+            } else {
+                box.style.background = '#f8f9fa';
+                box.style.borderColor = '#e0e0e0';
+            }
+        });
+    }
+    
+    
     loadSelectedServices();
     updateSummaryBar();
     updateSelectedServicesList();
+    updateVariantBoxesDisplay();
+    
+    // Handle "Chọn ưu đãi" link click - save before navigating
+    const selectOffersLink = document.getElementById('selectOffersLink');
+    if (selectOffersLink) {
+        selectOffersLink.addEventListener('click', function(e) {
+            // Save selected services before navigating
+            saveSelectedServices();
+            // Let the link navigate normally (URL params are already set in href)
+        });
+    }
     
     // Handle service button clicks
     document.querySelectorAll('.select-service-btn').forEach(button => {
@@ -1430,11 +1899,49 @@ document.addEventListener('DOMContentLoaded', function() {
             const comboName = this.getAttribute('data-combo-name') || '';
             
             if (variantId) {
-                handleServiceSelection(variantId, variantPrice, 'variant');
+                // Try to get parent service ID from button or closest variant-item-box
+                let parentServiceId = this.getAttribute('data-service-id');
+                if (!parentServiceId) {
+                    const variantBox = this.closest('.variant-item-box');
+                    if (variantBox) {
+                        parentServiceId = variantBox.getAttribute('data-service-id');
+                    }
+                }
+                const variantName = this.getAttribute('data-variant-name') || '';
+                handleServiceSelection(variantId, variantPrice, 'variant', variantName, parentServiceId);
             } else if (comboId) {
                 handleServiceSelection(comboId, comboPrice, 'combo', comboName);
             } else if (serviceId) {
                 handleServiceSelection(serviceId, servicePrice, 'service', serviceName);
+            }
+        });
+    });
+    
+    // Handle toggle variant list button clicks
+    document.querySelectorAll('.select-variant-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const serviceId = this.getAttribute('data-service-id');
+            const variantsList = document.querySelector(`.variants-list[data-service-id="${serviceId}"]`);
+            const icon = this.querySelector('.fa-chevron-down');
+            
+            if (variantsList) {
+                if (variantsList.classList.contains('variants-list-hidden')) {
+                    // Show variants
+                    variantsList.classList.remove('variants-list-hidden');
+                    variantsList.classList.add('variants-list-visible');
+                    variantsList.style.display = 'flex';
+                    this.classList.add('active');
+                    if (icon) icon.style.transform = 'rotate(180deg)';
+                } else {
+                    // Hide variants
+                    variantsList.classList.remove('variants-list-visible');
+                    variantsList.classList.add('variants-list-hidden');
+                    variantsList.style.display = 'none';
+                    this.classList.remove('active');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                }
             }
         });
     });
@@ -1444,14 +1951,30 @@ document.addEventListener('DOMContentLoaded', function() {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const variantId = this.getAttribute('data-variant-id');
+            const serviceId = this.getAttribute('data-service-id');
             const variantPrice = parseFloat(this.getAttribute('data-variant-price') || 0);
             if (variantId) {
                 const variantName = this.getAttribute('data-variant-name') || 'Biến thể #' + variantId;
-                handleServiceSelection(variantId, variantPrice, 'variant', variantName);
-                // Close tooltip after selection
-                const tooltip = this.closest('.svc-actions')?.querySelector('.variants-tooltip');
-                if (tooltip) {
-                    tooltip.style.display = 'none';
+                const isCurrentlySelected = selectedServices.variantIds.includes(variantId);
+                
+                handleServiceSelection(variantId, variantPrice, 'variant', variantName, serviceId);
+                
+                // Visual feedback - highlight selected variant
+                const variantsList = this.closest('.variants-list');
+                if (variantsList) {
+                    const variantBoxes = variantsList.querySelectorAll('.variant-item-box');
+                    variantBoxes.forEach(box => {
+                        const boxVariantId = box.getAttribute('data-variant-id');
+                        const isSelected = selectedServices.variantIds.includes(boxVariantId);
+                        
+                        if (isSelected) {
+                            box.style.background = '#e3f2fd';
+                            box.style.borderColor = '#0066cc';
+                        } else {
+                            box.style.background = '#f8f9fa';
+                            box.style.borderColor = '#e0e0e0';
+                        }
+                    });
                 }
             }
         });

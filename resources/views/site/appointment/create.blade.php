@@ -54,6 +54,10 @@
                             @endforeach
                         @endif
 
+                        @if(request('promotion_id'))
+                            <input type="hidden" name="promotion_id" value="{{ request('promotion_id') }}">
+                        @endif
+
                         @if(request()->has('service_variants'))
                             @php
                                 // CRITICAL: Get variants ONLY from query string, not from any other source
@@ -205,14 +209,67 @@
                             @php
                                 $hasAnyService = request('service_id') || request('service_variants') || request('combo_id');
                                 
+                                // Load selected promotion if exists
+                                $selectedPromotion = null;
+                                if (request('promotion_id') && request('promotion_id')) {
+                                    $selectedPromotion = \App\Models\Promotion::where('id', request('promotion_id'))
+                                        ->where('status', 'active')
+                                        ->whereNull('deleted_at')
+                                        ->first();
+                                }
+                                
                                 // Collect all selected items
                                 $allSelectedItems = [];
                                 $totalPrice = 0;
                                 $totalCount = 0;
                                 
-                                // Get services
+                                // Debug arrays to track what's being parsed
+                                $debugServiceIds = [];
+                                $debugVariantIds = [];
+                                $debugComboIds = [];
+                                
+                                // Parse URL params manually to handle all formats (same logic as select-services page)
+                                $url = request()->fullUrl();
+                                $parsedUrl = parse_url($url);
+                                $queryParams = [];
+                                if (isset($parsedUrl['query'])) {
+                                    parse_str($parsedUrl['query'], $queryParams);
+                                }
+                                
+                                // Get services - parse all formats
+                                $serviceIds = [];
+                                $queryServices = [];
+                                
+                                // Try request()->query() first
                                 if (request('service_id')) {
-                                    $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
+                                    $queryServices = request()->query('service_id', []);
+                                    if (!is_array($queryServices)) {
+                                        $queryServices = $queryServices ? [$queryServices] : [];
+                                    }
+                                }
+                                
+                                // Also check parsed URL params for service_id[] format
+                                if (isset($queryParams['service_id'])) {
+                                    if (is_array($queryParams['service_id'])) {
+                                        $queryServices = array_merge($queryServices, $queryParams['service_id']);
+                                    } else {
+                                        $queryServices[] = $queryParams['service_id'];
+                                    }
+                                }
+                                
+                                // Check for indexed format service_id[0], etc.
+                                foreach ($queryParams as $key => $value) {
+                                    if (preg_match('/^service_id\[(\d+)\]$/', $key, $matches)) {
+                                        $queryServices[] = $value;
+                                    }
+                                }
+                                
+                                $serviceIds = array_filter($queryServices, function($id) {
+                                    return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                });
+                                $serviceIds = array_values(array_unique($serviceIds));
+                                
+                                if (!empty($serviceIds)) {
                                     $selectedServices = \App\Models\Service::whereIn('id', $serviceIds)->get();
                                     foreach ($selectedServices as $service) {
                                         $allSelectedItems[] = [
@@ -226,9 +283,33 @@
                                     }
                                 }
                                 
-                                // Get variants
-                                if (request('service_variants')) {
-                                    $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
+                                // Get variants - parse from URL to handle service_variants[] format
+                                $variantIds = [];
+                                if (request()->has('service_variants')) {
+                                    $queryVariants = [];
+                                    
+                                    // Check for service_variants[] format
+                                    if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
+                                        $queryVariants = $queryParams['service_variants'];
+                                    } elseif (isset($queryParams['service_variants'])) {
+                                        $queryVariants = [$queryParams['service_variants']];
+                                    }
+                                    
+                                    // Check for service_variants[0], service_variants[1], etc. format
+                                    foreach ($queryParams as $key => $value) {
+                                        if (preg_match('/^service_variants\[(\d+)\]$/', $key, $matches)) {
+                                            $queryVariants[] = $value;
+                                        }
+                                    }
+                                    
+                                    $variantIds = array_filter($queryVariants, function($id) {
+                                        return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                    });
+                                    $variantIds = array_values(array_unique($variantIds));
+                                    $debugVariantIds = $variantIds; // For debugging
+                                }
+                                
+                                if (!empty($variantIds)) {
                                     $selectedVariants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->with('service')->get();
                                     foreach ($selectedVariants as $variant) {
                                         $name = $variant->service ? $variant->service->name . ' - ' . $variant->name : $variant->name;
@@ -243,9 +324,40 @@
                                     }
                                 }
                                 
-                                // Get combos
+                                // Get combos - parse all formats
+                                $comboIds = [];
+                                $queryCombos = [];
+                                
+                                // Try request()->query() first
                                 if (request('combo_id')) {
-                                    $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
+                                    $queryCombos = request()->query('combo_id', []);
+                                    if (!is_array($queryCombos)) {
+                                        $queryCombos = $queryCombos ? [$queryCombos] : [];
+                                    }
+                                }
+                                
+                                // Also check parsed URL params for combo_id[] format
+                                if (isset($queryParams['combo_id'])) {
+                                    if (is_array($queryParams['combo_id'])) {
+                                        $queryCombos = array_merge($queryCombos, $queryParams['combo_id']);
+                                    } else {
+                                        $queryCombos[] = $queryParams['combo_id'];
+                                    }
+                                }
+                                
+                                // Check for indexed format combo_id[0], etc.
+                                foreach ($queryParams as $key => $value) {
+                                    if (preg_match('/^combo_id\[(\d+)\]$/', $key, $matches)) {
+                                        $queryCombos[] = $value;
+                                    }
+                                }
+                                
+                                $comboIds = array_filter($queryCombos, function($id) {
+                                    return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                });
+                                $comboIds = array_values(array_unique($comboIds));
+                                
+                                if (!empty($comboIds)) {
                                     $selectedCombos = \App\Models\Combo::whereIn('id', $comboIds)->get();
                                     foreach ($selectedCombos as $combo) {
                                         $allSelectedItems[] = [
@@ -258,37 +370,229 @@
                                         $totalCount++;
                                     }
                                 }
+                                
+                                // Load selected promotion if exists
+                                $selectedPromotion = null;
+                                if (request('promotion_id') && request('promotion_id')) {
+                                    $selectedPromotion = \App\Models\Promotion::where('id', request('promotion_id'))
+                                        ->where('status', 'active')
+                                        ->whereNull('deleted_at')
+                                        ->first();
+                                }
+                                
+                                // Calculate discount from promotion
+                                $discountAmount = 0;
+                                $finalPrice = $totalPrice;
+                                if ($selectedPromotion) {
+                                    if ($selectedPromotion->discount_type === 'percent') {
+                                        $discountPercent = $selectedPromotion->discount_percent ?? 0;
+                                        $discountAmount = ($totalPrice * $discountPercent) / 100;
+                                        // Apply max discount if exists
+                                        if ($selectedPromotion->max_discount_amount) {
+                                            $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
+                                        }
+                                    } else {
+                                        $discountAmount = $selectedPromotion->discount_amount ?? 0;
+                                    }
+                                    $finalPrice = max(0, $totalPrice - $discountAmount);
+                                }
+                                
+                                // Debug: Log để kiểm tra
+                                if (config('app.debug')) {
+                                    \Log::info('Appointment create - Total price calculation', [
+                                        'url' => request()->fullUrl(),
+                                        'service_ids' => $debugServiceIds,
+                                        'variant_ids' => $debugVariantIds,
+                                        'combo_ids' => $debugComboIds,
+                                        'service_count' => count($debugServiceIds),
+                                        'variant_count' => count($debugVariantIds),
+                                        'combo_count' => count($debugComboIds),
+                                        'total_count' => $totalCount,
+                                        'total_price' => $totalPrice,
+                                        'discount_amount' => $discountAmount,
+                                        'final_price' => $finalPrice,
+                                        'promotion_id' => request('promotion_id'),
+                                        'all_items' => array_map(function($item) {
+                                            return [
+                                                'id' => $item['id'],
+                                                'name' => $item['name'],
+                                                'price' => $item['price'],
+                                                'type' => $item['type']
+                                            ];
+                                        }, $allSelectedItems)
+                                    ]);
+                                }
                             @endphp
                             
                             @if($hasAnyService && count($allSelectedItems) > 0)
-                                <!-- Header với icon và số lượng -->
-                                <div style="background: #f8f9fa; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e0e0e0; border-bottom: none;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <i class="fa fa-scissors" style="color: #000; font-size: 16px;"></i>
-                                        <span style="color: #000; font-size: 14px; font-weight: 600;">Đã chọn {{ $totalCount }} dịch vụ</span>
-                                    </div>
-                                    <i class="fa fa-chevron-right" style="color: #000; font-size: 12px;"></i>
-                                </div>
-                                
-                                <!-- Danh sách dịch vụ dạng tags -->
-                                <div style="background: #fff; padding: 12px 16px; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px;">
-                                    @foreach($allSelectedItems as $item)
-                                        <div style="background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 20px; padding: 8px 14px; display: inline-block; font-size: 13px; color: #333;">
-                                            {{ $item['name'] }}
+                                <!-- Container với white background, rounded corners và shadow -->
+                                <div style="background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+                                    <!-- Header với icon và số lượng -->
+                                    <div style="background: #fff; padding: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <i class="fa fa-scissors" style="color: #000; font-size: 18px;"></i>
+                                            <span style="color: #000; font-size: 14px; font-weight: 600;">Đã chọn {{ $totalCount }} dịch vụ</span>
                                         </div>
-                                    @endforeach
-                                </div>
-                                
-                                <!-- Tổng số tiền -->
-                                <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <i class="fa fa-chevron-right" style="color: #000; font-size: 14px;"></i>
+                                    </div>
+                                    
+                                    <!-- Danh sách dịch vụ dạng tags -->
+                                    <div style="background: #fff; padding: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
+                                        @foreach($allSelectedItems as $item)
+                                            <div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 16px; padding: 6px 12px; display: inline-block; font-size: 13px; color: #333;">
+                                                {{ $item['name'] }}
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    
+                                    <!-- Tổng số tiền -->
+                                    <div style="background: #fff; padding: 16px; border-top: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between;">
                                         <span style="color: #000; font-size: 14px; font-weight: 500;">Tổng số tiền anh cần thanh toán:</span>
-                                        <span style="color: #28a745; font-size: 16px; font-weight: 700;">{{ number_format($totalPrice, 0, ',', '.') }} VNĐ</span>
+                                        <span id="totalPriceDisplay" style="color: #28a745; font-size: 16px; font-weight: 700;">{{ number_format($finalPrice, 0, ',', '.') }} VNĐ</span>
                                     </div>
                                 </div>
+                                
+                                <script>
+                                // Promotion data from server
+                                @php
+                                    $promotionForJs = null;
+                                    if (isset($selectedPromotion) && $selectedPromotion) {
+                                        $promotionForJs = [
+                                            'id' => $selectedPromotion->id,
+                                            'discount_type' => $selectedPromotion->discount_type,
+                                            'discount_percent' => $selectedPromotion->discount_percent ?? 0,
+                                            'discount_amount' => $selectedPromotion->discount_amount ?? 0,
+                                            'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null
+                                        ];
+                                    }
+                                @endphp
+                                const promotionData = @json($promotionForJs);
+                                
+                                // Update total price from sessionStorage and apply discount
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    try {
+                                        const stored = sessionStorage.getItem('selectedServices');
+                                        const totalPriceEl = document.getElementById('totalPriceDisplay');
+                                        if (!totalPriceEl) return;
+                                        
+                                        let totalPrice = {{ $totalPrice }};
+                                        
+                                        if (stored) {
+                                            const parsed = JSON.parse(stored);
+                                            const prices = parsed.prices || {};
+                                            
+                                            // Calculate total from sessionStorage prices
+                                            let totalFromStorage = 0;
+                                            Object.values(prices).forEach(price => {
+                                                totalFromStorage += parseFloat(price) || 0;
+                                            });
+                                            
+                                            // Use sessionStorage price if available and different
+                                            if (totalFromStorage > 0) {
+                                                totalPrice = totalFromStorage;
+                                            }
+                                        }
+                                        
+                                        // Calculate discount if promotion exists
+                                        let discountAmount = 0;
+                                        let finalPrice = totalPrice;
+                                        if (promotionData) {
+                                            if (promotionData.discount_type === 'percent') {
+                                                discountAmount = (totalPrice * promotionData.discount_percent) / 100;
+                                                if (promotionData.max_discount_amount) {
+                                                    discountAmount = Math.min(discountAmount, promotionData.max_discount_amount);
+                                                }
+                                            } else {
+                                                discountAmount = promotionData.discount_amount;
+                                            }
+                                            finalPrice = Math.max(0, totalPrice - discountAmount);
+                                        }
+                                        
+                                        // Format and update price
+                                        const formattedPrice = Math.round(finalPrice).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                                        totalPriceEl.textContent = formattedPrice + ' VNĐ';
+                                    } catch (e) {
+                                        console.error('Error updating total price:', e);
+                                    }
+                                });
+                                </script>
                                 
                                 <!-- Nút chọn thêm dịch vụ -->
-                                <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}" 
+                                @php
+                                    // Build URL query string manually to ensure correct format
+                                    $urlParams = [];
+                                    
+                                    // Get service IDs
+                                    if (request('service_id')) {
+                                        $queryServices = request()->query('service_id', []);
+                                        if (!is_array($queryServices)) {
+                                            $queryServices = $queryServices ? [$queryServices] : [];
+                                        }
+                                        $serviceIds = array_filter($queryServices, function($id) {
+                                            return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                        });
+                                        foreach ($serviceIds as $serviceId) {
+                                            $urlParams[] = 'service_id[]=' . urlencode($serviceId);
+                                        }
+                                    }
+                                    
+                                    // Get variant IDs
+                                    if (request()->has('service_variants')) {
+                                        $url = request()->fullUrl();
+                                        $parsedUrl = parse_url($url);
+                                        $queryParams = [];
+                                        if (isset($parsedUrl['query'])) {
+                                            parse_str($parsedUrl['query'], $queryParams);
+                                        }
+                                        
+                                        $queryVariants = [];
+                                        if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
+                                            $queryVariants = $queryParams['service_variants'];
+                                        } elseif (isset($queryParams['service_variants'])) {
+                                            $queryVariants = [$queryParams['service_variants']];
+                                        }
+                                        
+                                        foreach ($queryParams as $key => $value) {
+                                            if (preg_match('/^service_variants\[(\d+)\]$/', $key, $matches)) {
+                                                $queryVariants[] = $value;
+                                            }
+                                        }
+                                        
+                                        $variantIds = array_filter($queryVariants, function($id) {
+                                            return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                        });
+                                        
+                                        foreach (array_unique($variantIds) as $variantId) {
+                                            $urlParams[] = 'service_variants[]=' . urlencode($variantId);
+                                        }
+                                    }
+                                    
+                                    // Get combo IDs
+                                    if (request('combo_id')) {
+                                        $queryCombos = request()->query('combo_id', []);
+                                        if (!is_array($queryCombos)) {
+                                            $queryCombos = $queryCombos ? [$queryCombos] : [];
+                                        }
+                                        $comboIds = array_filter($queryCombos, function($id) {
+                                            return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
+                                        });
+                                        foreach ($comboIds as $comboId) {
+                                            $urlParams[] = 'combo_id[]=' . urlencode($comboId);
+                                        }
+                                    }
+                                    
+                                    // Add promotion_id if exists
+                                    if (request('promotion_id')) {
+                                        $urlParams[] = 'promotion_id=' . urlencode(request('promotion_id'));
+                                    }
+                                    
+                                    // Build final URL
+                                    $selectServicesUrl = route('site.appointment.select-services');
+                                    if (!empty($urlParams)) {
+                                        $selectServicesUrl .= '?' . implode('&', $urlParams);
+                                    }
+                                @endphp
+                                <a href="{{ $selectServicesUrl }}" 
                                    class="btn w-100" 
                                    style="background: #fff; border: 1px solid #0066cc; color: #0066cc; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center; margin-top: 12px;">
                                     <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn thêm dịch vụ ({{ $totalCount }})
