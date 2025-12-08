@@ -7,6 +7,8 @@ use App\Models\AppointmentDetail;
 use App\Models\AppointmentLog;
 use App\Models\WorkingSchedule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AppointmentCancelledMail;
 
 class AppointmentService
 {
@@ -308,7 +310,12 @@ class AppointmentService
     public function cancelAppointment($id, $reason = null, $modifiedBy = null)
     {
         return DB::transaction(function () use ($id, $reason, $modifiedBy) {
-            $appointment = Appointment::findOrFail($id);
+            $appointment = Appointment::with([
+                'user',
+                'employee.user',
+                'appointmentDetails.serviceVariant.service',
+                'appointmentDetails.combo'
+            ])->findOrFail($id);
             $oldStatus = $appointment->status;
             
             $appointment->update([
@@ -327,6 +334,31 @@ class AppointmentService
                 'status_to' => 'Đã hủy',
                 'modified_by' => $modifiedBy ?? auth()->id(),
             ]);
+
+            // Gửi email thông báo hủy lịch cho khách hàng
+            try {
+                if ($appointment->user && $appointment->user->email) {
+                    Mail::to($appointment->user->email)
+                        ->send(new AppointmentCancelledMail($appointment, $reason));
+                    
+                    \Log::info('Cancellation email sent successfully', [
+                        'appointment_id' => $appointment->id,
+                        'user_email' => $appointment->user->email
+                    ]);
+                } else {
+                    \Log::warning('Cannot send cancellation email: user has no email', [
+                        'appointment_id' => $appointment->id,
+                        'user_id' => $appointment->user_id
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Log lỗi nhưng không làm gián đoạn quá trình hủy lịch
+                \Log::error('Failed to send cancellation email: ' . $e->getMessage(), [
+                    'appointment_id' => $appointment->id,
+                    'user_email' => $appointment->user->email ?? null,
+                    'error' => $e->getTraceAsString()
+                ]);
+            }
 
             return $appointment;
         });
