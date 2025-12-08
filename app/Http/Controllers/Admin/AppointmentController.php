@@ -51,7 +51,10 @@ class AppointmentController extends Controller
      */
     public function create()
     {
-        $employees = $this->employeeService->getAll();
+        // Chỉ lấy nhân viên có position là Stylist
+        $employees = \App\Models\Employee::where('position', 'Stylist')
+            ->with('user')
+            ->get();
         
         // Lấy dịch vụ đơn (không có biến thể)
         $singleServices = \App\Models\Service::whereNull('deleted_at')
@@ -81,26 +84,29 @@ class AppointmentController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'email' => 'nullable|email|max:255',
-            'employee_id' => 'nullable|exists:employees,id',
-            'service_type' => 'required|in:single,variant,combo',
-            'service_id' => 'nullable|exists:services,id',
-            'service_variant_id' => 'nullable|exists:service_variants,id',
-            'combo_id' => 'nullable|exists:combos,id',
-            'status' => 'required|in:Chờ xử lý,Đã xác nhận,Đang thực hiện,Hoàn thành,Chưa thanh toán,Đã thanh toán',
+            'employee_id' => [
+                'nullable',
+                'exists:employees,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $employee = \App\Models\Employee::find($value);
+                        if (!$employee || $employee->position !== 'Stylist') {
+                            $fail('Chỉ có thể chọn nhân viên có vị trí là Stylist.');
+                        }
+                    }
+                },
+            ],
+            'services' => 'required|array|min:1',
+            'services.*' => 'required|string',
+            'status' => 'required|in:Chờ xử lý,Đã xác nhận,Đang thực hiện,Hoàn thành',
             'note' => 'nullable|string',
             'appointment_date' => 'nullable|date',
             'appointment_time' => 'nullable|string',
         ]);
 
-        // Validate that at least one service is selected based on service_type
-        if ($validated['service_type'] === 'single' && empty($validated['service_id'])) {
-            return redirect()->back()->withErrors(['service_id' => 'Vui lòng chọn dịch vụ đơn'])->withInput();
-        }
-        if ($validated['service_type'] === 'variant' && empty($validated['service_variant_id'])) {
-            return redirect()->back()->withErrors(['service_variant_id' => 'Vui lòng chọn dịch vụ biến thể'])->withInput();
-        }
-        if ($validated['service_type'] === 'combo' && empty($validated['combo_id'])) {
-            return redirect()->back()->withErrors(['combo_id' => 'Vui lòng chọn combo'])->withInput();
+        // Validate that at least one service is selected
+        if (empty($validated['services']) || count($validated['services']) === 0) {
+            return redirect()->back()->withErrors(['services' => 'Vui lòng chọn ít nhất một dịch vụ'])->withInput();
         }
 
         // Get or create user
@@ -136,60 +142,71 @@ class AppointmentController extends Controller
             'note' => $validated['note'] ?? null,
         ];
 
-        // Prepare service data based on type
+        // Prepare service data from selected services
         $serviceVariantData = [];
-        $duration = 0;
+        $totalDuration = 0;
         
-        if ($validated['service_type'] === 'single' && !empty($validated['service_id'])) {
-            $service = \App\Models\Service::find($validated['service_id']);
-            if ($service) {
-                $serviceVariantData[] = [
-                    'service_variant_id' => null,
-                    'combo_id' => null,
-                    'employee_id' => $validated['employee_id'] ?? null,
-                    'price_snapshot' => $service->base_price ?? 0,
-                    'duration' => $service->base_duration ?? 0,
-                    'status' => 'Chờ',
-                    'notes' => $service->name, // Store service name in notes
-                ];
-                $duration = $service->base_duration ?? 0;
+        foreach ($validated['services'] as $serviceValue) {
+            // Format: "type_id" (e.g., "single_1", "variant_5", "combo_2")
+            $parts = explode('_', $serviceValue);
+            if (count($parts) !== 2) {
+                continue;
             }
-        } elseif ($validated['service_type'] === 'variant' && !empty($validated['service_variant_id'])) {
-            $serviceVariant = ServiceVariant::find($validated['service_variant_id']);
-            if ($serviceVariant) {
-                $serviceVariantData[] = [
-                    'service_variant_id' => $serviceVariant->id,
-                    'combo_id' => null,
-                    'employee_id' => $validated['employee_id'] ?? null,
-                    'price_snapshot' => $serviceVariant->price,
-                    'duration' => $serviceVariant->duration,
-                    'status' => 'Chờ',
-                ];
-                $duration = $serviceVariant->duration ?? 0;
-            }
-        } elseif ($validated['service_type'] === 'combo' && !empty($validated['combo_id'])) {
-            $combo = \App\Models\Combo::find($validated['combo_id']);
-            if ($combo) {
-                // Calculate total duration from combo items
-                $totalDuration = 0;
-                foreach ($combo->comboItems as $item) {
-                    if ($item->serviceVariant) {
-                        $totalDuration += $item->serviceVariant->duration ?? 0;
-                    } elseif ($item->service) {
-                        $totalDuration += $item->service->base_duration ?? 0;
-                    }
+            
+            $serviceType = $parts[0];
+            $serviceId = $parts[1];
+            
+            if ($serviceType === 'single') {
+                $service = \App\Models\Service::find($serviceId);
+                if ($service) {
+                    $serviceVariantData[] = [
+                        'service_variant_id' => null,
+                        'combo_id' => null,
+                        'employee_id' => $validated['employee_id'] ?? null,
+                        'price_snapshot' => $service->base_price ?? 0,
+                        'duration' => $service->base_duration ?? 0,
+                        'status' => 'Chờ',
+                        'notes' => $service->name,
+                    ];
+                    $totalDuration += $service->base_duration ?? 0;
                 }
-                
-                $serviceVariantData[] = [
-                    'service_variant_id' => null,
-                    'combo_id' => $combo->id,
-                    'employee_id' => $validated['employee_id'] ?? null,
-                    'price_snapshot' => $combo->price,
-                    'duration' => $totalDuration,
-                    'status' => 'Chờ',
-                    'notes' => $combo->name, // Store combo name in notes
-                ];
-                $duration = $totalDuration;
+            } elseif ($serviceType === 'variant') {
+                $serviceVariant = ServiceVariant::find($serviceId);
+                if ($serviceVariant) {
+                    $serviceVariantData[] = [
+                        'service_variant_id' => $serviceVariant->id,
+                        'combo_id' => null,
+                        'employee_id' => $validated['employee_id'] ?? null,
+                        'price_snapshot' => $serviceVariant->price,
+                        'duration' => $serviceVariant->duration,
+                        'status' => 'Chờ',
+                    ];
+                    $totalDuration += $serviceVariant->duration ?? 0;
+                }
+            } elseif ($serviceType === 'combo') {
+                $combo = \App\Models\Combo::find($serviceId);
+                if ($combo) {
+                    // Calculate total duration from combo items
+                    $comboDuration = 0;
+                    foreach ($combo->comboItems as $item) {
+                        if ($item->serviceVariant) {
+                            $comboDuration += $item->serviceVariant->duration ?? 0;
+                        } elseif ($item->service) {
+                            $comboDuration += $item->service->base_duration ?? 0;
+                        }
+                    }
+                    
+                    $serviceVariantData[] = [
+                        'service_variant_id' => null,
+                        'combo_id' => $combo->id,
+                        'employee_id' => $validated['employee_id'] ?? null,
+                        'price_snapshot' => $combo->price,
+                        'duration' => $comboDuration,
+                        'status' => 'Chờ',
+                        'notes' => $combo->name,
+                    ];
+                    $totalDuration += $comboDuration;
+                }
             }
         }
 
@@ -198,9 +215,9 @@ class AppointmentController extends Controller
             $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
             $appointmentData['start_at'] = $startAt;
             
-            // Calculate end_at based on service duration
-            if ($duration > 0) {
-                $appointmentData['end_at'] = $startAt->copy()->addMinutes($duration);
+            // Calculate end_at based on total service duration
+            if ($totalDuration > 0) {
+                $appointmentData['end_at'] = $startAt->copy()->addMinutes($totalDuration);
             }
         }
 
@@ -225,7 +242,10 @@ class AppointmentController extends Controller
     public function edit(string $id)
     {
         $appointment = $this->appointmentService->getOne($id);
-        $employees = $this->employeeService->getAll();
+        // Chỉ lấy nhân viên có position là Stylist
+        $employees = \App\Models\Employee::where('position', 'Stylist')
+            ->with('user')
+            ->get();
         
         // Lấy dịch vụ đơn (không có biến thể)
         $singleServices = \App\Models\Service::whereNull('deleted_at')
@@ -290,140 +310,200 @@ class AppointmentController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'employee_id' => 'nullable|exists:employees,id',
-            'service_type' => 'required|in:single,variant,combo',
-            'service_id' => 'nullable|exists:services,id',
-            'service_variant_id' => 'nullable|exists:service_variants,id',
-            'combo_id' => 'nullable|exists:combos,id',
-            'status' => 'required|in:Chờ xử lý,Đã xác nhận,Đang thực hiện,Hoàn thành,Đã hủy,Chưa thanh toán,Đã thanh toán',
-            'note' => 'nullable|string',
-            'appointment_date' => 'nullable|date',
-            'appointment_time' => 'nullable|string',
+        \Illuminate\Support\Facades\Log::info('Appointment update started', [
+            'appointment_id' => $id,
+            'method' => $request->method(),
+            'route' => $request->route()->getName(),
+            'url' => $request->fullUrl()
         ]);
-
-        // Validate that at least one service is selected based on service_type
-        if ($validated['service_type'] === 'single' && empty($validated['service_id'])) {
-            return redirect()->back()->withErrors(['service_id' => 'Vui lòng chọn dịch vụ đơn'])->withInput();
-        }
-        if ($validated['service_type'] === 'variant' && empty($validated['service_variant_id'])) {
-            return redirect()->back()->withErrors(['service_variant_id' => 'Vui lòng chọn dịch vụ biến thể'])->withInput();
-        }
-        if ($validated['service_type'] === 'combo' && empty($validated['combo_id'])) {
-            return redirect()->back()->withErrors(['combo_id' => 'Vui lòng chọn combo'])->withInput();
-        }
-
-        $appointment = $this->appointmentService->getOne($id);
-
-        // Update user info
-        $user = $appointment->user;
-        if ($user) {
-            $user->update([
-                'name' => $validated['name'],
-                'phone' => $validated['phone'],
-                'email' => $validated['email'] ?? $user->email,
-            ]);
-        }
-
-        // Prepare appointment data
-        $appointmentData = [
-            'user_id' => $user->id,
-            'employee_id' => $validated['employee_id'] ?? null,
-            'status' => $validated['status'],
-            'note' => $validated['note'] ?? null,
-        ];
-
-        // Nếu appointment có nhiều dịch vụ (>1), giữ lại appointment details hiện có
-        // Chỉ cập nhật dịch vụ nếu appointment có 1 dịch vụ hoặc có flag update_services
-        $shouldUpdateServices = $request->has('update_services') && $request->input('update_services') === '1';
-        $serviceVariantData = [];
-        $duration = 0;
         
-        // Tính duration từ appointment details hiện có
-        foreach ($appointment->appointmentDetails as $detail) {
-            $duration += $detail->duration ?? 60;
-        }
-        
-        // Chỉ cập nhật dịch vụ nếu appointment có 1 dịch vụ hoặc có flag update_services
-        if ($shouldUpdateServices || $appointment->appointmentDetails->count() <= 1) {
-            $serviceVariantData = []; // Reset
-            $duration = 0; // Reset
-            
-            if ($validated['service_type'] === 'single' && !empty($validated['service_id'])) {
-                $service = \App\Models\Service::find($validated['service_id']);
-                if ($service) {
-                    $serviceVariantData[] = [
-                        'service_variant_id' => null,
-                        'combo_id' => null,
-                        'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $service->base_price ?? 0,
-                        'duration' => $service->base_duration ?? 0,
-                        'status' => 'Chờ',
-                        'notes' => $service->name,
-                    ];
-                    $duration = $service->base_duration ?? 0;
-                }
-            } elseif ($validated['service_type'] === 'variant' && !empty($validated['service_variant_id'])) {
-                $serviceVariant = ServiceVariant::find($validated['service_variant_id']);
-                if ($serviceVariant) {
-                    $serviceVariantData[] = [
-                        'service_variant_id' => $serviceVariant->id,
-                        'combo_id' => null,
-                        'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $serviceVariant->price,
-                        'duration' => $serviceVariant->duration,
-                        'status' => 'Chờ',
-                    ];
-                    $duration = $serviceVariant->duration ?? 0;
-                }
-            } elseif ($validated['service_type'] === 'combo' && !empty($validated['combo_id'])) {
-                $combo = \App\Models\Combo::find($validated['combo_id']);
-                if ($combo) {
-                    // Calculate total duration from combo items
-                    $totalDuration = 0;
-                    foreach ($combo->comboItems as $item) {
-                        if ($item->serviceVariant) {
-                            $totalDuration += $item->serviceVariant->duration ?? 0;
-                        } elseif ($item->service) {
-                            $totalDuration += $item->service->base_duration ?? 0;
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'phone' => 'required|string|max:20',
+                'email' => 'nullable|email|max:255',
+                'employee_id' => [
+                    'nullable',
+                    'exists:employees,id',
+                    function ($attribute, $value, $fail) {
+                        if ($value) {
+                            $employee = \App\Models\Employee::find($value);
+                            if (!$employee || $employee->position !== 'Stylist') {
+                                $fail('Chỉ có thể chọn nhân viên có vị trí là Stylist.');
+                            }
                         }
+                    },
+                ],
+                'new_services' => 'nullable|array',
+                'new_services.*' => 'nullable|string',
+                'status' => 'required|in:Chờ xử lý,Đã xác nhận,Đang thực hiện,Hoàn thành,Đã hủy',
+                'note' => 'nullable|string',
+                'appointment_date' => 'nullable|date',
+                'appointment_time' => 'nullable|string',
+            ]);
+
+            $appointment = $this->appointmentService->getOne($id);
+
+            // Update user info
+            $user = $appointment->user;
+            if ($user) {
+                $user->update([
+                    'name' => $validated['name'],
+                    'phone' => $validated['phone'],
+                    'email' => $validated['email'] ?? $user->email,
+                ]);
+            }
+
+            // Prepare appointment data
+            $appointmentData = [
+                'user_id' => $user->id,
+                'employee_id' => $validated['employee_id'] ?? null,
+                'status' => $validated['status'],
+                'note' => $validated['note'] ?? null,
+            ];
+
+            // Prepare new services data if any
+            $newServiceVariantData = [];
+            $additionalDuration = 0;
+            
+            if (!empty($validated['new_services'])) {
+                foreach ($validated['new_services'] as $serviceValue) {
+                    if (empty($serviceValue)) continue;
+                    
+                    // Format: "type_id" (e.g., "single_1", "variant_5", "combo_2")
+                    $parts = explode('_', $serviceValue);
+                    if (count($parts) !== 2) {
+                        continue;
                     }
                     
-                    $serviceVariantData[] = [
-                        'service_variant_id' => null,
-                        'combo_id' => $combo->id,
-                        'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $combo->price,
-                        'duration' => $totalDuration,
-                        'status' => 'Chờ',
-                        'notes' => $combo->name,
-                    ];
-                    $duration = $totalDuration;
+                    $serviceType = $parts[0];
+                    $serviceId = $parts[1];
+                    
+                    if ($serviceType === 'single') {
+                        $service = \App\Models\Service::find($serviceId);
+                        if ($service) {
+                            $newServiceVariantData[] = [
+                                'service_variant_id' => null,
+                                'combo_id' => null,
+                                'employee_id' => $validated['employee_id'] ?? null,
+                                'price_snapshot' => $service->base_price ?? 0,
+                                'duration' => $service->base_duration ?? 0,
+                                'status' => 'Chờ',
+                                'notes' => $service->name,
+                            ];
+                            $additionalDuration += $service->base_duration ?? 0;
+                        }
+                    } elseif ($serviceType === 'variant') {
+                        $serviceVariant = ServiceVariant::find($serviceId);
+                        if ($serviceVariant) {
+                            $newServiceVariantData[] = [
+                                'service_variant_id' => $serviceVariant->id,
+                                'combo_id' => null,
+                                'employee_id' => $validated['employee_id'] ?? null,
+                                'price_snapshot' => $serviceVariant->price,
+                                'duration' => $serviceVariant->duration,
+                                'status' => 'Chờ',
+                            ];
+                            $additionalDuration += $serviceVariant->duration ?? 0;
+                        }
+                    } elseif ($serviceType === 'combo') {
+                        $combo = \App\Models\Combo::find($serviceId);
+                        if ($combo) {
+                            // Calculate total duration from combo items
+                            $comboDuration = 0;
+                            foreach ($combo->comboItems as $item) {
+                                if ($item->serviceVariant) {
+                                    $comboDuration += $item->serviceVariant->duration ?? 0;
+                                } elseif ($item->service) {
+                                    $comboDuration += $item->service->base_duration ?? 0;
+                                }
+                            }
+                            
+                            $newServiceVariantData[] = [
+                                'service_variant_id' => null,
+                                'combo_id' => $combo->id,
+                                'employee_id' => $validated['employee_id'] ?? null,
+                                'price_snapshot' => $combo->price,
+                                'duration' => $comboDuration,
+                                'status' => 'Chờ',
+                                'notes' => $combo->name,
+                            ];
+                            $additionalDuration += $comboDuration;
+                        }
+                    }
                 }
             }
-        }
-        // Nếu không cập nhật dịch vụ, serviceVariantData sẽ rỗng và AppointmentService sẽ giữ lại appointment details hiện có
 
-        // Set start_at and end_at if date and time provided
-        if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
-            $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
-            $appointmentData['start_at'] = $startAt;
-            
-            // Calculate end_at based on service duration
-            if ($duration > 0) {
-                $appointmentData['end_at'] = $startAt->copy()->addMinutes($duration);
+            // Set start_at and end_at if date and time provided
+            if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
+                $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
+                $appointmentData['start_at'] = $startAt;
+                
+                // Calculate total duration from existing services + new services
+                // Reload appointment to get fresh appointment details count
+                $appointment->refresh();
+                $existingDuration = $appointment->appointmentDetails->sum('duration');
+                $totalDuration = $existingDuration + $additionalDuration;
+                
+                // Always set end_at if we have start_at, even if duration is 0
+                $appointmentData['end_at'] = $startAt->copy()->addMinutes(max($totalDuration, 60)); // Minimum 60 minutes if no duration
             }
+            // If date/time not provided, don't include start_at and end_at in updateData
+            // They will remain unchanged
+
+            // Update appointment (keep existing services, add new ones)
+            \Illuminate\Support\Facades\Log::info('Calling appointmentService->update', [
+                'appointment_id' => $id,
+                'appointment_data' => $appointmentData,
+                'service_variant_data_count' => count($newServiceVariantData)
+            ]);
+            
+            $updatedAppointment = $this->appointmentService->update($id, $appointmentData, $newServiceVariantData);
+            
+            \Illuminate\Support\Facades\Log::info('Appointment updated successfully', [
+                'appointment_id' => $id,
+                'appointment_deleted_at' => $updatedAppointment->deleted_at,
+                'appointment_trashed' => $updatedAppointment->trashed()
+            ]);
+
+            return redirect()->route('admin.appointments.index')
+                ->with('success', 'Lịch hẹn đã được cập nhật thành công!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Re-throw validation exceptions to show validation errors
+            throw $e;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error updating appointment: ' . $e->getMessage(), [
+                'appointment_id' => $id,
+                'error' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra khi cập nhật lịch hẹn: ' . $e->getMessage());
         }
+    }
 
-        // Chỉ truyền serviceVariantData nếu muốn cập nhật dịch vụ
-        // Nếu rỗng, AppointmentService sẽ giữ lại appointment details hiện có
-        $this->appointmentService->update($id, $appointmentData, $serviceVariantData);
-
-        return redirect()->route('admin.appointments.index')
-            ->with('success', 'Lịch hẹn đã được cập nhật thành công!');
+    /**
+     * Remove a service from appointment.
+     */
+    public function removeService(string $appointmentId, string $detailId)
+    {
+        try {
+            $appointment = $this->appointmentService->getOne($appointmentId);
+            $detail = \App\Models\AppointmentDetail::findOrFail($detailId);
+            
+            if ($detail->appointment_id != $appointment->id) {
+                return redirect()->back()->with('error', 'Dịch vụ không thuộc lịch hẹn này!');
+            }
+            
+            $detail->delete();
+            
+            return redirect()->route('admin.appointments.edit', $appointmentId)
+                ->with('success', 'Dịch vụ đã được xóa thành công!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -536,6 +616,14 @@ class AppointmentController extends Controller
      */
     public function destroy(string $id)
     {
+        \Illuminate\Support\Facades\Log::warning('AppointmentController->destroy called', [
+            'appointment_id' => $id,
+            'request_method' => request()->method(),
+            'request_url' => request()->fullUrl(),
+            'request_route' => request()->route()->getName() ?? 'unknown',
+            'request_all' => request()->all()
+        ]);
+        
         $this->appointmentService->delete($id);
 
         return redirect()->route('admin.appointments.index')

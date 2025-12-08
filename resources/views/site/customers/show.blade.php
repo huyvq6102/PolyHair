@@ -6,45 +6,49 @@
     <div class="row">
         <!-- Cột thông tin cá nhân và hành động -->
         <div class="col-lg-4 mb-4">
-            <div class="card border-0 shadow-sm text-center">
-                <div class="card-body p-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4 text-center">
                     <!-- Avatar -->
-                    @if($user->avatar)
-                        <img src="{{ asset('storage/' . $user->avatar) }}" 
-                             alt="{{ $user->name }}"
-                             class="rounded-circle img-fluid mb-3 shadow-sm" 
-                             style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #f8f9fa;">
-                    @else
-                        <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm" 
-                             style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                            {{ strtoupper(substr($user->name, 0, 1)) }}
-                        </div>
-                    @endif
+                    <div class="mb-3">
+                        @if($user->avatar)
+                            <img src="{{ asset('legacy/images/avatars/' . $user->avatar) }}" 
+                                 alt="{{ $user->name }}"
+                                 class="rounded-circle img-fluid shadow-sm" 
+                                 style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #f8f9fa;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="rounded-circle mx-auto d-none align-items-center justify-content-center bg-gradient-primary text-white shadow-sm" 
+                                 style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                {{ strtoupper(substr($user->name, 0, 1)) }}
+                            </div>
+                        @else
+                            <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm" 
+                                 style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                {{ strtoupper(substr($user->name, 0, 1)) }}
+                            </div>
+                        @endif
+                    </div>
                     
-                    <h4 class="mb-2 fw-bold">{{ $user->name }}</h4>
-                    <p class="text-muted mb-4">
-                        <i class="fas fa-medal me-1 text-warning"></i>Thành viên Vàng
-                    </p>
+                    <h4 class="mb-4 fw-bold text-dark">{{ $user->name }}</h4>
 
                     <!-- Thống kê -->
-                    <div class="mb-4 p-4 bg-gradient-light rounded-3 shadow-sm" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+                    <div class="mb-4 p-4 bg-light rounded-3">
                         <div class="d-flex flex-column align-items-center">
                             <div class="mb-2">
-                                <i class="fas fa-cut fa-2x text-primary mb-2"></i>
+                                <i class="fas fa-cut fa-2x text-primary"></i>
                             </div>
-                            <h3 class="mb-0 fw-bold text-primary">{{ $user->appointments->where('status', '!=', 'Đã hủy')->count() }}</h3>
+                            <h3 class="mb-1 fw-bold text-primary">{{ $user->appointments->where('status', '!=', 'Đã hủy')->count() }}</h3>
                             <small class="text-muted fw-semibold">Lần cắt</small>
                         </div>
                     </div>
 
                     <!-- Nút hành động chính -->
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-3">
                         <a href="{{ route('site.appointment.create') }}" 
-                           class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm">
+                           class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm text-decoration-none">
                             <i class="fas fa-calendar-plus me-2"></i>Đặt lịch ngay
                         </a>
                         <a href="{{ route('profile.edit') }}" 
-                           class="btn btn-outline-secondary rounded-pill d-flex align-items-center justify-content-center py-2">
+                           class="btn btn-outline-secondary btn-lg rounded-pill fw-semibold d-flex align-items-center justify-content-center py-3 text-decoration-none">
                             <i class="fas fa-user-edit me-2"></i>Sửa hồ sơ
                         </a>
                     </div>
@@ -60,10 +64,15 @@
                     @if($favoriteBarber && $favoriteBarber->user)
                         <div class="d-flex align-items-center p-3 bg-light rounded-3">
                             @if($favoriteBarber->avatar)
-                                <img src="{{ asset('storage/' . $favoriteBarber->avatar) }}" 
+                                <img src="{{ asset('legacy/images/avatars/' . $favoriteBarber->avatar) }}" 
                                      alt="{{ $favoriteBarber->user->name }}" 
                                      class="rounded-circle me-3 shadow-sm" 
-                                     style="width: 70px; height: 70px; object-fit: cover; border: 3px solid #fff;">
+                                     style="width: 70px; height: 70px; object-fit: cover; border: 3px solid #fff;"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="rounded-circle me-3 d-none align-items-center justify-content-center bg-gradient-primary text-white shadow-sm" 
+                                     style="width: 70px; height: 70px; font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #fff;">
+                                    {{ strtoupper(substr($favoriteBarber->user->name, 0, 1)) }}
+                                </div>
                             @else
                                 <div class="rounded-circle me-3 d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm" 
                                      style="width: 70px; height: 70px; font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #fff;">
@@ -103,7 +112,7 @@
                         </div>
                     @endif
                 </div>
-            </div> -->
+            </div>
         </div>
 
         <!-- Cột nội dung chính với các tab -->
@@ -139,7 +148,7 @@
                         <!-- Tab Lịch sử đặt lịch -->
                         <div class="tab-pane fade show active" id="history" role="tabpanel">
                             <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
-                            <div class="list-group">
+                            <div class="row g-3">
                                 @php
                                     $upcomingAppointments = $user->appointments->filter(function($appointment) {
                                         return $appointment->status != 'Hoàn thành' 
@@ -150,102 +159,127 @@
                                 @endphp
                                 
                                 @forelse($upcomingAppointments as $appointment)
-                                <div class="list-group-item d-flex justify-content-between align-items-center" data-appointment-id="{{ $appointment->id }}">
-                                    <div>
-                                        <h6 class="mb-1">
-                                            @if($appointment->appointmentDetails->count() > 0)
-                                                @foreach($appointment->appointmentDetails as $detail)
-                                                    @if($detail->serviceVariant)
-                                                        {{ $detail->serviceVariant->name }}
-                                                    @elseif($detail->combo)
-                                                        {{ $detail->combo->name }}
-                                                    @else
-                                                        {{ $detail->notes ?? 'Dịch vụ' }}
-                                                    @endif
-                                                    @if(!$loop->last), @endif
-                                                @endforeach
-                                            @else
-                                                Dịch vụ
-                                            @endif
-                                        </h6>
-                                        <small class="text-muted">
-                                            @if($appointment->employee && $appointment->employee->user)
-                                                Barber: {{ $appointment->employee->user->name }}
-                                            @else
-                                                Chưa phân công nhân viên
-                                            @endif
-                                        </small>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="fw-bold d-block">
-                                            @if($appointment->start_at)
-                                                {{ $appointment->start_at->format('H:i, d/m/Y') }}
-                                            @else
-                                                Chưa có thời gian
-                                            @endif
-                                        </span>
-                                        @php
-                                            $statusBadgeClass = 'bg-info'; // Mặc định
-                                            if ($appointment->status === 'Đã xác nhận') {
-                                                $statusBadgeClass = 'bg-success';
-                                            } elseif ($appointment->status === 'Chờ xử lý') {
-                                                $statusBadgeClass = 'bg-warning';
-                                            } elseif ($appointment->status === 'Đang thực hiện') {
-                                                $statusBadgeClass = 'bg-primary';
-                                            }
-                                        @endphp
-                                        <span class="badge {{ $statusBadgeClass }} ms-2 appointment-status-badge" data-status="{{ $appointment->status }}">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
-                                    </div>
-                                    <div class="ms-3 appointment-actions" data-appointment-id="{{ $appointment->id }}">
-                                        <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary me-2">Xem</a>
-                                        @php
-                                            // Chỉ hiển thị nút hủy nếu:
-                                            // 1. Status = 'Chờ xử lý'
-                                            // 2. Chưa quá 5 phút kể từ khi đặt
-                                            $canCancel = false;
-                                            if ($appointment->status === 'Chờ xử lý' && $appointment->created_at) {
-                                                $createdAt = \Carbon\Carbon::parse($appointment->created_at);
-                                                $minutesSinceCreated = $createdAt->diffInMinutes(now());
-                                                $canCancel = $minutesSinceCreated <= 5;
-                                            }
-                                        @endphp
-                                        @if($canCancel)
-                                            <button type="button" class="btn btn-sm btn-outline-danger appointment-cancel-btn" data-bs-toggle="modal" data-bs-target="#cancelModal{{ $appointment->id }}">
-                                                Hủy
-                                            </button>
-                                            
-                                            <!-- Modal xác nhận hủy -->
-                                            <div class="modal fade" id="cancelModal{{ $appointment->id }}" tabindex="-1" aria-labelledby="cancelModalLabel{{ $appointment->id }}" aria-hidden="true">
-                                                <div class="modal-dialog">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title" id="cancelModalLabel{{ $appointment->id }}">Xác nhận hủy lịch hẹn</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                        </div>
-                                                        <form action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST">
-                                                            @csrf
-                                                            <div class="modal-body">
-                                                                <p>Bạn có chắc chắn muốn hủy lịch hẹn này?</p>
-                                                                <div class="mb-3">
-                                                                    <label for="cancellation_reason{{ $appointment->id }}" class="form-label">Lý do hủy (tùy chọn):</label>
-                                                                    <textarea class="form-control" id="cancellation_reason{{ $appointment->id }}" name="cancellation_reason" rows="3" placeholder="Nhập lý do hủy lịch hẹn..."></textarea>
+                                <div class="col-12" data-appointment-id="{{ $appointment->id }}">
+                                    <div class="card border shadow-sm h-100">
+                                        <div class="card-body p-3">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-8">
+                                                    <!-- Dòng đầu: Tên dịch vụ -->
+                                                    <h6 class="mb-2 fw-bold">
+                                                        @if($appointment->appointmentDetails->count() > 0)
+                                                            @foreach($appointment->appointmentDetails as $detail)
+                                                                @if($detail->serviceVariant)
+                                                                    {{ $detail->serviceVariant->name }}
+                                                                @elseif($detail->combo)
+                                                                    {{ $detail->combo->name }}
+                                                                @else
+                                                                    {{ $detail->notes ?? 'Dịch vụ' }}
+                                                                @endif
+                                                                @if(!$loop->last), @endif
+                                                            @endforeach
+                                                        @else
+                                                            Dịch vụ
+                                                        @endif
+                                                    </h6>
+                                                    
+                                                    <!-- Dòng thứ 2: Mã đơn và trạng thái (cố định, không wrap) -->
+                                                    <div class="d-flex align-items-center gap-2 mb-2" style="flex-wrap: nowrap;">
+                                                        @if($appointment->booking_code)
+                                                            <span class="badge bg-secondary text-white" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->booking_code }}</span>
+                                                        @endif
+                                                        @php
+                                                            $statusBadgeClass = 'bg-info';
+                                                            if ($appointment->status === 'Đã xác nhận') {
+                                                                $statusBadgeClass = 'bg-success';
+                                                            } elseif ($appointment->status === 'Chờ xử lý') {
+                                                                $statusBadgeClass = 'bg-warning text-dark';
+                                                            } elseif ($appointment->status === 'Đang thực hiện') {
+                                                                $statusBadgeClass = 'bg-primary';
+                                                            }
+                                                        @endphp
+                                                        <span class="badge {{ $statusBadgeClass }} appointment-status-badge" data-status="{{ $appointment->status }}" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
+                                                    </div>
+                                                    <!-- Dòng thứ 3: Thông tin barber và thời gian -->
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-user-tie me-1"></i>
+                                                            @if($appointment->employee && $appointment->employee->user)
+                                                                Barber: <strong>{{ $appointment->employee->user->name }}</strong>
+                                                            @else
+                                                                <span class="text-warning">Chưa phân công nhân viên</span>
+                                                            @endif
+                                                        </small>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calendar-alt me-1"></i>
+                                                            @if($appointment->start_at)
+                                                                <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong>
+                                                            @else
+                                                                <span class="text-warning">Chưa có thời gian</span>
+                                                            @endif
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                                    <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end appointment-actions" data-appointment-id="{{ $appointment->id }}">
+                                                        <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye me-1"></i>Xem
+                                                        </a>
+                                                        @php
+                                                            // Chỉ hiển thị nút hủy nếu:
+                                                            // 1. Status = 'Chờ xử lý'
+                                                            // 2. Chưa quá 5 phút kể từ khi đặt
+                                                            $canCancel = false;
+                                                            if ($appointment->status === 'Chờ xử lý' && $appointment->created_at) {
+                                                                $createdAt = \Carbon\Carbon::parse($appointment->created_at);
+                                                                $minutesSinceCreated = $createdAt->diffInMinutes(now());
+                                                                $canCancel = $minutesSinceCreated <= 5;
+                                                            }
+                                                        @endphp
+                                                        @if($canCancel)
+                                                            <button type="button" class="btn btn-sm btn-outline-danger appointment-cancel-btn" data-bs-toggle="modal" data-bs-target="#cancelModal{{ $appointment->id }}">
+                                                                <i class="fas fa-times me-1"></i>Hủy
+                                                            </button>
+                                                            
+                                                            <!-- Modal xác nhận hủy -->
+                                                            <div class="modal fade" id="cancelModal{{ $appointment->id }}" tabindex="-1" aria-labelledby="cancelModalLabel{{ $appointment->id }}" aria-hidden="true">
+                                                                <div class="modal-dialog">
+                                                                    <div class="modal-content">
+                                                                        <div class="modal-header">
+                                                                            <h5 class="modal-title" id="cancelModalLabel{{ $appointment->id }}">Xác nhận hủy lịch hẹn</h5>
+                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                        </div>
+                                                                        <form action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST">
+                                                                            @csrf
+                                                                            <div class="modal-body">
+                                                                                <p>Bạn có chắc chắn muốn hủy lịch hẹn này?</p>
+                                                                                <div class="mb-3">
+                                                                                    <label for="cancellation_reason{{ $appointment->id }}" class="form-label">Lý do hủy (tùy chọn):</label>
+                                                                                    <textarea class="form-control" id="cancellation_reason{{ $appointment->id }}" name="cancellation_reason" rows="3" placeholder="Nhập lý do hủy lịch hẹn..."></textarea>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="modal-footer">
+                                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                                                                <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+                                                                            </div>
+                                                                        </form>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                                                                <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
-                                                            </div>
-                                                        </form>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
-                                        @endif
+                                        </div>
                                     </div>
                                 </div>
                                 @empty
-                                <div class="list-group-item text-center text-muted py-4">
-                                    <i class="fas fa-calendar-times fa-2x mb-2"></i>
-                                    <p class="mb-0">Chưa có lịch hẹn sắp tới</p>
+                                <div class="col-12">
+                                    <div class="card border text-center py-5">
+                                        <div class="card-body">
+                                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted mb-0">Chưa có lịch hẹn sắp tới</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 @endforelse
                             </div>
@@ -253,7 +287,7 @@
                             <hr class="my-4">
 
                             <h5 class="mb-4">Các lịch hẹn đã hoàn thành</h5>
-                            <div class="list-group">
+                            <div class="row g-3">
                                 @php
                                     $completedAppointments = $user->appointments->filter(function($appointment) {
                                         return ($appointment->status == 'Hoàn thành' || $appointment->status == 'Đã thanh toán')
@@ -263,56 +297,83 @@
                                 @endphp
                                 
                                 @forelse($completedAppointments as $appointment)
-                                    <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
-                                        <div>
-                                            <h6 class="mb-1">
-                                                @if($appointment->appointmentDetails->count() > 0)
-                                                    @foreach($appointment->appointmentDetails as $detail)
-                                                        @if($detail->serviceVariant)
-                                                            {{ $detail->serviceVariant->name }}
-                                                        @elseif($detail->combo)
-                                                            {{ $detail->combo->name }}
-                                                        @else
-                                                            {{ $detail->notes ?? 'Dịch vụ' }}
-                                                        @endif
-                                                        @if(!$loop->last), @endif
-                                                    @endforeach
-                                                @else
-                                                    Dịch vụ
-                                                @endif
-                                            </h6>
-                                            <small class="text-muted">
-                                                @if($appointment->employee && $appointment->employee->user)
-                                                    {{ $appointment->employee->user->name }}
-                                                @endif
-                                                @if($appointment->start_at)
-                                                    - {{ $appointment->start_at->format('H:i, d/m/Y') }}
-                                                @endif
-                                            </small>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-success">{{ $appointment->status }}</span>
-                                            <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i> Xem
-                                            </a>
-                                            @php
-                                                $existingReview = $appointment->reviews->where('user_id', $user->id)->first();
-                                            @endphp
-                                            @if($existingReview)
-                                                <a href="{{ route('site.reviews.edit', $existingReview->id) }}" class="btn btn-sm btn-outline-warning">
-                                                    <i class="fas fa-star"></i> Xem đánh giá
-                                                </a>
-                                            @else
-                                                <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-success">
-                                                    <i class="fas fa-star"></i> Đánh giá
-                                                </a>
-                                            @endif
+                                    <div class="col-12">
+                                        <div class="card border shadow-sm h-100">
+                                            <div class="card-body p-3">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-8">
+                                                        <!-- Dòng đầu: Tên dịch vụ -->
+                                                        <h6 class="mb-2 fw-bold">
+                                                            @if($appointment->appointmentDetails->count() > 0)
+                                                                @foreach($appointment->appointmentDetails as $detail)
+                                                                    @if($detail->serviceVariant)
+                                                                        {{ $detail->serviceVariant->name }}
+                                                                    @elseif($detail->combo)
+                                                                        {{ $detail->combo->name }}
+                                                                    @else
+                                                                        {{ $detail->notes ?? 'Dịch vụ' }}
+                                                                    @endif
+                                                                    @if(!$loop->last), @endif
+                                                                @endforeach
+                                                            @else
+                                                                Dịch vụ
+                                                            @endif
+                                                        </h6>
+                                                        
+                                                        <!-- Dòng thứ 2: Mã đơn và trạng thái (cố định, không wrap) -->
+                                                        <div class="d-flex align-items-center gap-2 mb-2" style="flex-wrap: nowrap;">
+                                                            @if($appointment->booking_code)
+                                                                <span class="badge bg-secondary text-white" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->booking_code }}</span>
+                                                            @endif
+                                                            <span class="badge bg-success" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->status }}</span>
+                                                        </div>
+                                                        <!-- Dòng thứ 3: Thông tin barber và thời gian -->
+                                                        <div class="d-flex flex-column gap-1">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-user-tie me-1"></i>
+                                                                @if($appointment->employee && $appointment->employee->user)
+                                                                    Barber: <strong>{{ $appointment->employee->user->name }}</strong>
+                                                                @endif
+                                                            </small>
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-calendar-alt me-1"></i>
+                                                                @if($appointment->start_at)
+                                                                    <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong>
+                                                                @endif
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                                        <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end">
+                                                            <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-eye me-1"></i>Xem
+                                                            </a>
+                                                            @php
+                                                                $existingReview = $appointment->reviews->where('user_id', $user->id)->first();
+                                                            @endphp
+                                                            @if($existingReview)
+                                                                <a href="{{ route('site.reviews.edit', $existingReview->id) }}" class="btn btn-sm btn-outline-warning">
+                                                                    <i class="fas fa-star me-1"></i>Xem đánh giá
+                                                                </a>
+                                                            @else
+                                                                <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-success">
+                                                                    <i class="fas fa-star me-1"></i>Đánh giá
+                                                                </a>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 @empty
-                                <div class="list-group-item text-center text-muted py-4">
-                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
-                                    <p class="mb-0">Chưa có lịch hẹn đã hoàn thành</p>
+                                <div class="col-12">
+                                    <div class="card border text-center py-5">
+                                        <div class="card-body">
+                                            <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted mb-0">Chưa có lịch hẹn đã hoàn thành</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 @endforelse
                             </div>
@@ -321,7 +382,7 @@
                         <!-- Tab Lịch sử đã hủy -->
                         <div class="tab-pane fade" id="cancelled" role="tabpanel">
                             <h5 class="mb-4">Các lịch hẹn đã hủy</h5>
-                            <div class="list-group">
+                            <div class="row g-3">
                                 @php
                                     $cancelledAppointments = $user->appointments->filter(function($appointment) {
                                         return $appointment->status === 'Đã hủy'
@@ -330,53 +391,76 @@
                                 @endphp
                                 
                                 @forelse($cancelledAppointments as $appointment)
-                                    <div class="list-group-item d-flex justify-content-between align-items-center mb-2">
-                                        <div>
-                                            <h6 class="mb-1">
-                                                @if($appointment->appointmentDetails->count() > 0)
-                                                    @foreach($appointment->appointmentDetails as $detail)
-                                                        @if($detail->serviceVariant)
-                                                            {{ $detail->serviceVariant->name }}
-                                                        @elseif($detail->combo)
-                                                            {{ $detail->combo->name }}
-                                                        @else
-                                                            {{ $detail->notes ?? 'Dịch vụ' }}
-                                                        @endif
-                                                        @if(!$loop->last), @endif
-                                                    @endforeach
-                                                @else
-                                                    Dịch vụ
-                                                @endif
-                                            </h6>
-                                            <small class="text-muted">
-                                                @if($appointment->employee && $appointment->employee->user)
-                                                    Barber: {{ $appointment->employee->user->name }}
-                                                @else
-                                                    Chưa phân công nhân viên
-                                                @endif
-                                                @if($appointment->start_at)
-                                                    - {{ $appointment->start_at->format('H:i, d/m/Y') }}
-                                                @endif
-                                            </small>
-                                            @if($appointment->cancellation_reason)
-                                                <div class="mt-2">
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-info-circle"></i> Lý do hủy: {{ $appointment->cancellation_reason }}
-                                                    </small>
+                                    <div class="col-12">
+                                        <div class="card border shadow-sm h-100">
+                                            <div class="card-body p-3">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-8">
+                                                        <!-- Dòng đầu: Tên dịch vụ -->
+                                                        <h6 class="mb-2 fw-bold">
+                                                            @if($appointment->appointmentDetails->count() > 0)
+                                                                @foreach($appointment->appointmentDetails as $detail)
+                                                                    @if($detail->serviceVariant)
+                                                                        {{ $detail->serviceVariant->name }}
+                                                                    @elseif($detail->combo)
+                                                                        {{ $detail->combo->name }}
+                                                                    @else
+                                                                        {{ $detail->notes ?? 'Dịch vụ' }}
+                                                                    @endif
+                                                                    @if(!$loop->last), @endif
+                                                                @endforeach
+                                                            @else
+                                                                Dịch vụ
+                                                            @endif
+                                                        </h6>
+                                                        
+                                                        <!-- Dòng thứ 2: Mã đơn và trạng thái (cố định, không wrap) -->
+                                                        <div class="d-flex align-items-center gap-2 mb-2" style="flex-wrap: nowrap;">
+                                                            @if($appointment->booking_code)
+                                                                <span class="badge bg-secondary text-white" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->booking_code }}</span>
+                                                            @endif
+                                                            <span class="badge bg-danger" style="white-space: nowrap; flex-shrink: 0;">Đã hủy</span>
+                                                        </div>
+                                                        <!-- Dòng thứ 3: Thông tin barber và thời gian -->
+                                                        <div class="d-flex flex-column gap-1">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-user-tie me-1"></i>
+                                                                @if($appointment->employee && $appointment->employee->user)
+                                                                    Barber: <strong>{{ $appointment->employee->user->name }}</strong>
+                                                                @else
+                                                                    <span class="text-warning">Chưa phân công nhân viên</span>
+                                                                @endif
+                                                            </small>
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-calendar-alt me-1"></i>
+                                                                @if($appointment->start_at)
+                                                                    <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong>
+                                                                @endif
+                                                            </small>
+                                                            @if($appointment->cancellation_reason)
+                                                                <small class="text-muted mt-1">
+                                                                    <i class="fas fa-info-circle me-1"></i>Lý do hủy: <em>{{ $appointment->cancellation_reason }}</em>
+                                                                </small>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                                        <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye me-1"></i>Xem
+                                                        </a>
+                                                    </div>
                                                 </div>
-                                            @endif
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-danger">Đã hủy</span>
-                                            <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i> Xem
-                                            </a>
+                                            </div>
                                         </div>
                                     </div>
                                 @empty
-                                <div class="list-group-item text-center text-muted py-4">
-                                    <i class="fas fa-ban fa-2x mb-2"></i>
-                                    <p class="mb-0">Chưa có lịch hẹn nào đã hủy</p>
+                                <div class="col-12">
+                                    <div class="card border text-center py-5">
+                                        <div class="card-body">
+                                            <i class="fas fa-ban fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted mb-0">Chưa có lịch hẹn nào đã hủy</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 @endforelse
                             </div>

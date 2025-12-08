@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Employee;
 use App\Models\Appointment;
+use App\Models\AppointmentLog;
 
 class CustomerController extends Controller
 {
@@ -19,6 +21,9 @@ class CustomerController extends Controller
         if (Auth::id() != $id && !Auth::user()->isAdmin()) {
             abort(403, 'Bạn không có quyền xem thông tin người dùng này.');
         }
+
+        // Tự động cập nhật trạng thái lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" nếu đã quá 5 phút
+        $this->autoConfirmPendingAppointments($id);
 
         $user = User::with([
             'role',
@@ -60,6 +65,9 @@ class CustomerController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // Tự động cập nhật trạng thái TRƯỚC KHI load appointments
+        $this->autoConfirmPendingAppointments($id);
+
         $user = User::with([
             'appointments' => function($query) {
                 // Lấy tất cả lịch hẹn sắp tới (không chỉ "Chờ xử lý")
@@ -94,5 +102,53 @@ class CustomerController extends Controller
         ])->header('Cache-Control', 'no-cache, no-store, must-revalidate')
           ->header('Pragma', 'no-cache')
           ->header('Expires', '0');
+    }
+
+    /**
+     * Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 5 phút
+     */
+    private function autoConfirmPendingAppointments($userId)
+    {
+        try {
+            $cutoffTime = \Carbon\Carbon::now()->subMinutes(5);
+            
+            $appointments = Appointment::where('user_id', $userId)
+                ->where('status', 'Chờ xử lý')
+                ->where('created_at', '<=', $cutoffTime)
+                ->get();
+            
+            foreach ($appointments as $appointment) {
+                try {
+                    DB::beginTransaction();
+                    
+                    $oldStatus = $appointment->status;
+                    
+                    // Chuyển status sang "Đã xác nhận"
+                    $appointment->update([
+                        'status' => 'Đã xác nhận'
+                    ]);
+                    
+                    // Log status change
+                    AppointmentLog::create([
+                        'appointment_id' => $appointment->id,
+                        'status_from' => $oldStatus,
+                        'status_to' => 'Đã xác nhận',
+                        'modified_by' => null, // Tự động xác nhận
+                    ]);
+                    
+                    DB::commit();
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    \Log::error('Error auto-confirming appointment: ' . $e->getMessage(), [
+                        'appointment_id' => $appointment->id,
+                        'user_id' => $userId
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error in autoConfirmPendingAppointments: ' . $e->getMessage(), [
+                'user_id' => $userId
+            ]);
+        }
     }
 }

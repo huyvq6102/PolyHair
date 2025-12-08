@@ -30,6 +30,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::post('appointments/{id}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
     Route::post('appointments/{id}/restore', [AppointmentController::class, 'restore'])->name('appointments.restore');
     Route::delete('appointments/{id}/force-delete', [AppointmentController::class, 'forceDelete'])->name('appointments.force-delete');
+    Route::delete('appointments/{appointmentId}/remove-service/{detailId}', [AppointmentController::class, 'removeService'])->name('appointments.remove-service');
     Route::resource('appointments', AppointmentController::class);
 
     // Working Schedule (View Only for Staff)

@@ -11,21 +11,25 @@ use Illuminate\Support\Facades\DB;
 class AppointmentService
 {
     /**
-     * Get all appointments with relations (including cancelled).
+     * Get all appointments with relations (excluding cancelled).
      */
     public function getAll()
     {
         return Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
+            ->whereNull('deleted_at')
+            ->where('status', '!=', 'Đã hủy')
             ->orderBy('id', 'desc')
             ->get();
     }
 
     /**
-     * Get all appointments with filters (including cancelled).
+     * Get all appointments with filters (excluding cancelled).
      */
     public function getAllWithFilters(array $filters = [])
     {
-        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo']);
+        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
+            ->whereNull('deleted_at')
+            ->where('status', '!=', 'Đã hủy');
 
         // Search by customer name
         if (isset($filters['customer_name']) && !empty($filters['customer_name'])) {
@@ -81,7 +85,10 @@ class AppointmentService
      */
     public function getOne($id)
     {
-        return Appointment::with([
+        // Use withTrashed to find appointment even if soft deleted
+        // This allows us to restore it if needed
+        $appointment = Appointment::withTrashed()
+            ->with([
                 'employee.user',
                 'user',
                 'appointmentDetails.serviceVariant.service',
@@ -89,6 +96,13 @@ class AppointmentService
                 'promotionUsages.promotion',
             ])
             ->findOrFail($id);
+        
+        // If appointment is soft deleted, restore it automatically
+        if ($appointment->trashed()) {
+            $appointment->restore();
+        }
+        
+        return $appointment;
     }
 
     /**
@@ -468,8 +482,30 @@ class AppointmentService
      */
     public function update($id, array $data, array $serviceVariantData = [])
     {
+        \Illuminate\Support\Facades\Log::info('AppointmentService->update started', [
+            'appointment_id' => $id,
+            'data_keys' => array_keys($data),
+            'service_variant_data_count' => count($serviceVariantData)
+        ]);
+        
         return DB::transaction(function () use ($id, $data, $serviceVariantData) {
-            $appointment = Appointment::findOrFail($id);
+            // Use withTrashed to find appointment even if soft deleted (shouldn't happen, but just in case)
+            $appointment = Appointment::withTrashed()->findOrFail($id);
+            
+            \Illuminate\Support\Facades\Log::info('Appointment found', [
+                'appointment_id' => $appointment->id,
+                'deleted_at' => $appointment->deleted_at,
+                'trashed' => $appointment->trashed()
+            ]);
+            
+            // If appointment is soft deleted, restore it first
+            if ($appointment->trashed()) {
+                \Illuminate\Support\Facades\Log::warning('Appointment was trashed, restoring it', [
+                    'appointment_id' => $appointment->id
+                ]);
+                $appointment->restore();
+            }
+            
             $oldStatus = $appointment->status;
             
             $appointment->update([
@@ -481,14 +517,17 @@ class AppointmentService
                 'note' => $data['note'] ?? $appointment->note,
             ]);
 
-            // Update service variants if provided
-            // CHỈ xóa và tạo lại appointment details nếu có serviceVariantData mới
-            // Nếu serviceVariantData rỗng, giữ lại appointment details hiện có
+            // Ensure appointment is not soft deleted after update
+            if ($appointment->trashed()) {
+                \Illuminate\Support\Facades\Log::warning('Appointment was trashed after update, restoring it', [
+                    'appointment_id' => $appointment->id
+                ]);
+                $appointment->restore();
+            }
+
+            // Add new service variants if provided (keep existing ones - don't delete)
             if (!empty($serviceVariantData)) {
-                // Delete existing appointment details
-                $appointment->appointmentDetails()->delete();
-                
-                // Create new appointment details
+                // Create new appointment details (keep existing ones)
                 foreach ($serviceVariantData as $variantData) {
                     AppointmentDetail::create([
                         'appointment_id' => $appointment->id,
@@ -501,6 +540,11 @@ class AppointmentService
                         'notes' => $variantData['notes'] ?? null,
                     ]);
                 }
+                
+                \Illuminate\Support\Facades\Log::info('New services added to appointment', [
+                    'appointment_id' => $appointment->id,
+                    'new_services_count' => count($serviceVariantData)
+                ]);
             }
             // Nếu serviceVariantData rỗng, không làm gì - giữ lại appointment details hiện có
 
@@ -514,7 +558,15 @@ class AppointmentService
                 ]);
             }
 
-            return $appointment->load(['employee.user', 'user', 'appointmentDetails.serviceVariant.service']);
+            $result = $appointment->load(['employee.user', 'user', 'appointmentDetails.serviceVariant.service']);
+            
+            \Illuminate\Support\Facades\Log::info('AppointmentService->update completed', [
+                'appointment_id' => $result->id,
+                'deleted_at' => $result->deleted_at,
+                'trashed' => $result->trashed()
+            ]);
+            
+            return $result;
         });
     }
 }
