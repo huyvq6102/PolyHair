@@ -66,6 +66,9 @@ class PromotionService
             
             $promotion = Promotion::create($data);
             
+            // Tự động cập nhật trạng thái dựa trên ngày
+            $this->autoUpdateStatus($promotion);
+            
             $this->syncPromotionServices($promotion->id, $serviceIds, $comboIds, $variantIds);
             
             return $promotion->load(['services', 'combos', 'serviceVariants']);
@@ -97,6 +100,11 @@ class PromotionService
             
             $promotion = Promotion::findOrFail($id);
             $promotion->update($data);
+            
+            // Tự động cập nhật trạng thái dựa trên ngày (trừ khi admin đặt thủ công là "Ngừng áp dụng")
+            if ($data['status'] !== 'inactive') {
+                $this->autoUpdateStatus($promotion);
+            }
             
             $this->syncPromotionServices($promotion->id, $serviceIds, $comboIds, $variantIds);
             
@@ -135,6 +143,30 @@ class PromotionService
             
             // Xóa vĩnh viễn promotion
             return $promotion->forceDelete();
+        });
+    }
+
+    /**
+     * Permanently delete all trashed promotions.
+     */
+    public function deleteAll()
+    {
+        $trashedPromotions = Promotion::onlyTrashed()->get();
+        $count = $trashedPromotions->count();
+        
+        if ($count === 0) {
+            return 0;
+        }
+        
+        return DB::transaction(function () use ($trashedPromotions, $count) {
+            // Xóa tất cả các quan hệ trong bảng pivot
+            $promotionIds = $trashedPromotions->pluck('id')->toArray();
+            DB::table('promotion_service')->whereIn('promotion_id', $promotionIds)->delete();
+            
+            // Xóa vĩnh viễn tất cả promotions
+            Promotion::onlyTrashed()->forceDelete();
+            
+            return $count;
         });
     }
 
@@ -203,9 +235,15 @@ class PromotionService
         // Tìm promotion (không phân biệt hoa thường cho status)
         $now = now();
         
+        // Chỉ cho phép áp dụng mã có trạng thái "Đang chạy"
         $promotion = Promotion::with(['services', 'combos', 'serviceVariants'])
             ->where('code', $code)
-            ->whereRaw('LOWER(status) = ?', ['active'])
+            ->where('status', 'active')
+            ->whereDate('start_date', '<=', $now)
+            ->where(function($query) use ($now) {
+                $query->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $now);
+            })
             ->first();
 
         if (!$promotion) {
@@ -215,7 +253,13 @@ class PromotionService
             if ($exists) {
                 $messages = [];
                 
-                if (strtolower($exists->status) !== 'active') {
+                if ($exists->status === 'inactive') {
+                    $messages[] = 'Mã khuyến mại này đang tạm ngừng áp dụng.';
+                } elseif ($exists->status === 'scheduled') {
+                    $messages[] = 'Mã khuyến mại này chưa đến thời gian áp dụng.';
+                } elseif ($exists->status === 'expired') {
+                    $messages[] = 'Mã khuyến mại này đã kết thúc.';
+                } elseif ($exists->status !== 'active') {
                     $messages[] = 'Mã khuyến mại này chưa được kích hoạt.';
                 }
                 
@@ -485,5 +529,36 @@ class PromotionService
             'discount_amount' => round($discountAmount, 2),
             'message' => 'Áp dụng mã khuyến mại thành công!'
         ];
+    }
+
+    /**
+     * Tự động cập nhật trạng thái khuyến mãi dựa trên ngày bắt đầu và kết thúc.
+     */
+    public function autoUpdateStatus(Promotion $promotion)
+    {
+        $today = \Carbon\Carbon::today();
+        
+        // Nếu trạng thái là "Ngừng áp dụng", không tự động cập nhật
+        if ($promotion->status === 'inactive') {
+            return;
+        }
+        
+        // Nếu có ngày kết thúc và đã qua ngày kết thúc -> "Đã kết thúc"
+        if ($promotion->end_date && $promotion->end_date->lt($today)) {
+            $promotion->update(['status' => 'expired']);
+            return;
+        }
+        
+        // Nếu ngày bắt đầu trong tương lai -> "Chờ áp dụng"
+        if ($promotion->start_date->gt($today)) {
+            $promotion->update(['status' => 'scheduled']);
+            return;
+        }
+        
+        // Nếu ngày bắt đầu đã đến hoặc đã qua -> "Đang chạy"
+        if ($promotion->start_date->lte($today)) {
+            $promotion->update(['status' => 'active']);
+            return;
+        }
     }
 }

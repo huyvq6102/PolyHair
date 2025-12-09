@@ -76,17 +76,17 @@
         @enderror
     </div>
     <div class="form-group col-md-4 js-discount-percent">
-        <label for="discount_percent">% giảm</label>
+        <label for="discount_percent">% giảm <span class="text-danger">*</span></label>
         <input type="number" name="discount_percent" id="discount_percent" class="form-control @error('discount_percent') is-invalid @enderror"
-               value="{{ old('discount_percent', $promotion->discount_percent ?? 0) }}" min="0" max="100">
+               value="{{ old('discount_percent', $promotion->discount_percent ?? 0) }}" min="1" max="100" required>
         @error('discount_percent')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
     <div class="form-group col-md-4 js-discount-amount">
-        <label for="discount_amount">Giảm tiền (VNĐ)</label>
+        <label for="discount_amount">Giảm tiền (VNĐ) <span class="text-danger">*</span></label>
         <input type="number" name="discount_amount" id="discount_amount" class="form-control @error('discount_amount') is-invalid @enderror"
-               value="{{ old('discount_amount', $promotion->discount_amount ?? null) }}" min="0" step="1000">
+               value="{{ old('discount_amount', $promotion->discount_amount ?? null) }}" min="1" step="1" required>
         @error('discount_amount')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
@@ -135,12 +135,24 @@
 </div>
 
 <div class="form-group js-service-selection">
-    <label>Chọn dịch vụ áp dụng</label>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <label class="mb-0">Chọn dịch vụ áp dụng</label>
+        <div class="form-check">
+            <input class="form-check-input js-select-all-master" type="checkbox" id="select_all_master">
+            <label class="form-check-label font-weight-bold" for="select_all_master">Chọn tất cả dịch vụ</label>
+        </div>
+    </div>
     
-    <!-- Dịch vụ -->
+    <!-- Dịch vụ đơn -->
     <div class="mb-3">
-        <h6 class="font-weight-bold">Dịch vụ</h6>
-        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="font-weight-bold mb-0">Dịch vụ đơn</h6>
+            <div class="form-check ml-3">
+                <input class="form-check-input js-select-all" type="checkbox" id="select_all_services" data-target=".js-service-list input[type='checkbox']">
+                <label class="form-check-label" for="select_all_services">Chọn tất cả</label>
+            </div>
+        </div>
+        <div class="border rounded p-3 js-service-list" style="max-height: 300px; overflow-y: auto;">
             @php
                 $services = $services ?? [];
                 $selectedServiceIds = $selectedServiceIds ?? [];
@@ -159,6 +171,9 @@
                         @if($service->category)
                             <small class="text-muted">({{ $service->category->name }})</small>
                         @endif
+                        @if($service->base_price)
+                            <small class="text-muted"> - {{ number_format($service->base_price, 0, ',', '.') }} đ</small>
+                        @endif
                     </label>
                 </div>
             @empty
@@ -169,8 +184,14 @@
 
     <!-- Combo -->
     <div class="mb-3">
-        <h6 class="font-weight-bold">Combo</h6>
-        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="font-weight-bold mb-0">Combo</h6>
+            <div class="form-check ml-3">
+                <input class="form-check-input js-select-all" type="checkbox" id="select_all_combos" data-target=".js-combo-list input[type='checkbox']">
+                <label class="form-check-label" for="select_all_combos">Chọn tất cả</label>
+            </div>
+        </div>
+        <div class="border rounded p-3 js-combo-list" style="max-height: 300px; overflow-y: auto;">
             @php
                 $combos = $combos ?? [];
                 $selectedComboIds = $selectedComboIds ?? [];
@@ -202,8 +223,14 @@
 
     <!-- Dịch vụ biến thể -->
     <div class="mb-3">
-        <h6 class="font-weight-bold">Dịch vụ biến thể</h6>
-        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="font-weight-bold mb-0">Dịch vụ biến thể</h6>
+            <div class="form-check ml-3">
+                <input class="form-check-input js-select-all" type="checkbox" id="select_all_variants" data-target=".js-variant-list input[type='checkbox']">
+                <label class="form-check-label" for="select_all_variants">Chọn tất cả</label>
+            </div>
+        </div>
+        <div class="border rounded p-3 js-variant-list" style="max-height: 300px; overflow-y: auto;">
             @php
                 $serviceVariants = $serviceVariants ?? [];
                 $selectedVariantIds = $selectedVariantIds ?? [];
@@ -233,15 +260,15 @@
         </div>
     </div>
 
-    <small class="form-text text-muted">Chọn các dịch vụ, combo hoặc dịch vụ biến thể mà khuyến mãi này sẽ áp dụng. Để trống nếu áp dụng cho tất cả.</small>
+    <small class="form-text text-muted">Chọn các dịch vụ, combo hoặc dịch vụ biến thể mà khuyến mãi này sẽ áp dụng. <strong class="text-danger">Bắt buộc phải chọn ít nhất một dịch vụ khi áp dụng theo dịch vụ.</strong></small>
     @error('services')
-        <div class="text-danger small">{{ $message }}</div>
+        <div class="text-danger small mt-2"><i class="fas fa-exclamation-circle"></i> {{ $message }}</div>
     @enderror
     @error('combos')
-        <div class="text-danger small">{{ $message }}</div>
+        <div class="text-danger small mt-2"><i class="fas fa-exclamation-circle"></i> {{ $message }}</div>
     @enderror
     @error('service_variants')
-        <div class="text-danger small">{{ $message }}</div>
+        <div class="text-danger small mt-2"><i class="fas fa-exclamation-circle"></i> {{ $message }}</div>
     @enderror
 </div>
 
@@ -309,11 +336,147 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function bindSelectAll() {
+        const selectAllCheckboxes = document.querySelectorAll('.js-select-all');
+        const selectAllMaster = document.querySelector('.js-select-all-master');
+
+        function syncSelectAllState(controller) {
+            const targetSelector = controller.dataset.target;
+            if (!targetSelector) return;
+            
+            // Lấy tất cả checkbox con, loại bỏ checkbox "Chọn tất cả"
+            const allInputs = document.querySelectorAll(targetSelector);
+            const targets = Array.from(allInputs).filter((input) => {
+                return input.type === 'checkbox' && 
+                       !input.classList.contains('js-select-all') &&
+                       !input.classList.contains('js-select-all-master') &&
+                       input !== controller;
+            });
+            
+            if (!targets.length) return;
+            
+            // Chỉ kiểm tra các checkbox đang enabled
+            const enabledTargets = targets.filter((input) => !input.disabled);
+            if (enabledTargets.length === 0) return;
+            
+            const allChecked = enabledTargets.every((input) => input.checked);
+            const noneChecked = enabledTargets.every((input) => !input.checked);
+            
+            controller.indeterminate = !allChecked && !noneChecked;
+            controller.checked = allChecked;
+        }
+
+        function syncMasterSelectAll() {
+            if (!selectAllMaster) return;
+            
+            // Lấy tất cả checkbox dịch vụ (đơn, combo, variant)
+            const allServiceCheckboxes = document.querySelectorAll(
+                '.js-service-list input[type="checkbox"]:not(.js-select-all), ' +
+                '.js-combo-list input[type="checkbox"]:not(.js-select-all), ' +
+                '.js-variant-list input[type="checkbox"]:not(.js-select-all)'
+            );
+            
+            const enabledCheckboxes = Array.from(allServiceCheckboxes).filter((input) => !input.disabled);
+            if (enabledCheckboxes.length === 0) return;
+            
+            const allChecked = enabledCheckboxes.every((input) => input.checked);
+            const noneChecked = enabledCheckboxes.every((input) => !input.checked);
+            
+            selectAllMaster.indeterminate = !allChecked && !noneChecked;
+            selectAllMaster.checked = allChecked;
+        }
+
+        // Xử lý checkbox "Chọn tất cả dịch vụ" (master)
+        if (selectAllMaster) {
+            selectAllMaster.addEventListener('change', function(e) {
+                e.stopPropagation();
+                const isChecked = this.checked;
+                
+                // Chọn/bỏ chọn tất cả dịch vụ đơn, combo và variant
+                const allServiceCheckboxes = document.querySelectorAll(
+                    '.js-service-list input[type="checkbox"]:not(.js-select-all), ' +
+                    '.js-combo-list input[type="checkbox"]:not(.js-select-all), ' +
+                    '.js-variant-list input[type="checkbox"]:not(.js-select-all)'
+                );
+                
+                allServiceCheckboxes.forEach((input) => {
+                    if (!input.disabled) {
+                        input.checked = isChecked;
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+                
+                // Đồng bộ trạng thái các checkbox "Chọn tất cả" của từng phần
+                selectAllCheckboxes.forEach((checkbox) => {
+                    syncSelectAllState(checkbox);
+                });
+            });
+        }
+
+        selectAllCheckboxes.forEach((controller) => {
+            // Xử lý khi click vào checkbox "Chọn tất cả" của từng phần
+            controller.addEventListener('change', function(e) {
+                e.stopPropagation();
+                const targetSelector = this.dataset.target;
+                if (!targetSelector) {
+                    console.warn('No target selector found for select all checkbox');
+                    return;
+                }
+                
+                // Lấy tất cả checkbox con trong phần này
+                const allInputs = document.querySelectorAll(targetSelector);
+                const targets = Array.from(allInputs).filter((input) => {
+                    return input.type === 'checkbox' && 
+                           !input.classList.contains('js-select-all') &&
+                           !input.classList.contains('js-select-all-master') &&
+                           input !== this;
+                });
+                
+                // Chọn/bỏ chọn tất cả checkbox con
+                const isChecked = this.checked;
+                targets.forEach((input) => {
+                    if (!input.disabled) {
+                        input.checked = isChecked;
+                        // Trigger change event để các listener khác có thể nhận biết
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+                
+                // Đồng bộ trạng thái master checkbox
+                syncMasterSelectAll();
+            });
+
+            // Đồng bộ trạng thái khi các checkbox con thay đổi
+            const targetSelector = controller.dataset.target;
+            if (targetSelector) {
+                const allInputs = document.querySelectorAll(targetSelector);
+                allInputs.forEach((input) => {
+                    if (input.type === 'checkbox' && 
+                        !input.classList.contains('js-select-all') &&
+                        !input.classList.contains('js-select-all-master') &&
+                        input !== controller) {
+                        input.addEventListener('change', () => {
+                            syncSelectAllState(controller);
+                            syncMasterSelectAll();
+                        });
+                    }
+                });
+                
+                // Đồng bộ trạng thái ban đầu
+                syncSelectAllState(controller);
+            }
+        });
+        
+        // Đồng bộ trạng thái master checkbox ban đầu
+        syncMasterSelectAll();
+    }
+
     typeSelect?.addEventListener('change', toggleDiscountFields);
     scopeSelect?.addEventListener('change', toggleScopeFields);
 
     toggleDiscountFields();
     toggleScopeFields();
+    bindSelectAll();
 });
 </script>
 @endpush
