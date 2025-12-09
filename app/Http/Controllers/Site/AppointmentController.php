@@ -247,19 +247,174 @@ class AppointmentController extends Controller
             }
         }
         
-        // Lấy TẤT CẢ nhân viên từ trang quản lý (không filter theo chuyên môn)
-        // Chỉ loại trừ admin và nhân viên bị vô hiệu hóa
-        // CHỈ LẤY CÁC STYLIST (không lấy barber, shampooer, receptionist, etc.)
-        $employees = \App\Models\Employee::with(['user.role', 'services'])
-                        ->whereNotNull('user_id')
-                        ->where('status', '!=', 'Vô hiệu hóa')
-                        ->where('position', 'Stylist') // Chỉ lấy stylist
-                        ->whereHas('user', function($query) {
-                            // Loại trừ admin
-                            $query->where('role_id', '!=', 1);
-                        })
-            ->orderBy('id', 'desc')
-            ->get();
+        // Loại bỏ trùng lặp
+        $singleServiceIds = array_unique($singleServiceIds);
+        $variantServiceIds = array_unique($variantServiceIds);
+        
+        // Khởi tạo $employees là collection rỗng
+        $employees = collect([]);
+        
+        // Query nhân viên dựa trên chuyên môn được set trong admin
+        // Phân biệt dịch vụ đơn và dịch vụ biến thể
+        if (!empty($singleServiceIds) || !empty($variantServiceIds)) {
+            $employeeIds = [];
+            
+            // Nếu có dịch vụ đơn được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ đơn
+            if (!empty($singleServiceIds)) {
+                $singleServiceIds = array_map('intval', $singleServiceIds);
+                $singleServiceIds = array_filter($singleServiceIds);
+                $singleServiceIds = array_values($singleServiceIds);
+                
+                if (!empty($singleServiceIds)) {
+                    // Lấy danh sách service_id là dịch vụ đơn (không có variants)
+                    $validSingleServiceIds = \App\Models\Service::whereIn('id', $singleServiceIds)
+                        ->whereNull('deleted_at')
+                        ->whereDoesntHave('serviceVariants')
+                        ->pluck('id')
+                        ->toArray();
+                    
+                    if (!empty($validSingleServiceIds)) {
+                        // Lấy employee_id từ employee_skills có service_id là dịch vụ đơn
+                        $singleEmployeeIds = \DB::table('employee_skills')
+                            ->whereIn('service_id', $validSingleServiceIds)
+                            ->whereNotNull('employee_id')
+                            ->whereNotNull('service_id')
+                            ->distinct()
+                            ->pluck('employee_id')
+                            ->toArray();
+                        
+                        $employeeIds = array_merge($employeeIds, $singleEmployeeIds);
+                    }
+                }
+            }
+            
+            // Nếu có dịch vụ biến thể được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ biến thể
+            if (!empty($variantServiceIds)) {
+                $variantServiceIds = array_map('intval', $variantServiceIds);
+                $variantServiceIds = array_filter($variantServiceIds);
+                $variantServiceIds = array_values($variantServiceIds);
+                
+                if (!empty($variantServiceIds)) {
+                    // Lấy danh sách service_id là dịch vụ biến thể (có variants)
+                    $validVariantServiceIds = \App\Models\Service::whereIn('id', $variantServiceIds)
+                        ->whereNull('deleted_at')
+                        ->whereHas('serviceVariants')
+                        ->pluck('id')
+                        ->toArray();
+                    
+                    if (!empty($validVariantServiceIds)) {
+                        // Lấy employee_id từ employee_skills có service_id là dịch vụ biến thể
+                        $variantEmployeeIds = \DB::table('employee_skills')
+                            ->whereIn('service_id', $validVariantServiceIds)
+                            ->whereNotNull('employee_id')
+                            ->whereNotNull('service_id')
+                            ->distinct()
+                            ->pluck('employee_id')
+                            ->toArray();
+                        
+                        $employeeIds = array_merge($employeeIds, $variantEmployeeIds);
+                    }
+                }
+            }
+            
+            // Loại bỏ trùng lặp
+            $employeeIds = array_unique($employeeIds);
+            $employeeIds = array_map('intval', $employeeIds);
+            $employeeIds = array_filter($employeeIds);
+            $employeeIds = array_values($employeeIds);
+            
+            if (!empty($employeeIds)) {
+                // Query nhân viên dựa trên employee_id từ employee_skills
+                $employees = \App\Models\Employee::with(['user.role', 'services'])
+                    ->whereIn('id', $employeeIds)
+                    ->whereNotNull('user_id')
+                    ->where('status', '!=', 'Vô hiệu hóa')
+                    ->whereHas('user', function($query) {
+                        // Loại trừ admin
+                        $query->where('role_id', '!=', 1);
+                    })
+                    ->get()
+                    // Lọc lại để đảm bảo nhân viên chỉ có chuyên môn phù hợp với loại dịch vụ đã chọn
+                    ->filter(function($employee) use ($singleServiceIds, $variantServiceIds) {
+                        $employeeServiceIds = $employee->services->pluck('id')->toArray();
+                        
+                        if (empty($employeeServiceIds)) {
+                            return false;
+                        }
+                        
+                        // Nếu chọn dịch vụ đơn, chỉ giữ lại nhân viên có chuyên môn là dịch vụ đơn
+                        if (!empty($singleServiceIds) && empty($variantServiceIds)) {
+                            // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ đơn đã chọn không
+                            $hasMatchingService = !empty(array_intersect($employeeServiceIds, $singleServiceIds));
+                            
+                            if (!$hasMatchingService) {
+                                return false;
+                            }
+                            
+                            // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ đơn không
+                            // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ biến thể nào không
+                            // Sử dụng whereHas để kiểm tra xem có service nào có variants không
+                            $servicesWithVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                ->whereNull('deleted_at')
+                                ->whereHas('serviceVariants', function($query) {
+                                    $query->whereNull('deleted_at');
+                                })
+                                ->pluck('id')
+                                ->toArray();
+                            
+                            // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ biến thể, loại bỏ
+                            if (!empty($servicesWithVariants)) {
+                                return false;
+                            }
+                            
+                            // Tất cả chuyên môn đều là dịch vụ đơn và có service_id trùng
+                            return true;
+                        }
+                        
+                        // Nếu chọn dịch vụ biến thể, chỉ giữ lại nhân viên có chuyên môn là dịch vụ biến thể
+                        if (!empty($variantServiceIds) && empty($singleServiceIds)) {
+                            // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ biến thể đã chọn không
+                            $hasMatchingService = !empty(array_intersect($employeeServiceIds, $variantServiceIds));
+                            
+                            if (!$hasMatchingService) {
+                                return false;
+                            }
+                            
+                            // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ biến thể không
+                            // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ đơn nào không
+                            // Sử dụng whereDoesntHave để kiểm tra xem có service nào không có variants không
+                            $servicesWithoutVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                ->whereNull('deleted_at')
+                                ->whereDoesntHave('serviceVariants', function($query) {
+                                    $query->whereNull('deleted_at');
+                                })
+                                ->pluck('id')
+                                ->toArray();
+                            
+                            // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ đơn, loại bỏ
+                            if (!empty($servicesWithoutVariants)) {
+                                return false;
+                            }
+                            
+                            // Tất cả chuyên môn đều là dịch vụ biến thể và có service_id trùng
+                            return true;
+                        }
+                        
+                        // Nếu chọn cả hai loại, giữ lại nhân viên có service_id trùng với bất kỳ dịch vụ nào đã chọn
+                        if (!empty($singleServiceIds) && !empty($variantServiceIds)) {
+                            $allSelectedServiceIds = array_merge($singleServiceIds, $variantServiceIds);
+                            return !empty(array_intersect($employeeServiceIds, $allSelectedServiceIds));
+                        }
+                        
+                        return false;
+                    })
+                    ->values();
+            } else {
+                // Không có nhân viên nào có chuyên môn phù hợp
+                $employees = collect([]);
+            }
+        }
+        // Nếu không có dịch vụ nào được chọn, $employees đã được khởi tạo là collection rỗng ở trên
         
         $wordTimes = $this->wordTimeService->getAll();
         $serviceCategories = \App\Models\ServiceCategory::whereNull('deleted_at')
@@ -350,12 +505,12 @@ class AppointmentController extends Controller
             }
 
             // Get word time
-                    $wordTime = $this->wordTimeService->getOne($validated['word_time_id']);
+            $wordTime = $this->wordTimeService->getOne($validated['word_time_id']);
             
             // Calculate start and end time
             $appointmentDate = Carbon::parse($validated['appointment_date']);
-                    $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
-                    $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
+            $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
+            $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
             
             // Calculate total duration from selected service variants, service, or combo
             $totalDuration = 0;
@@ -433,17 +588,12 @@ class AppointmentController extends Controller
                 foreach ($comboIds as $comboId) {
                     $combo = \App\Models\Combo::with('comboItems.serviceVariant')->findOrFail($comboId);
                     
-                    // Use duration from combo if available, otherwise calculate from combo items
-                    if (!is_null($combo->duration)) {
-                        $comboDuration = $combo->duration;
-                    } else {
-                        // Calculate from combo items if duration not set
-                        $comboDuration = 60; // Default
-                        if ($combo->comboItems && $combo->comboItems->count() > 0) {
-                            $comboDuration = $combo->comboItems->sum(function($item) {
-                                return $item->serviceVariant->duration ?? 60;
-                            });
-                        }
+                    // Calculate duration from combo items
+                    $comboDuration = 60; // Default
+                    if ($combo->comboItems && $combo->comboItems->count() > 0) {
+                        $comboDuration = $combo->comboItems->sum(function($item) {
+                            return $item->serviceVariant->duration ?? 60;
+                        });
                     }
                     $totalDuration += $comboDuration;
                     
@@ -661,25 +811,11 @@ class AppointmentController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            // Log lỗi chi tiết để debug
-            \Log::error('Appointment store - Exception occurred', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all(),
-            ]);
-            
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra khi đặt lịch: ' . $e->getMessage(),
-                'error' => $e->getMessage(),
-                'error_details' => config('app.debug') ? [
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ] : null
-            ], 500);
+                'message' => 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.',
+                'error' => $e->getMessage()
+            ], 422);
         }
     }
 
@@ -761,7 +897,6 @@ class AppointmentController extends Controller
             $request->validate([
                 'employee_id' => 'nullable|exists:employees,id',
                 'appointment_date' => 'required|date|after_or_equal:today',
-                'total_duration' => 'nullable|integer|min:1', // Tổng thời gian dịch vụ đã chọn (phút)
             ]);
 
             $employeeId = $request->input('employee_id');
@@ -770,7 +905,6 @@ class AppointmentController extends Controller
                 $employeeId = null;
             }
             $appointmentDate = Carbon::parse($request->input('appointment_date'));
-            $totalDuration = (int)($request->input('total_duration') ?? 0); // Tổng thời gian dịch vụ (phút)
             
             // Lấy giờ hiện tại theo timezone Việt Nam
             $now = Carbon::now('Asia/Ho_Chi_Minh');
@@ -801,26 +935,10 @@ class AppointmentController extends Controller
                 ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
                 ->whereNull('deleted_at') // Loại bỏ các bản ghi đã bị xóa mềm
                 ->get();
-            
-            // Debug log để kiểm tra
-            $employee = \App\Models\Employee::find($employeeId);
-            if ($employee) {
-                \Log::info('Loading time slots for employee', [
-                    'employee_id' => $employeeId,
-                    'employee_name' => $employee->user->name ?? 'N/A',
-                    'employee_position' => $employee->position ?? 'N/A',
-                    'date' => $appointmentDate->format('Y-m-d'),
-                    'working_schedules_count' => $workingSchedules->count()
-                ]);
-            }
 
             // Lưu các khoảng thời gian làm việc
             foreach ($workingSchedules as $schedule) {
                 if (!$schedule->shift) {
-                    \Log::warning('Working schedule has no shift', [
-                        'schedule_id' => $schedule->id,
-                        'employee_id' => $employeeId
-                    ]);
                     continue;
                 }
 
@@ -828,13 +946,6 @@ class AppointmentController extends Controller
                 $endTimeString = $schedule->shift->formatted_end_time;
                 
                 if (!$startTimeString || !$endTimeString) {
-                    \Log::warning('Working shift has no start/end time', [
-                        'schedule_id' => $schedule->id,
-                        'shift_id' => $schedule->shift_id,
-                        'shift_name' => $schedule->shift->name ?? 'N/A',
-                        'start_time_string' => $startTimeString,
-                        'end_time_string' => $endTimeString
-                    ]);
                     continue;
                 }
                 
@@ -842,12 +953,6 @@ class AppointmentController extends Controller
                     $shiftStart = Carbon::createFromFormat('H:i', $startTimeString);
                     $shiftEnd = Carbon::createFromFormat('H:i', $endTimeString);
                 } catch (\Exception $e) {
-                    \Log::warning('Error parsing shift time, using Carbon::parse', [
-                        'schedule_id' => $schedule->id,
-                        'start_time_string' => $startTimeString,
-                        'end_time_string' => $endTimeString,
-                        'error' => $e->getMessage()
-                    ]);
                     $shiftStart = Carbon::parse($startTimeString);
                     $shiftEnd = Carbon::parse($endTimeString);
                 }
@@ -856,100 +961,26 @@ class AppointmentController extends Controller
                     'start' => $shiftStart,
                     'end' => $shiftEnd
                 ];
-                
-                // Debug log cho Quang Lực
-                if ($employee && $employee->user && strpos($employee->user->name ?? '', 'Quang') !== false) {
-                    \Log::info('Added working time range for Quang Lực', [
-                        'schedule_id' => $schedule->id,
-                        'shift_name' => $schedule->shift->name ?? 'N/A',
-                        'start_time_string' => $startTimeString,
-                        'end_time_string' => $endTimeString,
-                        'shift_start' => $shiftStart->format('H:i'),
-                        'shift_end' => $shiftEnd->format('H:i'),
-                        'total_ranges' => count($workingTimeRanges)
-                    ]);
-                }
-            }
-            
-            // Debug log working time ranges
-            if ($employee && $employee->user && strpos($employee->user->name ?? '', 'Quang') !== false) {
-                \Log::info('Quang Lực working time ranges', [
-                    'employee_id' => $employeeId,
-                    'employee_name' => $employee->user->name,
-                    'working_time_ranges' => array_map(function($range) {
-                        return $range['start']->format('H:i') . ' - ' . $range['end']->format('H:i');
-                    }, $workingTimeRanges),
-                    'working_schedules' => $workingSchedules->map(function($s) {
-                        return [
-                            'id' => $s->id,
-                            'shift_id' => $s->shift_id,
-                            'shift_name' => $s->shift->name ?? 'N/A',
-                            'start_time' => $s->shift->formatted_start_time ?? 'N/A',
-                            'end_time' => $s->shift->formatted_end_time ?? 'N/A'
-                        ];
-                    })
-                ]);
             }
             
             // Nếu không có lịch làm việc, vẫn hiển thị tất cả slots nhưng tất cả đều unavailable
             // (workingTimeRanges sẽ rỗng, nên isInWorkingTime sẽ luôn false)
 
             // Get booked appointments for this employee on this date
-            $bookedAppointments = \App\Models\Appointment::with('appointmentDetails')
-                ->where('employee_id', $employeeId)
+            $bookedAppointments = \App\Models\Appointment::where('employee_id', $employeeId)
                 ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
                 ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
                 ->get();
             
-            // Lưu các khoảng thời gian đã bị đặt (start_at đến end_at)
-            $bookedTimeRanges = [];
+            $bookedTimes = [];
             foreach ($bookedAppointments as $appointment) {
                 if ($appointment->start_at) {
                     $appointmentStart = Carbon::parse($appointment->start_at);
-                    
-                    // Nếu có end_at, dùng end_at; nếu không, tính từ appointment details
-                    if ($appointment->end_at) {
-                        $appointmentEnd = Carbon::parse($appointment->end_at);
-                    } else {
-                        // Tính tổng thời gian từ appointment details
-                        $totalDuration = 0;
-                        $appointmentDetails = $appointment->appointmentDetails;
-                        foreach ($appointmentDetails as $detail) {
-                            $totalDuration += $detail->duration ?? 60; // Default 60 minutes
-                        }
-                        $appointmentEnd = $appointmentStart->copy()->addMinutes($totalDuration);
-                    }
-                    
-                    // Chỉ lưu nếu end > start và cùng ngày
-                    if ($appointmentEnd->gt($appointmentStart) && 
-                        $appointmentStart->format('Y-m-d') === $appointmentDate->format('Y-m-d')) {
-                        $bookedTimeRanges[] = [
-                            'start' => $appointmentStart->format('H:i'),
-                            'end' => $appointmentEnd->format('H:i'),
-                            'start_carbon' => $appointmentStart,
-                            'end_carbon' => $appointmentEnd
-                        ];
-                    }
+                    $bookedTimes[] = $appointmentStart->format('H:i');
                 }
             }
             
-            // Debug log
-            \Log::info('Available time slots calculation', [
-                'employee_id' => $employeeId,
-                'date' => $appointmentDate->format('Y-m-d'),
-                'total_duration' => $totalDuration,
-                'booked_ranges' => array_map(function($range) {
-                    return $range['start'] . ' - ' . $range['end'];
-                }, $bookedTimeRanges),
-                'working_ranges' => array_map(function($range) {
-                    return $range['start']->format('H:i') . ' - ' . $range['end']->format('H:i');
-                }, $workingTimeRanges),
-                'appointments_count' => $bookedAppointments->count(),
-                'request_total_duration' => $request->input('total_duration')
-            ]);
-            
             // Tạo TẤT CẢ time slots từ 7:00 đến 22:00 (mỗi 30 phút)
-            // HIỂN THỊ TẤT CẢ slots, nhưng chỉ available nếu nằm trong ca làm việc
             $startTime = Carbon::parse('07:00');
             $endTime = Carbon::parse('22:00');
             $currentTime = $startTime->copy();
@@ -964,175 +995,18 @@ class AppointmentController extends Controller
                 );
                 
                 // Kiểm tra xem slot có nằm trong khung giờ làm việc không
-                // HIỂN THỊ TẤT CẢ slots từ 7h-22h, nhưng chỉ available nếu nằm trong ca làm việc
                 $isInWorkingTime = false;
-                $shiftEndTime = null; // Lưu thời gian kết thúc ca làm việc
-                $slotTime = Carbon::createFromFormat('H:i', $timeString);
-                
-                // Debug log cho Quang Lực
-                $shouldDebug = false;
-                if ($employee && $employee->user && strpos($employee->user->name ?? '', 'Quang') !== false && $timeString >= '07:00' && $timeString <= '12:00') {
-                    $shouldDebug = true;
-                }
-                
-                if ($shouldDebug) {
-                    \Log::info('Checking if slot is in working time', [
-                        'slot' => $timeString,
-                        'slot_time' => $slotTime->format('H:i'),
-                        'working_time_ranges' => array_map(function($r) {
-                            return $r['start']->format('H:i') . ' - ' . $r['end']->format('H:i');
-                        }, $workingTimeRanges),
-                        'working_time_ranges_count' => count($workingTimeRanges)
-                    ]);
-                }
-                
                 foreach ($workingTimeRanges as $range) {
-                    // Kiểm tra slot có nằm trong khoảng [start, end] (bao gồm cả end time)
-                    // Ví dụ: ca sáng 7h-12h thì slots 7h00, 7h30, ..., 11h30, 12h00 đều nằm trong ca
-                    $isGte = $slotTime->gte($range['start']);
-                    $isLte = $slotTime->lte($range['end']);
-                    
-                    if ($shouldDebug) {
-                        \Log::info('Comparing slot with range', [
-                            'slot' => $timeString,
-                            'range_start' => $range['start']->format('H:i'),
-                            'range_end' => $range['end']->format('H:i'),
-                            'is_gte' => $isGte,
-                            'is_lte' => $isLte,
-                            'result' => ($isGte && $isLte ? 'true' : 'false')
-                        ]);
-                    }
-                    
-                    if ($isGte && $isLte) {
+                    $slotTime = Carbon::createFromFormat('H:i', $timeString);
+                    // Kiểm tra slot có nằm trong khoảng [start, end) không
+                    if ($slotTime->gte($range['start']) && $slotTime->lt($range['end'])) {
                         $isInWorkingTime = true;
-                        $shiftEndTime = $range['end']; // Lưu thời gian kết thúc ca
-                        if ($shouldDebug) {
-                            \Log::info('Slot is in working time', [
-                                'slot' => $timeString,
-                                'shift_end_time' => $shiftEndTime->format('H:i')
-                            ]);
-                        }
                         break;
                     }
                 }
                 
-                if ($shouldDebug) {
-                    \Log::info('Final result for slot', [
-                        'slot' => $timeString,
-                        'is_in_working_time' => $isInWorkingTime,
-                        'shift_end_time' => $shiftEndTime ? $shiftEndTime->format('H:i') : 'null'
-                    ]);
-                }
-                
                 // Kiểm tra xem slot có bị đặt chưa
-                // YÊU CẦU MỚI:
-                // 1. Ẩn toàn bộ các mốc giờ nằm trong khoảng thời gian đã có đơn
-                // 2. Nếu có nhiều đơn liên tiếp trong ngày, thì phải khóa toàn bộ khoảng từ thời gian bắt đầu của đơn đầu tiên đến thời gian kết thúc của đơn cuối cùng, kể cả khoảng trống giữa các đơn
-                $isBooked = false;
-                $conflictReason = null; // Lưu lý do trùng lịch để hiển thị thông báo
-                
-                if (count($bookedTimeRanges) > 0) {
-                    // Tìm khoảng thời gian tổng thể: từ appointment đầu tiên đến appointment cuối cùng
-                    $sortedRanges = $bookedTimeRanges;
-                    usort($sortedRanges, function($a, $b) {
-                        return strcmp($a['start'], $b['start']);
-                    });
-                    
-                    $firstAppointmentStart = $sortedRanges[0]['start'];
-                    $lastAppointmentEnd = $sortedRanges[count($sortedRanges) - 1]['end'];
-                    
-                    // Debug log
-                    if ($timeString === '14:00') {
-                        \Log::info('DEBUG 14:00 slot check', [
-                            'slot' => $timeString,
-                            'first_appointment_start' => $firstAppointmentStart,
-                            'last_appointment_end' => $lastAppointmentEnd,
-                            'booked_ranges' => $bookedTimeRanges,
-                            'sorted_ranges' => array_map(function($r) {
-                                return $r['start'] . '-' . $r['end'];
-                            }, $sortedRanges),
-                            'condition1' => ($timeString >= $firstAppointmentStart ? 'true' : 'false'),
-                            'condition2' => ($timeString < $lastAppointmentEnd ? 'true' : 'false'),
-                            'both_conditions' => (($timeString >= $firstAppointmentStart && $timeString < $lastAppointmentEnd) ? 'true' : 'false')
-                        ]);
-                    }
-                    
-                    // Kiểm tra xem slot có nằm trong khoảng tổng thể không (từ đơn đầu tiên đến đơn cuối cùng)
-                    // Điều này sẽ khóa cả khoảng trống giữa các đơn
-                    if ($timeString >= $firstAppointmentStart && $timeString < $lastAppointmentEnd) {
-                        $isBooked = true;
-                        $conflictReason = "Nằm trong khoảng thời gian đã có đơn ({$firstAppointmentStart} - {$lastAppointmentEnd})";
-                        \Log::info('Slot blocked - in overall range', [
-                            'slot' => $timeString,
-                            'first_start' => $firstAppointmentStart,
-                            'last_end' => $lastAppointmentEnd
-                        ]);
-                    } else {
-                        // Kiểm tra từng appointment riêng lẻ (cho trường hợp slot nằm trong một appointment cụ thể)
-                        foreach ($bookedTimeRanges as $range) {
-                            // Kiểm tra xem slot có nằm trong khoảng [start, end) của appointment không
-                            // Slot bị coi là booked nếu nó >= start và < end
-                            // So sánh string H:i (ví dụ: "07:00" < "08:30")
-                            if ($timeString >= $range['start'] && $timeString < $range['end']) {
-                                $isBooked = true;
-                                $conflictReason = "Trùng với lịch đã đặt ({$range['start']} - {$range['end']})";
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                // Kiểm tra xem nếu đặt lịch từ slot này có trùng với appointment đã có không
-                // (Chỉ kiểm tra nếu slot chưa bị booked bởi logic trên và có duration)
-                // Kiểm tra overlap: nếu appointment mới (từ slot đến slot + duration) có overlap với bất kỳ appointment nào
-                if (!$isBooked && $totalDuration > 0 && $isInWorkingTime && count($bookedTimeRanges) > 0) {
-                    $slotTime = Carbon::createFromFormat('H:i', $timeString);
-                    $proposedEndTime = $slotTime->copy()->addMinutes($totalDuration);
-                    $proposedEndTimeString = $proposedEndTime->format('H:i');
-                    
-                    // Kiểm tra overlap với từng appointment
-                    foreach ($bookedTimeRanges as $range) {
-                        $rangeStart = $range['start'];
-                        $rangeEnd = $range['end'];
-                        
-                        // Trùng lịch nếu có overlap
-                        // Overlap nếu: slot < rangeEnd && proposedEndTime > rangeStart
-                        $hasOverlap = $timeString < $rangeEnd && $proposedEndTimeString > $rangeStart;
-                        
-                        if ($hasOverlap) {
-                            $isBooked = true;
-                            $conflictReason = "Trùng với lịch đã đặt ({$rangeStart} - {$rangeEnd})";
-                            break;
-                        }
-                    }
-                }
-                
-                // Kiểm tra xem slot có vượt quá ca làm việc không
-                // Nếu đặt lịch ở slot này, thời gian kết thúc phải <= thời gian kết thúc ca
-                if (!$isBooked && $totalDuration > 0 && $isInWorkingTime && $shiftEndTime) {
-                    // Tính thời gian kết thúc nếu đặt lịch ở slot này
-                    $slotTime = Carbon::createFromFormat('H:i', $timeString);
-                    $endTime = $slotTime->copy()->addMinutes($totalDuration);
-                    
-                    // So sánh với thời gian kết thúc ca làm việc
-                    // Nếu thời gian kết thúc > thời gian kết thúc ca, thì không cho phép đặt
-                    // So sánh bằng format H:i để chính xác
-                    $endTimeString = $endTime->format('H:i');
-                    $shiftEndTimeString = $shiftEndTime->format('H:i');
-                    
-                    if ($endTimeString > $shiftEndTimeString) {
-                        $isBooked = true;
-                        $conflictReason = "Vượt quá thời gian kết thúc ca làm việc";
-                        \Log::info('Time slot blocked - exceeds shift end', [
-                            'slot' => $timeString,
-                            'total_duration' => $totalDuration,
-                            'end_time' => $endTimeString,
-                            'shift_end' => $shiftEndTimeString,
-                            'employee_id' => $employeeId,
-                            'date' => $appointmentDate->format('Y-m-d')
-                        ]);
-                    }
-                }
+                $isBooked = in_array($timeString, $bookedTimes);
                 
                 // Kiểm tra xem slot có trước giờ hiện tại không (nếu là ngày hôm nay)
                 $isPastTime = false;
@@ -1145,132 +1019,18 @@ class AppointmentController extends Controller
                     }
                 }
                 
-                // Xác định trạng thái available của slot:
-                // - available = true: Nằm trong ca làm việc VÀ chưa bị đặt VÀ không phải quá khứ
-                // - available = false: Không nằm trong ca làm việc HOẶC đã bị đặt HOẶC là quá khứ
-                // Các slot unavailable sẽ được hiển thị với màu tối (gray out) ở frontend
+                // Slot chỉ available nếu: nằm trong khung giờ làm việc VÀ chưa bị đặt VÀ không phải quá khứ
                 $isAvailable = $isInWorkingTime && !$isBooked && !$isPastTime;
-                
-                // Debug log để kiểm tra
-                if ($timeString === '14:00' && $totalDuration > 0) {
-                    \Log::info('DEBUG 14:00 slot', [
-                        'slot' => $timeString,
-                        'total_duration' => $totalDuration,
-                        'is_booked' => $isBooked,
-                        'is_in_working_time' => $isInWorkingTime,
-                        'is_past_time' => $isPastTime,
-                        'is_available' => $isAvailable,
-                        'conflict_reason' => $conflictReason,
-                        'booked_ranges' => $bookedTimeRanges
-                    ]);
-                }
                 
                 $timeSlots[] = [
                     'time' => $timeString,
                     'display' => $timeString,
                     'word_time_id' => $wordTime->id,
                     'available' => $isAvailable,
-                    'conflict_reason' => $conflictReason, // Thêm lý do trùng lịch để hiển thị tooltip
                 ];
                 
                 $currentTime->addMinutes(30);
             }
-
-            // Đảm bảo luôn trả về đủ 30 slots từ 7h-22h
-            // Nếu thiếu slots (do lỗi logic), log để debug
-            $expectedSlots = 30; // 7h-22h, mỗi 30 phút = 30 slots
-            if (count($timeSlots) !== $expectedSlots) {
-                \Log::error('Time slots count mismatch - CRITICAL ERROR', [
-                    'expected' => $expectedSlots,
-                    'actual' => count($timeSlots),
-                    'employee_id' => $employeeId,
-                    'date' => $appointmentDate->format('Y-m-d'),
-                    'slots_returned' => array_map(function($slot) {
-                        return $slot['time'];
-                    }, $timeSlots),
-                    'working_ranges_count' => count($workingTimeRanges)
-                ]);
-                
-                // Nếu thiếu slots, tạo lại từ đầu để đảm bảo đủ 30 slots
-                if (count($timeSlots) < $expectedSlots) {
-                    $timeSlots = [];
-                    $currentTime = Carbon::parse('07:00');
-                    $endTime = Carbon::parse('22:00');
-                    
-                    while ($currentTime->lte($endTime)) {
-                        $timeString = $currentTime->format('H:i');
-                        $wordTime = \App\Models\WordTime::firstOrCreate(
-                            ['time' => $timeString],
-                            ['time' => $timeString]
-                        );
-                        
-                        // Kiểm tra available (giống logic trên)
-                        $slotTime = Carbon::createFromFormat('H:i', $timeString);
-                        $isInWorkingTime = false;
-                        $shiftEndTime = null;
-                        foreach ($workingTimeRanges as $range) {
-                            if ($slotTime->gte($range['start']) && $slotTime->lte($range['end'])) {
-                                $isInWorkingTime = true;
-                                $shiftEndTime = $range['end'];
-                                break;
-                            }
-                        }
-                        
-                        // Kiểm tra booked (giống logic trên - khóa toàn bộ khoảng từ đơn đầu tiên đến đơn cuối cùng)
-                        $isBooked = false;
-                        if (count($bookedTimeRanges) > 0) {
-                            $sortedRanges = $bookedTimeRanges;
-                            usort($sortedRanges, function($a, $b) {
-                                return strcmp($a['start'], $b['start']);
-                            });
-                            
-                            $firstAppointmentStart = $sortedRanges[0]['start'];
-                            $lastAppointmentEnd = $sortedRanges[count($sortedRanges) - 1]['end'];
-                            
-                            // Khóa toàn bộ khoảng từ đơn đầu tiên đến đơn cuối cùng
-                            if ($timeString >= $firstAppointmentStart && $timeString < $lastAppointmentEnd) {
-                                $isBooked = true;
-                            } else {
-                                // Kiểm tra từng appointment riêng lẻ
-                                foreach ($bookedTimeRanges as $range) {
-                                    if ($timeString >= $range['start'] && $timeString < $range['end']) {
-                                        $isBooked = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        $isPastTime = false;
-                        if ($isToday) {
-                            $slotHour = (int)substr($timeString, 0, 2);
-                            $slotMinute = (int)substr($timeString, 3, 2);
-                            if ($slotHour < $currentHour || ($slotHour === $currentHour && $slotMinute < $currentSlotMinute)) {
-                                $isPastTime = true;
-                            }
-                        }
-                        
-                        $isAvailable = $isInWorkingTime && !$isBooked && !$isPastTime;
-                        
-                        $timeSlots[] = [
-                            'time' => $timeString,
-                            'display' => $timeString,
-                            'word_time_id' => $wordTime->id,
-                            'available' => $isAvailable,
-                        ];
-                        
-                        $currentTime->addMinutes(30);
-                    }
-                }
-            }
-
-            \Log::info('Time slots returned', [
-                'count' => count($timeSlots),
-                'employee_id' => $employeeId,
-                'date' => $appointmentDate->format('Y-m-d'),
-                'first_slot' => $timeSlots[0]['time'] ?? 'N/A',
-                'last_slot' => $timeSlots[count($timeSlots) - 1]['time'] ?? 'N/A'
-            ]);
 
             return response()->json([
                 'success' => true,
@@ -1467,20 +1227,166 @@ class AppointmentController extends Controller
             // Khởi tạo $employees là collection rỗng
             $employees = collect([]);
             
-            // Lấy TẤT CẢ nhân viên từ trang quản lý (không filter theo chuyên môn)
-            // Chỉ loại trừ admin và nhân viên bị vô hiệu hóa
-            // CHỈ LẤY CÁC STYLIST (không lấy barber, shampooer, receptionist, etc.)
-            $employees = \App\Models\Employee::with(['user.role', 'services'])
+            // Query nhân viên dựa trên chuyên môn được set trong admin
+            // Phân biệt dịch vụ đơn và dịch vụ biến thể
+            if (!empty($singleServiceIds) || !empty($variantServiceIds)) {
+                $employeeIds = [];
+                
+                // Nếu có dịch vụ đơn được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ đơn
+                if (!empty($singleServiceIds)) {
+                    $singleServiceIds = array_map('intval', $singleServiceIds);
+                    $singleServiceIds = array_filter($singleServiceIds);
+                    $singleServiceIds = array_values($singleServiceIds);
+                    
+                    if (!empty($singleServiceIds)) {
+                        // Lấy danh sách service_id là dịch vụ đơn (không có variants)
+                        $validSingleServiceIds = \App\Models\Service::whereIn('id', $singleServiceIds)
+                            ->whereNull('deleted_at')
+                            ->whereDoesntHave('serviceVariants')
+                            ->pluck('id')
+                            ->toArray();
+                        
+                        if (!empty($validSingleServiceIds)) {
+                            // Lấy employee_id từ employee_skills có service_id là dịch vụ đơn
+                            $singleEmployeeIds = \DB::table('employee_skills')
+                                ->whereIn('service_id', $validSingleServiceIds)
+                                ->whereNotNull('employee_id')
+                                ->whereNotNull('service_id')
+                                ->distinct()
+                                ->pluck('employee_id')
+                                ->toArray();
+                            
+                            $employeeIds = array_merge($employeeIds, $singleEmployeeIds);
+                        }
+                    }
+                }
+                
+                // Nếu có dịch vụ biến thể được chọn, chỉ lấy nhân viên có chuyên môn là dịch vụ biến thể
+                if (!empty($variantServiceIds)) {
+                    $variantServiceIds = array_map('intval', $variantServiceIds);
+                    $variantServiceIds = array_filter($variantServiceIds);
+                    $variantServiceIds = array_values($variantServiceIds);
+                    
+                    if (!empty($variantServiceIds)) {
+                        // Lấy danh sách service_id là dịch vụ biến thể (có variants)
+                        $validVariantServiceIds = \App\Models\Service::whereIn('id', $variantServiceIds)
+                            ->whereNull('deleted_at')
+                            ->whereHas('serviceVariants')
+                            ->pluck('id')
+                            ->toArray();
+                        
+                        if (!empty($validVariantServiceIds)) {
+                            // Lấy employee_id từ employee_skills có service_id là dịch vụ biến thể
+                            $variantEmployeeIds = \DB::table('employee_skills')
+                                ->whereIn('service_id', $validVariantServiceIds)
+                                ->whereNotNull('employee_id')
+                                ->whereNotNull('service_id')
+                                ->distinct()
+                                ->pluck('employee_id')
+                                ->toArray();
+                            
+                            $employeeIds = array_merge($employeeIds, $variantEmployeeIds);
+                        }
+                    }
+                }
+                
+                // Loại bỏ trùng lặp
+                $employeeIds = array_unique($employeeIds);
+                $employeeIds = array_map('intval', $employeeIds);
+                $employeeIds = array_filter($employeeIds);
+                $employeeIds = array_values($employeeIds);
+                
+                if (!empty($employeeIds)) {
+                    // Query nhân viên dựa trên employee_id từ employee_skills
+                    $employees = \App\Models\Employee::with(['user.role', 'services'])
+                        ->whereIn('id', $employeeIds)
                         ->whereNotNull('user_id')
                         ->where('status', '!=', 'Vô hiệu hóa')
-                        ->where('position', 'Stylist') // Chỉ lấy stylist
                         ->whereHas('user', function($query) {
                             // Loại trừ admin
                             $query->where('role_id', '!=', 1);
                         })
-                ->orderBy('id', 'desc')
                         ->get()
+                        // Lọc lại để đảm bảo nhân viên chỉ có chuyên môn phù hợp với loại dịch vụ đã chọn
+                        ->filter(function($employee) use ($singleServiceIds, $variantServiceIds) {
+                            $employeeServiceIds = $employee->services->pluck('id')->toArray();
+                            
+                            if (empty($employeeServiceIds)) {
+                                return false;
+                            }
+                            
+                            // Nếu chọn dịch vụ đơn, chỉ giữ lại nhân viên có chuyên môn là dịch vụ đơn
+                            if (!empty($singleServiceIds) && empty($variantServiceIds)) {
+                                // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ đơn đã chọn không
+                                $hasMatchingService = !empty(array_intersect($employeeServiceIds, $singleServiceIds));
+                                
+                                if (!$hasMatchingService) {
+                                    return false;
+                                }
+                                
+                                // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ đơn không
+                                // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ biến thể nào không
+                                // Sử dụng whereHas để kiểm tra xem có service nào có variants không
+                                $servicesWithVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                    ->whereNull('deleted_at')
+                                    ->whereHas('serviceVariants', function($query) {
+                                        $query->whereNull('deleted_at');
+                                    })
+                                    ->pluck('id')
+                                    ->toArray();
+                                
+                                // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ biến thể, loại bỏ
+                                if (!empty($servicesWithVariants)) {
+                                    return false;
+                                }
+                                
+                                // Tất cả chuyên môn đều là dịch vụ đơn và có service_id trùng
+                                return true;
+                            }
+                            
+                            // Nếu chọn dịch vụ biến thể, chỉ giữ lại nhân viên có chuyên môn là dịch vụ biến thể
+                            if (!empty($variantServiceIds) && empty($singleServiceIds)) {
+                                // Kiểm tra xem nhân viên có service_id nào trùng với dịch vụ biến thể đã chọn không
+                                $hasMatchingService = !empty(array_intersect($employeeServiceIds, $variantServiceIds));
+                                
+                                if (!$hasMatchingService) {
+                                    return false;
+                                }
+                                
+                                // Kiểm tra xem tất cả chuyên môn của nhân viên có phải là dịch vụ biến thể không
+                                // Lấy tất cả service_id của nhân viên và kiểm tra xem có dịch vụ đơn nào không
+                                // Sử dụng whereDoesntHave để kiểm tra xem có service nào không có variants không
+                                $servicesWithoutVariants = \App\Models\Service::whereIn('id', $employeeServiceIds)
+                                    ->whereNull('deleted_at')
+                                    ->whereDoesntHave('serviceVariants', function($query) {
+                                        $query->whereNull('deleted_at');
+                                    })
+                                    ->pluck('id')
+                                    ->toArray();
+                                
+                                // Nếu nhân viên có bất kỳ chuyên môn nào là dịch vụ đơn, loại bỏ
+                                if (!empty($servicesWithoutVariants)) {
+                                    return false;
+                                }
+                                
+                                // Tất cả chuyên môn đều là dịch vụ biến thể và có service_id trùng
+                                return true;
+                            }
+                            
+                            // Nếu chọn cả hai loại, giữ lại nhân viên có service_id trùng với bất kỳ dịch vụ nào đã chọn
+                            if (!empty($singleServiceIds) && !empty($variantServiceIds)) {
+                                $allSelectedServiceIds = array_merge($singleServiceIds, $variantServiceIds);
+                                return !empty(array_intersect($employeeServiceIds, $allSelectedServiceIds));
+                            }
+                            
+                            return false;
+                        })
                         ->values();
+                } else {
+                    // Không có nhân viên nào có chuyên môn phù hợp
+                    $employees = collect([]);
+                }
+            }
 
             return response()->json([
                 'success' => true,
