@@ -32,6 +32,36 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
+    .auth-title {
+        color: #ffffff !important;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        font-weight: 700;
+    }
+    @media (prefers-color-scheme: light) {
+        .auth-title {
+            color: #1a1a1a !important;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+    }
+    .toggle-password {
+        border-left: none;
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .toggle-password:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+    }
+    .input-group .form-control {
+        border-right: none;
+    }
+    .input-group .form-control:focus {
+        border-right: none;
+    }
+    .input-group-append .btn {
+        border-left: 1px solid rgba(255, 255, 255, 0.3);
+    }
 </style>
 @endpush
 
@@ -40,7 +70,7 @@
         <div class="row align-items-center">
             <div class="col-lg-6 mb-5 mb-lg-0">
                 <span class="text-uppercase" style="letter-spacing:4px;">Trải nghiệm PolyHair</span>
-                <h1 class="mt-3 mb-4">Đăng nhập<br>để tiếp tục</h1>
+                <h1 class="mt-3 mb-4 auth-title">Đăng nhập<br>để tiếp tục</h1>
                 <p>
                     Khám phá các dịch vụ chăm sóc tóc đẳng cấp, đặt lịch nhanh chóng và nhận ưu đãi cá nhân hoá.
                     Đăng nhập ngay để tiếp tục hành trình trải nghiệm hệ sinh thái làm đẹp chuyên nghiệp tại PolyHair.
@@ -93,11 +123,18 @@
 
                             <div class="form-group">
                                 <label for="password">Mật khẩu <span class="text-danger">*</span></label>
-                                <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" 
-                                       value="" required autocomplete="current-password" placeholder="Nhập mật khẩu mới">
-                                @error('password')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                <div class="input-group">
+                                    <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" 
+                                           value="" required autocomplete="current-password" placeholder="Nhập mật khẩu">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button" id="togglePassword" aria-label="Hiện/ẩn mật khẩu">
+                                            <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                                        </button>
+                                    </div>
+                                    @error('password')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -144,4 +181,76 @@
         </div>
     </div>
 </section>
+
+<script>
+    // Toggle password visibility - inline để đảm bảo hoạt động
+    (function() {
+        function setupTogglePassword() {
+            var toggleBtn = document.getElementById('togglePassword');
+            var passwordInput = document.getElementById('password');
+            var toggleIcon = document.getElementById('togglePasswordIcon');
+            
+            if (toggleBtn && passwordInput && toggleIcon) {
+                toggleBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        toggleIcon.classList.remove('fa-eye');
+                        toggleIcon.classList.add('fa-eye-slash');
+                    } else {
+                        passwordInput.type = 'password';
+                        toggleIcon.classList.remove('fa-eye-slash');
+                        toggleIcon.classList.add('fa-eye');
+                    }
+                };
+            }
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupTogglePassword);
+        } else {
+            setupTogglePassword();
+        }
+    })();
+</script>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const togglePasswordBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+        
+        if (!togglePasswordBtn || !passwordInput || !togglePasswordIcon) {
+            console.error('Toggle password elements not found');
+            return;
+        }
+        
+        togglePasswordBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            try {
+                const currentType = passwordInput.type || passwordInput.getAttribute('type');
+                const newType = currentType === 'password' ? 'text' : 'password';
+                
+                passwordInput.type = newType;
+                
+                // Đổi icon
+                if (newType === 'text') {
+                    togglePasswordIcon.classList.remove('fa-eye');
+                    togglePasswordIcon.classList.add('fa-eye-slash');
+                } else {
+                    togglePasswordIcon.classList.remove('fa-eye-slash');
+                    togglePasswordIcon.classList.add('fa-eye');
+                }
+            } catch (error) {
+                console.error('Error toggling password visibility:', error);
+            }
+        });
+    });
+</script>
+@endpush
 @endsection
