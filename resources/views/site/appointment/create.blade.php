@@ -26,7 +26,7 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('site.appointment.store') }}" method="POST" id="appointmentForm" novalidate>
+                    <form action="{{ url(route('site.appointment.store')) }}" method="POST" id="appointmentForm" novalidate>
                         @csrf
                         
                         @if(request('service_id'))
@@ -208,6 +208,7 @@
                                 // Collect all selected items
                                 $allSelectedItems = [];
                                 $totalPrice = 0;
+                                $totalDuration = 0;
                                 $totalCount = 0;
                                 
                                 // Get services
@@ -218,10 +219,12 @@
                                         $allSelectedItems[] = [
                                             'name' => $service->name,
                                             'price' => $service->base_price ?? 0,
+                                            'duration' => $service->base_duration ?? 60,
                                             'type' => 'service',
                                             'id' => $service->id
                                         ];
                                         $totalPrice += $service->base_price ?? 0;
+                                        $totalDuration += $service->base_duration ?? 60;
                                         $totalCount++;
                                     }
                                 }
@@ -235,10 +238,12 @@
                                         $allSelectedItems[] = [
                                             'name' => $name,
                                             'price' => $variant->price ?? 0,
+                                            'duration' => $variant->duration ?? 60,
                                             'type' => 'variant',
                                             'id' => $variant->id
                                         ];
                                         $totalPrice += $variant->price ?? 0;
+                                        $totalDuration += $variant->duration ?? 60;
                                         $totalCount++;
                                     }
                                 }
@@ -248,17 +253,27 @@
                                     $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
                                     $selectedCombos = \App\Models\Combo::whereIn('id', $comboIds)->get();
                                     foreach ($selectedCombos as $combo) {
+                                        // Use duration from combo if available, otherwise calculate from combo items
+                                        $comboDuration = $combo->duration ?? 60;
+                                        if (!$comboDuration && $combo->comboItems && $combo->comboItems->count() > 0) {
+                                            $comboDuration = $combo->comboItems->sum(function($item) {
+                                                return $item->serviceVariant->duration ?? 60;
+                                            });
+                                        }
+                                        
                                         $allSelectedItems[] = [
                                             'name' => $combo->name,
                                             'price' => $combo->price ?? 0,
+                                            'duration' => $comboDuration,
                                             'type' => 'combo',
                                             'id' => $combo->id
                                         ];
                                         $totalPrice += $combo->price ?? 0;
+                                        $totalDuration += $comboDuration;
                                         $totalCount++;
                                     }
                                 }
-                            @endphp
+                                @endphp
                             
                             @if($hasAnyService && count($allSelectedItems) > 0)
                                 <!-- Header với icon và số lượng -->
@@ -266,26 +281,29 @@
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i class="fa fa-scissors" style="color: #000; font-size: 16px;"></i>
                                         <span style="color: #000; font-size: 14px; font-weight: 600;">Đã chọn {{ $totalCount }} dịch vụ</span>
-                                    </div>
+                                                    </div>
                                     <i class="fa fa-chevron-right" style="color: #000; font-size: 12px;"></i>
-                                </div>
+                                                    </div>
                                 
                                 <!-- Danh sách dịch vụ dạng tags -->
                                 <div style="background: #fff; padding: 12px 16px; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px;">
                                     @foreach($allSelectedItems as $item)
                                         <div style="background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 20px; padding: 8px 14px; display: inline-block; font-size: 13px; color: #333;">
                                             {{ $item['name'] }}
-                                        </div>
-                                    @endforeach
-                                </div>
+                                                    </div>
+                                                            @endforeach
+                                                    </div>
                                 
                                 <!-- Tổng số tiền -->
                                 <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <span style="color: #000; font-size: 14px; font-weight: 500;">Tổng số tiền anh cần thanh toán:</span>
                                         <span style="color: #28a745; font-size: 16px; font-weight: 700;">{{ number_format($totalPrice, 0, ',', '.') }} VNĐ</span>
-                                    </div>
-                                </div>
+                                                </div>
+                                            </div>
+                                
+                                <!-- Hidden input để lưu total duration cho JavaScript -->
+                                <input type="hidden" id="total_duration_minutes" value="{{ $totalDuration }}">
                                 
                                 <!-- Nút chọn thêm dịch vụ -->
                                 <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}" 
@@ -348,9 +366,7 @@
                                                             @endif
                                                         </div>
                                                         <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">{{ $employee->user->name }}</div>
-                                                    @if($employee->position)
-                                                        <div class="employee-position" style="font-size: 11px; color: #666;">{{ $employee->position }}</div>
-                                                    @endif
+                                                    {{-- Đã bỏ phần hiển thị chức vụ --}}
                                                     </div>
                                                 @endforeach
                                             @else
@@ -385,15 +401,28 @@
                             </div>
 
                             <div class="mb-2">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 5px; font-weight: 500;">
+                                <label class="form-label" style="font-size: 13px; margin-bottom: 8px; font-weight: 500;">
                                     <i class="fa fa-clock-o"></i> Chọn giờ <span class="text-danger">*</span>
                                 </label>
+                                <!-- Hiển thị ước tính thời gian hoàn thành -->
+                                <div id="estimated_completion_time" style="display: none; background: #e7f3ff; border: 1px solid #0066cc; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <i class="fa fa-clock-o" style="color: #0066cc; font-size: 14px;"></i>
+                                        <span style="color: #000; font-size: 13px; font-weight: 500;">
+                                            Bắt đầu: <strong id="start_time_display" style="color: #0066cc;">-</strong>
+                                        </span>
+                                        <span style="color: #666; font-size: 13px;">→</span>
+                                        <span style="color: #000; font-size: 13px; font-weight: 500;">
+                                            Ước tính hoàn thành: <strong id="end_time_display" style="color: #28a745; font-size: 14px;">-</strong>
+                                        </span>
+                                    </div>
+                                </div>
                                 <div class="time-slot-container" style="position: relative; display: none;">
                                     <button type="button" class="time-slot-nav-btn time-slot-prev" style="position: absolute; left: -35px; top: 50%; transform: translateY(-50%); background: #000; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;">
                                         <i class="fa fa-chevron-left"></i>
                                     </button>
-                                    <div id="time_slot_grid" class="time-slot-grid" style="overflow: hidden;">
-                                        <div class="time-slot-slider" style="transition: transform 0.3s ease;">
+                                    <div id="time_slot_grid" class="time-slot-grid">
+                                        <div class="time-slot-slider">
                                             <!-- Time slots will be rendered here -->
                                         </div>
                                     </div>
@@ -401,7 +430,7 @@
                                         <i class="fa fa-chevron-right"></i>
                                     </button>
                                 </div>
-                                <div id="time_slot_message" class="text-muted" style="padding: 8px; color: #000; font-size: 13px;">
+                                <div id="time_slot_message" class="text-muted" style="padding: 8px; color: #666; font-size: 13px;">
                                     Vui lòng chọn kỹ thuật viên trước
                                 </div>
                                 <input type="hidden" name="time_slot" id="time_slot" value="">
@@ -680,7 +709,7 @@
 
     /* Time Slot Container */
     .time-slot-container {
-        margin-top: 8px;
+        margin-top: 12px;
         padding: 0;
     }
 
@@ -688,21 +717,24 @@
     .time-slot-grid {
         width: 100%;
         position: relative;
-        overflow: hidden;
+        overflow: visible;
+        background: transparent;
+        padding: 0;
     }
 
     .time-slot-slider {
         display: flex;
         gap: 0;
-        width: max-content;
-        transition: transform 0.3s ease;
+        width: 100%;
+        transition: none;
+        transform: none !important;
     }
 
     .time-slot-page {
         display: grid;
         grid-template-columns: repeat(11, 1fr);
         grid-template-rows: repeat(3, 1fr);
-        grid-auto-flow: column;
+        grid-auto-flow: row;
         gap: 8px;
         width: 100%;
         min-width: 100%;
@@ -711,7 +743,8 @@
         align-items: stretch;
         justify-items: stretch;
         overflow: visible;
-        margin-top: 10px;
+        margin-top: 0;
+        padding: 0;
     }
     
     .time-slot-page > * {
@@ -734,15 +767,15 @@
     }
 
     .time-slot-btn {
-        padding: 14px 10px;
+        padding: 12px 8px;
         border: 1px solid #000;
-        border-radius: 8px;
+        border-radius: 6px;
         background: #fff;
         color: #000;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         text-align: center;
         min-width: 0;
         min-height: 0;
@@ -755,17 +788,12 @@
         box-sizing: border-box;
         overflow: visible;
         white-space: nowrap;
-        transform: scale(1);
-        z-index: 1;
         position: relative;
     }
 
-    .time-slot-btn:hover:not(.unavailable) {
+    .time-slot-btn:hover:not(.unavailable):not(.selected) {
         background: #f8f8f8;
         border-color: #333;
-        transform: scale(1.1);
-        z-index: 10;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .time-slot-btn.selected {
@@ -780,14 +808,46 @@
         color: #b0b0b0;
         border: 1px solid #e0e0e0;
         cursor: not-allowed;
-        opacity: 0.6;
+        position: relative;
     }
 
     .time-slot-btn.unavailable:hover {
         background: #e8e8e8;
-        transform: none;
-        box-shadow: none;
         border-color: #e0e0e0;
+        cursor: not-allowed;
+        color: #b0b0b0;
+    }
+    
+    /* Tooltip cho slot bị trùng lịch */
+    .time-slot-btn.unavailable[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 5px;
+        padding: 6px 10px;
+        background: #333;
+        color: #fff;
+        font-size: 12px;
+        white-space: nowrap;
+        border-radius: 4px;
+        z-index: 1000;
+        pointer-events: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .time-slot-btn.unavailable[title]:hover::before {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: -1px;
+        border: 5px solid transparent;
+        border-top-color: #333;
+        z-index: 1000;
+        pointer-events: none;
     }
 
     .time-slot-btn.empty-slot {
@@ -795,14 +855,6 @@
         pointer-events: none;
         border: none;
         background: transparent;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 10px 6px;
-        min-width: 0;
-        min-height: 0;
-        box-sizing: border-box;
-        overflow: hidden;
     }
 
     /* Employee Selector Styles */
@@ -864,8 +916,7 @@
         border-width: 2px;
     }
 
-    .employee-item-btn.selected .employee-name,
-    .employee-item-btn.selected .employee-position {
+    .employee-item-btn.selected .employee-name {
         color: #000;
     }
 
@@ -922,8 +973,7 @@
         flex-shrink: 0;
     }
 
-    .employee-name,
-    .employee-position {
+    .employee-name {
         width: 100%;
         text-align: center;
         word-wrap: break-word;
@@ -984,6 +1034,7 @@
         color: #000 !important;
     }
 
+    /* Responsive Design */
     @media (max-width: 768px) {
         .appointment-form-container {
             padding: 25px 20px !important;
@@ -1002,6 +1053,30 @@
         .form-label {
             font-size: 13px;
             margin-bottom: 6px;
+        }
+
+        .time-slot-page {
+            grid-template-columns: repeat(8, 1fr) !important;
+            grid-template-rows: repeat(4, 1fr) !important;
+            gap: 6px !important;
+        }
+
+        .time-slot-btn {
+            padding: 10px 4px !important;
+            font-size: 12px !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .time-slot-page {
+            grid-template-columns: repeat(6, 1fr) !important;
+            grid-template-rows: repeat(5, 1fr) !important;
+            gap: 5px !important;
+        }
+
+        .time-slot-btn {
+            padding: 8px 3px !important;
+            font-size: 11px !important;
         }
     }
 </style>
@@ -1077,7 +1152,7 @@
             // Recreate only valid inputs from URL
             const $form = $('#appointmentForm');
             if ($form.length) {
-                validVariants.forEach(function(variantId) {
+            validVariants.forEach(function(variantId) {
                     const $newInput = $('<input>', {
                         type: 'hidden',
                         name: 'service_variants[]',
@@ -1296,15 +1371,15 @@
         }
         
         // Load employees by service on page load
-        loadEmployeesByService();
-        loadEmployeesForCarousel();
+            loadEmployeesByService();
+            loadEmployeesForCarousel();
         
         // Nếu đã khôi phục employee_id và appointment_date từ localStorage, load time slots
         if (restoredEmployeeId && restoredAppointmentDate) {
             // Đợi một chút để đảm bảo employees đã load xong
-            setTimeout(function() {
+        setTimeout(function() {
                 loadAvailableTimeSlots();
-            }, 500);
+        }, 500);
         }
         
         // Function to load employees by service (for select dropdown - not used anymore but kept for compatibility)
@@ -1447,9 +1522,7 @@
                                 itemHtml += '</div>';
                                 itemHtml += '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">' + employee.name + '</div>';
                                 
-                                if (employee.position) {
-                                    itemHtml += '<div class="employee-position" style="font-size: 11px; color: #666;">' + employee.position + '</div>';
-                                }
+                                // Đã bỏ phần hiển thị chức vụ
                                 
                                 itemHtml += '</div>';
                                 $slider.append(itemHtml);
@@ -1519,7 +1592,6 @@
             
             const employeeId = $(this).data('employee-id');
             const employeeName = $(this).data('employee-name');
-            const employeePosition = $(this).data('employee-position');
             
             if (!employeeId) {
                 return false;
@@ -1671,8 +1743,8 @@
                 $('#appointment_date-error').hide();
                 $(this).removeClass('is-invalid');
                 // Chỉ load time slots nếu đã chọn kỹ thuật viên
-                if ($('#employee_id').val()) {
-                    loadAvailableTimeSlots();
+                    if ($('#employee_id').val()) {
+                        loadAvailableTimeSlots();
                 }
             } else {
                 // Nếu xóa date, hiển thị error
@@ -1756,27 +1828,23 @@
             // Show loading
             timeSlotMessage.text('Đang tải khung giờ...');
             
+            // Lấy tổng thời gian dịch vụ đã chọn
+            const totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
+            
             // Load time slots via AJAX
             $.ajax({
                 url: '{{ route("site.appointment.available-time-slots") }}',
                 method: 'GET',
                 data: {
                     employee_id: employeeId || '',
-                    appointment_date: appointmentDate
+                    appointment_date: appointmentDate,
+                    total_duration: totalDuration
                 },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function(response) {
-                    // Kiểm tra xem có message từ server không (khi không có lịch làm việc)
-                    if (response.success && response.message && (!response.time_slots || response.time_slots.length === 0)) {
-                        $('.time-slot-container').hide();
-                        timeSlotMessage.text(response.message || 'Nhân viên này không có lịch làm việc vào ngày đã chọn');
-                        timeSlotHidden.val('');
-                        wordTimeIdInput.val('');
-                        return;
-                    }
-                    
+                    // LUÔN hiển thị tất cả slots từ 7h-22h (30 slots), kể cả khi không có lịch làm việc
                     if (response.success && response.time_slots && response.time_slots.length > 0) {
                         const currentlySelectedTime = timeSlotHidden.val();
                         let availableCount = 0;
@@ -1789,33 +1857,38 @@
                         const $slider = $('.time-slot-slider');
                         $slider.empty();
                         
-                        // Tính toán số cột và hàng dựa trên số lượng slots
-                        // Từ 7:00 đến 22:00 mỗi 30 phút = 30 slots
-                        // Sử dụng 10 cột x 3 hàng = 30 slots (hoặc 11 cột x 3 hàng = 33 slots để có thêm không gian)
-                        const fixedColumns = 11;
-                        const totalSlots = sortedSlots.length;
-                        // Tính số hàng cần thiết (làm tròn lên)
-                        const fixedRowsPerPage = Math.ceil(totalSlots / fixedColumns);
-                        const slotsPerPage = fixedColumns * fixedRowsPerPage;
+                        // Layout responsive: Desktop 11 cột x 3 hàng, Mobile tự động điều chỉnh
+                        // Hiển thị tất cả slots từ 7h-22h (30 slots), còn 3 slots trống ở cuối
+                        const isMobile = window.innerWidth <= 768;
+                        const isSmallMobile = window.innerWidth <= 480;
                         
-                        // Xóa style cũ nếu có
+                        let fixedColumns, fixedRows;
+                        if (isSmallMobile) {
+                            fixedColumns = 6;
+                            fixedRows = 5;
+                        } else if (isMobile) {
+                            fixedColumns = 8;
+                            fixedRows = 4;
+                        } else {
+                            fixedColumns = 11;
+                            fixedRows = 3;
+                        }
+                        
+                        const totalSlots = fixedColumns * fixedRows;
+                        const slotsPerPage = totalSlots;
+                        
+                        // Cập nhật CSS grid động dựa trên kích thước màn hình
                         $('#dynamic-time-slot-style').remove();
-                        
-                        // Cập nhật CSS cho grid - cố định 11 cột x 3 hàng để đồng bộ cho tất cả nhân viên
                         $('<style>').prop('id', 'dynamic-time-slot-style').html(
-                            '.time-slot-page { grid-template-columns: repeat(' + fixedColumns + ', 1fr) !important; grid-template-rows: repeat(' + fixedRowsPerPage + ', 1fr) !important; }'
+                            '.time-slot-page { grid-template-columns: repeat(' + fixedColumns + ', 1fr) !important; grid-template-rows: repeat(' + fixedRows + ', 1fr) !important; }'
                         ).appendTo('head');
                         
-                        let currentPage = null;
-                        let slotIndex = 0;
+                        // Tạo một page duy nhất với layout 11 cột x 3 hàng
+                        const currentPage = $('<div></div>').addClass('time-slot-page');
+                        $slider.append(currentPage);
                         
+                        // Thêm tất cả slots từ 7h-22h (30 slots)
                         sortedSlots.forEach(function(slot) {
-                            // Create new page if needed
-                            if (slotIndex % slotsPerPage === 0) {
-                                currentPage = $('<div></div>').addClass('time-slot-page');
-                                $slider.append(currentPage);
-                            }
-                            
                             const isAvailable = slot.available !== false;
                             const formattedTime = formatTimeSlot(slot.time);
                             const isSelected = currentlySelectedTime === slot.time;
@@ -1829,6 +1902,12 @@
                             
                             if (!isAvailable) {
                                 btn.addClass('unavailable');
+                                // Thêm tooltip nếu có lý do trùng lịch
+                                if (slot.conflict_reason) {
+                                    btn.attr('title', slot.conflict_reason);
+                                    btn.attr('data-toggle', 'tooltip');
+                                    btn.attr('data-placement', 'top');
+                                }
                             } else {
                                 availableCount++;
                                 if (isSelected) {
@@ -1839,37 +1918,53 @@
                             }
                             
                             currentPage.append(btn);
-                            slotIndex++;
                         });
                         
-                        // Đảm bảo page cuối cùng luôn có đủ slots để layout đồng bộ
-                        if (currentPage && currentPage.children().length < slotsPerPage) {
-                            const remainingSlots = slotsPerPage - currentPage.children().length;
-                            for (let i = 0; i < remainingSlots; i++) {
-                                const emptyBtn = $('<button></button>')
-                                    .attr('type', 'button')
-                                    .addClass('time-slot-btn empty-slot')
-                                    .css({
-                                        'visibility': 'hidden',
-                                        'pointer-events': 'none'
-                                    });
-                                currentPage.append(emptyBtn);
-                            }
+                        // Khởi tạo tooltip cho các slot unavailable có conflict_reason
+                        if (typeof $.fn.tooltip !== 'undefined') {
+                            $('.time-slot-btn.unavailable[data-toggle="tooltip"]').tooltip();
                         }
                         
-                        if (availableCount === 0) {
-                            $('.time-slot-container').hide();
-                            timeSlotMessage.text('Không còn khung giờ trống trong ca làm việc của nhân viên này');
-                        } else {
-                            $('.time-slot-container').show();
-                            timeSlotMessage.hide();
-                            updateNavigationButtons();
+                        // Thêm các empty slots ở cuối để đủ 33 slots (11 cột x 3 hàng)
+                        const remainingSlots = totalSlots - sortedSlots.length;
+                        for (let i = 0; i < remainingSlots; i++) {
+                            const emptyBtn = $('<button></button>')
+                                .attr('type', 'button')
+                                .addClass('time-slot-btn empty-slot')
+                                .css({
+                                    'visibility': 'hidden',
+                                    'pointer-events': 'none'
+                                });
+                            currentPage.append(emptyBtn);
                         }
+                        
+                        // LUÔN hiển thị time slot container để người dùng thấy tất cả slots từ 7h-22h
+                        // (kể cả các slots unavailable - sẽ được đánh dấu xám)
+                        $('.time-slot-container').show();
+                        
+                        // Đảm bảo slider hiển thị tất cả, không scroll
+                        $('.time-slot-slider').css({
+                            'width': '100%',
+                            'transform': 'none'
+                        });
+                        
+                        // Ẩn các nút navigation vì hiển thị tất cả slots cùng lúc (11 cột x 3 hàng)
+                        $('.time-slot-nav-btn').hide();
+                        
+                        if (availableCount === 0) {
+                            // Nếu không có slot nào available, hiển thị thông báo nhưng vẫn show container với tất cả slots
+                            timeSlotMessage.text('Nhân viên này không có ca làm việc vào ngày đã chọn. Tất cả khung giờ đều không khả dụng.').show();
+                        } else {
+                            timeSlotMessage.hide();
+                        }
+                        
+                        // Không cần update navigation buttons vì đã ẩn
+                        // updateNavigationButtons();
                     } else {
-                        // No time slots available
+                        // Nếu không có time_slots từ server (lỗi), vẫn hiển thị thông báo
                         $('.time-slot-container').hide();
                         if (employeeId) {
-                            timeSlotMessage.text(response.message || 'Nhân viên này không có ca làm việc vào ngày đã chọn');
+                            timeSlotMessage.text(response.message || 'Không thể tải khung giờ. Vui lòng thử lại.');
                         } else {
                             timeSlotMessage.text('Vui lòng chọn kỹ thuật viên và ngày trước');
                         }
@@ -1891,25 +1986,11 @@
         }
 
         // Update navigation buttons state
+        // Ẩn các nút navigation vì hiển thị tất cả slots cùng lúc (11 cột x 3 hàng)
         function updateNavigationButtons() {
-            const $slider = $('.time-slot-slider');
-            const $container = $('.time-slot-container');
-            const containerWidth = $container.width();
-            const sliderWidth = $slider[0].scrollWidth;
-            const currentTransform = $slider.css('transform');
-            
-            // Parse current transform
-            let currentX = 0;
-            if (currentTransform && currentTransform !== 'none') {
-                const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
-                if (matrix) {
-                    currentX = parseFloat(matrix[1].split(',')[4]) || 0;
-                }
-            }
-            
-            // Show/hide buttons based on scroll position
-            $('.time-slot-prev').prop('disabled', currentX >= 0);
-            $('.time-slot-next').prop('disabled', Math.abs(currentX) >= sliderWidth - containerWidth - 10);
+            $('.time-slot-nav-btn').hide();
+            // Đảm bảo slider không scroll
+            $('.time-slot-slider').css('transform', 'none');
         }
 
         // Navigation button handlers
@@ -1954,6 +2035,40 @@
             setTimeout(updateNavigationButtons, 300);
         });
         
+        // Function to calculate and display estimated completion time
+        function updateEstimatedCompletionTime() {
+            const selectedTime = $('#time_slot').val();
+            const totalDurationMinutes = parseInt($('#total_duration_minutes').val()) || 0;
+            
+            if (selectedTime && totalDurationMinutes > 0) {
+                // Parse selected time (format: HH:MM)
+                const [startHours, startMinutes] = selectedTime.split(':').map(Number);
+                
+                // Calculate end time: đơn giản cộng phút
+                let totalMinutes = (startHours * 60) + startMinutes + totalDurationMinutes;
+                
+                // Tính giờ và phút kết thúc
+                let endHours = Math.floor(totalMinutes / 60);
+                let endMinutes = totalMinutes % 60;
+                
+                // Xử lý trường hợp vượt quá 24h (nếu cần)
+                if (endHours >= 24) {
+                    endHours = endHours % 24;
+                }
+                
+                // Format times: 7h00, 8h30, etc.
+                const startTimeStr = String(startHours).padStart(2, '0') + 'h' + String(startMinutes).padStart(2, '0');
+                const endTimeStr = String(endHours).padStart(2, '0') + 'h' + String(endMinutes).padStart(2, '0');
+                
+                // Update display
+                $('#start_time_display').text(startTimeStr);
+                $('#end_time_display').text(endTimeStr);
+                $('#estimated_completion_time').show();
+                            } else {
+                $('#estimated_completion_time').hide();
+            }
+        }
+        
         // Handle time slot button click
         $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
             // Kiểm tra xem đã chọn kỹ thuật viên chưa
@@ -1961,9 +2076,9 @@
             if (!employeeId) {
                 $('#time_slot_message').text('Vui lòng chọn kỹ thuật viên trước').show();
                 $('.time-slot-container').hide();
-                return false;
-            }
-            
+                            return false;
+                        }
+                        
             // Remove previous selection
             $('.time-slot-btn').removeClass('selected');
             
@@ -1978,12 +2093,15 @@
             const wordTimeId = $(this).data('word-time-id');
             
             // Đảm bảo set giá trị đúng
-            if (time) {
-                $('#time_slot').val(time);
+                if (time) {
+                    $('#time_slot').val(time);
+                }
+                if (wordTimeId) {
+                    $('#word_time_id').val(wordTimeId);
             }
-            if (wordTimeId) {
-                $('#word_time_id').val(wordTimeId);
-            }
+            
+            // Update estimated completion time
+            updateEstimatedCompletionTime();
             
             // Debug: Log để kiểm tra
             console.log('Time slot selected:', {
@@ -2286,20 +2404,15 @@
                 formDataObj.email = email.trim();
             }
             
+            // Luôn gửi các field required để server có thể validate
             const employeeId = $('#employee_id').val();
-            if (employeeId && employeeId !== '' && employeeId !== '0') {
-                formDataObj.employee_id = employeeId;
-            }
+            formDataObj.employee_id = employeeId || '';
             
             const appointmentDate = $('#appointment_date').val();
-            if (appointmentDate && appointmentDate.trim() !== '') {
-                formDataObj.appointment_date = appointmentDate.trim();
-            }
+            formDataObj.appointment_date = appointmentDate ? appointmentDate.trim() : '';
             
             const wordTimeId = $('#word_time_id').val();
-            if (wordTimeId && wordTimeId !== '' && wordTimeId !== '0') {
-                formDataObj.word_time_id = wordTimeId;
-            }
+            formDataObj.word_time_id = wordTimeId || '';
             
             const note = $('textarea[name="note"]').val();
             if (note && note.trim() !== '') {
@@ -2389,8 +2502,25 @@
             $form.find('input, button, select, textarea').prop('disabled', true);
             
             // Submit form via AJAX
+            // Lấy URL từ route để đảm bảo đúng - sử dụng absolute URL
+            const submitUrl = '{{ url(route("site.appointment.store")) }}';
+            
+            console.log('=== APPOINTMENT SUBMIT DEBUG ===');
+            console.log('Submitting to URL:', submitUrl);
+            console.log('Form data object:', formDataObj);
+            console.log('Form data keys:', Object.keys(formDataObj));
+            console.log('Employee ID:', formDataObj.employee_id);
+            console.log('Appointment Date:', formDataObj.appointment_date);
+            console.log('Word Time ID:', formDataObj.word_time_id);
+            console.log('Service IDs:', formDataObj.service_id);
+            console.log('Service Variants:', formDataObj.service_variants);
+            console.log('Combo IDs:', formDataObj.combo_id);
+            console.log('Name:', formDataObj.name);
+            console.log('Phone:', formDataObj.phone);
+            console.log('===============================');
+            
             $.ajax({
-                url: $form.attr('action'),
+                url: submitUrl,
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
@@ -2449,8 +2579,11 @@
                     $form.find('input, button, select, textarea').prop('disabled', false);
                     
                     console.log('AJAX Error:', xhr);
+                    console.log('Request URL:', submitUrl);
+                    console.log('Request Data:', formDataObj);
                     console.log('Response:', xhr.responseJSON);
                     console.log('Status:', xhr.status);
+                    console.log('Status Text:', xhr.statusText);
                     console.log('Response Text:', xhr.responseText);
                     
                     // Handle validation errors - display inline errors
@@ -2464,27 +2597,27 @@
                             if (value && value.length > 0) {
                                 console.log('Error for field:', key, 'Message:', value[0]);
                                 
-                                // Map backend field names to frontend field IDs
-                                let fieldId = key;
-                                if (key === 'employee_id') fieldId = 'employee';
-                                if (key === 'appointment_date') fieldId = 'appointment_date';
-                                if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
-                                if (key === 'service_id' || key === 'service_id.*') fieldId = 'service';
-                                
-                                // Hiển thị lỗi
-                                const $errorDiv = $('#' + fieldId + '-error');
-                                if ($errorDiv.length) {
-                                    $errorDiv.find('span').text(value[0]);
-                                    $errorDiv.show();
-                                } else {
-                                    // Nếu không tìm thấy error div, thử showFieldError
-                                    showFieldError(fieldId, value[0]);
-                                }
-                                
-                                // Thêm invalid class cho field
-                                const $field = $('#' + fieldId);
-                                if ($field.length) {
-                                    $field.addClass('is-invalid');
+                                    // Map backend field names to frontend field IDs
+                                    let fieldId = key;
+                                    if (key === 'employee_id') fieldId = 'employee';
+                                    if (key === 'appointment_date') fieldId = 'appointment_date';
+                                    if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
+                                    if (key === 'service_id' || key === 'service_id.*') fieldId = 'service';
+                                    
+                                    // Hiển thị lỗi
+                                    const $errorDiv = $('#' + fieldId + '-error');
+                                    if ($errorDiv.length) {
+                                        $errorDiv.find('span').text(value[0]);
+                                        $errorDiv.show();
+                                    } else {
+                                        // Nếu không tìm thấy error div, thử showFieldError
+                                        showFieldError(fieldId, value[0]);
+                                    }
+                                    
+                                    // Thêm invalid class cho field
+                                    const $field = $('#' + fieldId);
+                                    if ($field.length) {
+                                        $field.addClass('is-invalid');
                                 }
                             }
                         });
@@ -2511,10 +2644,25 @@
                         // Nếu không có errors từ server, có thể là lỗi khác
                         console.error('Unexpected error:', xhr);
                         let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                        
+                        // Kiểm tra các loại lỗi khác nhau
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) {
                             errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON.error) {
+                                errorMessage = xhr.responseJSON.error;
+                            }
+                        } else if (xhr.status === 0) {
+                            errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối internet.';
+                        } else if (xhr.status === 500) {
+                            errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+                        } else if (xhr.status === 404) {
+                            errorMessage = 'Không tìm thấy trang. Vui lòng thử lại.';
                         }
+                        
+                        // Hiển thị alert và scroll to top
                         alert(errorMessage);
+                        $('html, body').animate({ scrollTop: 0 }, 300);
                     }
                 }
             });

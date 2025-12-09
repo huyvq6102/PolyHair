@@ -138,17 +138,22 @@ class ServiceController extends Controller
             'name' => 'required|string|max:255|unique:services,name',
             'category_id' => 'required|exists:service_categories,id',
             'base_price' => 'required|numeric|min:0',
+            'base_duration' => 'required|integer|min:1',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'description' => 'nullable|string',
         ], [
             'name.unique' => 'Dịch vụ này đã tồn tại',
+            'base_duration.required' => 'Vui lòng nhập thời gian thực hiện dịch vụ',
+            'base_duration.integer' => 'Thời gian phải là số nguyên',
+            'base_duration.min' => 'Thời gian phải lớn hơn 0',
         ]);
 
         $data = $request->only([
             'name',
             'category_id',
             'base_price',
+            'base_duration',
             'status',
             'description',
         ]);
@@ -278,6 +283,7 @@ class ServiceController extends Controller
             'combo_name' => 'required|string|max:255|unique:combos,name',
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
+            'combo_duration' => 'required|integer|min:1',
             'combo_items' => 'required|array|min:1',
             'combo_items.*.service_id' => 'required|exists:services,id',
             'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
@@ -286,6 +292,9 @@ class ServiceController extends Controller
             'combo_description' => 'nullable|string',
         ], [
             'combo_name.unique' => 'Dịch vụ này đã tồn tại',
+            'combo_duration.required' => 'Vui lòng nhập thời gian thực hiện combo',
+            'combo_duration.integer' => 'Thời gian phải là số nguyên',
+            'combo_duration.min' => 'Thời gian phải lớn hơn 0',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -294,6 +303,7 @@ class ServiceController extends Controller
                 'slug' => Str::slug($request->input('combo_name')) . '-' . uniqid(),
                 'category_id' => $request->input('category_id'),
                 'price' => $request->input('combo_price'),
+                'duration' => $request->input('combo_duration'),
                 'status' => $request->input('combo_status', 'Hoạt động'),
                 'description' => $request->input('combo_description'),
             ]);
@@ -435,17 +445,22 @@ class ServiceController extends Controller
             'name' => 'required|string|max:255|unique:services,name,' . $id,
             'category_id' => 'required|exists:service_categories,id',
             'base_price' => 'required|numeric|min:0',
+            'base_duration' => 'required|integer|min:1',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'description' => 'nullable|string',
         ], [
             'name.unique' => 'Dịch vụ này đã tồn tại',
+            'base_duration.required' => 'Vui lòng nhập thời gian thực hiện dịch vụ',
+            'base_duration.integer' => 'Thời gian phải là số nguyên',
+            'base_duration.min' => 'Thời gian phải lớn hơn 0',
         ]);
 
         $data = $request->only([
             'name',
             'category_id',
             'base_price',
+            'base_duration',
             'status',
             'description',
         ]);
@@ -641,6 +656,7 @@ class ServiceController extends Controller
             'combo_name' => 'required|string|max:255|unique:combos,name,' . $id,
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
+            'combo_duration' => 'required|integer|min:1',
             'combo_items' => 'required|array|min:1',
             'combo_items.*.service_id' => 'required|exists:services,id',
             'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
@@ -649,6 +665,9 @@ class ServiceController extends Controller
             'combo_description' => 'nullable|string',
         ], [
             'combo_name.unique' => 'Dịch vụ này đã tồn tại',
+            'combo_duration.required' => 'Vui lòng nhập thời gian thực hiện combo',
+            'combo_duration.integer' => 'Thời gian phải là số nguyên',
+            'combo_duration.min' => 'Thời gian phải lớn hơn 0',
         ]);
 
         DB::transaction(function () use ($request, $combo) {
@@ -656,6 +675,7 @@ class ServiceController extends Controller
                 'name' => $request->input('combo_name'),
                 'category_id' => $request->input('category_id'),
                 'price' => $request->input('combo_price'),
+                'duration' => $request->input('combo_duration'),
                 'status' => $request->input('combo_status', 'Hoạt động'),
                 'description' => $request->input('combo_description'),
             ]);
