@@ -220,10 +220,14 @@ class EmployeeAppointmentController extends Controller
 
             // If employee selected a promotion code, link it to this appointment & customer
             if (!empty($validated['promotion_code'] ?? null)) {
+                // Chỉ cho phép áp dụng mã có trạng thái "Đang chạy"
                 $promotion = Promotion::where('code', $validated['promotion_code'])
                     ->where('status', 'active')
                     ->whereDate('start_date', '<=', now())
-                    ->whereDate('end_date', '>=', now())
+                    ->where(function($query) {
+                        $query->whereNull('end_date')
+                              ->orWhereDate('end_date', '>=', now());
+                    })
                     ->first();
 
                 if ($promotion) {

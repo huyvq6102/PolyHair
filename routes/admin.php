@@ -64,6 +64,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
         Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
         Route::put('promotions/{id}/restore', [PromotionController::class, 'restore'])->name('promotions.restore');
         Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
+        Route::delete('promotions/delete-all', [PromotionController::class, 'deleteAll'])->name('promotions.delete-all');
         Route::resource('promotions', PromotionController::class);
 
         // Payments

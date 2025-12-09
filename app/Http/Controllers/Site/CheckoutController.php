@@ -199,14 +199,18 @@ class CheckoutController extends Controller
 
         $code = $request->input('coupon_code');
 
+        // Chỉ cho phép áp dụng mã có trạng thái "Đang chạy"
         $promo = Promotion::where('code', $code)
             ->where('status', 'active')
             ->whereDate('start_date', '<=', now())
-            ->whereDate('end_date', '>=', now())
+            ->where(function($query) {
+                $query->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', now());
+            })
             ->first();
 
         if (!$promo) {
-            return back()->with('error', 'Mã khuyến mại không hợp lệ hoặc đã hết hạn.');
+            return back()->with('error', 'Mã khuyến mại không hợp lệ, đã hết hạn hoặc đang tạm ngừng áp dụng.');
         }
 
         Session::put('coupon_code', $code);
