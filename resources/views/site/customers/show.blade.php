@@ -182,25 +182,15 @@
                                                         @endif
                                                     </h6>
                                                     
-                                                    <!-- Dòng thứ 2: Mã đơn và trạng thái (cố định, không wrap) -->
-                                                    <div class="d-flex align-items-center gap-2 mb-2" style="flex-wrap: nowrap;">
+                                                    <!-- Dòng thứ 2: Mã đơn -->
+                                                    <div class="mb-2">
                                                         @if($appointment->booking_code)
-                                                            <span class="badge bg-secondary text-white" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->booking_code }}</span>
+                                                            <span class="badge bg-secondary text-white" style="white-space: nowrap;">{{ $appointment->booking_code }}</span>
                                                         @endif
-                                                        @php
-                                                            $statusBadgeClass = 'bg-info';
-                                                            if ($appointment->status === 'Đã xác nhận') {
-                                                                $statusBadgeClass = 'bg-success';
-                                                            } elseif ($appointment->status === 'Chờ xử lý') {
-                                                                $statusBadgeClass = 'bg-warning text-dark';
-                                                            } elseif ($appointment->status === 'Đang thực hiện') {
-                                                                $statusBadgeClass = 'bg-primary';
-                                                            }
-                                                        @endphp
-                                                        <span class="badge {{ $statusBadgeClass }} appointment-status-badge" data-status="{{ $appointment->status }}" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
                                                     </div>
+                                                    
                                                     <!-- Dòng thứ 3: Thông tin barber và thời gian -->
-                                                    <div class="d-flex flex-column gap-1">
+                                                    <div class="d-flex flex-column gap-1 mb-2">
                                                         <small class="text-muted">
                                                             <i class="fas fa-user-tie me-1"></i>
                                                             @if($appointment->employee && $appointment->employee->user)
@@ -217,6 +207,21 @@
                                                                 <span class="text-warning">Chưa có thời gian</span>
                                                             @endif
                                                         </small>
+                                                    </div>
+                                                    
+                                                    <!-- Dòng thứ 4: Trạng thái -->
+                                                    <div class="mb-2">
+                                                        @php
+                                                            $statusBadgeClass = 'bg-info text-white';
+                                                            if ($appointment->status === 'Đã xác nhận') {
+                                                                $statusBadgeClass = 'bg-success text-white';
+                                                            } elseif ($appointment->status === 'Chờ xử lý') {
+                                                                $statusBadgeClass = 'bg-warning text-white';
+                                                            } elseif ($appointment->status === 'Đang thực hiện') {
+                                                                $statusBadgeClass = 'bg-primary text-white';
+                                                            }
+                                                        @endphp
+                                                        <span class="badge {{ $statusBadgeClass }} appointment-status-badge" data-status="{{ $appointment->status }}" style="white-space: nowrap;">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -419,7 +424,7 @@
                                                             @if($appointment->booking_code)
                                                                 <span class="badge bg-secondary text-white" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->booking_code }}</span>
                                                             @endif
-                                                            <span class="badge bg-danger" style="white-space: nowrap; flex-shrink: 0;">Đã hủy</span>
+                                                            <span class="badge bg-danger text-white" style="white-space: nowrap; flex-shrink: 0;">Đã hủy</span>
                                                         </div>
                                                         <!-- Dòng thứ 3: Thông tin barber và thời gian -->
                                                         <div class="d-flex flex-column gap-1">
