@@ -52,7 +52,6 @@ Route::prefix('cart')->name('site.cart.')->group(function () {
 Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::get('/', [AppointmentController::class, 'create'])->name('create');
     Route::get('/select-services', [AppointmentController::class, 'selectServices'])->name('select-services');
-    Route::get('/select-offers', [AppointmentController::class, 'selectOffers'])->name('select-offers');
     Route::get('/test-email', [\App\Http\Controllers\Site\TestEmailController::class, 'testEmail'])->name('test-email');
     Route::post('/', [AppointmentController::class, 'store'])->name('store');
     Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
