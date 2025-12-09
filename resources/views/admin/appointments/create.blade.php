@@ -2,6 +2,30 @@
 
 @section('title', 'Thêm mới lịch hẹn')
 
+@push('styles')
+<style>
+    .service-variant-attributes .badge {
+        margin-right: 5px;
+        margin-bottom: 3px;
+        font-size: 11px;
+    }
+    
+    .combo-items .badge {
+        margin-right: 5px;
+        margin-bottom: 3px;
+        font-size: 11px;
+    }
+    
+    .form-check-label {
+        line-height: 1.6;
+    }
+    
+    .form-check-label strong {
+        color: #333;
+    }
+</style>
+@endpush
+
 @section('content')
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
@@ -119,7 +143,7 @@
                                             <strong>{{ $service->name }}</strong>
                                             <div class="row ml-3">
                                                 @foreach($service->serviceVariants as $variant)
-                                                    <div class="col-md-4 mb-2">
+                                                    <div class="col-md-6 mb-3">
                                                         <div class="form-check">
                                                             <input class="form-check-input service-checkbox" type="checkbox" 
                                                                    name="services[]" 
@@ -131,7 +155,14 @@
                                                                    data-price="{{ $variant->price }}"
                                                                    data-duration="{{ $variant->duration }}">
                                                             <label class="form-check-label" for="service_variant_{{ $variant->id }}">
-                                                                {{ $variant->name }} - {{ number_format($variant->price, 0, ',', '.') }} đ
+                                                                <strong>{{ $variant->name }}</strong> - {{ number_format($variant->price, 0, ',', '.') }} đ
+                                                                @if($variant->variantAttributes->count() > 0)
+                                                                    <br><small class="text-muted service-variant-attributes">
+                                                                        @foreach($variant->variantAttributes as $attr)
+                                                                            <span class="badge badge-secondary">{{ $attr->attribute_name }}: {{ $attr->attribute_value }}</span>
+                                                                        @endforeach
+                                                                    </small>
+                                                                @endif
                                                             </label>
                                                         </div>
                                                     </div>
@@ -148,7 +179,7 @@
                                     <h6 class="text-primary">Combo</h6>
                                     <div class="row">
                                         @foreach($combos as $combo)
-                                            <div class="col-md-4 mb-2">
+                                            <div class="col-md-6 mb-3">
                                                 <div class="form-check">
                                                     <input class="form-check-input service-checkbox" type="checkbox" 
                                                            name="services[]" 
@@ -159,7 +190,19 @@
                                                            data-price="{{ $combo->price }}"
                                                            data-duration="0">
                                                     <label class="form-check-label" for="service_combo_{{ $combo->id }}">
-                                                        {{ $combo->name }} - {{ number_format($combo->price, 0, ',', '.') }} đ
+                                                        <strong>{{ $combo->name }}</strong> - {{ number_format($combo->price, 0, ',', '.') }} đ
+                                                        @if($combo->comboItems->count() > 0)
+                                                            <br><small class="text-muted combo-items">
+                                                                <i class="fas fa-list"></i> Bao gồm:
+                                                                @foreach($combo->comboItems as $item)
+                                                                    @if($item->serviceVariant)
+                                                                        <span class="badge badge-info">{{ $item->serviceVariant->name }}</span>
+                                                                    @elseif($item->service)
+                                                                        <span class="badge badge-info">{{ $item->service->name }}</span>
+                                                                    @endif
+                                                                @endforeach
+                                                            </small>
+                                                        @endif
                                                     </label>
                                                 </div>
                                             </div>
@@ -201,7 +244,10 @@
                         <label for="appointment_date">Ngày đặt</label>
                         <input type="date" name="appointment_date" id="appointment_date" 
                                value="{{ old('appointment_date') }}" 
-                               class="form-control @error('appointment_date') is-invalid @enderror">
+                               min="{{ date('Y-m-d') }}"
+                               class="form-control @error('appointment_date') is-invalid @enderror"
+                               disabled>
+                        <small class="form-text text-muted">Vui lòng chọn nhân viên trước</small>
                         @error('appointment_date')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -210,9 +256,13 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="appointment_time">Giờ đặt</label>
-                        <input type="time" name="appointment_time" id="appointment_time" 
-                               value="{{ old('appointment_time') }}" 
-                               class="form-control @error('appointment_time') is-invalid @enderror">
+                        <select name="appointment_time" id="appointment_time" 
+                                class="form-control @error('appointment_time') is-invalid @enderror"
+                                disabled>
+                            <option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>
+                        </select>
+                        <input type="hidden" name="word_time_id" id="word_time_id" value="">
+                        <small class="form-text text-muted" id="time_slot_message" style="display: none;"></small>
                         @error('appointment_time')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -259,25 +309,163 @@
         }, false);
     })();
     
-    // Xử lý validation cho checkbox dịch vụ
-    document.addEventListener('DOMContentLoaded', function() {
-        var serviceError = document.getElementById('service_error');
-        var form = document.querySelector('.needs-validation');
+    $(document).ready(function() {
+        // Xử lý validation cho checkbox dịch vụ
+        var serviceError = $('#service_error');
+        var form = $('.needs-validation');
         
         // Validation khi submit
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                var checkedServices = document.querySelectorAll('.service-checkbox:checked');
+        if (form.length) {
+            form.on('submit', function(e) {
+                var checkedServices = $('.service-checkbox:checked');
                 
                 if (checkedServices.length === 0) {
                     e.preventDefault();
                     e.stopPropagation();
-                    serviceError.style.display = 'block';
-                    serviceError.textContent = 'Vui lòng chọn ít nhất một dịch vụ';
+                    serviceError.show().text('Vui lòng chọn ít nhất một dịch vụ');
                 } else {
-                    serviceError.style.display = 'none';
+                    serviceError.hide();
                 }
             });
+        }
+        
+        // Xử lý dependency: Nhân viên -> Ngày -> Giờ
+        $('#employee_id').on('change', function() {
+            const employeeId = $(this).val();
+            const $appointmentDate = $('#appointment_date');
+            
+            if (employeeId) {
+                // Enable input ngày khi đã chọn nhân viên
+                $(this).removeClass('is-invalid');
+                $appointmentDate.prop('disabled', false);
+                $appointmentDate.siblings('small').text('Chọn ngày đặt lịch');
+                
+                // Load time slots nếu đã chọn ngày
+                if ($appointmentDate.val()) {
+                    loadAvailableTimeSlots();
+                } else {
+                    // Reset time slots
+                    $('#appointment_time').prop('disabled', true).html('<option value="">-- Vui lòng chọn ngày trước --</option>');
+                    $('#word_time_id').val('');
+                    $('#time_slot_message').hide();
+                }
+            } else {
+                // Disable input ngày và reset khi bỏ chọn nhân viên
+                $appointmentDate.prop('disabled', true).val('').removeClass('is-invalid');
+                $appointmentDate.siblings('small').text('Vui lòng chọn nhân viên trước');
+                
+                // Reset time slots
+                $('#appointment_time').prop('disabled', true).html('<option value="">-- Vui lòng chọn nhân viên và ngày trước --</option>');
+                $('#word_time_id').val('');
+                $('#time_slot_message').hide();
+            }
+        });
+        
+        $('#appointment_date').on('change', function() {
+            const dateValue = $(this).val();
+            const employeeId = $('#employee_id').val();
+            
+            if (dateValue && dateValue.trim() !== '') {
+                $(this).removeClass('is-invalid');
+                
+                // Chỉ load time slots nếu đã chọn nhân viên
+                if (employeeId) {
+                    loadAvailableTimeSlots();
+                } else {
+                    $('#appointment_time').prop('disabled', true).html('<option value="">-- Vui lòng chọn nhân viên trước --</option>');
+                    $('#word_time_id').val('');
+                    $('#time_slot_message').text('Vui lòng chọn nhân viên trước').show();
+                }
+            } else {
+                // Reset time slots nếu xóa ngày
+                $('#appointment_time').prop('disabled', true).html('<option value="">-- Vui lòng chọn ngày trước --</option>');
+                $('#word_time_id').val('');
+                $('#time_slot_message').hide();
+            }
+        });
+        
+        // Load available time slots
+        function loadAvailableTimeSlots() {
+            const employeeId = $('#employee_id').val();
+            const appointmentDate = $('#appointment_date').val();
+            
+            if (!employeeId || !appointmentDate) {
+                return;
+            }
+            
+            // Disable time select và hiển thị loading
+            const $timeSelect = $('#appointment_time');
+            $timeSelect.prop('disabled', true).html('<option value="">Đang tải...</option>');
+            $('#time_slot_message').text('Đang tải các khung giờ có sẵn...').show();
+            
+            // Gọi API để lấy available time slots
+            $.ajax({
+                url: '{{ route("site.appointment.available-time-slots") }}',
+                method: 'GET',
+                data: {
+                    employee_id: employeeId,
+                    appointment_date: appointmentDate
+                },
+                success: function(response) {
+                    if (response.success && response.time_slots) {
+                        $timeSelect.html('<option value="">-- Chọn giờ --</option>');
+                        
+                        let hasAvailableSlots = false;
+                        response.time_slots.forEach(function(slot) {
+                            if (slot.available) {
+                                hasAvailableSlots = true;
+                                const timeValue = slot.time.replace(':', '');
+                                $timeSelect.append(
+                                    $('<option></option>')
+                                        .attr('value', slot.time)
+                                        .attr('data-word-time-id', slot.word_time_id)
+                                        .text(slot.time + ' - ' + (slot.display_name || 'Có sẵn'))
+                                );
+                            }
+                        });
+                        
+                        if (hasAvailableSlots) {
+                            $timeSelect.prop('disabled', false);
+                            $('#time_slot_message').text('Chọn giờ đặt lịch').show();
+                        } else {
+                            $timeSelect.html('<option value="">Không có khung giờ trống</option>');
+                            $('#time_slot_message').text('Không có khung giờ trống cho nhân viên này trong ngày đã chọn').show();
+                        }
+                    } else {
+                        $timeSelect.html('<option value="">Không thể tải khung giờ</option>');
+                        $('#time_slot_message').text(response.message || 'Không thể tải khung giờ').show();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error loading time slots:', xhr);
+                    $timeSelect.html('<option value="">Lỗi khi tải khung giờ</option>');
+                    $('#time_slot_message').text('Có lỗi xảy ra khi tải khung giờ').show();
+                }
+            });
+        }
+        
+        // Khi chọn giờ, lưu word_time_id
+        $('#appointment_time').on('change', function() {
+            const selectedOption = $(this).find('option:selected');
+            const wordTimeId = selectedOption.attr('data-word-time-id');
+            
+            if (wordTimeId) {
+                $('#word_time_id').val(wordTimeId);
+                $(this).removeClass('is-invalid');
+            } else {
+                $('#word_time_id').val('');
+            }
+        });
+        
+        // Khởi tạo nếu đã có giá trị từ old input
+        var hasEmployeeId = {{ old('employee_id') ? 'true' : 'false' }};
+        var hasAppointmentDate = {{ old('appointment_date') ? 'true' : 'false' }};
+        
+        if (hasEmployeeId) {
+            $('#employee_id').trigger('change');
+        }
+        if (hasAppointmentDate) {
+            $('#appointment_date').trigger('change');
         }
     });
 </script>
