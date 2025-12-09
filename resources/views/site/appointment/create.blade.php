@@ -371,30 +371,157 @@
                                     }
                                 }
                                 
-                                // Load selected promotion if exists
+                                // Load selected promotion if exists and validate it applies to selected services
                                 $selectedPromotion = null;
                                 if (request('promotion_id') && request('promotion_id')) {
-                                    $selectedPromotion = \App\Models\Promotion::where('id', request('promotion_id'))
+                                    $promotion = \App\Models\Promotion::where('id', request('promotion_id'))
                                         ->where('status', 'active')
                                         ->whereNull('deleted_at')
+                                        ->with(['services', 'combos', 'serviceVariants'])
                                         ->first();
+                                    
+                                    if ($promotion) {
+                                        // Get selected IDs for validation
+                                        $selectedServiceIds = array_map(function($item) {
+                                            return $item['id'];
+                                        }, array_filter($allSelectedItems, function($item) {
+                                            return $item['type'] === 'service';
+                                        }));
+                                        $selectedVariantIds = array_map(function($item) {
+                                            return $item['id'];
+                                        }, array_filter($allSelectedItems, function($item) {
+                                            return $item['type'] === 'variant';
+                                        }));
+                                        $selectedComboIds = array_map(function($item) {
+                                            return $item['id'];
+                                        }, array_filter($allSelectedItems, function($item) {
+                                            return $item['type'] === 'combo';
+                                        }));
+                                        
+                                        // Validate promotion applies to selected services
+                                        // If promotion has apply_scope = 'order', it applies to all
+                                        if ($promotion->apply_scope === 'order') {
+                                            $selectedPromotion = $promotion;
+                                        } elseif ($promotion->apply_scope === 'service') {
+                                            $hasSpecificServices = $promotion->services->count() > 0 
+                                                || $promotion->combos->count() > 0 
+                                                || $promotion->serviceVariants->count() > 0;
+                                            
+                                            // If no specific services, applies to all
+                                            if (!$hasSpecificServices) {
+                                                $selectedPromotion = $promotion;
+                                            } else {
+                                                // Check if any selected service/variant/combo matches
+                                                $hasMatch = false;
+                                                
+                                                // Check services
+                                                foreach ($selectedServiceIds as $serviceId) {
+                                                    if ($promotion->services->contains('id', $serviceId)) {
+                                                        $hasMatch = true;
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                // Check variants
+                                                if (!$hasMatch) {
+                                                    foreach ($selectedVariantIds as $variantId) {
+                                                        if ($promotion->serviceVariants->contains('id', $variantId)) {
+                                                            $hasMatch = true;
+                                                            break;
+                                                        }
+                                                        // Also check parent service
+                                                        $variant = \App\Models\ServiceVariant::with('service')->find($variantId);
+                                                        if ($variant && $variant->service && $promotion->services->contains('id', $variant->service->id)) {
+                                                            $hasMatch = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                // Check combos
+                                                if (!$hasMatch) {
+                                                    foreach ($selectedComboIds as $comboId) {
+                                                        if ($promotion->combos->contains('id', $comboId)) {
+                                                            $hasMatch = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                if ($hasMatch) {
+                                                    $selectedPromotion = $promotion;
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                                 
-                                // Calculate discount from promotion
+                                // Calculate discount from promotion - only on applicable services
                                 $discountAmount = 0;
+                                $applicablePrice = 0; // Price of services that match promotion
                                 $finalPrice = $totalPrice;
+                                
                                 if ($selectedPromotion) {
-                                    if ($selectedPromotion->discount_type === 'percent') {
-                                        $discountPercent = $selectedPromotion->discount_percent ?? 0;
-                                        $discountAmount = ($totalPrice * $discountPercent) / 100;
-                                        // Apply max discount if exists
-                                        if ($selectedPromotion->max_discount_amount) {
-                                            $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
-                                        }
+                                    // Check if promotion applies to all services
+                                    $hasSpecificServices = $selectedPromotion->services->count() > 0 
+                                        || $selectedPromotion->combos->count() > 0 
+                                        || $selectedPromotion->serviceVariants->count() > 0;
+                                    
+                                    $totalSelected = $selectedPromotion->services->count() 
+                                        + $selectedPromotion->combos->count() 
+                                        + $selectedPromotion->serviceVariants->count();
+                                    
+                                    $applyToAll = !$hasSpecificServices || $totalSelected >= 20;
+                                    
+                                    // Calculate applicable price (only for services that match promotion)
+                                    if ($selectedPromotion->apply_scope === 'order' || $applyToAll) {
+                                        // Apply to all services
+                                        $applicablePrice = $totalPrice;
                                     } else {
-                                        $discountAmount = $selectedPromotion->discount_amount ?? 0;
+                                        // Only apply to matching services
+                                        foreach ($allSelectedItems as $item) {
+                                            $isApplicable = false;
+                                            
+                                            if ($item['type'] === 'service') {
+                                                if ($selectedPromotion->services->contains('id', $item['id'])) {
+                                                    $isApplicable = true;
+                                                }
+                                            } elseif ($item['type'] === 'variant') {
+                                                if ($selectedPromotion->serviceVariants->contains('id', $item['id'])) {
+                                                    $isApplicable = true;
+                                                } else {
+                                                    // Check if variant's parent service is in promotion
+                                                    $variant = \App\Models\ServiceVariant::with('service')->find($item['id']);
+                                                    if ($variant && $variant->service && $selectedPromotion->services->contains('id', $variant->service->id)) {
+                                                        $isApplicable = true;
+                                                    }
+                                                }
+                                            } elseif ($item['type'] === 'combo') {
+                                                if ($selectedPromotion->combos->contains('id', $item['id'])) {
+                                                    $isApplicable = true;
+                                                }
+                                            }
+                                            
+                                            if ($isApplicable) {
+                                                $applicablePrice += $item['price'];
+                                            }
+                                        }
                                     }
-                                    $finalPrice = max(0, $totalPrice - $discountAmount);
+                                    
+                                    // Calculate discount on applicable price only
+                                    if ($applicablePrice > 0) {
+                                        if ($selectedPromotion->discount_type === 'percent') {
+                                            $discountPercent = $selectedPromotion->discount_percent ?? 0;
+                                            $discountAmount = ($applicablePrice * $discountPercent) / 100;
+                                            // Apply max discount if exists
+                                            if ($selectedPromotion->max_discount_amount) {
+                                                $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
+                                            }
+                                        } else {
+                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $applicablePrice);
+                                        }
+                                        $finalPrice = max(0, $totalPrice - $discountAmount);
+                                    }
                                 }
                                 
                                 // Debug: Log để kiểm tra
@@ -437,18 +564,132 @@
                                     </div>
                                     
                                     <!-- Danh sách dịch vụ dạng tags -->
+                                    @php
+                                        // Determine which services are eligible for discount
+                                        $applicableServiceIds = [];
+                                        $nonApplicableServiceIds = [];
+                                        
+                                        if ($selectedPromotion) {
+                                            $hasSpecificServices = $selectedPromotion->services->count() > 0 
+                                                || $selectedPromotion->combos->count() > 0 
+                                                || $selectedPromotion->serviceVariants->count() > 0;
+                                            
+                                            $totalSelected = $selectedPromotion->services->count() 
+                                                + $selectedPromotion->combos->count() 
+                                                + $selectedPromotion->serviceVariants->count();
+                                            
+                                            $applyToAll = !$hasSpecificServices || $totalSelected >= 20;
+                                            
+                                            if ($selectedPromotion->apply_scope === 'order' || $applyToAll) {
+                                                // All services are applicable
+                                                foreach ($allSelectedItems as $item) {
+                                                    $applicableServiceIds[] = $item['id'] . '_' . $item['type'];
+                                                }
+                                            } else {
+                                                // Check each service
+                                                foreach ($allSelectedItems as $item) {
+                                                    $isApplicable = false;
+                                                    
+                                                    if ($item['type'] === 'service') {
+                                                        if ($selectedPromotion->services->contains('id', $item['id'])) {
+                                                            $isApplicable = true;
+                                                        }
+                                                    } elseif ($item['type'] === 'variant') {
+                                                        if ($selectedPromotion->serviceVariants->contains('id', $item['id'])) {
+                                                            $isApplicable = true;
+                                                        } else {
+                                                            $variant = \App\Models\ServiceVariant::with('service')->find($item['id']);
+                                                            if ($variant && $variant->service && $selectedPromotion->services->contains('id', $variant->service->id)) {
+                                                                $isApplicable = true;
+                                                            }
+                                                        }
+                                                    } elseif ($item['type'] === 'combo') {
+                                                        if ($selectedPromotion->combos->contains('id', $item['id'])) {
+                                                            $isApplicable = true;
+                                                        }
+                                                    }
+                                                    
+                                                    if ($isApplicable) {
+                                                        $applicableServiceIds[] = $item['id'] . '_' . $item['type'];
+                                                    } else {
+                                                        $nonApplicableServiceIds[] = $item['id'] . '_' . $item['type'];
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            // No promotion, all services are non-applicable
+                                            foreach ($allSelectedItems as $item) {
+                                                $nonApplicableServiceIds[] = $item['id'] . '_' . $item['type'];
+                                            }
+                                        }
+                                    @endphp
                                     <div style="background: #fff; padding: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
                                         @foreach($allSelectedItems as $item)
-                                            <div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 16px; padding: 6px 12px; display: inline-block; font-size: 13px; color: #333;">
-                                                {{ $item['name'] }}
+                                            @php
+                                                $serviceKey = $item['id'] . '_' . $item['type'];
+                                                $isApplicable = in_array($serviceKey, $applicableServiceIds);
+                                            @endphp
+                                            <div style="background: {{ $isApplicable ? '#e8f5e9' : '#f5f5f5' }}; border: 1px solid {{ $isApplicable ? '#4caf50' : '#e0e0e0' }}; border-radius: 16px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #333;">
+                                                @if($isApplicable && $selectedPromotion)
+                                                    <i class="fa fa-check-circle" style="color: #4caf50; font-size: 12px;"></i>
+                                                @endif
+                                                <span>{{ $item['name'] }}</span>
                                             </div>
                                         @endforeach
                                     </div>
+                                    @if($selectedPromotion && count($applicableServiceIds) > 0 && count($nonApplicableServiceIds) > 0)
+                                        <div style="background: #f8f9fa; border-left: 3px solid #28a745; padding: 12px 16px; border-top: 1px solid #f0f0f0; font-size: 13px;">
+                                            <div style="margin-bottom: 8px;">
+                                                <i class="fa fa-check-circle" style="color: #28a745; margin-right: 6px; font-size: 14px;"></i>
+                                                <span style="color: #28a745; font-weight: 600; font-size: 13px;">Được giảm giá:</span>
+                                                <span style="color: #333; font-weight: 500; margin-left: 4px;">
+                                                    @foreach($allSelectedItems as $item)
+                                                        @php
+                                                            $serviceKey = $item['id'] . '_' . $item['type'];
+                                                            $isApplicable = in_array($serviceKey, $applicableServiceIds);
+                                                        @endphp
+                                                        @if($isApplicable)
+                                                            {{ $item['name'] }}@if(!$loop->last), @endif
+                                                        @endif
+                                                    @endforeach
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <i class="fa fa-circle-o" style="color: #999; margin-right: 6px; font-size: 14px;"></i>
+                                                <span style="color: #999; font-weight: 600; font-size: 13px;">Không được giảm:</span>
+                                                <span style="color: #666; margin-left: 4px;">
+                                                    @foreach($allSelectedItems as $item)
+                                                        @php
+                                                            $serviceKey = $item['id'] . '_' . $item['type'];
+                                                            $isApplicable = in_array($serviceKey, $applicableServiceIds);
+                                                        @endphp
+                                                        @if(!$isApplicable)
+                                                            {{ $item['name'] }}@if(!$loop->last), @endif
+                                                        @endif
+                                                    @endforeach
+                                                </span>
+                                            </div>
+                                        </div>
+                                    @endif
                                     
                                     <!-- Tổng số tiền -->
-                                    <div style="background: #fff; padding: 16px; border-top: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between;">
-                                        <span style="color: #000; font-size: 14px; font-weight: 500;">Tổng số tiền anh cần thanh toán:</span>
-                                        <span id="totalPriceDisplay" style="color: #28a745; font-size: 16px; font-weight: 700;">{{ number_format($finalPrice, 0, ',', '.') }} VNĐ</span>
+                                    <div style="background: #fff; padding: 16px; border-top: 1px solid #f0f0f0;">
+                                        @if($selectedPromotion && $discountAmount > 0)
+                                            <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #e0e0e0;">
+                                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                                                    <span style="color: #666; font-size: 13px;">Tổng giá gốc:</span>
+                                                    <span style="color: #999; font-size: 14px; text-decoration: line-through;">{{ number_format($totalPrice, 0, ',', '.') }} VNĐ</span>
+                                                </div>
+                                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                                    <span style="color: #28a745; font-size: 13px; font-weight: 600;">✓ Giảm giá:</span>
+                                                    <span style="color: #28a745; font-size: 14px; font-weight: 700;">-{{ number_format($discountAmount, 0, ',', '.') }} VNĐ</span>
+                                                </div>
+                                            </div>
+                                        @endif
+                                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                                            <span style="color: #000; font-size: 14px; font-weight: 600;">Tổng số tiền anh cần thanh toán:</span>
+                                            <span id="totalPriceDisplay" style="color: #28a745; font-size: 18px; font-weight: 700;">{{ number_format($finalPrice, 0, ',', '.') }} VNĐ</span>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -457,16 +698,51 @@
                                 @php
                                     $promotionForJs = null;
                                     if (isset($selectedPromotion) && $selectedPromotion) {
+                                        // Load relationships if not loaded
+                                        if (!$selectedPromotion->relationLoaded('services')) {
+                                            $selectedPromotion->load('services');
+                                        }
+                                        if (!$selectedPromotion->relationLoaded('combos')) {
+                                            $selectedPromotion->load('combos');
+                                        }
+                                        if (!$selectedPromotion->relationLoaded('serviceVariants')) {
+                                            $selectedPromotion->load('serviceVariants');
+                                        }
+                                        
                                         $promotionForJs = [
                                             'id' => $selectedPromotion->id,
                                             'discount_type' => $selectedPromotion->discount_type,
                                             'discount_percent' => $selectedPromotion->discount_percent ?? 0,
                                             'discount_amount' => $selectedPromotion->discount_amount ?? 0,
-                                            'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null
+                                            'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null,
+                                            'apply_scope' => $selectedPromotion->apply_scope,
+                                            'service_ids' => $selectedPromotion->services->pluck('id')->toArray(),
+                                            'variant_ids' => $selectedPromotion->serviceVariants->pluck('id')->toArray(),
+                                            'combo_ids' => $selectedPromotion->combos->pluck('id')->toArray()
                                         ];
                                     }
                                 @endphp
                                 const promotionData = @json($promotionForJs);
+                                
+                                // Selected services data for discount calculation
+                                @php
+                                    $selectedServicesDataForJs = array_map(function($item) {
+                                        $data = [
+                                            'id' => $item['id'],
+                                            'type' => $item['type'],
+                                            'price' => $item['price']
+                                        ];
+                                        // For variants, add parent service ID if available
+                                        if ($item['type'] === 'variant') {
+                                            $variant = \App\Models\ServiceVariant::with('service')->find($item['id']);
+                                            if ($variant && $variant->service) {
+                                                $data['parent_service_id'] = $variant->service->id;
+                                            }
+                                        }
+                                        return $data;
+                                    }, $allSelectedItems);
+                                @endphp
+                                const selectedServicesData = @json($selectedServicesDataForJs);
                                 
                                 // Update total price from sessionStorage and apply discount
                                 document.addEventListener('DOMContentLoaded', function() {
@@ -493,19 +769,67 @@
                                             }
                                         }
                                         
-                                        // Calculate discount if promotion exists
+                                        // Calculate discount if promotion exists - only on applicable services
                                         let discountAmount = 0;
+                                        let applicablePrice = 0; // Price of services that match promotion
                                         let finalPrice = totalPrice;
-                                        if (promotionData) {
-                                            if (promotionData.discount_type === 'percent') {
-                                                discountAmount = (totalPrice * promotionData.discount_percent) / 100;
-                                                if (promotionData.max_discount_amount) {
-                                                    discountAmount = Math.min(discountAmount, promotionData.max_discount_amount);
-                                                }
+                                        
+                                        if (promotionData && selectedServicesData) {
+                                            // Check if promotion applies to all services
+                                            const hasSpecificServices = (promotionData.service_ids && promotionData.service_ids.length > 0) 
+                                                || (promotionData.combo_ids && promotionData.combo_ids.length > 0) 
+                                                || (promotionData.variant_ids && promotionData.variant_ids.length > 0);
+                                            
+                                            const totalSelected = (promotionData.service_ids?.length || 0) 
+                                                + (promotionData.combo_ids?.length || 0) 
+                                                + (promotionData.variant_ids?.length || 0);
+                                            
+                                            const applyToAll = !hasSpecificServices || totalSelected >= 20;
+                                            
+                                            // Calculate applicable price (only for services that match promotion)
+                                            if (promotionData.apply_scope === 'order' || applyToAll) {
+                                                // Apply to all services
+                                                applicablePrice = totalPrice;
                                             } else {
-                                                discountAmount = promotionData.discount_amount;
+                                                // Only apply to matching services
+                                                selectedServicesData.forEach(item => {
+                                                    let isApplicable = false;
+                                                    
+                                                    if (item.type === 'service') {
+                                                        if (promotionData.service_ids && promotionData.service_ids.includes(item.id)) {
+                                                            isApplicable = true;
+                                                        }
+                                                    } else if (item.type === 'variant') {
+                                                        if (promotionData.variant_ids && promotionData.variant_ids.includes(item.id)) {
+                                                            isApplicable = true;
+                                                        } else if (item.parent_service_id && promotionData.service_ids && promotionData.service_ids.includes(item.parent_service_id)) {
+                                                            // Check if variant's parent service is in promotion
+                                                            isApplicable = true;
+                                                        }
+                                                    } else if (item.type === 'combo') {
+                                                        if (promotionData.combo_ids && promotionData.combo_ids.includes(item.id)) {
+                                                            isApplicable = true;
+                                                        }
+                                                    }
+                                                    
+                                                    if (isApplicable) {
+                                                        applicablePrice += parseFloat(item.price || 0);
+                                                    }
+                                                });
                                             }
-                                            finalPrice = Math.max(0, totalPrice - discountAmount);
+                                            
+                                            // Calculate discount on applicable price only
+                                            if (applicablePrice > 0) {
+                                                if (promotionData.discount_type === 'percent') {
+                                                    discountAmount = (applicablePrice * promotionData.discount_percent) / 100;
+                                                    if (promotionData.max_discount_amount) {
+                                                        discountAmount = Math.min(discountAmount, promotionData.max_discount_amount);
+                                                    }
+                                                } else {
+                                                    discountAmount = Math.min(promotionData.discount_amount, applicablePrice);
+                                                }
+                                                finalPrice = Math.max(0, totalPrice - discountAmount);
+                                            }
                                         }
                                         
                                         // Format and update price

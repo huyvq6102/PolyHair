@@ -143,7 +143,9 @@
                 </div>
             @else
                 <div style="text-align: center; padding: 60px 20px;">
-                    <p style="font-size: 14px; color: #999; font-style: italic; margin: 0;">Không có ưu đãi</p>
+                    <i class="fa fa-info-circle" style="font-size: 48px; color: #ccc; margin-bottom: 16px; display: block;"></i>
+                    <p style="font-size: 16px; color: #666; font-weight: 500; margin: 0 0 8px 0;">Không có voucher nào áp dụng được</p>
+                    <p style="font-size: 14px; color: #999; margin: 0;">Các dịch vụ bạn đã chọn không đủ điều kiện cho bất kỳ voucher nào.</p>
                 </div>
             @endif
         </div>
@@ -187,8 +189,10 @@
                     @endforeach
                 </div>
             @else
-                <div style="text-align: center; padding: 60px 20px; background: #f5f5f5;">
-                    <p style="font-size: 14px; color: #999; font-style: italic; margin: 0;">Không có ưu đãi</p>
+                <div style="text-align: center; padding: 60px 20px;">
+                    <i class="fa fa-info-circle" style="font-size: 48px; color: #ccc; margin-bottom: 16px; display: block;"></i>
+                    <p style="font-size: 16px; color: #666; font-weight: 500; margin: 0 0 8px 0;">Không có voucher nào áp dụng được</p>
+                    <p style="font-size: 14px; color: #999; margin: 0;">Các dịch vụ bạn đã chọn không đủ điều kiện cho bất kỳ voucher nào.</p>
                 </div>
             @endif
         </div>

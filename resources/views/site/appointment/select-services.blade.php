@@ -653,8 +653,8 @@
                         </div>
                     </div>
                     
-                    <!-- Offers Section (Hide/Show on Scroll - Behind Summary Bar) -->
-                    <div class="offers-section" id="offersSection" style="position: absolute; bottom: 100%; left: 0; right: 0; background: #fff; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; padding: 12px 20px; border-radius: 15px 15px 0 0; transition: transform 0.3s ease-in-out; z-index: 1;">
+                    <!-- Offers Section (Always visible when services are selected) -->
+                    <div class="offers-section" id="offersSection" style="position: absolute; bottom: 100%; left: 0; right: 0; background: #fff; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; padding: 12px 20px; border-radius: 15px 15px 0 0; transition: transform 0.3s ease-in-out; z-index: 1; display: none;">
                         <div style="display: flex; align-items: center; justify-content: space-between;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div style="width: 40px; height: 40px; background: #ffc107; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -679,63 +679,7 @@
                                     @endif
                                 </div>
                             </div>
-                            @php
-                                // Build URL with selected services to preserve them
-                                $urlParams = [];
-                                if (request('service_id')) {
-                                    $queryServices = request()->query('service_id', []);
-                                    if (!is_array($queryServices)) {
-                                        $queryServices = $queryServices ? [$queryServices] : [];
-                                    }
-                                    foreach ($queryServices as $serviceId) {
-                                        $urlParams[] = 'service_id[]=' . urlencode($serviceId);
-                                    }
-                                }
-                                if (request()->has('service_variants')) {
-                                    $url = request()->fullUrl();
-                                    $parsedUrl = parse_url($url);
-                                    $queryParams = [];
-                                    if (isset($parsedUrl['query'])) {
-                                        parse_str($parsedUrl['query'], $queryParams);
-                                    }
-                                    $queryVariants = [];
-                                    if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
-                                        $queryVariants = $queryParams['service_variants'];
-                                    } elseif (isset($queryParams['service_variants'])) {
-                                        $queryVariants = [$queryParams['service_variants']];
-                                    }
-                                    foreach ($queryParams as $key => $value) {
-                                        if (preg_match('/^service_variants\[(\d+)\]$/', $key, $matches)) {
-                                            $queryVariants[] = $value;
-                                        }
-                                    }
-                                    foreach (array_unique($queryVariants) as $variantId) {
-                                        if (!empty($variantId) && $variantId !== '0') {
-                                            $urlParams[] = 'service_variants[]=' . urlencode($variantId);
-                                        }
-                                    }
-                                }
-                                if (request('combo_id')) {
-                                    $queryCombos = request()->query('combo_id', []);
-                                    if (!is_array($queryCombos)) {
-                                        $queryCombos = $queryCombos ? [$queryCombos] : [];
-                                    }
-                                    foreach ($queryCombos as $comboId) {
-                                        if (!empty($comboId) && $comboId !== '0') {
-                                            $urlParams[] = 'combo_id[]=' . urlencode($comboId);
-                                        }
-                                    }
-                                }
-                                // Add promotion_id if exists
-                                if (request('promotion_id')) {
-                                    $urlParams[] = 'promotion_id=' . urlencode(request('promotion_id'));
-                                }
-                                $offersUrl = route('site.appointment.select-offers');
-                                if (!empty($urlParams)) {
-                                    $offersUrl .= '?' . implode('&', $urlParams);
-                                }
-                            @endphp
-                            <a href="{{ $offersUrl }}" 
+                            <a href="#" 
                                id="selectOffersLink"
                                style="display: flex; align-items: center; color: #0066cc; text-decoration: none; font-size: 14px; font-weight: 400; gap: 4px;">
                                 Chọn ưu đãi
@@ -941,15 +885,16 @@
     /* Offers Section Styles */
     .offers-section {
         will-change: transform;
-        transform: translateY(100%);
     }
     
     .offers-section.visible {
         transform: translateY(0) !important;
+        display: block !important;
     }
     
     .offers-section.hidden {
         transform: translateY(100%) !important;
+        display: none !important;
     }
     
     /* Ensure summary container has relative positioning for absolute children */
@@ -1263,7 +1208,8 @@ document.addEventListener('DOMContentLoaded', function() {
         variantIds: [],
         comboIds: [],
         prices: {},
-        names: {} // Store service names for display
+        names: {}, // Store service names for display
+        variantParentServices: {} // Store parent service ID for each variant: {variantId: parentServiceId}
     };
     
     // Load from URL params first (source of truth from appointment form), then sessionStorage
@@ -1306,7 +1252,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 variantIds: [],
                 comboIds: [],
                 prices: {},
-                names: {}
+                names: {},
+                variantParentServices: {}
             };
             
             // Get service IDs - try both formats
@@ -1379,10 +1326,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (variantBox) {
                         const name = variantBox.getAttribute('data-variant-name') || 'Biến thể #' + id;
                         const price = parseFloat(variantBox.getAttribute('data-variant-price') || 0);
+                        const parentServiceId = variantBox.getAttribute('data-service-id');
+                        
                         // Only update if we don't have the data or if price is 0 (meaning we didn't find it before)
                         if (!selectedServices.names['variant_' + id] || selectedServices.prices['variant_' + id] === 0) {
                             selectedServices.names['variant_' + id] = name;
                             selectedServices.prices['variant_' + id] = price;
+                            if (parentServiceId) {
+                                selectedServices.variantParentServices[id] = parentServiceId;
+                            }
                             hasUpdates = true;
                         }
                     } else if (!selectedServices.names['variant_' + id]) {
@@ -1450,7 +1402,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         variantIds: parsed.variantIds || [],
                         comboIds: parsed.comboIds || [],
                         prices: parsed.prices || {},
-                        names: parsed.names || {}
+                        names: parsed.names || {},
+                        variantParentServices: parsed.variantParentServices || {}
                     };
                 } catch (e) {
                     // Parse error: reset
@@ -1459,7 +1412,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         variantIds: [],
                         comboIds: [],
                         prices: {},
-                        names: {}
+                        names: {},
+                        variantParentServices: {}
                     };
                     sessionStorage.removeItem('selectedServices');
                 }
@@ -1471,7 +1425,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     variantIds: [],
                     comboIds: [],
                     prices: {},
-                    names: {}
+                    names: {},
+                    variantParentServices: {}
                 };
                 // Xóa sessionStorage cũ để đảm bảo bắt đầu mới
                 sessionStorage.removeItem('selectedServices');
@@ -1488,17 +1443,85 @@ document.addEventListener('DOMContentLoaded', function() {
     @php
         $promotionForJs = null;
         if (isset($selectedPromotion) && $selectedPromotion) {
+            // Load relationships if not loaded
+            if (!$selectedPromotion->relationLoaded('services')) {
+                $selectedPromotion->load('services');
+            }
+            if (!$selectedPromotion->relationLoaded('combos')) {
+                $selectedPromotion->load('combos');
+            }
+            if (!$selectedPromotion->relationLoaded('serviceVariants')) {
+                $selectedPromotion->load('serviceVariants');
+            }
+            
             $promotionForJs = [
                 'id' => $selectedPromotion->id,
                 'name' => $selectedPromotion->name,
                 'discount_type' => $selectedPromotion->discount_type,
                 'discount_percent' => $selectedPromotion->discount_percent ?? 0,
                 'discount_amount' => $selectedPromotion->discount_amount ?? 0,
-                'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null
+                'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null,
+                'apply_scope' => $selectedPromotion->apply_scope,
+                'service_ids' => $selectedPromotion->services->pluck('id')->toArray(),
+                'variant_ids' => $selectedPromotion->serviceVariants->pluck('id')->toArray(),
+                'combo_ids' => $selectedPromotion->combos->pluck('id')->toArray()
             ];
         }
     @endphp
     const promotionData = @json($promotionForJs);
+    
+    // Update offers section visibility and link
+    function updateOffersSection() {
+        const offersSection = document.getElementById('offersSection');
+        const selectOffersLink = document.getElementById('selectOffersLink');
+        const totalCount = selectedServices.serviceIds.length + selectedServices.variantIds.length + selectedServices.comboIds.length;
+        
+        // Check if there are any services that could be eligible for promotions
+        // This is a simple check - we'll let the server filter promotions in select-offers page
+        // For now, show offers section if there are services selected
+        // The server will filter out promotions that don't apply
+        
+        if (offersSection) {
+            if (totalCount > 0) {
+                // Show offers section when services are selected
+                offersSection.style.display = 'block';
+                offersSection.classList.add('visible');
+                offersSection.classList.remove('hidden');
+            } else {
+                // Hide offers section when no services selected
+                offersSection.style.display = 'none';
+            }
+        }
+        
+        // Update "Chọn ưu đãi" link with current selected services
+        if (selectOffersLink && totalCount > 0) {
+            const params = new URLSearchParams();
+            
+            // Add service IDs
+            selectedServices.serviceIds.forEach(id => {
+                params.append('service_id[]', id);
+            });
+            
+            // Add variant IDs
+            selectedServices.variantIds.forEach(id => {
+                params.append('service_variants[]', id);
+            });
+            
+            // Add combo IDs
+            selectedServices.comboIds.forEach(id => {
+                params.append('combo_id[]', id);
+            });
+            
+            // Add promotion_id if exists in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('promotion_id')) {
+                params.append('promotion_id', urlParams.get('promotion_id'));
+            }
+            
+            const offersUrl = '{{ route("site.appointment.select-offers") }}' + '?' + params.toString();
+            selectOffersLink.href = offersUrl;
+        }
+    }
     
     // Update summary bar
     function updateSummaryBar() {
@@ -1510,19 +1533,94 @@ document.addEventListener('DOMContentLoaded', function() {
             totalPrice += parseFloat(price) || 0;
         });
         
-        // Calculate discount if promotion exists
+        // Calculate discount if promotion exists - only on applicable services
         let discountAmount = 0;
+        let applicablePrice = 0; // Price of services that match promotion
         let finalPrice = totalPrice;
+        let applicableServices = []; // Track which services are eligible
+        let nonApplicableServices = []; // Track which services are NOT eligible
+        
         if (promotionData) {
-            if (promotionData.discount_type === 'percent') {
-                discountAmount = (totalPrice * promotionData.discount_percent) / 100;
-                if (promotionData.max_discount_amount) {
-                    discountAmount = Math.min(discountAmount, promotionData.max_discount_amount);
-                }
+            // Check if promotion applies to all services
+            const hasSpecificServices = (promotionData.service_ids && promotionData.service_ids.length > 0) 
+                || (promotionData.combo_ids && promotionData.combo_ids.length > 0) 
+                || (promotionData.variant_ids && promotionData.variant_ids.length > 0);
+            
+            const applyToAll = !hasSpecificServices || 
+                ((promotionData.service_ids?.length || 0) + (promotionData.combo_ids?.length || 0) + (promotionData.variant_ids?.length || 0)) >= 20;
+            
+            // Calculate applicable price (only for services that match promotion)
+            if (promotionData.apply_scope === 'order' || applyToAll) {
+                // Apply to all services
+                applicablePrice = totalPrice;
+                // All services are applicable
+                selectedServices.serviceIds.forEach(id => {
+                    applicableServices.push({type: 'service', id: id, name: selectedServices.names['service_' + id] || 'Dịch vụ #' + id});
+                });
+                selectedServices.variantIds.forEach(id => {
+                    applicableServices.push({type: 'variant', id: id, name: selectedServices.names['variant_' + id] || 'Biến thể #' + id});
+                });
+                selectedServices.comboIds.forEach(id => {
+                    applicableServices.push({type: 'combo', id: id, name: selectedServices.names['combo_' + id] || 'Combo #' + id});
+                });
             } else {
-                discountAmount = promotionData.discount_amount;
+                // Only apply to matching services
+                // Check services
+                selectedServices.serviceIds.forEach(id => {
+                    if (promotionData.service_ids && promotionData.service_ids.includes(parseInt(id))) {
+                        applicablePrice += parseFloat(selectedServices.prices['service_' + id] || 0);
+                        applicableServices.push({type: 'service', id: id, name: selectedServices.names['service_' + id] || 'Dịch vụ #' + id});
+                    } else {
+                        nonApplicableServices.push({type: 'service', id: id, name: selectedServices.names['service_' + id] || 'Dịch vụ #' + id});
+                    }
+                });
+                
+                // Check variants
+                selectedServices.variantIds.forEach(id => {
+                    let isApplicable = false;
+                    
+                    // Check direct variant match
+                    if (promotionData.variant_ids && promotionData.variant_ids.includes(parseInt(id))) {
+                        isApplicable = true;
+                    } else {
+                        // Check if variant's parent service is in promotion
+                        const parentServiceId = selectedServices.variantParentServices[id];
+                        if (parentServiceId && promotionData.service_ids && promotionData.service_ids.includes(parseInt(parentServiceId))) {
+                            isApplicable = true;
+                        }
+                    }
+                    
+                    if (isApplicable) {
+                        applicablePrice += parseFloat(selectedServices.prices['variant_' + id] || 0);
+                        applicableServices.push({type: 'variant', id: id, name: selectedServices.names['variant_' + id] || 'Biến thể #' + id});
+                    } else {
+                        nonApplicableServices.push({type: 'variant', id: id, name: selectedServices.names['variant_' + id] || 'Biến thể #' + id});
+                    }
+                });
+                
+                // Check combos
+                selectedServices.comboIds.forEach(id => {
+                    if (promotionData.combo_ids && promotionData.combo_ids.includes(parseInt(id))) {
+                        applicablePrice += parseFloat(selectedServices.prices['combo_' + id] || 0);
+                        applicableServices.push({type: 'combo', id: id, name: selectedServices.names['combo_' + id] || 'Combo #' + id});
+                    } else {
+                        nonApplicableServices.push({type: 'combo', id: id, name: selectedServices.names['combo_' + id] || 'Combo #' + id});
+                    }
+                });
             }
-            finalPrice = Math.max(0, totalPrice - discountAmount);
+            
+            // Calculate discount on applicable price only
+            if (applicablePrice > 0) {
+                if (promotionData.discount_type === 'percent') {
+                    discountAmount = (applicablePrice * promotionData.discount_percent) / 100;
+                    if (promotionData.max_discount_amount) {
+                        discountAmount = Math.min(discountAmount, promotionData.max_discount_amount);
+                    }
+                } else {
+                    discountAmount = Math.min(promotionData.discount_amount, applicablePrice);
+                }
+                finalPrice = Math.max(0, totalPrice - discountAmount);
+            }
         }
         
         const selectedCountEl = document.getElementById('selectedCount');
@@ -1551,30 +1649,53 @@ document.addEventListener('DOMContentLoaded', function() {
             if (promotionData && discountAmount > 0) {
                 let existingStrike = priceSection.querySelector('.original-price-strike');
                 let existingDiscount = priceSection.querySelector('.discount-amount');
+                let existingServiceList = priceSection.querySelector('.service-discount-list');
                 
                 if (!existingStrike) {
                     existingStrike = document.createElement('div');
                     existingStrike.className = 'original-price-strike';
-                    existingStrike.style.cssText = 'font-size: 11px; color: #999; text-decoration: line-through; line-height: 1.3; margin-bottom: 1px;';
+                    existingStrike.style.cssText = 'font-size: 13px; color: #999; text-decoration: line-through; line-height: 1.4; margin-bottom: 3px; font-weight: 500;';
                     priceSection.insertBefore(existingStrike, labelEl);
                 }
-                existingStrike.textContent = formatPrice(totalPrice) + ' VNĐ';
+                existingStrike.textContent = 'Giá gốc: ' + formatPrice(totalPrice) + ' VNĐ';
                 existingStrike.style.display = 'block';
                 
                 if (!existingDiscount) {
                     existingDiscount = document.createElement('div');
                     existingDiscount.className = 'discount-amount';
-                    existingDiscount.style.cssText = 'font-size: 11px; color: #28a745; line-height: 1.3; margin-bottom: 3px;';
+                    existingDiscount.style.cssText = 'font-size: 13px; color: #28a745; font-weight: 600; line-height: 1.4; margin-bottom: 6px;';
                     priceSection.insertBefore(existingDiscount, labelEl);
                 }
-                existingDiscount.textContent = 'Giảm: ' + formatPrice(discountAmount) + ' VNĐ';
+                existingDiscount.textContent = '✓ Giảm: ' + formatPrice(discountAmount) + ' VNĐ';
                 existingDiscount.style.display = 'block';
+                
+                // Show service list if there are both applicable and non-applicable services
+                if (nonApplicableServices.length > 0 && applicableServices.length > 0) {
+                    if (!existingServiceList) {
+                        existingServiceList = document.createElement('div');
+                        existingServiceList.className = 'service-discount-list';
+                        existingServiceList.style.cssText = 'background: #f8f9fa; border-left: 3px solid #28a745; padding: 8px 10px; border-radius: 4px; font-size: 12px; line-height: 1.5; margin-top: 6px; margin-bottom: 4px;';
+                        priceSection.insertBefore(existingServiceList, labelEl);
+                    }
+                    let listHtml = '<div style="margin-bottom: 6px;"><span style="color: #28a745; font-weight: 600;">✓ Được giảm giá:</span> ';
+                    listHtml += '<span style="color: #333; font-weight: 500;">' + applicableServices.map(s => s.name).join(', ') + '</span>';
+                    listHtml += '</div>';
+                    listHtml += '<div><span style="color: #999; font-weight: 500;">○ Không được giảm:</span> ';
+                    listHtml += '<span style="color: #666;">' + nonApplicableServices.map(s => s.name).join(', ') + '</span>';
+                    listHtml += '</div>';
+                    existingServiceList.innerHTML = listHtml;
+                    existingServiceList.style.display = 'block';
+                } else if (existingServiceList) {
+                    existingServiceList.style.display = 'none';
+                }
             } else {
                 // Hide discount display if no promotion
                 const existingStrike = priceSection.querySelector('.original-price-strike');
                 const existingDiscount = priceSection.querySelector('.discount-amount');
+                const existingServiceList = priceSection.querySelector('.service-discount-list');
                 if (existingStrike) existingStrike.style.display = 'none';
                 if (existingDiscount) existingDiscount.style.display = 'none';
+                if (existingServiceList) existingServiceList.style.display = 'none';
             }
             
             // Update final price
@@ -1628,6 +1749,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         selectedServices.variantIds = selectedServices.variantIds.filter(vid => vid !== variantId);
                         delete selectedServices.prices['variant_' + variantId];
                         delete selectedServices.names['variant_' + variantId];
+                        delete selectedServices.variantParentServices[variantId];
                         // Reset visual state
                         box.style.background = '#f8f9fa';
                         box.style.borderColor = '#e0e0e0';
@@ -1640,10 +1762,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedServices.variantIds = selectedServices.variantIds.filter(vid => vid !== id);
                 delete selectedServices.prices['variant_' + id];
                 delete selectedServices.names['variant_' + id];
+                delete selectedServices.variantParentServices[id];
             } else {
                 selectedServices.variantIds.push(id);
                 selectedServices.prices['variant_' + id] = price;
                 selectedServices.names['variant_' + id] = name || 'Biến thể #' + id;
+                // Store parent service ID if available
+                if (serviceParentId) {
+                    selectedServices.variantParentServices[id] = serviceParentId.toString();
+                }
             }
         } else if (type === 'combo') {
             if (selectedServices.comboIds.includes(id)) {
@@ -1666,6 +1793,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSummaryBar();
         updateSelectedServicesList();
         updateVariantBoxesDisplay();
+        updateOffersSection();
     }
     
     // Remove service from selection
@@ -1678,6 +1806,7 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedServices.variantIds = selectedServices.variantIds.filter(vid => vid !== id);
             delete selectedServices.prices['variant_' + id];
             delete selectedServices.names['variant_' + id];
+            delete selectedServices.variantParentServices[id];
         } else if (type === 'combo') {
             selectedServices.comboIds = selectedServices.comboIds.filter(cid => cid !== id);
             delete selectedServices.prices['combo_' + id];
@@ -1687,6 +1816,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveSelectedServices();
         updateSummaryBar();
         updateSelectedServicesList();
+        updateOffersSection();
     }
     
     // Update selected services list display
@@ -1874,6 +2004,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSummaryBar();
     updateSelectedServicesList();
     updateVariantBoxesDisplay();
+    updateOffersSection();
     
     // Handle "Chọn ưu đãi" link click - save before navigating
     const selectOffersLink = document.getElementById('selectOffersLink');
@@ -1986,62 +2117,8 @@ document.addEventListener('DOMContentLoaded', function() {
         doneButton.addEventListener('click', handleDoneClick);
     }
     
-    // Hide/Show offers section on scroll (summary bar stays fixed)
-    let lastScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const offersSection = document.getElementById('offersSection');
-    
-    function handleScroll() {
-        const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        
-        // Only trigger if scrolled enough (avoid flickering)
-        if (Math.abs(lastScrollTop - currentScrollTop) < 5) {
-            return;
-        }
-        
-        if (offersSection) {
-            if (currentScrollTop > lastScrollTop && currentScrollTop > 100) {
-                // Scrolling down - hide offers section
-                offersSection.classList.remove('visible');
-                offersSection.classList.add('hidden');
-            } else if (currentScrollTop < lastScrollTop || currentScrollTop <= 100) {
-                // Scrolling up or at top - show offers section
-                offersSection.classList.remove('hidden');
-                offersSection.classList.add('visible');
-            }
-        }
-        
-        lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
-    }
-    
-    // Throttle scroll events for performance
-    let scrollThrottle = false;
-    window.addEventListener('scroll', function() {
-        if (!scrollThrottle) {
-            window.requestAnimationFrame(function() {
-                handleScroll();
-                scrollThrottle = false;
-            });
-            scrollThrottle = true;
-        }
-    }, { passive: true });
-    
-    // Initialize offers section as visible on page load
-    if (offersSection) {
-        // Remove any inline transform and add visible class
-        offersSection.style.transform = '';
-        offersSection.classList.remove('hidden');
-        offersSection.classList.add('visible');
-        
-        // Also check scroll position on load
-        const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        if (currentScrollTop <= 100) {
-            offersSection.classList.remove('hidden');
-            offersSection.classList.add('visible');
-        } else {
-            offersSection.classList.remove('visible');
-            offersSection.classList.add('hidden');
-        }
-    }
+    // Offers section visibility is now controlled by updateOffersSection() based on selected services
+    // No longer using scroll-based show/hide
     
     // Adjust summary container position to sit above footer
     function adjustSummaryPosition() {

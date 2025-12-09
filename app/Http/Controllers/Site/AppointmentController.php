@@ -39,13 +39,48 @@ class AppointmentController extends Controller
      */
     public function selectServices(Request $request)
     {
-        // Load selected promotion if exists
+        // Get selected services/variants/combos from request
+        $serviceIds = $request->query('service_id', []);
+        $variantIds = $request->query('service_variants', []);
+        $comboIds = $request->query('combo_id', []);
+        
+        // Convert to arrays if needed
+        if (!is_array($serviceIds)) {
+            $serviceIds = $serviceIds ? [$serviceIds] : [];
+        }
+        if (!is_array($variantIds)) {
+            $variantIds = $variantIds ? [$variantIds] : [];
+        }
+        if (!is_array($comboIds)) {
+            $comboIds = $comboIds ? [$comboIds] : [];
+        }
+        
+        // Filter out empty values
+        $serviceIds = array_filter($serviceIds, function($value) {
+            return !empty($value) && $value !== '0' && is_numeric($value);
+        });
+        $variantIds = array_filter($variantIds, function($value) {
+            return !empty($value) && $value !== '0' && is_numeric($value);
+        });
+        $comboIds = array_filter($comboIds, function($value) {
+            return !empty($value) && $value !== '0' && is_numeric($value);
+        });
+        
+        // Load selected promotion if exists and validate it applies to selected services
         $selectedPromotion = null;
         if ($request->has('promotion_id') && $request->promotion_id) {
-            $selectedPromotion = \App\Models\Promotion::where('id', $request->promotion_id)
+            $promotion = \App\Models\Promotion::where('id', $request->promotion_id)
                 ->where('status', 'active')
                 ->whereNull('deleted_at')
+                ->with(['services', 'combos', 'serviceVariants'])
                 ->first();
+            
+            if ($promotion) {
+                // Validate if promotion applies to selected services
+                if ($this->promotionAppliesToSelectedServices($promotion, $serviceIds, $variantIds, $comboIds)) {
+                    $selectedPromotion = $promotion;
+                }
+            }
         }
         
         // Lấy tất cả danh mục có dịch vụ hoặc combo, sắp xếp theo bảng chữ cái
@@ -1422,6 +1457,7 @@ class AppointmentController extends Controller
                 $query->whereNull('end_date')
                       ->orWhere('end_date', '>=', $now);
             })
+            ->with(['services', 'combos', 'serviceVariants'])
             ->orderBy('created_at', 'desc')
             ->get();
         
@@ -1439,9 +1475,19 @@ class AppointmentController extends Controller
                     $query->whereNull('end_date')
                           ->orWhere('end_date', '>=', $now);
                 })
+                ->with(['services', 'combos', 'serviceVariants'])
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
+        
+        // Filter promotions to only show those that apply to selected services
+        $publicOffers = $publicOffers->filter(function($promotion) use ($serviceIds, $variantIds, $comboIds) {
+            return $this->promotionAppliesToSelectedServices($promotion, $serviceIds, $variantIds, $comboIds);
+        });
+        
+        $personalOffers = $personalOffers->filter(function($promotion) use ($serviceIds, $variantIds, $comboIds) {
+            return $this->promotionAppliesToSelectedServices($promotion, $serviceIds, $variantIds, $comboIds);
+        });
         
         return view('site.appointment.select-offers', compact(
             'serviceIds',
@@ -1450,5 +1496,67 @@ class AppointmentController extends Controller
             'publicOffers',
             'personalOffers'
         ));
+    }
+    
+    /**
+     * Check if a promotion applies to the selected services/variants/combos
+     */
+    private function promotionAppliesToSelectedServices($promotion, $serviceIds, $variantIds, $comboIds)
+    {
+        // Load relationships if not already loaded
+        if (!$promotion->relationLoaded('services')) {
+            $promotion->load('services');
+        }
+        if (!$promotion->relationLoaded('combos')) {
+            $promotion->load('combos');
+        }
+        if (!$promotion->relationLoaded('serviceVariants')) {
+            $promotion->load('serviceVariants');
+        }
+        
+        // If promotion has apply_scope = 'order', it applies to all services
+        if ($promotion->apply_scope === 'order') {
+            return true;
+        }
+        
+        // If promotion has apply_scope = 'service', check if it has specific services selected
+        $hasSpecificServices = $promotion->services->count() > 0 
+            || $promotion->combos->count() > 0 
+            || $promotion->serviceVariants->count() > 0;
+        
+        // If no specific services selected, promotion applies to all
+        if (!$hasSpecificServices) {
+            return true;
+        }
+        
+        // Check if any selected service/variant/combo matches promotion
+        // Check services
+        foreach ($serviceIds as $serviceId) {
+            if ($promotion->services->contains('id', $serviceId)) {
+                return true;
+            }
+        }
+        
+        // Check variants
+        foreach ($variantIds as $variantId) {
+            if ($promotion->serviceVariants->contains('id', $variantId)) {
+                return true;
+            }
+            // Also check if variant's parent service is in promotion
+            $variant = \App\Models\ServiceVariant::with('service')->find($variantId);
+            if ($variant && $variant->service && $promotion->services->contains('id', $variant->service->id)) {
+                return true;
+            }
+        }
+        
+        // Check combos
+        foreach ($comboIds as $comboId) {
+            if ($promotion->combos->contains('id', $comboId)) {
+                return true;
+            }
+        }
+        
+        // No match found
+        return false;
     }
 }
