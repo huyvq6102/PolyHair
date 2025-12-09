@@ -15,7 +15,11 @@
                 Chi tiết lịch đặt
             </h1>
             <div class="appointment-id">
-                Mã lịch đặt: #{{ str_pad($appointment->id, 6, '0', STR_PAD_LEFT) }}
+                @if($appointment->booking_code)
+                    Mã đơn đặt: <strong style="color: #667eea; font-size: 1.1em;">{{ $appointment->booking_code }}</strong>
+                @else
+                    Mã lịch đặt: #{{ str_pad($appointment->id, 6, '0', STR_PAD_LEFT) }}
+                @endif
             </div>
         </div>
         
@@ -31,8 +35,36 @@
                     <div class="info-row">
                         <span class="info-label">Trạng thái:</span>
                         <span class="info-value">
-                            <span class="status-badge status-{{ strtolower(str_replace(' ', '-', $appointment->status ?? 'pending')) }}">
-                                {{ $appointment->status ?? 'Chờ xử lý' }}
+                            @php
+                                $status = $appointment->status ?? 'Chờ xử lý';
+                                $statusClass = 'status-pending';
+                                $statusColor = '#ffc107'; // Mặc định vàng
+                                
+                                if ($status === 'Đã xác nhận') {
+                                    $statusClass = 'status-confirmed';
+                                    $statusColor = '#28a745'; // Xanh lá
+                                } elseif ($status === 'Chờ xử lý') {
+                                    $statusClass = 'status-pending';
+                                    $statusColor = '#ffc107'; // Vàng
+                                } elseif ($status === 'Đang thực hiện') {
+                                    $statusClass = 'status-in-progress';
+                                    $statusColor = '#007bff'; // Xanh dương
+                                } elseif ($status === 'Hoàn thành') {
+                                    $statusClass = 'status-completed';
+                                    $statusColor = '#28a745'; // Xanh lá
+                                } elseif ($status === 'Đã thanh toán') {
+                                    $statusClass = 'status-paid';
+                                    $statusColor = '#17a2b8'; // Xanh nhạt
+                                } elseif ($status === 'Chưa thanh toán') {
+                                    $statusClass = 'status-unpaid';
+                                    $statusColor = '#dc3545'; // Đỏ
+                                } elseif ($status === 'Đã hủy') {
+                                    $statusClass = 'status-cancelled';
+                                    $statusColor = '#6c757d'; // Xám
+                                }
+                            @endphp
+                            <span class="status-badge {{ $statusClass }}" style="background-color: {{ $statusColor }}; color: #fff; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                {{ $status }}
                             </span>
                         </span>
                     </div>
@@ -248,9 +280,15 @@
                     </h3>
                     
                     <div class="action-buttons">
-                        <a href="{{ route('site.cart.index') }}" class="btn-action btn-back">
-                            <i class="fa fa-arrow-left"></i> Quay lại
-                        </a>
+                        @if(auth()->check() && $appointment->user_id == auth()->id())
+                            <a href="{{ route('site.customers.show', auth()->id()) }}#history" class="btn-action btn-back">
+                                <i class="fa fa-arrow-left"></i> Quay lại
+                            </a>
+                        @else
+                            <a href="{{ route('site.cart.index') }}" class="btn-action btn-back">
+                                <i class="fa fa-arrow-left"></i> Quay lại
+                            </a>
+                        @endif
                         @if(isset($canReview) && $canReview)
                             <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn-action" style="background: #ffc107; color: #000;">
                                 <i class="fa fa-star"></i> Đánh giá dịch vụ
