@@ -607,19 +607,12 @@ class AppointmentController extends Controller
                 ]);
             }
 
-            // Nếu là guest (chưa đăng nhập), redirect đến trang chi tiết appointment
-            // Nếu đã đăng nhập, redirect đến checkout để thanh toán
-            $redirectUrl = Auth::check() 
-                ? route('site.payments.checkout')
-                : route('site.appointment.show', $appointment->id);
-            
             return response()->json([
                 'success' => true,
                 'message' => '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng. Vui lòng thanh toán để hoàn tất đặt lịch.',
                 'appointment_id' => $appointment->id,
-                'redirect_url' => $redirectUrl,
+                'redirect_url' => route('site.payments.checkout'),
                 'cart_count' => count($cart),
-                'is_guest' => !Auth::check(), // Thêm flag để frontend biết là guest
             ]);
 
         } catch (\Exception $e) {
@@ -857,24 +850,6 @@ class AppointmentController extends Controller
             // Nếu không có lịch làm việc, vẫn hiển thị tất cả slots nhưng tất cả đều unavailable
             // (workingTimeRanges sẽ rỗng, nên isInWorkingTime sẽ luôn false)
 
-            // Tìm đơn đã hoàn thành trong ngày và lấy thời gian kết thúc (tính trước để dùng trong vòng lặp)
-            $completedAppointmentEndTime = null;
-            $completedAppointment = \App\Models\Appointment::where('employee_id', $employeeId)
-                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-                ->where('status', 'Hoàn thành')
-                ->orderBy('end_at', 'desc')
-                ->first();
-            
-            if ($completedAppointment && $completedAppointment->end_at) {
-                $completedAppointmentEndTime = $completedAppointment->end_at->format('H:i');
-                \Log::info('Found completed appointment', [
-                    'appointment_id' => $completedAppointment->id,
-                    'end_time' => $completedAppointmentEndTime,
-                    'employee_id' => $employeeId,
-                    'date' => $appointmentDate->format('Y-m-d')
-                ]);
-            }
-            
             // Get booked appointments for this employee on this date
             $bookedAppointments = \App\Models\Appointment::with('appointmentDetails')
                 ->where('employee_id', $employeeId)
@@ -1182,50 +1157,31 @@ class AppointmentController extends Controller
                     }
                 }
                 
-                // Debug log cho slot 8h00
-                if ($timeString === '08:00') {
-                    \Log::info('DEBUG: Slot 8h00 check - START', [
-                        'slot' => $timeString,
-                        'completed_appointment_end_time' => $completedAppointmentEndTime,
-                        'is_today' => $isToday,
-                        'booked_time_ranges' => array_map(function($r) {
-                            return $r['start'] . '-' . $r['end'];
-                        }, $bookedTimeRanges),
-                        'booked_ranges_count' => count($bookedTimeRanges)
-                    ]);
-                }
-                
                 // Kiểm tra xem slot có trước giờ hiện tại không (nếu là ngày hôm nay)
                 // Nếu slot đã qua (slot <= current time), thì không cho phép đặt
                 // Ví dụ: Hiện tại 10h00, thì slot 7h00, 7h30, ..., 9h30, 10h00 đều đã qua → không cho phép
-                // LƯU Ý: Nếu slot = completed appointment end time, KHÔNG đánh dấu isPastTime
-                // (vì slot này là thời gian kết thúc của appointment đã hoàn thành, phải available cho appointment tiếp theo)
                 $isPastTime = false;
                 if ($isToday) {
-                    // Nếu slot = completed appointment end time, bỏ qua kiểm tra isPastTime
-                    // Ví dụ: Appointment hoàn thành lúc 8h00 → slot 8h00 phải available (có thể bắt đầu ngay sau khi kết thúc)
-                    if (!($completedAppointmentEndTime && $timeString === $completedAppointmentEndTime)) {
-                        // So sánh bằng Carbon objects để chính xác, sử dụng cùng timezone
-                        $slotTime = Carbon::createFromFormat('H:i', $timeString);
-                        $now = Carbon::now('Asia/Ho_Chi_Minh'); // Đảm bảo cùng timezone với $now ở đầu function
-                        
-                        // Chuyển slot time sang cùng ngày với now để so sánh
-                        $slotDateTime = Carbon::create(
-                            $now->year,
-                            $now->month,
-                            $now->day,
-                            $slotTime->hour,
-                            $slotTime->minute,
-                            0,
-                            'Asia/Ho_Chi_Minh' // Đảm bảo cùng timezone
-                        );
-                        
-                        // Slot đã qua nếu slot <= current time (bao gồm cả slot hiện tại)
-                        // Ví dụ: Hiện tại 10h00, slot 7h00-10h00 đều đã qua
-                        // Ví dụ: Hiện tại 10h15, slot 7h00-10h30 đều đã qua
-                        if ($slotDateTime->lte($now)) {
-                            $isPastTime = true;
-                        }
+                    // So sánh bằng Carbon objects để chính xác, sử dụng cùng timezone
+                    $slotTime = Carbon::createFromFormat('H:i', $timeString);
+                    $now = Carbon::now('Asia/Ho_Chi_Minh'); // Đảm bảo cùng timezone với $now ở đầu function
+                    
+                    // Chuyển slot time sang cùng ngày với now để so sánh
+                    $slotDateTime = Carbon::create(
+                        $now->year,
+                        $now->month,
+                        $now->day,
+                        $slotTime->hour,
+                        $slotTime->minute,
+                        0,
+                        'Asia/Ho_Chi_Minh' // Đảm bảo cùng timezone
+                    );
+                    
+                    // Slot đã qua nếu slot <= current time (bao gồm cả slot hiện tại)
+                    // Ví dụ: Hiện tại 10h00, slot 7h00-10h00 đều đã qua
+                    // Ví dụ: Hiện tại 10h15, slot 7h00-10h30 đều đã qua
+                    if ($slotDateTime->lte($now)) {
+                        $isPastTime = true;
                     }
                 }
                 
@@ -1233,20 +1189,7 @@ class AppointmentController extends Controller
                 // - available = true: Nằm trong ca làm việc VÀ chưa bị đặt VÀ không phải quá khứ
                 // - available = false: Không nằm trong ca làm việc HOẶC đã bị đặt HOẶC là quá khứ
                 // Các slot unavailable sẽ được hiển thị với màu tối (gray out) ở frontend
-                // LƯU Ý: Nếu slot = completed appointment end time, thì KHÔNG kiểm tra isPastTime
-                // (vì slot này là thời gian kết thúc của appointment đã hoàn thành, phải available cho appointment tiếp theo)
                 $isAvailable = $isInWorkingTime && !$isBooked && !$isPastTime;
-                
-                // Nếu slot = completed appointment end time, bỏ qua isPastTime
-                // Ví dụ: Appointment hoàn thành lúc 8h00 → slot 8h00 phải available (có thể bắt đầu ngay sau khi kết thúc)
-                if ($completedAppointmentEndTime && $timeString === $completedAppointmentEndTime) {
-                    $isAvailable = $isInWorkingTime && !$isBooked; // Bỏ qua isPastTime
-                }
-                
-                // Nếu slot không nằm trong ca làm việc và chưa có conflict_reason, thêm conflict_reason
-                if (!$isInWorkingTime && !$conflictReason) {
-                    $conflictReason = 'Không có trong ca làm việc';
-                }
                 
                 // QUAN TRỌNG: Kiểm tra lại nếu slot + duration vượt quá ca làm việc
                 // Logic này PHẢI chạy bất kể $isAvailable là gì, để đảm bảo slot bị chặn đúng
@@ -1342,65 +1285,11 @@ class AppointmentController extends Controller
                     ]);
                 }
                 
-                // Nếu có completed appointment kết thúc tại slot này, slot phải available
-                // (trừ khi bị chặn bởi lý do khác như isBooked - KHÔNG kiểm tra isPastTime vì slot này là thời gian kết thúc của appointment đã hoàn thành)
-                // Ví dụ: Completed appointment kết thúc lúc 8h00 → slot 8h00 phải available (có thể bắt đầu ngay sau khi kết thúc)
-                $finalAvailable = $isAvailable;
-                if ($completedAppointmentEndTime && $timeString === $completedAppointmentEndTime) {
-                    // Slot này = completed appointment end time
-                    // Chỉ available nếu không bị chặn bởi lý do khác (isBooked)
-                    // KHÔNG kiểm tra isPastTime vì slot này là thời gian kết thúc của appointment đã hoàn thành
-                    // Nếu appointment đã hoàn thành lúc 8h00, thì slot 8h00 phải available cho appointment tiếp theo
-                    if (!$isBooked && $isInWorkingTime) {
-                        $finalAvailable = true;
-                        $conflictReason = null; // Xóa conflict reason vì slot này available
-                        \Log::info('Slot made available - equals completed appointment end time', [
-                            'slot' => $timeString,
-                            'completed_appointment_end_time' => $completedAppointmentEndTime,
-                            'is_past_time' => $isPastTime,
-                            'is_booked' => $isBooked,
-                            'is_in_working_time' => $isInWorkingTime,
-                            'is_available_before' => $isAvailable,
-                            'final_available' => true,
-                            'note' => 'Slot này available vì là thời gian kết thúc của appointment đã hoàn thành'
-                        ]);
-                    } else {
-                        // Debug log nếu slot không thể available
-                        \Log::warning('Slot NOT made available - equals completed appointment end time but blocked', [
-                            'slot' => $timeString,
-                            'completed_appointment_end_time' => $completedAppointmentEndTime,
-                            'is_past_time' => $isPastTime,
-                            'is_booked' => $isBooked,
-                            'is_in_working_time' => $isInWorkingTime,
-                            'is_available_before' => $isAvailable,
-                            'conflict_reason' => $conflictReason,
-                            'reason_blocked' => [
-                                'isBooked' => $isBooked ? 'YES (blocked by booked)' : 'NO',
-                                'isInWorkingTime' => $isInWorkingTime ? 'YES' : 'NO (not in working time)'
-                            ]
-                        ]);
-                    }
-                }
-                
-                // Debug log cho slot 8h00 - FINAL
-                if ($timeString === '08:00') {
-                    \Log::info('DEBUG: Slot 8h00 check - FINAL', [
-                        'slot' => $timeString,
-                        'completed_appointment_end_time' => $completedAppointmentEndTime,
-                        'is_past_time' => $isPastTime,
-                        'is_booked' => $isBooked,
-                        'is_in_working_time' => $isInWorkingTime,
-                        'is_available' => $isAvailable,
-                        'final_available' => $finalAvailable,
-                        'conflict_reason' => $conflictReason
-                    ]);
-                }
-                
                 $timeSlots[] = [
                     'time' => $timeString,
                     'display' => $timeString,
                     'word_time_id' => $wordTime->id,
-                    'available' => $finalAvailable, // Đảm bảo giá trị này đúng
+                    'available' => $isAvailable, // Đảm bảo giá trị này đúng
                     'conflict_reason' => $conflictReason, // Thêm lý do trùng lịch để hiển thị tooltip
                 ];
                 
@@ -1554,7 +1443,24 @@ class AppointmentController extends Controller
                 'last_slot' => $timeSlots[count($timeSlots) - 1]['time'] ?? 'N/A'
             ]);
 
-            // $completedAppointmentEndTime đã được tính ở trên (trước vòng lặp tạo slots)
+            // Tìm đơn đã hoàn thành trong ngày và lấy thời gian kết thúc
+            // Nếu có đơn đã hoàn thành, chỉ hiển thị các slot <= thời gian kết thúc đơn
+            $completedAppointmentEndTime = null;
+            $completedAppointment = \App\Models\Appointment::where('employee_id', $employeeId)
+                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
+                ->where('status', 'Hoàn thành')
+                ->orderBy('end_at', 'desc')
+                ->first();
+            
+            if ($completedAppointment && $completedAppointment->end_at) {
+                $completedAppointmentEndTime = $completedAppointment->end_at->format('H:i');
+                \Log::info('Found completed appointment', [
+                    'appointment_id' => $completedAppointment->id,
+                    'end_time' => $completedAppointmentEndTime,
+                    'employee_id' => $employeeId,
+                    'date' => $appointmentDate->format('Y-m-d')
+                ]);
+            }
             
             // Debug log: Kiểm tra slot 11:30 trong response cuối cùng
             $slot1130 = collect($timeSlots)->firstWhere('time', '11:30');
@@ -1790,7 +1696,7 @@ class AppointmentController extends Controller
                         'avatar' => $employee->avatar,
                         'display_name' => $employee->user->name . 
                             ($employee->position ? ' - ' . $employee->position : '') . 
-                            ($employee->level ? ' (' . $employee->level . ')' : ''),
+                          ($employee->level ? ' (' . $employee->level . ')' : ''),
                     ];
                 }),
             ]);

@@ -49,7 +49,7 @@
                                             <ul id="navigation">
                                                 <li><a class="{{ $currentRoute == 'site.home' ? 'active' : '' }}" href="{{ route('site.home') }}">TRANG CHỦ</a></li>
                                                 <li>
-                                                    <a class="{{ str_contains($currentRoute, 'service') ? 'active' : '' }}"
+                                                     <a class="{{ str_starts_with($currentRoute, 'site.services') ? 'active' : '' }}"
                                                         href="{{ route('site.services.index') }}">DỊCH VỤ</a>
                                                     <ul class="submenu">
                                                         @foreach($types as $type)
@@ -194,7 +194,7 @@
     #userDropdown {
         max-width: 200px;
     }
-    
+
     #userDropdown span {
         max-width: 180px;
         overflow: hidden;
