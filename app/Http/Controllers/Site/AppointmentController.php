@@ -607,11 +607,24 @@ class AppointmentController extends Controller
                 ]);
             }
 
+            // Xác định redirect URL dựa trên trạng thái đăng nhập
+            // Nếu là guest (không đăng nhập), redirect đến trang chi tiết lịch đặt
+            // Nếu đã đăng nhập, redirect đến trang thanh toán
+            $isGuest = !Auth::check();
+            $redirectUrl = $isGuest 
+                ? route('site.appointment.show', $appointment->id)
+                : route('site.payments.checkout');
+            
+            $successMessage = $isGuest
+                ? '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Vui lòng kiểm tra thông tin lịch đặt của bạn.'
+                : '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng. Vui lòng thanh toán để hoàn tất đặt lịch.';
+
             return response()->json([
                 'success' => true,
-                'message' => '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng. Vui lòng thanh toán để hoàn tất đặt lịch.',
+                'message' => $successMessage,
                 'appointment_id' => $appointment->id,
-                'redirect_url' => route('site.payments.checkout'),
+                'redirect_url' => $redirectUrl,
+                'is_guest' => $isGuest,
                 'cart_count' => count($cart),
             ]);
 

@@ -4,17 +4,31 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/appointment-show.css') }}">
+<style>
+    .btn-primary:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+</style>
 @endpush
 
 @section('content')
 <div class="appointment-detail-section" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
     <div class="container" style="max-width: 900px; margin: 0 auto;">
         @if(!auth()->check())
-        <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 20px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 15px 20px; border-radius: 5px;">
-            <i class="fa fa-check-circle"></i> Đặt lịch thành công! 
-            <a href="{{ route('site.home') }}" class="btn btn-primary btn-sm" style="margin-left: 15px;">
-                <i class="fa fa-home"></i> Quay về trang chủ
-            </a>
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 30px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 20px 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fa fa-check-circle" style="font-size: 24px; color: #28a745;"></i>
+                    <strong style="font-size: 16px;">Đặt lịch thành công!</strong>
+                    <span style="font-size: 14px;">Vui lòng kiểm tra thông tin lịch đặt của bạn bên dưới.</span>
+                </div>
+                <a href="{{ route('site.home') }}" class="btn btn-primary" style="background: #000; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; white-space: nowrap;">
+                    <i class="fa fa-home"></i> Quay về trang chủ
+                </a>
+            </div>
         </div>
         @endif
         
