@@ -286,7 +286,7 @@
                                         <div class="svc-card service-card-wrapper"
                                              data-service-id="{{ $service->id }}"
                                              data-service-name="{{ strtolower($service->name) }}"
-                                             style="border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); background: #fff; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; position: relative; transition: all 0.3s ease;">
+                                             style="border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); background: #fff; display: flex; flex-direction: column; border-radius: 8px; overflow: visible; position: relative; transition: all 0.3s ease;">
 
                                             <!-- Card Image -->
                                             <div class="svc-img" style="overflow: hidden; display: block; height: 180px; background: #f5f5f5; position: relative;">
@@ -332,26 +332,26 @@
                                                             <i class="fa fa-chevron-down" style="font-size: 11px; transition: transform 0.3s ease;"></i>
                                                         </button>
 
-                                                        <!-- Display Variants (hidden by default) -->
-                                                        <div class="variants-list variants-list-hidden"
+                                                        <!-- Display Variants (hidden by default, hiển thị như popup bên ngoài) -->
+                                                        <div class="variants-list variants-list-hidden variants-popup"
                                                              data-service-id="{{ $service->id }}"
-                                                             style="display: none; flex-direction: column; gap: 8px; margin-bottom: 12px; width: 100%; min-width: 100%; max-width: 100%; margin-left: 0; margin-right: 0; padding: 0; box-sizing: border-box;">
+                                                             style="display: none; position: fixed; z-index: 999999; flex-direction: column; gap: 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); padding: 8px; max-height: 500px; overflow-y: auto; overflow-x: hidden; width: max-content; max-width: calc(100vw - 40px);">
                                                             @foreach($service->serviceVariants as $variant)
                                                                 @php
                                                                     $variantPrice = number_format($variant->price ?? 0, 0, ',', '.');
                                                                     // Load variant attributes if not already loaded
                                                                     $attributes = $variant->variantAttributes ?? collect();
                                                                 @endphp
-                                                                <div class="variant-item-box variant-item-link"
-                                                                     data-variant-id="{{ $variant->id }}"
-                                                                     data-service-id="{{ $service->id }}"
-                                                                     data-variant-price="{{ $variant->price ?? 0 }}"
-                                                                     data-variant-name="{{ $service->name }} - {{ $variant->name }}"
-                                                                     style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 16px; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; gap: 6px; width: 100%; min-width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; flex-shrink: 0;">
+                                                                    <div class="variant-item-box variant-item-link"
+                                                                         data-variant-id="{{ $variant->id }}"
+                                                                         data-service-id="{{ $service->id }}"
+                                                                         data-variant-price="{{ $variant->price ?? 0 }}"
+                                                                         data-variant-name="{{ $service->name }} - {{ $variant->name }}"
+                                                                         style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 16px; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; gap: 6px; width: max-content; min-width: max-content; box-sizing: border-box; margin: 0; flex-shrink: 0; word-wrap: break-word; overflow-wrap: break-word;">
                                                                     <!-- Dòng 1: Tên biến thể + Tag thuộc tính -->
                                                                     <div style="display: flex; flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap;">
                                                                         <!-- Variant Name -->
-                                                                        <span style="font-size: 13px; font-weight: 600; color: #000; flex-shrink: 0;">
+                                                                        <span style="font-size: 13px; font-weight: 600; color: #000; flex-shrink: 0; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%;">
                                                                             {{ $variant->name }}
                                                                         </span>
 
@@ -852,6 +852,46 @@
         max-width: 100% !important;
         box-sizing: border-box !important;
     }
+
+    /* Popup variants list - hiển thị bên ngoài, vừa đủ chiều ngang */
+    .variants-popup {
+        position: fixed !important;
+        z-index: 999999 !important;
+        background: #fff !important;
+        border: 1px solid #e0e0e0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        padding: 8px !important;
+        max-height: 500px !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        width: max-content !important;
+        min-width: auto !important;
+        max-width: calc(100vw - 40px) !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+
+    .variants-popup .variant-item-box {
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow-x: hidden !important;
+    }
+
+    .variants-popup .variant-item-box span {
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        max-width: 100% !important;
+    }
+
+    /* Đảm bảo card không cắt popup */
+    .svc-card,
+    .service-card-wrapper,
+    .svc-body,
+    .service-grid {
+        overflow: visible !important;
+    }
+
 
     .variant-item:last-child {
         margin-bottom: 0 !important;
@@ -2220,7 +2260,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle toggle variant list button clicks
+    // Handle toggle variant list button clicks - hiển thị như popup bên ngoài
     document.querySelectorAll('.select-variant-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -2231,10 +2271,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (variantsList) {
                 if (variantsList.classList.contains('variants-list-hidden')) {
-                    // Show variants
+                    // Đóng tất cả popup khác
+                    document.querySelectorAll('.variants-list').forEach(list => {
+                        if (list !== variantsList) {
+                            list.classList.add('variants-list-hidden');
+                            list.classList.remove('variants-list-visible');
+                            list.style.display = 'none';
+                        }
+                    });
+                    document.querySelectorAll('.select-variant-btn').forEach(b => {
+                        if (b !== btn) {
+                            b.classList.remove('active');
+                            const i = b.querySelector('.fa-chevron-down');
+                            if (i) i.style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    // Tính toán vị trí từ button
+                    const btnRect = this.getBoundingClientRect();
+
+                    // Di chuyển popup ra body để không bị ảnh hưởng bởi container
+                    if (variantsList.parentElement !== document.body) {
+                        document.body.appendChild(variantsList);
+                    }
+
+                    // Show variants như popup bên ngoài - full ra ngoài
                     variantsList.classList.remove('variants-list-hidden');
                     variantsList.classList.add('variants-list-visible');
                     variantsList.style.display = 'flex';
+                    variantsList.style.position = 'fixed';
+                    variantsList.style.top = (btnRect.bottom + 4) + 'px';
+                    variantsList.style.left = btnRect.left + 'px';
+                    variantsList.style.zIndex = '999999';
+                    variantsList.style.width = 'max-content';
+                    variantsList.style.minWidth = 'auto';
+                    variantsList.style.maxWidth = 'calc(100vw - 40px)';
+                    variantsList.style.overflowX = 'hidden';
                     this.classList.add('active');
                     if (icon) icon.style.transform = 'rotate(180deg)';
                 } else {
@@ -2248,6 +2320,35 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Đóng popup khi click ra ngoài
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.select-variant-btn') && !e.target.closest('.variants-list')) {
+            document.querySelectorAll('.variants-list').forEach(list => {
+                list.classList.add('variants-list-hidden');
+                list.classList.remove('variants-list-visible');
+                list.style.display = 'none';
+            });
+            document.querySelectorAll('.select-variant-btn').forEach(btn => {
+                btn.classList.remove('active');
+                const icon = btn.querySelector('.fa-chevron-down');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            });
+        }
+    });
+
+    // Cập nhật vị trí popup khi scroll
+    window.addEventListener('scroll', function() {
+        document.querySelectorAll('.variants-list.variants-list-visible').forEach(list => {
+            const serviceId = list.getAttribute('data-service-id');
+            const btn = document.querySelector(`.select-variant-btn[data-service-id="${serviceId}"]`);
+            if (btn) {
+                const btnRect = btn.getBoundingClientRect();
+                list.style.top = (btnRect.bottom + 4) + 'px';
+                list.style.left = btnRect.left + 'px';
+            }
+        });
+    }, { passive: true });
 
     // Handle variant item clicks
     document.querySelectorAll('.variant-item-link').forEach(link => {
