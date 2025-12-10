@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Promotion;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PromotionService
 {
@@ -64,6 +65,9 @@ class PromotionService
                 }
             }
             
+            // Tự động cập nhật trạng thái dựa trên ngày
+            $this->autoUpdateStatus($data);
+            
             $promotion = Promotion::create($data);
             
             $this->syncPromotionServices($promotion->id, $serviceIds, $comboIds, $variantIds);
@@ -96,6 +100,10 @@ class PromotionService
             }
             
             $promotion = Promotion::findOrFail($id);
+            
+            // Tự động cập nhật trạng thái dựa trên ngày
+            $this->autoUpdateStatus($data);
+            
             $promotion->update($data);
             
             $this->syncPromotionServices($promotion->id, $serviceIds, $comboIds, $variantIds);
@@ -200,55 +208,76 @@ class PromotionService
      */
     public function validateAndCalculateDiscount($code, $cartItems, $subtotal, $userId = null)
     {
-        // Tìm promotion (không phân biệt hoa thường cho status)
-        $now = now();
+        $now = Carbon::now();
         
         $promotion = Promotion::with(['services', 'combos', 'serviceVariants'])
             ->where('code', $code)
-            ->whereRaw('LOWER(status) = ?', ['active'])
+            ->whereNull('deleted_at')
             ->first();
 
         if (!$promotion) {
-            // Kiểm tra xem mã có tồn tại không để đưa ra thông báo chính xác hơn
-            $exists = Promotion::where('code', $code)->first();
-            
-            if ($exists) {
-                $messages = [];
-                
-                if (strtolower($exists->status) !== 'active') {
-                    $messages[] = 'Mã khuyến mại này chưa được kích hoạt.';
-                }
-                
-                // Kiểm tra start_date
-                if ($exists->start_date) {
-                    $startDate = $exists->start_date->startOfDay();
-                    $today = now()->startOfDay();
-                    if ($startDate->gt($today)) {
-                        $messages[] = 'Mã khuyến mại này chưa đến thời gian áp dụng. (Bắt đầu: ' . $startDate->format('d/m/Y') . ')';
-                    }
-                }
-                
-                // Kiểm tra end_date
-                if ($exists->end_date) {
-                    $endDate = $exists->end_date->endOfDay();
-                    $today = now()->startOfDay();
-                    if ($endDate->lt($today)) {
-                        $messages[] = 'Mã khuyến mại này đã hết hạn. (Kết thúc: ' . $endDate->format('d/m/Y') . ')';
-                    }
-                }
-                
-                $message = !empty($messages) 
-                    ? implode(' ', $messages)
-                    : 'Mã khuyến mại này không thể sử dụng.';
-            } else {
-                $message = 'Mã khuyến mại không tồn tại.';
-            }
-            
             return [
                 'valid' => false,
                 'promotion' => null,
                 'discount_amount' => 0,
-                'message' => $message
+                'message' => 'Mã khuyến mại không tồn tại hoặc đã bị xóa.'
+            ];
+        }
+
+        // Kiểm tra trạng thái khuyến mãi
+        if ($promotion->status === 'inactive') {
+            return [
+                'valid' => false,
+                'promotion' => $promotion,
+                'discount_amount' => 0,
+                'message' => 'Mã khuyến mại này đã bị ngừng áp dụng.'
+            ];
+        }
+
+        if ($promotion->status === 'expired') {
+            return [
+                'valid' => false,
+                'promotion' => $promotion,
+                'discount_amount' => 0,
+                'message' => 'Mã khuyến mại này đã hết hạn.'
+            ];
+        }
+
+        if ($promotion->status === 'scheduled') {
+            return [
+                'valid' => false,
+                'promotion' => $promotion,
+                'discount_amount' => 0,
+                'message' => 'Mã khuyến mại này chưa đến thời gian áp dụng.'
+            ];
+        }
+
+        // Chỉ chấp nhận status = 'active'
+        if ($promotion->status !== 'active') {
+            return [
+                'valid' => false,
+                'promotion' => $promotion,
+                'discount_amount' => 0,
+                'message' => 'Mã khuyến mại này không khả dụng.'
+            ];
+        }
+
+        // Kiểm tra ngày bắt đầu và kết thúc (double check)
+        if ($promotion->start_date && Carbon::parse($promotion->start_date)->gt($now)) {
+            return [
+                'valid' => false,
+                'promotion' => $promotion,
+                'discount_amount' => 0,
+                'message' => 'Mã khuyến mại này chưa đến thời gian áp dụng.'
+            ];
+        }
+
+        if ($promotion->end_date && Carbon::parse($promotion->end_date)->lt($now)) {
+            return [
+                'valid' => false,
+                'promotion' => $promotion,
+                'discount_amount' => 0,
+                'message' => 'Mã khuyến mại này đã hết hạn.'
             ];
         }
 
@@ -485,5 +514,28 @@ class PromotionService
             'discount_amount' => round($discountAmount, 2),
             'message' => 'Áp dụng mã khuyến mại thành công!'
         ];
+    }
+
+    /**
+     * Tự động cập nhật trạng thái khuyến mãi dựa trên ngày bắt đầu và kết thúc.
+     */
+    public function autoUpdateStatus(array &$data)
+    {
+        $now = Carbon::now()->startOfDay();
+        $startDate = Carbon::parse($data['start_date'])->startOfDay();
+        $endDate = isset($data['end_date']) ? Carbon::parse($data['end_date'])->endOfDay() : null;
+
+        // Nếu admin đã chọn 'inactive', giữ nguyên
+        if (isset($data['status']) && $data['status'] === 'inactive') {
+            return;
+        }
+
+        if ($startDate->gt($now)) {
+            $data['status'] = 'scheduled'; // Ngày bắt đầu trong tương lai
+        } elseif ($endDate && $endDate->lt($now)) {
+            $data['status'] = 'expired'; // Ngày kết thúc đã qua
+        } else {
+            $data['status'] = 'active'; // Đang trong thời gian áp dụng
+        }
     }
 }

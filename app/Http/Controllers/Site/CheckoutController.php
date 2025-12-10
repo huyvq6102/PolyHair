@@ -199,15 +199,15 @@ class CheckoutController extends Controller
 
         $code = $request->input('coupon_code');
 
-        $promo = Promotion::where('code', $code)
-            ->where('status', 'active')
-            ->whereDate('start_date', '<=', now())
-            ->whereDate('end_date', '>=', now())
-            ->first();
-
-        if (!$promo) {
-            return back()->with('error', 'Mã khuyến mại không hợp lệ hoặc đã hết hạn.');
+        // Sử dụng PromotionService để validate promotion
+        $promotionService = app(PromotionService::class);
+        $result = $promotionService->validateAndCalculateDiscount($code, [], 0);
+        
+        if (!$result['valid']) {
+            return back()->with('error', $result['message']);
         }
+        
+        $promo = $result['promotion'];
 
         Session::put('coupon_code', $code);
 
