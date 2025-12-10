@@ -100,6 +100,18 @@ class ServiceService
     }
 
     /**
+     * Get base services (single services without variants).
+     */
+    public function getBaseServices()
+    {
+        return Service::with('category')
+            ->whereNull('deleted_at')
+            ->whereDoesntHave('serviceVariants')
+            ->orderBy('name')
+            ->get(['id', 'name', 'category_id', 'base_price']);
+    }
+
+    /**
      * Create a new service.
      */
     public function create(array $serviceData, array $variants = [], array $combos = [])

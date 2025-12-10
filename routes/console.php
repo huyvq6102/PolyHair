@@ -13,3 +13,9 @@ Schedule::command('appointments:auto-confirm')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Chạy mỗi giờ để tự động cập nhật trạng thái khuyến mãi
+Schedule::command('promotions:update-status')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground();

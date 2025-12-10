@@ -66,10 +66,10 @@ class EmployeeAppointmentController extends Controller
         $categories = $this->serviceCategoryService->getAll();
         $services = $this->serviceService->getAll()->load('serviceVariants');
 
-        // Active promotions that can be applied by employee (same rule as checkout)
+        // Active promotions that can be applied by employee (chỉ lấy status = 'active')
+        // Command sẽ tự động cập nhật trạng thái dựa trên ngày
         $promotions = Promotion::where('status', 'active')
-            ->whereDate('start_date', '<=', now())
-            ->whereDate('end_date', '>=', now())
+            ->whereNull('deleted_at')
             ->orderBy('name')
             ->get();
 
@@ -220,10 +220,11 @@ class EmployeeAppointmentController extends Controller
 
             // If employee selected a promotion code, link it to this appointment & customer
             if (!empty($validated['promotion_code'] ?? null)) {
+                // Chỉ chấp nhận promotion có status = 'active'
+                // Command sẽ tự động cập nhật trạng thái dựa trên ngày
                 $promotion = Promotion::where('code', $validated['promotion_code'])
                     ->where('status', 'active')
-                    ->whereDate('start_date', '<=', now())
-                    ->whereDate('end_date', '>=', now())
+                    ->whereNull('deleted_at')
                     ->first();
 
                 if ($promotion) {
