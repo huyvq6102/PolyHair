@@ -39,24 +39,18 @@ class AppointmentController extends Controller
      */
     public function selectServices(Request $request)
     {
-        $selectedPromotion = null;
-        if ($request->has('promotion_id') && $request->promotion_id) {
-            $selectedPromotion = \App\Models\Promotion::where('id', $request->promotion_id)
-                ->where('status', 'active')
-                ->whereNull('deleted_at')
-                ->first();
-        }
+        // Lấy tất cả danh mục có dịch vụ hoặc combo, sắp xếp theo bảng chữ cái
         $categories = \App\Models\ServiceCategory::with([
                 'services' => function($query) {
                     $query->whereNull('deleted_at')
                         ->where('status', 'Hoạt động')
-                        ->with('serviceVariants.variantAttributes')
+                        ->with('serviceVariants')
                         ->orderBy('name', 'asc'); // Sắp xếp dịch vụ theo bảng chữ cái
                 },
                 'combos' => function($query) {
                     $query->whereNull('deleted_at')
                         ->where('status', 'Hoạt động')
-                        ->with('comboItems.serviceVariant.service', 'comboItems.serviceVariant.variantAttributes')
+                        ->with('comboItems.serviceVariant')
                         ->orderBy('name', 'asc'); // Sắp xếp combo theo bảng chữ cái
                 }
             ])
@@ -81,17 +75,18 @@ class AppointmentController extends Controller
             ->orderBy('name', 'asc')
             ->get();
 
+
         // Load promotion nếu có promotion_id trong URL
         $selectedPromotion = null;
         $promotionForJs = null;
-        
+
         if ($request->has('promotion_id') && $request->input('promotion_id')) {
             $promotionId = $request->input('promotion_id');
             $selectedPromotion = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
                 ->whereNull('deleted_at')
                 ->where('status', 'active')
                 ->find($promotionId);
-            
+
             if ($selectedPromotion) {
                 // Prepare promotion data for JavaScript
                 $promotionForJs = [
@@ -121,7 +116,7 @@ class AppointmentController extends Controller
         $serviceIds = $request->query('service_id', []);
         $variantIds = $request->query('service_variants', []);
         $comboIds = $request->query('combo_id', []);
-        
+
         // Convert to arrays if single values
         if (!is_array($serviceIds)) {
             $serviceIds = $serviceIds ? [$serviceIds] : [];
@@ -132,7 +127,7 @@ class AppointmentController extends Controller
         if (!is_array($comboIds)) {
             $comboIds = $comboIds ? [$comboIds] : [];
         }
-        
+
         // Filter out empty values
         $serviceIds = array_filter($serviceIds, function($id) {
             return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
@@ -143,7 +138,7 @@ class AppointmentController extends Controller
         $comboIds = array_filter($comboIds, function($id) {
             return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
         });
-        
+
         // Get all active promotions
         $now = Carbon::now();
         $allPromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
@@ -158,25 +153,25 @@ class AppointmentController extends Controller
                     ->orWhere('end_date', '>=', $now);
             })
             ->get();
-        
+
         // Filter applicable promotions
         $applicablePromotions = collect();
-        
+
         foreach ($allPromotions as $promotion) {
             $isApplicable = false;
-            
+
             // If promotion applies to all (no specific services/variants/combos selected)
-            $hasSpecificItems = $promotion->services->count() > 0 
-                || $promotion->combos->count() > 0 
+            $hasSpecificItems = $promotion->services->count() > 0
+                || $promotion->combos->count() > 0
                 || $promotion->serviceVariants->count() > 0;
-            
+
             // If promotion has many items selected (>= 20), treat as "apply to all"
-            $totalSelected = $promotion->services->count() 
-                + $promotion->combos->count() 
+            $totalSelected = $promotion->services->count()
+                + $promotion->combos->count()
                 + $promotion->serviceVariants->count();
-            
+
             $applyToAll = !$hasSpecificItems || $totalSelected >= 20;
-            
+
             if ($applyToAll) {
                 // Promotion applies to all services
                 $isApplicable = true;
@@ -188,7 +183,7 @@ class AppointmentController extends Controller
                         break;
                     }
                 }
-                
+
                 // Check if any selected variant matches
                 if (!$isApplicable) {
                     foreach ($variantIds as $variantId) {
@@ -204,7 +199,7 @@ class AppointmentController extends Controller
                         }
                     }
                 }
-                
+
                 // Check if any selected combo matches
                 if (!$isApplicable) {
                     foreach ($comboIds as $comboId) {
@@ -215,18 +210,19 @@ class AppointmentController extends Controller
                     }
                 }
             }
-            
+
             if ($isApplicable) {
                 $applicablePromotions->push($promotion);
             }
         }
-        
+
         // For now, all applicable promotions are public offers
         // Personal offers could be filtered by user_id if that field exists in the future
         $publicOffers = $applicablePromotions;
         $personalOffers = collect(); // Empty for now, can be extended later
-        
+
         return view('site.appointment.select-offers', compact('publicOffers', 'personalOffers'));
+
     }
 
     /**
@@ -380,16 +376,7 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Load selected promotion if exists
-        $selectedPromotion = null;
-        if ($request->has('promotion_id') && $request->promotion_id) {
-            $selectedPromotion = \App\Models\Promotion::where('id', $request->promotion_id)
-                ->where('status', 'active')
-                ->whereNull('deleted_at')
-                ->first();
-        }
-
-        return view('site.appointment.create', compact('employees', 'wordTimes', 'serviceCategories', 'combos', 'selectedPromotion'));
+        return view('site.appointment.create', compact('employees', 'wordTimes', 'serviceCategories', 'combos'));
     }
 
     /**
@@ -1697,6 +1684,7 @@ class AppointmentController extends Controller
             ], 500);
         }
     }
+
     /**
      * Cancel an appointment.
      */
@@ -1855,7 +1843,7 @@ class AppointmentController extends Controller
                         'avatar' => $employee->avatar,
                         'display_name' => $employee->user->name .
                             ($employee->position ? ' - ' . $employee->position : '') .
-                            ($employee->level ? ' (' . $employee->level . ')' : ''),
+                          ($employee->level ? ' (' . $employee->level . ')' : ''),
                     ];
                 }),
             ]);

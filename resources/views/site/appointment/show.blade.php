@@ -7,8 +7,17 @@
 @endpush
 
 @section('content')
-<div class="appointment-detail-section">
-    <div class="container">
+<div class="appointment-detail-section" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+    <div class="container" style="max-width: 900px; margin: 0 auto;">
+        @if(!auth()->check())
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 20px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 15px 20px; border-radius: 5px;">
+            <i class="fa fa-check-circle"></i> Đặt lịch thành công! 
+            <a href="{{ route('site.home') }}" class="btn btn-primary btn-sm" style="margin-left: 15px;">
+                <i class="fa fa-home"></i> Quay về trang chủ
+            </a>
+        </div>
+        @endif
+        
         <div class="appointment-header">
             <h1 class="appointment-title">
                 <i class="fa fa-calendar-check-o"></i>
@@ -23,8 +32,8 @@
             </div>
         </div>
         
-        <div class="appointment-content">
-            <div>
+        <div class="appointment-content" style="display: flex; justify-content: center;">
+            <div style="width: 100%; max-width: 800px;">
                 <!-- Thông tin lịch đặt -->
                 <div class="appointment-card">
                     <h3 class="card-title">
@@ -269,51 +278,6 @@
                 </div>
                 @endif
                 
-            </div>
-            
-            <!-- Sidebar -->
-            <div>
-                <div class="appointment-card">
-                    <h3 class="card-title">
-                        <i class="fa fa-cog"></i>
-                        Thao tác
-                    </h3>
-                    
-                    <div class="action-buttons">
-                        @if(auth()->check() && $appointment->user_id == auth()->id())
-                            <a href="{{ route('site.customers.show', auth()->id()) }}#history" class="btn-action btn-back">
-                                <i class="fa fa-arrow-left"></i> Quay lại
-                            </a>
-                        @else
-                            <a href="{{ route('site.cart.index') }}" class="btn-action btn-back">
-                                <i class="fa fa-arrow-left"></i> Quay lại
-                            </a>
-                        @endif
-                        @if(isset($canReview) && $canReview)
-                            <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn-action" style="background: #ffc107; color: #000;">
-                                <i class="fa fa-star"></i> Đánh giá dịch vụ
-                            </a>
-                        @elseif(isset($existingReview) && $existingReview)
-                            <a href="{{ route('site.reviews.edit', $existingReview->id) }}" class="btn-action" style="background: #17a2b8; color: #fff;">
-                                <i class="fa fa-edit"></i> Xem/Sửa đánh giá
-                            </a>
-                        @endif
-                    </div>
-                    
-                    @if($appointment->status === 'Hoàn thành' && auth()->check() && $appointment->user_id == auth()->id())
-                        @if(isset($existingReview) && $existingReview)
-                            <div class="alert alert-warning mt-3" style="border-left: 4px solid #ffc107;">
-                                <i class="fa fa-exclamation-triangle"></i> 
-                                <strong>Bạn đã đánh giá lịch hẹn này rồi.</strong> Mỗi lịch hẹn chỉ có thể đánh giá một lần. Bạn có thể sửa đánh giá hiện có.
-                            </div>
-                        @else
-                            <div class="alert alert-info mt-3" style="border-left: 4px solid #17a2b8;">
-                                <i class="fa fa-info-circle"></i> 
-                                <strong>Bạn đã hoàn thành dịch vụ!</strong> Hãy chia sẻ trải nghiệm của bạn để giúp chúng tôi cải thiện dịch vụ.
-                            </div>
-                        @endif
-                    @endif
-                </div>
             </div>
         </div>
     </div>

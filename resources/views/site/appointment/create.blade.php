@@ -1284,7 +1284,6 @@
         const currentUserName = '{{ auth()->user()->name ?? '' }}';
         const currentUserPhone = '{{ auth()->user()->phone ?? '' }}';
         const currentUserEmail = '{{ auth()->user()->email ?? '' }}';
-
         // Nếu user đã đăng nhập, ưu tiên thông tin từ server (không khôi phục từ localStorage)
         // Chỉ khôi phục thông tin đặt lịch (employee, date, time) từ localStorage
         if (savedFormData) {
@@ -1315,7 +1314,6 @@
                     };
                     localStorage.setItem('appointmentFormData', JSON.stringify(appointmentData));
                 }
-
                 // Khôi phục note (luôn khôi phục vì không liên quan đến user)
                 if (formData.note) {
                     $('textarea[name="note"]').val(formData.note);
@@ -2189,27 +2187,45 @@
                         const completeSlots = allTimeSlots.map(function(timeString) {
                             const existingSlot = sortedSlots.find(s => s.time === timeString);
                             if (existingSlot) {
-                                // Sử dụng slot từ backend
+                                // Sử dụng slot từ backend (giữ nguyên available từ backend)
                                 return existingSlot;
                             } else {
-                                // Tạo slot mới nếu chưa có
+                                // Tạo slot mới nếu chưa có (backend không trả về slot này)
+                                // KHÔNG set conflict_reason mặc định vì có thể slot này nằm trong ca làm việc
+                                // nhưng bị unavailable vì lý do khác (quá khứ, đã đặt, v.v.)
                                 return {
                                     time: timeString,
                                     display: timeString,
                                     word_time_id: null,
                                     available: false,
-                                    conflict_reason: 'Không có trong ca làm việc'
+                                    conflict_reason: null // Không set mặc định, để backend xử lý
                                 };
                             }
                         });
 
-                        // Đánh dấu các slot <= completed appointment end time là unavailable
+                        // Đánh dấu các slot < completed appointment end time là unavailable
+                        // QUAN TRỌNG: KHÔNG override available nếu slot = completedAppointmentEndTime
+                        // (vì backend đã xử lý và set available = true cho slot này)
+                        // Ví dụ: Dịch vụ hoàn thành lúc 8h00 → slot 8h00 phải available (backend đã set)
+                        // Chỉ đánh dấu unavailable các slot < 8h00 (7h00, 7h30)
                         completeSlots.forEach(function(slot) {
-                            if (completedAppointmentEndTime && compareTime(slot.time, completedAppointmentEndTime) <= 0) {
+                            // Chỉ xử lý nếu slot < completedAppointmentEndTime
+                            // KHÔNG xử lý nếu slot = completedAppointmentEndTime (để giữ nguyên available từ backend)
+                            if (completedAppointmentEndTime && compareTime(slot.time, completedAppointmentEndTime) < 0) {
                                 slot.available = false;
                                 if (!slot.conflict_reason) {
                                     slot.conflict_reason = 'Đã qua thời gian';
                                 }
+                            }
+
+                            // Debug log cho slot = completedAppointmentEndTime
+                            if (completedAppointmentEndTime && slot.time === completedAppointmentEndTime) {
+                                console.log('=== DEBUG: Slot = completedAppointmentEndTime ===');
+                                console.log('slot.time:', slot.time);
+                                console.log('completedAppointmentEndTime:', completedAppointmentEndTime);
+                                console.log('slot.available (from backend):', slot.available);
+                                console.log('slot.conflict_reason:', slot.conflict_reason);
+                                console.log('NOTE: Slot này PHẢI available để có thể đặt appointment tiếp theo');
                             }
                         });
 
@@ -2218,30 +2234,26 @@
 
                         // Render tất cả 30 slots - KHÔNG ẨN, CHỈ GRAY OUT
                         completeSlots.forEach(function(slot) {
-                            // Nếu có đơn đã hoàn thành, đánh dấu các slot <= thời gian kết thúc đơn là unavailable
-                            // Ví dụ: Đơn hoàn thành lúc 10h00 → đánh dấu 7h, 7h30, 8h, 8h30, 9h, 9h30, 10h là unavailable
-                            // NHƯNG VẪN HIỂN THỊ TẤT CẢ SLOTS (chỉ gray out)
-                            if (completedAppointmentEndTime && compareTime(slot.time, completedAppointmentEndTime) <= 0) {
-                                // Slot này <= thời gian kết thúc đơn → đánh dấu unavailable (không ẩn)
-                                slot.available = false;
-                                if (!slot.conflict_reason) {
-                                    slot.conflict_reason = 'Đã qua thời gian';
-                                }
-                            }
+                            // QUAN TRỌNG: KHÔNG đánh dấu slot = completedAppointmentEndTime là unavailable
+                            // Chỉ đánh dấu unavailable các slot < completedAppointmentEndTime
+                            // Ví dụ: Đơn hoàn thành lúc 8h00 → chỉ đánh dấu 7h, 7h30 là unavailable
+                            // Slot 8h00 PHẢI available (có thể bắt đầu ngay sau khi kết thúc)
+                            // Logic này đã được xử lý ở trên (dòng 2144), không cần xử lý lại ở đây
 
                             // Kiểm tra available chính xác: phải là true (không phải false, null, undefined)
                             const isAvailable = slot.available === true;
                             const formattedTime = formatTimeSlot(slot.time);
                             const isSelected = currentlySelectedTime === slot.time;
 
-                            // Debug log cho slot 11:30
-                            if (slot.time === '11:30') {
-                                console.log('=== DEBUG: Rendering slot 11:30 ===');
+                            // Debug log cho slot 8h00 và 11:30
+                            if (slot.time === '08:00' || slot.time === '11:30') {
+                                console.log('=== DEBUG: Rendering slot', slot.time, '===');
                                 console.log('Slot object:', slot);
                                 console.log('slot.available:', slot.available);
                                 console.log('slot.available type:', typeof slot.available);
                                 console.log('isAvailable (calculated):', isAvailable);
                                 console.log('slot.conflict_reason:', slot.conflict_reason);
+                                console.log('completedAppointmentEndTime:', completedAppointmentEndTime);
                             }
 
                             const btn = $('<button></button>')
@@ -2254,7 +2266,8 @@
                             if (!isAvailable) {
                                 btn.addClass('unavailable');
                                 // Thêm tooltip nếu có lý do trùng lịch
-                                if (slot.conflict_reason) {
+                                // CHỈ hiển thị tooltip nếu có conflict_reason rõ ràng từ backend (không phải null, empty, hoặc undefined)
+                                if (slot.conflict_reason && typeof slot.conflict_reason === 'string' && slot.conflict_reason.trim() !== '') {
                                     btn.attr('title', slot.conflict_reason);
                                     btn.attr('data-toggle', 'tooltip');
                                     btn.attr('data-placement', 'top');
@@ -2273,11 +2286,20 @@
                                 btn.on('click', function(e) {
                                     e.preventDefault();
                                     e.stopPropagation();
+
+                                    // Ẩn tooltip trước khi hiển thị alert
+                                    $(this).tooltip('hide');
+
                                     console.log('Blocked click on unavailable slot:', slot.time);
                                     if (slot.conflict_reason) {
                                         alert(slot.conflict_reason);
                                     }
                                     return false;
+                                });
+
+                                // Ẩn tooltip khi mouse leave
+                                btn.on('mouseleave', function() {
+                                    $(this).tooltip('hide');
                                 });
                             } else {
                                 availableCount++;
@@ -2300,8 +2322,12 @@
                         console.log('Completed appointment end time:', completedAppointmentEndTime || 'null');
 
                         // Khởi tạo tooltip cho các slot unavailable có conflict_reason
+                        // Sử dụng trigger 'hover' để tooltip chỉ hiển thị khi hover, tự động ẩn khi mouse leave
                         if (typeof $.fn.tooltip !== 'undefined') {
-                            $('.time-slot-btn.unavailable[data-toggle="tooltip"]').tooltip();
+                            $('.time-slot-btn.unavailable[data-toggle="tooltip"]').tooltip({
+                                trigger: 'hover',
+                                placement: 'top'
+                            });
                         }
 
                         // Thêm các empty slots ở cuối để đủ 33 slots (11 cột x 3 hàng)
@@ -2441,9 +2467,9 @@
                     endHours = endHours % 24;
                 }
 
-                // Format times: 7h00, 8h30, etc.
-                const startTimeStr = String(startHours).padStart(2, '0') + 'h' + String(startMinutes).padStart(2, '0');
-                const endTimeStr = String(endHours).padStart(2, '0') + 'h' + String(endMinutes).padStart(2, '0');
+                // Format times: 8h00, 8h30, etc. (không có số 0 phía trước giờ)
+                const startTimeStr = startHours + 'h' + String(startMinutes).padStart(2, '0');
+                const endTimeStr = endHours + 'h' + String(endMinutes).padStart(2, '0');
 
                 // Update display
                 $('#start_time_display').text(startTimeStr);
