@@ -94,6 +94,29 @@
             </div>
         </li>
 
+        <!-- Nav Item - News -->
+        <li class="nav-item {{ str_contains($currentRoute, 'news') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('admin.news.index') }}">
+                <i class="fas fa-fw fa-newspaper"></i>
+                <span>Tin tức</span>
+            </a>
+        </li>
+
+        <!-- Nav Item - Products -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true"
+                aria-controls="collapseTwo">
+                <i class="far fa-file-alt"></i>
+                <span>Sản phẩm</span>
+            </a>
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+                <div class="bg-white py-2 collapse-inner rounded">
+                    <a class="collapse-item" href="{{ route('admin.categories.index') }}">Quản lý danh mục</a>
+                    <a class="collapse-item" href="{{ route('admin.products.index') }}">Quản lý sản phẩm</a>
+                </div>
+            </div>
+        </li>
+
         <!-- Nav Item - Orders -->
         <li class="nav-item {{ str_contains($currentRoute, 'payment') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.payments.index') }}">

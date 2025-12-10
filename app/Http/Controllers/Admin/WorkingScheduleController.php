@@ -118,14 +118,10 @@ class WorkingScheduleController extends Controller
     {
         $validated = $request->validate([
             'schedule_type' => 'required|in:day,week',
-            'stylist_ids' => 'required|array|min:1',
-            'stylist_ids.*' => 'required|exists:employees,id',
-            'barber_ids' => 'required|array|min:1',
-            'barber_ids.*' => 'required|exists:employees,id',
-            'shampooer_ids' => 'required|array|min:1',
-            'shampooer_ids.*' => 'required|exists:employees,id',
-            'receptionist_ids' => 'required|array|min:1',
-            'receptionist_ids.*' => 'required|exists:employees,id',
+            'stylist_id' => 'required|exists:employees,id',
+            'barber_id' => 'required|exists:employees,id',
+            'shampooer_id' => 'required|exists:employees,id',
+            'receptionist_id' => 'required|exists:employees,id',
             'work_date' => 'required_if:schedule_type,day|nullable|date',
             'week_start_date' => 'required_if:schedule_type,week|nullable|date',
             'shift_ids' => 'required|array|min:1',
@@ -133,53 +129,38 @@ class WorkingScheduleController extends Controller
         ]);
 
         // Kiểm tra nhân viên có đúng vị trí không
-        $stylistIds = $validated['stylist_ids'];
-        $barberIds = $validated['barber_ids'];
-        $shampooerIds = $validated['shampooer_ids'];
-        $receptionistIds = $validated['receptionist_ids'];
+        $stylist = Employee::findOrFail($validated['stylist_id']);
+        $barber = Employee::findOrFail($validated['barber_id']);
+        $shampooer = Employee::findOrFail($validated['shampooer_id']);
+        $receptionist = Employee::findOrFail($validated['receptionist_id']);
 
-        // Kiểm tra tất cả Stylist
-        foreach ($stylistIds as $stylistId) {
-            $stylist = Employee::findOrFail($stylistId);
         if ($stylist->position !== 'Stylist') {
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Nhân viên được chọn cho vị trí Stylist không đúng vị trí.');
         }
-        }
-
-        // Kiểm tra tất cả Barber
-        foreach ($barberIds as $barberId) {
-            $barber = Employee::findOrFail($barberId);
         if ($barber->position !== 'Barber') {
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Nhân viên được chọn cho vị trí Barber không đúng vị trí.');
         }
-        }
-
-        // Kiểm tra tất cả Shampooer
-        foreach ($shampooerIds as $shampooerId) {
-            $shampooer = Employee::findOrFail($shampooerId);
         if ($shampooer->position !== 'Shampooer') {
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Nhân viên được chọn cho vị trí Shampooer không đúng vị trí.');
         }
-        }
-
-        // Kiểm tra tất cả Receptionist
-        foreach ($receptionistIds as $receptionistId) {
-            $receptionist = Employee::findOrFail($receptionistId);
         if ($receptionist->position !== 'Receptionist') {
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Nhân viên được chọn cho vị trí Receptionist không đúng vị trí.');
         }
-        }
 
-        // Gộp tất cả nhân viên vào một mảng
-        $employeeIds = array_merge($stylistIds, $barberIds, $shampooerIds, $receptionistIds);
+        $employeeIds = [
+            $validated['stylist_id'],
+            $validated['barber_id'],
+            $validated['shampooer_id'],
+            $validated['receptionist_id'],
+        ];
         $shiftIds = $validated['shift_ids'];
         $scheduleType = $validated['schedule_type'];
 

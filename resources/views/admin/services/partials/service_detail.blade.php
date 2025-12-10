@@ -56,26 +56,6 @@
                     </td>
                 </tr>
                 <tr>
-                    <th>Thời gian:</th>
-                    <td>
-                        @if($service->base_duration)
-                            <strong class="text-info">{{ $service->base_duration }} phút</strong>
-                        @elseif($service->serviceVariants->count() > 0)
-                            @php
-                                $minDuration = $service->serviceVariants->min('duration');
-                                $maxDuration = $service->serviceVariants->max('duration');
-                            @endphp
-                            @if($minDuration == $maxDuration)
-                                <strong class="text-info">{{ $minDuration }} phút</strong>
-                            @else
-                                <strong class="text-info">{{ $minDuration }} - {{ $maxDuration }} phút</strong>
-                            @endif
-                        @else
-                            N/A
-                        @endif
-                    </td>
-                </tr>
-                <tr>
                     <th>Trạng thái:</th>
                     <td>
                         <span class="badge badge-{{ $service->status == 'Hoạt động' ? 'success' : 'secondary' }}">

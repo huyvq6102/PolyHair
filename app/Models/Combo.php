@@ -20,14 +20,12 @@ class Combo extends Model
         'category_id',
         'owner_service_id',
         'price',
-        'duration',
         'status',
         'sort_order',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
-        'duration' => 'integer',
         'sort_order' => 'integer',
     ];
 
@@ -75,3 +73,4 @@ class Combo extends Model
         return $this->belongsTo(Service::class, 'owner_service_id');
     }
 }
+

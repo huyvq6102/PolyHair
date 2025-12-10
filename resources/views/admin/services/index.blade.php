@@ -52,7 +52,6 @@
                         <th>Tên dịch vụ</th>
                         <th>Loại</th>
                         <th>Giá</th>
-                        <th>Thời gian</th>
                         <th>Hình ảnh</th>
                         <th>Nhóm dịch vụ</th>
                         <th>Trạng thái</th>
@@ -93,23 +92,6 @@
                                     @endif
                                 @else
                                     N/A
-                                @endif
-                            </td>
-                            <td>
-                                @if($service->base_duration)
-                                    <strong class="text-info">{{ $service->base_duration }} phút</strong>
-                                @elseif($service->serviceVariants->count() > 0)
-                                    @php
-                                        $minDuration = $service->serviceVariants->min('duration');
-                                        $maxDuration = $service->serviceVariants->max('duration');
-                                    @endphp
-                                    @if($minDuration == $maxDuration)
-                                        <strong class="text-info">{{ $minDuration }} phút</strong>
-                                    @else
-                                        <strong class="text-info">{{ $minDuration }} - {{ $maxDuration }} phút</strong>
-                                    @endif
-                                @else
-                                    <span class="text-muted">N/A</span>
                                 @endif
                             </td>
                             <td>
@@ -154,7 +136,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center">Chưa có dịch vụ nào</td>
+                            <td colspan="9" class="text-center">Chưa có dịch vụ nào</td>
                         </tr>
                     @endforelse
                     
@@ -171,13 +153,6 @@
                                     </span>
                                 </td>
                                 <td>{{ number_format($combo->price, 0, ',', '.') }} đ</td>
-                                <td>
-                                    @if($combo->duration)
-                                        <strong class="text-info">{{ $combo->duration }} phút</strong>
-                                    @else
-                                        <span class="text-muted">N/A</span>
-                                    @endif
-                                </td>
                                 <td>
                                     @if($combo->image)
                                         <img src="{{ asset('legacy/images/products/' . $combo->image) }}" alt="{{ $combo->name }}" width="60" height="60" class="img-thumbnail">

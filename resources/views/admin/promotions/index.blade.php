@@ -7,15 +7,6 @@
     <h1 class="h3 mb-0 text-gray-800">Quản lý khuyến mãi</h1>
     <div>
         @if(isset($isTrash) && $isTrash)
-            @if($promotions->count() > 0)
-                <form action="{{ route('admin.promotions.delete-all') }}" method="POST" class="d-inline" id="deleteAllForm">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger" onclick="return confirmDeleteAll()">
-                        <i class="fas fa-trash-alt"></i> Xóa tất cả
-                    </button>
-                </form>
-            @endif
             <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Quay lại
             </a>
@@ -218,16 +209,6 @@
 @endsection
 
 @push('scripts')
-<script>
-    function confirmDeleteAll() {
-        const count = {{ isset($isTrash) && $isTrash ? $promotions->count() : 0 }};
-        if (count === 0) {
-            alert('Thùng rác đang trống!');
-            return false;
-        }
-        return confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn tất cả ${count} khuyến mãi trong thùng rác? Hành động này không thể hoàn tác!`);
-    }
-</script>
 <script>
     $(function () {
         $('#promotionsTable').DataTable({
