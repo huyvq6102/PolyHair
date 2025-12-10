@@ -59,8 +59,7 @@ class PromotionController extends Controller
     public function create()
     {
         $statuses = $this->statuses;
-        // Chỉ lấy danh sách dịch vụ đơn để tránh trộn với biến thể
-        $services = $this->serviceService->getBaseServices();
+        $services = $this->serviceService->getAll();
         $combos = \App\Models\Combo::whereNull('deleted_at')->with('category')->get();
         $serviceVariants = \App\Models\ServiceVariant::whereNull('deleted_at')
             ->with('service.category')
@@ -104,8 +103,7 @@ class PromotionController extends Controller
     {
         $promotion = $this->promotionService->getOne($id);
         $statuses = $this->statuses;
-        // Chỉ lấy danh sách dịch vụ đơn để tránh trộn với biến thể
-        $services = $this->serviceService->getBaseServices();
+        $services = $this->serviceService->getAll();
         $combos = \App\Models\Combo::whereNull('deleted_at')->with('category')->get();
         $serviceVariants = \App\Models\ServiceVariant::whereNull('deleted_at')
             ->with('service.category')
@@ -180,18 +178,6 @@ class PromotionController extends Controller
     }
 
     /**
-     * Permanently delete all trashed promotions.
-     */
-    public function deleteAll()
-    {
-        $deletedCount = $this->promotionService->deleteAll();
-
-        return redirect()
-            ->route('admin.promotions.trash')
-            ->with('success', "Đã xóa vĩnh viễn {$deletedCount} khuyến mãi!");
-    }
-
-    /**
      * Validate request data.
      */
     protected function validateData(Request $request, ?string $id = null): array
@@ -220,44 +206,26 @@ class PromotionController extends Controller
         // Ràng buộc logic theo loại giảm giá
         if ($data['discount_type'] === 'percent') {
             $data['discount_amount'] = null;
-            if ($data['discount_percent'] === null || $data['discount_percent'] <= 0) {
+            if ($data['discount_percent'] === null) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'discount_percent' => 'Vui lòng nhập % giảm giá lớn hơn 0 khi chọn loại giảm giá theo phần trăm.',
-                ]);
-            }
-            if ($data['discount_percent'] > 100) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'discount_percent' => '% giảm giá không được vượt quá 100%.',
+                    'discount_percent' => 'Vui lòng nhập % giảm giá khi chọn loại giảm giá theo phần trăm.',
                 ]);
             }
         } else {
             // Set discount_percent = 0 thay vì null để tránh lỗi database
             $data['discount_percent'] = 0;
-            if ($data['discount_amount'] === null || $data['discount_amount'] <= 0) {
+            if ($data['discount_amount'] === null) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'discount_amount' => 'Vui lòng nhập số tiền giảm giá lớn hơn 0 khi chọn loại giảm giá theo số tiền.',
+                    'discount_amount' => 'Vui lòng nhập số tiền giảm giá khi chọn loại giảm giá theo số tiền.',
                 ]);
             }
         }
 
         // Nếu áp dụng theo hóa đơn thì yêu cầu tổng tiền tối thiểu
-        if ($data['apply_scope'] === 'order' && ($data['min_order_amount'] === null || $data['min_order_amount'] <= 0)) {
+        if ($data['apply_scope'] === 'order' && $data['min_order_amount'] === null) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'min_order_amount' => 'Vui lòng nhập số tiền hóa đơn tối thiểu lớn hơn 0 khi áp dụng theo hóa đơn.',
+                'min_order_amount' => 'Vui lòng nhập số tiền hóa đơn tối thiểu khi áp dụng theo hóa đơn.',
             ]);
-        }
-
-        // Nếu áp dụng theo dịch vụ thì yêu cầu chọn ít nhất một dịch vụ/combo/variant
-        if ($data['apply_scope'] === 'service') {
-            $serviceIds = $request->input('services', []);
-            $comboIds = $request->input('combos', []);
-            $variantIds = $request->input('service_variants', []);
-            
-            if (empty($serviceIds) && empty($comboIds) && empty($variantIds)) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'services' => 'Vui lòng chọn ít nhất một dịch vụ, combo hoặc dịch vụ biến thể khi áp dụng theo dịch vụ.',
-                ]);
-            }
         }
 
         return $data;

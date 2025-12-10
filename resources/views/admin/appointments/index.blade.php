@@ -111,41 +111,20 @@
                             <td>{{ $appointment->user->email ?? 'N/A' }}</td>
                             <td>{{ $appointment->employee->user->name ?? 'Chưa phân công' }}</td>
                             <td>
-                                @php
-                                    $servicesList = [];
-                                    if($appointment->appointmentDetails->count() > 0) {
-                                        foreach($appointment->appointmentDetails as $detail) {
-                                            if($detail->combo_id) {
-                                                $servicesList[] = $detail->combo->name ?? ($detail->notes ?? 'Combo');
-                                            } elseif($detail->serviceVariant) {
-                                                $servicesList[] = $detail->serviceVariant->name ?? ($detail->serviceVariant->service->name ?? 'N/A');
-                                            } else {
-                                                $servicesList[] = $detail->notes ?? 'Dịch vụ đơn';
-                                            }
-                                        }
-                                    }
-                                    $servicesText = !empty($servicesList) ? implode("\n", $servicesList) : 'N/A';
-                                @endphp
-                                <div class="services-list-container service-tooltip-trigger" 
-                                     data-services="{{ htmlspecialchars($servicesText, ENT_QUOTES, 'UTF-8') }}">
-                                    @if($appointment->appointmentDetails->count() > 0)
-                                        <div class="services-list">
-                                            @foreach($appointment->appointmentDetails as $detail)
-                                                <div class="service-item">
-                                                    @if($detail->combo_id)
-                                                        {{ $detail->combo->name ?? ($detail->notes ?? 'Combo') }}
-                                                    @elseif($detail->serviceVariant)
-                                                        {{ $detail->serviceVariant->name ?? ($detail->serviceVariant->service->name ?? 'N/A') }}
-                                                    @else
-                                                        {{ $detail->notes ?? 'Dịch vụ đơn' }}
-                                                    @endif
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @else
-                                        <span class="text-muted">N/A</span>
-                                    @endif
-                                </div>
+                                @if($appointment->appointmentDetails->count() > 0)
+                                    @foreach($appointment->appointmentDetails as $detail)
+                                        @if($detail->combo_id)
+                                            {{ $detail->combo->name ?? ($detail->notes ?? 'Combo') }}
+                                        @elseif($detail->serviceVariant)
+                                            {{ $detail->serviceVariant->name ?? ($detail->serviceVariant->service->name ?? 'N/A') }}
+                                        @else
+                                            {{ $detail->notes ?? 'Dịch vụ đơn' }}
+                                        @endif
+                                        @if(!$loop->last), @endif
+                                    @endforeach
+                                @else
+                                    N/A
+                                @endif
                             </td>
                             <td>{{ $appointment->start_at ? $appointment->start_at->format('d/m/Y H:i') : 'N/A' }}</td>
                             <td>
@@ -156,38 +135,26 @@
                                     <br><small class="text-muted"><i class="fas fa-info-circle"></i> {{ Str::limit($appointment->cancellation_reason, 30) }}</small>
                                 @endif
                             </td>
+                            <td>{{ Str::limit($appointment->note ?? 'N/A', 50) }}</td>
                             <td>
-                                @php
-                                    $description = $appointment->note ?? 'N/A';
-                                @endphp
-                                <span class="text-truncate-cell-description" 
-                                      data-toggle="tooltip" 
-                                      data-placement="top" 
-                                      title="{{ htmlspecialchars($description, ENT_QUOTES, 'UTF-8') }}">
-                                    {{ $description }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <a href="{{ route('admin.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    @if($appointment->status != 'Đã hủy')
-                                    <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
-                                            <i class="fas fa-ban"></i>
-                                        </button>
-                                    </form>
-                                    @else
-                                        <span class="btn btn-sm btn-secondary" title="Lịch đã hủy" disabled>
-                                            <i class="fas fa-ban"></i>
-                                        </span>
-                                    @endif
-                                </div>
+                                <a href="{{ route('admin.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                @if($appointment->status != 'Đã hủy')
+                                <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
+                                @else
+                                    <span class="btn btn-sm btn-secondary" title="Lịch đã hủy" disabled>
+                                        <i class="fas fa-ban"></i>
+                                    </span>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -202,138 +169,6 @@
 </div>
 @endsection
 
-@push('styles')
-<style>
-    /* Truncate text for long content */
-    .text-truncate-cell {
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-    }
-    
-    .services-list-container {
-        max-width: 300px;
-        position: relative;
-        cursor: help;
-    }
-    
-    .services-list {
-        max-height: 80px;
-        overflow: hidden;
-        position: relative;
-        display: block;
-    }
-    
-    .service-item {
-        display: block;
-        padding: 3px 0;
-        line-height: 1.5;
-        border-bottom: 1px solid #e0e0e0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        width: 100%;
-    }
-    
-    .service-item:last-child {
-        border-bottom: none;
-    }
-    
-    /* Custom tooltip fallback */
-    .service-tooltip-trigger {
-        position: relative;
-    }
-    
-    .service-tooltip-trigger:hover::after {
-        content: attr(data-tooltip-content);
-        position: absolute;
-        bottom: calc(100% + 10px);
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #333;
-        color: #fff;
-        padding: 8px 12px;
-        border-radius: 4px;
-        white-space: pre-line;
-        z-index: 9999;
-        min-width: 200px;
-        max-width: 400px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        font-size: 13px;
-        line-height: 1.8;
-        pointer-events: none;
-        word-wrap: break-word;
-    }
-    
-    .service-tooltip-trigger:hover::before {
-        content: '';
-        position: absolute;
-        bottom: calc(100% + 5px);
-        left: 50%;
-        transform: translateX(-50%);
-        border: 5px solid transparent;
-        border-top-color: #333;
-        z-index: 10000;
-        pointer-events: none;
-    }
-    
-    .text-truncate-cell-services {
-        max-width: 300px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-    }
-    
-    .text-truncate-cell-description {
-        max-width: 250px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-    }
-    
-    /* Action buttons alignment */
-    .action-buttons {
-        display: flex;
-        gap: 5px;
-        align-items: center;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    .action-buttons .btn {
-        margin: 2px 0;
-        min-width: 35px;
-    }
-    
-    /* Tooltip styling */
-    [data-toggle="tooltip"] {
-        cursor: help;
-    }
-    
-    /* Table column width */
-    #dataTable th:nth-child(6),
-    #dataTable td:nth-child(6) {
-        max-width: 300px;
-        min-width: 200px;
-    }
-    
-    #dataTable th:nth-child(9),
-    #dataTable td:nth-child(9) {
-        max-width: 250px;
-    }
-    
-    #dataTable th:nth-child(10),
-    #dataTable td:nth-child(10) {
-        width: 120px;
-        min-width: 120px;
-    }
-</style>
-@endpush
-
 @push('scripts')
 <script>
     $(document).ready(function() {
@@ -343,62 +178,6 @@
             },
             "order": [[0, "desc"]]
         });
-        
-        // Function to initialize tooltips
-        function initServiceTooltips() {
-            $('.service-tooltip-trigger').each(function() {
-                var $this = $(this);
-                var servicesText = $this.attr('data-services');
-                
-                // Destroy existing tooltip if any
-                if ($this.data('bs.tooltip')) {
-                    $this.tooltip('dispose');
-                }
-                
-                if (servicesText && servicesText !== 'N/A') {
-                    // Chuyển đổi \n thành array
-                    var servicesArray = servicesText.split('\n').map(function(service) {
-                        return service.trim();
-                    }).filter(function(service) {
-                        return service.length > 0;
-                    });
-                    
-                    var htmlContent = servicesArray.join('<br>');
-                    var textContent = servicesArray.join('\n');
-                    
-                    // Set data attribute for CSS tooltip fallback
-                    $this.attr('data-tooltip-content', textContent);
-                    
-                    // Initialize Bootstrap tooltip with HTML content
-                    try {
-                        if (typeof $this.tooltip === 'function') {
-                            $this.tooltip({
-                                html: true,
-                                placement: 'top',
-                                container: 'body',
-                                title: htmlContent,
-                                trigger: 'hover'
-                            });
-                        }
-                    } catch(e) {
-                        // Fallback: CSS tooltip will be used
-                        console.warn('Bootstrap tooltip initialization failed, using CSS fallback:', e);
-                    }
-                }
-            });
-        }
-        
-        // Initialize tooltips after DataTable is ready
-        $('#dataTable').on('draw.dt', function() {
-            setTimeout(function() {
-                initServiceTooltips();
-            }, 100);
-        });
-        
-        // Initialize tooltips on page load
-        setTimeout(function() {
-            initServiceTooltips();
-        }, 500);
     });
 </script>
 @endpush

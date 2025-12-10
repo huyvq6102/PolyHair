@@ -5,75 +5,6 @@
 @section('content')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('legacy/content/css/auth-pages.css') }}">
-<style>
-    .register-title {
-        color: #ffffff !important;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-        font-weight: 700;
-        font-size: 2.5rem;
-    }
-    @media (prefers-color-scheme: light) {
-        .register-title {
-            color: #1a1a1a !important;
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.9);
-        }
-    }
-    .register-hero .container,
-    .register-hero .row,
-    .register-hero .col-md-6,
-    .register-hero .col-lg-7 {
-        overflow: visible !important;
-    }
-    .register-hero .col-md-6 {
-        padding-left: 15px !important;
-        padding-right: 15px !important;
-        width: 50% !important;
-        flex: 0 0 50% !important;
-        max-width: 50% !important;
-    }
-    .register-hero .form-group {
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow: visible !important;
-        position: relative !important;
-        margin-bottom: 16px !important;
-    }
-    .register-hero .form-group select,
-    .register-hero #gender {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        overflow: visible !important;
-        box-sizing: border-box !important;
-        display: block !important;
-        position: relative !important;
-        -webkit-appearance: menulist !important;
-        -moz-appearance: menulist !important;
-        appearance: menulist !important;
-    }
-    .register-hero .form-group select option {
-        white-space: normal !important;
-        padding: 8px !important;
-        display: block !important;
-    }
-    .register-hero .form-control {
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    .register-form-wrapper {
-        overflow: visible !important;
-        width: 100% !important;
-    }
-    .register-form-wrapper form {
-        overflow: visible !important;
-        width: 100% !important;
-    }
-    .register-form-wrapper .row {
-        margin-left: -15px !important;
-        margin-right: -15px !important;
-    }
-</style>
 @endpush
 
 <section class="register-hero">
@@ -81,7 +12,7 @@
         <div class="row align-items-start">
             <div class="col-lg-5 mb-5 mb-lg-0">
                 <span class="text-uppercase" style="letter-spacing:4px;">Khách hàng mới</span>
-                <h1 class="mt-3 register-title">Gia nhập PolyHair</h1>
+                <h1 class="mt-3">Gia nhập PolyHair</h1>
                 <p>
                     Tạo tài khoản để quản lý lịch hẹn, nhận ưu đãi dành riêng cho bạn và kết nối với đội ngũ stylist chuyên nghiệp.
                     PolyHair luôn sẵn sàng đồng hành trong hành trình chăm sóc tóc của bạn.
@@ -147,10 +78,10 @@
                                         @enderror
                                     </div>
                                 </div>
-                                <div class="col-md-6" style="overflow: visible !important;">
-                                    <div class="form-group" style="width: 100% !important; overflow: visible !important;">
+                                <div class="col-md-6">
+                                    <div class="form-group">
                                         <label for="gender">Giới tính</label>
-                                        <select name="gender" id="gender" class="form-control @error('gender') is-invalid @enderror" style="width: 100% !important; max-width: 100% !important; min-width: 100% !important; overflow: visible !important; box-sizing: border-box !important;">
+                                        <select name="gender" id="gender" class="form-control @error('gender') is-invalid @enderror">
                                             <option value="">-- Chọn giới tính --</option>
                                             <option value="Nam" {{ old('gender') == 'Nam' ? 'selected' : '' }}>Nam</option>
                                             <option value="Nữ" {{ old('gender') == 'Nữ' ? 'selected' : '' }}>Nữ</option>

@@ -100,22 +100,6 @@ class ServiceService
     }
 
     /**
-     * Get only base services (không bao gồm dịch vụ biến thể).
-     * Dùng cho các selector cần chọn dịch vụ đơn.
-     */
-    /**
-     * Get base services (single services without variants).
-     */
-    public function getBaseServices()
-    {
-        return Service::with('category')
-            ->whereNull('deleted_at')
-            ->whereDoesntHave('serviceVariants')
-            ->orderBy('name')
-            ->get();
-    }
-
-    /**
      * Create a new service.
      */
     public function create(array $serviceData, array $variants = [], array $combos = [])

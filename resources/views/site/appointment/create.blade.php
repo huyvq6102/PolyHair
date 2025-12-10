@@ -8,7 +8,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-8 col-xl-7">
                 <div class="appointment-form-container" style="background: #fff; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 20px 25px; margin-bottom: 20px; margin-top: 0;">
-                    
+
                     <!-- Header -->
                     <div class="text-center mb-2" style="margin-bottom: 15px;">
                         <h2 class="fw-bold mb-1" style="color: #000; font-size: 18px; margin-bottom: 4px;">
@@ -28,22 +28,22 @@
 
                     <form action="{{ url(route('site.appointment.store')) }}" method="POST" id="appointmentForm" novalidate>
                         @csrf
-                        
+
                         @if(request('service_id'))
                             @php
                                 // CRITICAL: Get services ONLY from query string
                                 $queryServices = request()->query('service_id', []);
-                                
+
                                 // Convert to array if single value
                                 if (!is_array($queryServices)) {
                                     $queryServices = $queryServices ? [$queryServices] : [];
                                 }
-                                
+
                                 // Filter out any empty/null values
                                 $serviceIds = array_filter($queryServices, function($id) {
                                     return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
                                 });
-                                
+
                                 // Remove duplicates - ensure each service ID appears only once
                                 $serviceIds = array_values(array_unique($serviceIds));
                             @endphp
@@ -64,18 +64,18 @@
                                 if (isset($parsedUrl['query'])) {
                                     parse_str($parsedUrl['query'], $queryParams);
                                 }
-                                
+
                                 // Get service_variants from parsed query string only
                                 // Handle both formats: service_variants[] and service_variants[0], service_variants[1], etc.
                                 $queryVariants = [];
-                                
+
                                 // Check for service_variants[] format
                                 if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
                                     $queryVariants = $queryParams['service_variants'];
                                 } elseif (isset($queryParams['service_variants'])) {
                                     $queryVariants = [$queryParams['service_variants']];
                                 }
-                                
+
                                 // Check for service_variants[0], service_variants[1], etc. format
                                 $indexedVariants = [];
                                 foreach ($queryParams as $key => $value) {
@@ -83,18 +83,18 @@
                                         $indexedVariants[] = $value;
                                     }
                                 }
-                                
+
                                 // Merge both formats
                                 $queryVariants = array_merge($queryVariants, $indexedVariants);
-                                
+
                                 // Filter out any empty/null values
                                 $variantIds = array_filter($queryVariants, function($id) {
                                     return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
                                 });
-                                
+
                                 // Remove duplicates - ensure each variant ID appears only once
                                 $variantIds = array_values(array_unique($variantIds));
-                                
+
                                 // Debug log (only in development)
                                 if (config('app.debug')) {
                                     \Log::info('Appointment form - Creating hidden inputs', [
@@ -120,17 +120,17 @@
                             @php
                                 // CRITICAL: Get combos ONLY from query string
                                 $queryCombos = request()->query('combo_id', []);
-                                
+
                                 // Convert to array if single value
                                 if (!is_array($queryCombos)) {
                                     $queryCombos = $queryCombos ? [$queryCombos] : [];
                                 }
-                                
+
                                 // Filter out any empty/null values
                                 $comboIds = array_filter($queryCombos, function($id) {
                                     return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
                                 });
-                                
+
                                 // Remove duplicates - ensure each combo ID appears only once
                                 $comboIds = array_values(array_unique($comboIds));
                             @endphp
@@ -154,7 +154,7 @@
                                     <label class="form-label" style="font-size: 12px; margin-bottom: 5px; font-weight: 500;">
                                         <i class="fa fa-user-circle"></i> Họ và tên <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" 
+                                    <input type="text"
                                            name="name"
                                            id="name"
                                            class="form-control"
@@ -170,7 +170,7 @@
                                     <label class="form-label" style="font-size: 12px; margin-bottom: 5px; font-weight: 500;">
                                         <i class="fa fa-phone"></i> Số điện thoại <span class="text-danger">*</span>
                                     </label>
-                                    <input type="tel" 
+                                    <input type="tel"
                                            name="phone"
                                            id="phone"
                                            class="form-control"
@@ -187,7 +187,7 @@
                                 <label class="form-label" style="font-size: 12px; margin-bottom: 5px; font-weight: 500;">
                                     <i class="fa fa-envelope"></i> Email
                                 </label>
-                                <input type="email" 
+                                <input type="email"
                                        name="email"
                                        class="form-control"
                                        style="font-size: 12px; padding: 8px 12px; height: 38px; border: 1px solid #ddd; border-radius: 6px;"
@@ -204,13 +204,13 @@
 
                             @php
                                 $hasAnyService = request('service_id') || request('service_variants') || request('combo_id');
-                                
+
                                 // Collect all selected items
                                 $allSelectedItems = [];
                                 $totalPrice = 0;
                                 $totalDuration = 0;
                                 $totalCount = 0;
-                                
+
                                 // Get services
                                 if (request('service_id')) {
                                     $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
@@ -228,7 +228,7 @@
                                         $totalCount++;
                                     }
                                 }
-                                
+
                                 // Get variants
                                 if (request('service_variants')) {
                                     $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
@@ -247,7 +247,7 @@
                                         $totalCount++;
                                     }
                                 }
-                                
+
                                 // Get combos
                                 if (request('combo_id')) {
                                     $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
@@ -260,7 +260,7 @@
                                                 return $item->serviceVariant->duration ?? 60;
                                             });
                                         }
-                                        
+
                                         $allSelectedItems[] = [
                                             'name' => $combo->name,
                                             'price' => $combo->price ?? 0,
@@ -273,8 +273,62 @@
                                         $totalCount++;
                                     }
                                 }
+
+                                // Tính discount từ promotion
+                                $discountAmount = 0;
+                                $finalPrice = $totalPrice;
+                                if (isset($selectedPromotion) && $selectedPromotion) {
+                                    // Kiểm tra promotion có áp dụng cho các dịch vụ đã chọn không
+                                    $isApplicable = false;
+
+                                    // Check if promotion applies to all services
+                                    $hasSpecificServices = ($selectedPromotion->services && $selectedPromotion->services->count() > 0)
+                                        || ($selectedPromotion->combos && $selectedPromotion->combos->count() > 0)
+                                        || ($selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->count() > 0);
+
+                                    $applyToAll = !$hasSpecificServices ||
+                                        (($selectedPromotion->services ? $selectedPromotion->services->count() : 0) +
+                                         ($selectedPromotion->combos ? $selectedPromotion->combos->count() : 0) +
+                                         ($selectedPromotion->serviceVariants ? $selectedPromotion->serviceVariants->count() : 0)) >= 20;
+
+                                    if ($selectedPromotion->apply_scope === 'order' || $applyToAll) {
+                                        $isApplicable = true;
+                                    } else {
+                                        // Check if any selected service/variant/combo matches promotion
+                                        foreach ($allSelectedItems as $item) {
+                                            if ($item['type'] === 'service' && $selectedPromotion->services && $selectedPromotion->services->contains('id', $item['id'])) {
+                                                $isApplicable = true;
+                                                break;
+                                            } elseif ($item['type'] === 'variant' && $selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->contains('id', $item['id'])) {
+                                                $isApplicable = true;
+                                                break;
+                                            } elseif ($item['type'] === 'combo' && $selectedPromotion->combos && $selectedPromotion->combos->contains('id', $item['id'])) {
+                                                $isApplicable = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if ($isApplicable) {
+                                        if ($selectedPromotion->discount_type === 'percent') {
+                                            $discountPercent = $selectedPromotion->discount_percent ?? 0;
+                                            $discountAmount = ($totalPrice * $discountPercent) / 100;
+                                            // Apply max discount if exists
+                                            if ($selectedPromotion->max_discount_amount) {
+                                                $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
+                                            }
+                                        } else {
+                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $totalPrice);
+                                        }
+                                        $finalPrice = max(0, $totalPrice - $discountAmount);
+                                    }
+                                }
+
+                                $formattedTotalPrice = number_format($totalPrice, 0, ',', '.');
+                                $formattedDiscountAmount = number_format($discountAmount, 0, ',', '.');
+                                $formattedFinalPrice = number_format($finalPrice, 0, ',', '.');
                                 @endphp
-                            
+
                             @if($hasAnyService && count($allSelectedItems) > 0)
                                 <!-- Header với icon và số lượng -->
                                 <div style="background: #f8f9fa; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e0e0e0; border-bottom: none;">
@@ -284,7 +338,7 @@
                                                     </div>
                                     <i class="fa fa-chevron-right" style="color: #000; font-size: 12px;"></i>
                                                     </div>
-                                
+
                                 <!-- Danh sách dịch vụ dạng tags -->
                                 <div style="background: #fff; padding: 12px 16px; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px;">
                                     @foreach($allSelectedItems as $item)
@@ -293,21 +347,33 @@
                                                     </div>
                                                             @endforeach
                                                     </div>
-                                
+
                                 <!-- Tổng số tiền -->
                                 <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
+                                    @if(isset($selectedPromotion) && $selectedPromotion && $discountAmount > 0)
+                                        <div style="margin-bottom: 8px;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                                                <span style="color: #999; font-size: 12px;">Giá gốc:</span>
+                                                <span style="color: #999; font-size: 12px; text-decoration: line-through;">{{ $formattedTotalPrice }} VNĐ</span>
+                                            </div>
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                                <span style="color: #28a745; font-size: 12px;">✓ Giảm:</span>
+                                                <span style="color: #28a745; font-size: 12px; font-weight: 600;">{{ $formattedDiscountAmount }} VNĐ</span>
+                                            </div>
+                                        </div>
+                                    @endif
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <span style="color: #000; font-size: 14px; font-weight: 500;">Tổng số tiền anh cần thanh toán:</span>
-                                        <span style="color: #28a745; font-size: 16px; font-weight: 700;">{{ number_format($totalPrice, 0, ',', '.') }} VNĐ</span>
-                                                </div>
-                                            </div>
-                                
+                                        <span style="color: #28a745; font-size: 16px; font-weight: 700;">{{ $formattedFinalPrice }} VNĐ</span>
+                                    </div>
+                                </div>
+
                                 <!-- Hidden input để lưu total duration cho JavaScript -->
                                 <input type="hidden" id="total_duration_minutes" value="{{ $totalDuration }}">
-                                
+
                                 <!-- Nút chọn thêm dịch vụ -->
-                                <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}" 
-                                   class="btn w-100" 
+                                <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}"
+                                   class="btn w-100"
                                    style="background: #fff; border: 1px solid #0066cc; color: #0066cc; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center; margin-top: 12px;">
                                     <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn thêm dịch vụ ({{ $totalCount }})
                                 </a>
@@ -316,7 +382,7 @@
                                     <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn dịch vụ
                                 </a>
                             @endif
-                            
+
                             <div class="field-error" id="service-error" style="display: none; color: #dc3545; font-size: 11px; margin-top: 4px;">
                                 <i class="fa fa-exclamation-circle"></i> <span></span>
                             </div>
@@ -474,7 +540,7 @@
     .alert.alert-danger li {
         display: none !important;
     }
-    
+
     .appointment-form-container {
         animation: fadeIn 0.5s ease-in;
         margin-left: auto !important;
@@ -661,7 +727,7 @@
         color: #fff;
         font-size: 14px;
     }
-    
+
     .custom-select-input i {
         color: #fff !important;
     }
@@ -746,7 +812,7 @@
         margin-top: 0;
         padding: 0;
     }
-    
+
     .time-slot-page > * {
         min-width: 0;
         min-height: 0;
@@ -817,7 +883,7 @@
         cursor: not-allowed;
         color: #b0b0b0;
     }
-    
+
     /* Tooltip cho slot bị trùng lịch */
     .time-slot-btn.unavailable[title]:hover::after {
         content: attr(title);
@@ -836,7 +902,7 @@
         pointer-events: none;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
-    
+
     .time-slot-btn.unavailable[title]:hover::before {
         content: '';
         position: absolute;
@@ -1091,7 +1157,7 @@
             const seen = new Set();
             const inputs = $(`input[name="${inputName}"]`);
             let removedCount = 0;
-            
+
             inputs.each(function() {
                 const val = $(this).val();
                 if (val && val.trim() !== '' && val !== '0') {
@@ -1109,18 +1175,18 @@
                     removedCount++;
                 }
             });
-            
+
             if (removedCount > 0) {
                 console.log(`Removed ${removedCount} duplicate/invalid ${inputName} inputs`);
             }
         }
-        
+
         // CRITICAL: Get valid variants from URL and remove any inputs that don't match
         function validateHiddenInputsFromUrl() {
             // Parse URL to get service_variants
             const url = new URL(window.location.href);
             const urlVariants = url.searchParams.getAll('service_variants[]');
-            
+
             // Also check for service_variants[0], service_variants[1], etc.
             const urlVariantsAlt = [];
             for (let i = 0; i < 100; i++) {
@@ -1132,12 +1198,12 @@
                     if (i > 10) break; // But stop after reasonable limit
                 }
             }
-            
+
             // Combine both formats and remove duplicates
             const validVariants = [...new Set([...urlVariants, ...urlVariantsAlt])].filter(v => v && v !== '0' && v !== '');
-            
+
             console.log('Valid variants from URL:', validVariants);
-            
+
             // CRITICAL: Remove ALL existing hidden inputs first, then recreate only valid ones
             // This ensures we don't have any stray inputs from previous renders or JavaScript
             const allInputs = $('input[name="service_variants[]"]');
@@ -1145,10 +1211,10 @@
             allInputs.each(function() {
                 existingValues.push($(this).val());
             });
-            
+
             // Remove all existing inputs
             allInputs.remove();
-            
+
             // Recreate only valid inputs from URL
             const $form = $('#appointmentForm');
             if ($form.length) {
@@ -1162,17 +1228,17 @@
                     $form.find('input[name="_token"]').after($newInput);
                 });
             }
-            
+
             const removedCount = existingValues.length - validVariants.length;
             if (removedCount > 0) {
                 console.log(`Removed ${removedCount} invalid service_variants[] inputs and recreated ${validVariants.length} valid ones from URL`);
             } else if (existingValues.length !== validVariants.length) {
                 console.log(`Recreated ${validVariants.length} service_variants[] inputs from URL (was ${existingValues.length})`);
             }
-            
+
             return validVariants;
         }
-        
+
         // Log BEFORE cleanup
         console.log('Hidden inputs BEFORE cleanup:', {
             service_variants: $('input[name="service_variants[]"]').length,
@@ -1180,22 +1246,22 @@
             combo_id: $('input[name="combo_id[]"]').length,
             url: window.location.href,
         });
-        
+
         // Log all service_variants values before cleanup
         const allVariantsBefore = [];
         $('input[name="service_variants[]"]').each(function() {
             allVariantsBefore.push($(this).val());
         });
         console.log('All service_variants values BEFORE cleanup:', allVariantsBefore);
-        
+
         // CRITICAL: First validate inputs against URL, then remove duplicates
         const validUrlVariants = validateHiddenInputsFromUrl();
-        
+
         // Remove duplicates for all three input types
         removeDuplicateHiddenInputs('service_variants[]');
         removeDuplicateHiddenInputs('service_id[]');
         removeDuplicateHiddenInputs('combo_id[]');
-        
+
         // Log AFTER cleanup
         const allVariantsAfter = [];
         $('input[name="service_variants[]"]').each(function() {
@@ -1207,25 +1273,50 @@
             combo_id: $('input[name="combo_id[]"]').length,
         });
         console.log('All service_variants values AFTER cleanup:', allVariantsAfter);
-        
+
         // Khôi phục thông tin từ localStorage khi quay lại từ trang chọn dịch vụ
         const savedFormData = localStorage.getItem('appointmentFormData');
         let restoredEmployeeId = null;
         let restoredAppointmentDate = null;
-        
+
+        // Kiểm tra xem user đã đăng nhập chưa
+        const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
+        const currentUserName = '{{ auth()->user()->name ?? '' }}';
+        const currentUserPhone = '{{ auth()->user()->phone ?? '' }}';
+        const currentUserEmail = '{{ auth()->user()->email ?? '' }}';
+
+        // Nếu user đã đăng nhập, ưu tiên thông tin từ server (không khôi phục từ localStorage)
+        // Chỉ khôi phục thông tin đặt lịch (employee, date, time) từ localStorage
         if (savedFormData) {
             try {
                 const formData = JSON.parse(savedFormData);
-                // Khôi phục thông tin khách hàng (luôn điền lại khi quay lại)
-                if (formData.name) {
-                    $('#name').val(formData.name);
+
+                // Chỉ khôi phục thông tin khách hàng nếu user CHƯA đăng nhập
+                // Nếu user đã đăng nhập, giữ nguyên thông tin từ server (đã được render sẵn)
+                if (!isLoggedIn) {
+                    // User chưa đăng nhập: khôi phục từ localStorage
+                    if (formData.name) {
+                        $('#name').val(formData.name);
+                    }
+                    if (formData.phone) {
+                        $('#phone').val(formData.phone);
+                    }
+                    if (formData.email) {
+                        $('input[name="email"]').val(formData.email);
+                    }
+                } else {
+                    // User đã đăng nhập: xóa thông tin khách hàng cũ trong localStorage để tránh nhầm lẫn
+                    // Chỉ giữ lại thông tin đặt lịch (employee, date, time)
+                    const appointmentData = {
+                        employee_id: formData.employee_id || '',
+                        appointment_date: formData.appointment_date || '',
+                        word_time_id: formData.word_time_id || '',
+                        time_slot: formData.time_slot || ''
+                    };
+                    localStorage.setItem('appointmentFormData', JSON.stringify(appointmentData));
                 }
-                if (formData.phone) {
-                    $('#phone').val(formData.phone);
-                }
-                if (formData.email) {
-                    $('input[name="email"]').val(formData.email);
-                }
+
+                // Khôi phục note (luôn khôi phục vì không liên quan đến user)
                 if (formData.note) {
                     $('textarea[name="note"]').val(formData.note);
                 }
@@ -1246,59 +1337,88 @@
                 if (formData.time_slot) {
                     $('#time_slot').val(formData.time_slot);
                 }
+
+                // QUAN TRỌNG: Sau khi khôi phục, reload time slots nếu đã có employee, date và total_duration
+                // Điều này đảm bảo khi quay lại từ trang select-services, time slots được load lại với total_duration mới
+                if (restoredEmployeeId && restoredAppointmentDate) {
+                    const totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
+                    if (totalDuration > 0) {
+                        console.log('Restored form data, reloading time slots with total_duration:', totalDuration);
+                        // Delay một chút để đảm bảo DOM đã sẵn sàng
+                        setTimeout(function() {
+                            loadAvailableTimeSlots();
+                        }, 300);
+                    }
+                }
             } catch (e) {
                 console.error('Error restoring form data:', e);
             }
         }
-        
+
         // Lưu thông tin form vào localStorage trước khi chuyển trang chọn dịch vụ
         $('.select-services-link').on('click', function(e) {
             const formData = {
-                name: $('#name').val() || '',
-                phone: $('#phone').val() || '',
-                email: $('input[name="email"]').val() || '',
-                note: $('textarea[name="note"]').val() || '',
                 employee_id: $('#employee_id').val() || '',
                 appointment_date: $('#appointment_date').val() || '',
                 word_time_id: $('#word_time_id').val() || '',
-                time_slot: $('#time_slot').val() || ''
+                time_slot: $('#time_slot').val() || '',
+                note: $('textarea[name="note"]').val() || ''
             };
+
+            // Chỉ lưu thông tin khách hàng nếu user CHƯA đăng nhập
+            if (!isLoggedIn) {
+                formData.name = $('#name').val() || '';
+                formData.phone = $('#phone').val() || '';
+                formData.email = $('input[name="email"]').val() || '';
+            }
+
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
         });
-        
+
         // Lưu thông tin form khi người dùng nhập (auto-save)
+        // Chỉ lưu thông tin đặt lịch và note, không lưu thông tin khách hàng nếu user đã đăng nhập
         $('#name, #phone, input[name="email"], textarea[name="note"]').on('input change', function() {
             const formData = {
-                name: $('#name').val() || '',
-                phone: $('#phone').val() || '',
-                email: $('input[name="email"]').val() || '',
-                note: $('textarea[name="note"]').val() || '',
                 employee_id: $('#employee_id').val() || '',
                 appointment_date: $('#appointment_date').val() || '',
                 word_time_id: $('#word_time_id').val() || '',
-                time_slot: $('#time_slot').val() || ''
+                time_slot: $('#time_slot').val() || '',
+                note: $('textarea[name="note"]').val() || ''
             };
+
+            // Chỉ lưu thông tin khách hàng nếu user CHƯA đăng nhập
+            if (!isLoggedIn) {
+                formData.name = $('#name').val() || '';
+                formData.phone = $('#phone').val() || '';
+                formData.email = $('input[name="email"]').val() || '';
+            }
+
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
         });
-        
+
         // Lưu khi chọn employee, date, time slot
         $('#employee_id, #appointment_date, #word_time_id, #time_slot').on('change', function() {
             const formData = {
-                name: $('#name').val() || '',
-                phone: $('#phone').val() || '',
-                email: $('input[name="email"]').val() || '',
-                note: $('textarea[name="note"]').val() || '',
                 employee_id: $('#employee_id').val() || '',
                 appointment_date: $('#appointment_date').val() || '',
                 word_time_id: $('#word_time_id').val() || '',
-                time_slot: $('#time_slot').val() || ''
+                time_slot: $('#time_slot').val() || '',
+                note: $('textarea[name="note"]').val() || ''
             };
+
+            // Chỉ lưu thông tin khách hàng nếu user CHƯA đăng nhập
+            if (!isLoggedIn) {
+                formData.name = $('#name').val() || '';
+                formData.phone = $('#phone').val() || '';
+                formData.email = $('input[name="email"]').val() || '';
+            }
+
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
         });
-        
+
         // Xóa tất cả thông báo lỗi tổng hợp khi trang load
         $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').remove();
-        
+
         // Clear errors khi trang load nếu đã có giá trị
         function clearErrorsIfHasValue() {
             // Clear name error nếu đã có giá trị
@@ -1306,46 +1426,46 @@
                 $('#name-error').hide();
                 $('#name').removeClass('is-invalid');
             }
-            
+
             // Clear phone error nếu đã có giá trị
             if ($('#phone').val() && $('#phone').val().trim() !== '') {
                 $('#phone-error').hide();
                 $('#phone').removeClass('is-invalid');
             }
-            
+
             // Clear employee error nếu đã có giá trị
             const employeeId = $('#employee_id').val();
             if (employeeId && employeeId !== '' && employeeId !== '0') {
                 $('#employee-error').hide();
                 $('#employeeToggleBtn').css('color', '');
             }
-            
+
             // Clear appointment date error nếu đã có giá trị
             const appointmentDate = $('#appointment_date').val();
             if (appointmentDate && appointmentDate.trim() !== '') {
                 $('#appointment_date-error').hide();
                 $('#appointment_date').removeClass('is-invalid');
             }
-            
+
             // Clear time slot error nếu đã có giá trị
             const wordTimeId = $('#word_time_id').val();
             if (wordTimeId && wordTimeId !== '' && wordTimeId !== '0') {
                 $('#time_slot-error').hide();
             }
         }
-        
+
         // Chạy ngay khi trang load
         clearErrorsIfHasValue();
-        
+
         // Chạy lại sau một chút để đảm bảo tất cả giá trị đã được set
         setTimeout(clearErrorsIfHasValue, 500);
         setTimeout(clearErrorsIfHasValue, 1000);
-        
+
         // Theo dõi và tự động clear errors nếu đã có giá trị (chạy định kỳ)
         setInterval(function() {
             // Clear errors nếu đã có giá trị
             clearErrorsIfHasValue();
-            
+
             // Xóa thông báo lỗi tổng hợp mới được thêm vào
             $('.alert-danger:not(.field-error), .alert-warning:not(.field-error), .validation-error-alert').each(function() {
                 if (!$(this).hasClass('field-error') && !$(this).closest('.field-error').length) {
@@ -1361,7 +1481,7 @@
         const vietnamTime = new Date(utc + (vietnamOffset * 60000));
         const today = vietnamTime.toISOString().split('T')[0];
         $('#appointment_date').attr('min', today);
-        
+
         // Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
         if (!$('#employee_id').val()) {
             $('#appointment_date').prop('disabled', true);
@@ -1369,11 +1489,28 @@
             // Nếu đã có employee_id (từ localStorage), enable input date
             $('#appointment_date').prop('disabled', false);
         }
-        
+
+        // QUAN TRỌNG: Sau khi trang load xong, reload time slots nếu đã có đủ thông tin
+        // Điều này đảm bảo khi quay lại từ trang select-services, time slots được load lại với total_duration mới
+        setTimeout(function() {
+            const employeeId = $('#employee_id').val();
+            const appointmentDate = $('#appointment_date').val();
+            const totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
+
+            if (employeeId && appointmentDate && totalDuration > 0) {
+                console.log('Page loaded with all info, reloading time slots...', {
+                    employeeId: employeeId,
+                    appointmentDate: appointmentDate,
+                    totalDuration: totalDuration
+                });
+                loadAvailableTimeSlots();
+            }
+        }, 500);
+
         // Load employees by service on page load
             loadEmployeesByService();
             loadEmployeesForCarousel();
-        
+
         // Nếu đã khôi phục employee_id và appointment_date từ localStorage, load time slots
         if (restoredEmployeeId && restoredAppointmentDate) {
             // Đợi một chút để đảm bảo employees đã load xong
@@ -1381,7 +1518,7 @@
                 loadAvailableTimeSlots();
         }, 500);
         }
-        
+
         // Function to load employees by service (for select dropdown - not used anymore but kept for compatibility)
         function loadEmployeesByService() {
             const serviceIds = [];
@@ -1390,26 +1527,26 @@
                     serviceIds.push($(this).val());
                 }
             });
-            
+
             const serviceVariants = [];
             $('input[name="service_variants[]"]').each(function() {
                 if ($(this).val()) {
                     serviceVariants.push($(this).val());
                 }
             });
-            
+
             const comboIds = [];
             $('input[name="combo_id[]"]').each(function() {
                 if ($(this).val()) {
                     comboIds.push($(this).val());
                 }
             });
-            
+
             // Only load if there's a service selected
             if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
                 return;
             }
-            
+
             $.ajax({
                 url: '{{ route("site.appointment.employees-by-service") }}',
                 method: 'GET',
@@ -1425,21 +1562,21 @@
                     if (response.success && response.employees) {
                         const $select = $('#employee_id');
                         const currentValue = $select.val();
-                        
+
                         // Clear existing options except the first one
                         $select.find('option:not(:first)').remove();
-                        
+
                         // Add new options
                         if (response.employees.length > 0) {
                             response.employees.forEach(function(employee) {
                                 const $option = $('<option></option>')
                                     .attr('value', employee.id)
                                     .text(employee.display_name);
-                                
+
                                 if (currentValue == employee.id) {
                                     $option.attr('selected', 'selected');
                                 }
-                                
+
                                 $select.append($option);
                             });
                         } else {
@@ -1453,7 +1590,7 @@
                 }
             });
         }
-        
+
         // Function to load employees for slider
         function loadEmployeesForCarousel() {
             const serviceIds = [];
@@ -1462,21 +1599,21 @@
                     serviceIds.push($(this).val());
                 }
             });
-            
+
             const serviceVariants = [];
             $('input[name="service_variants[]"]').each(function() {
                 if ($(this).val()) {
                     serviceVariants.push($(this).val());
                 }
             });
-            
+
             const comboIds = [];
             $('input[name="combo_id[]"]').each(function() {
                 if ($(this).val()) {
                     comboIds.push($(this).val());
                 }
             });
-            
+
             // Kiểm tra xem có dịch vụ nào được chọn không
             if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
                 const $slider = $('.employee-slider');
@@ -1485,9 +1622,9 @@
                 $('#employee_id').val('');
                 return;
             }
-            
+
             const currentEmployeeId = $('#employee_id').val();
-            
+
             $.ajax({
                 url: '{{ route("site.appointment.employees-by-service") }}',
                 method: 'GET',
@@ -1503,31 +1640,39 @@
                     if (response.success && response.employees) {
                         const $slider = $('.employee-slider');
                         $slider.empty();
-                        
+
                         // Thêm employees vào slider
                         if (response.employees.length > 0) {
                             response.employees.forEach(function(employee) {
                                 const avatarUrl = employee.avatar ? '{{ asset("legacy/images/avatars") }}/' + employee.avatar : '';
                                 const isSelected = currentEmployeeId == employee.id;
-                                
+
                                 let itemHtml = '<div class="employee-item-btn' + (isSelected ? ' selected' : '') + '" data-employee-id="' + employee.id + '" data-employee-name="' + employee.name + '" data-employee-position="' + (employee.position || '') + '" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">';
                                 itemHtml += '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isSelected ? '#007bff' : '#ddd') + ';">';
-                                
+
                                 if (avatarUrl) {
                                     itemHtml += '<img src="' + avatarUrl + '" alt="' + employee.name + '" style="width: 100%; height: 100%; object-fit: cover;">';
                                 } else {
                                     itemHtml += '<div style="width: 100%; height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center;"><i class="fa fa-user" style="font-size: 40px; color: #999;"></i></div>';
                                 }
-                                
+
                                 itemHtml += '</div>';
                                 itemHtml += '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">' + employee.name + '</div>';
-                                
+
                                 // Đã bỏ phần hiển thị chức vụ
-                                
+
                                 itemHtml += '</div>';
                                 $slider.append(itemHtml);
                             });
-                            
+
+                            // Đảm bảo container hiển thị sau khi load employees
+                            $('#employeeContainer').show();
+
+                            // Debug: Log số lượng employees đã load
+                            console.log('=== DEBUG: Employees loaded ===');
+                            console.log('Total employees:', response.employees.length);
+                            console.log('Employee buttons in DOM:', $('.employee-item-btn').length);
+
                             // Nếu employee đã chọn không còn trong danh sách, reset
                             if (currentEmployeeId && !response.employees.find(e => e.id == currentEmployeeId)) {
                                 $('#employee_id').val('');
@@ -1546,7 +1691,7 @@
                 }
             });
         }
-        
+
         // Employee Selector - Toggle container
         $('#employeeToggleBtn').on('click', function(e) {
             e.preventDefault();
@@ -1554,7 +1699,7 @@
             e.stopImmediatePropagation();
             const container = $('#employeeContainer');
             const chevron = $('.employee-chevron');
-            
+
             // Chỉ toggle khi click vào toggle button, không toggle khi click vào container
             if (container.is(':visible')) {
                 container.slideUp(300, function() {
@@ -1569,11 +1714,11 @@
                     }
                 });
             }
-            
+
             return false;
         });
-        
-        
+
+
         // Xử lý old value nếu có
         const oldEmployeeId = $('#employee_id').val();
         if (oldEmployeeId) {
@@ -1583,60 +1728,66 @@
                 selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
             }
         }
-        
+
         // Xử lý chọn employee - đặt priority cao để chạy trước document click
-        $('#employeeContainer').on('click', '.employee-item-btn', function(e) {
+        // Sử dụng $(document) để đảm bảo event handler hoạt động ngay cả khi container chưa tồn tại
+        $(document).on('click', '.employee-item-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            
+
             const employeeId = $(this).data('employee-id');
             const employeeName = $(this).data('employee-name');
-            
+
+            console.log('=== DEBUG: Employee button clicked ===');
+            console.log('Employee ID:', employeeId);
+            console.log('Employee Name:', employeeName);
+
             if (!employeeId) {
+                console.error('ERROR: No employee ID found!');
                 return false;
             }
-            
+
             // Cập nhật hidden input
             $('#employee_id').val(employeeId);
-            
+
             // Debug: Log để kiểm tra
             console.log('Employee selected:', {
                 employeeId: employeeId,
                 employeeIdValue: $('#employee_id').val()
             });
-            
+
             // Xóa selected của tất cả items
             $('.employee-item-btn').removeClass('selected');
             $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
-            
+
             // Thêm selected cho item được chọn
             $(this).addClass('selected');
             $(this).find('.employee-avatar-wrapper').css('border-color', '#007bff');
-            
+
             // Clear error và remove invalid class
             $('#employee-error').hide();
             $('#employeeToggleBtn').css('color', '');
-            
+
             // Trigger change event để load time slots nếu đã chọn ngày
             $('#employee_id').trigger('change');
-            
+
             // Đảm bảo container vẫn mở
             $('#employeeContainer').show();
-            
+
             return false;
         });
-        
+
         // Navigation buttons cho employee slider
         $('#employeeContainer').on('click', '.employee-nav-prev', function(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            
+
             const $slider = $('.employee-slider');
             const containerWidth = $('.employee-grid').width();
             const currentTransform = $slider.css('transform');
-            
+
             let currentX = 0;
             if (currentTransform && currentTransform !== 'none') {
                 const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
@@ -1644,24 +1795,24 @@
                     currentX = parseFloat(matrix[1].split(',')[4]) || 0;
                 }
             }
-            
+
             const newX = Math.min(0, currentX + containerWidth);
             $slider.css('transform', 'translateX(' + newX + 'px)');
-            
+
             return false;
         });
-        
+
         $('#employeeContainer').on('click', '.employee-nav-next', function(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            
+
             const $slider = $('.employee-slider');
             const $container = $('.employee-grid');
             const containerWidth = $container.width();
             const sliderWidth = $slider[0].scrollWidth;
             const currentTransform = $slider.css('transform');
-            
+
             let currentX = 0;
             if (currentTransform && currentTransform !== 'none') {
                 const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
@@ -1669,14 +1820,14 @@
                     currentX = parseFloat(matrix[1].split(',')[4]) || 0;
                 }
             }
-            
+
             const maxX = -(sliderWidth - containerWidth);
             const newX = Math.max(maxX, currentX - containerWidth);
             $slider.css('transform', 'translateX(' + newX + 'px)');
-            
+
             return false;
         });
-        
+
         // Clear error when user starts typing/selecting (clear ngay khi có giá trị)
         $('input[name="name"]').on('input keyup change paste', function() {
             const value = $(this).val();
@@ -1685,7 +1836,7 @@
                 $(this).removeClass('is-invalid');
             }
         });
-        
+
         $('input[name="phone"]').on('input keyup change paste', function() {
             const value = $(this).val();
             if (value && value.trim().length > 0) {
@@ -1693,7 +1844,7 @@
                 $(this).removeClass('is-invalid');
             }
         });
-        
+
         // Clear error khi focus vào input (nếu đã có giá trị)
         $('input[name="name"], input[name="phone"]').on('focus', function() {
             const value = $(this).val();
@@ -1703,17 +1854,17 @@
                 $(this).removeClass('is-invalid');
             }
         });
-        
+
         $('#employee_id').on('change', function() {
             const employeeId = $(this).val();
             const $appointmentDate = $('#appointment_date');
-            
+
             if (employeeId) {
                 // Enable input ngày khi đã chọn kỹ thuật viên
                 $('#employee-error').hide();
                 $(this).removeClass('is-invalid');
                 $appointmentDate.prop('disabled', false);
-                
+
                 // Load time slots nếu đã chọn ngày
                 if ($appointmentDate.val()) {
                     loadAvailableTimeSlots();
@@ -1728,7 +1879,7 @@
                 // Disable input ngày và reset khi bỏ chọn kỹ thuật viên
                 $appointmentDate.prop('disabled', true).val('').removeClass('is-invalid');
                 $('#appointment_date-error').hide();
-                
+
                 // Reset time slots
                 $('.time-slot-container').hide();
                 $('#time_slot_message').text('Vui lòng chọn kỹ thuật viên trước').show();
@@ -1736,7 +1887,7 @@
                 $('#word_time_id').val('');
             }
         });
-        
+
         $('#appointment_date').on('change input', function() {
             const dateValue = $(this).val();
             if (dateValue && dateValue.trim() !== '') {
@@ -1752,7 +1903,7 @@
                 $(this).addClass('is-invalid');
             }
         });
-        
+
         // Clear service error when service is selected (check on page load only)
         function checkAndClearServiceError() {
             // Kiểm tra service_id[] (array)
@@ -1762,7 +1913,7 @@
                     serviceIds.push($(this).val());
                 }
             });
-            
+
             // Kiểm tra service_variants[] (array)
             const serviceVariants = [];
             $('input[name="service_variants[]"]').each(function() {
@@ -1770,7 +1921,7 @@
                     serviceVariants.push($(this).val());
                 }
             });
-            
+
             // Kiểm tra combo_id[] (array)
             const comboIds = [];
             $('input[name="combo_id[]"]').each(function() {
@@ -1778,59 +1929,162 @@
                     comboIds.push($(this).val());
                 }
             });
-            
+
             if (serviceIds.length > 0 || serviceVariants.length > 0 || comboIds.length > 0) {
                 $('#service-error').hide();
             }
         }
-        
+
         // Check on page load only (not continuously)
         checkAndClearServiceError();
-        
+
+        // Reload time slots khi total_duration thay đổi (khi chọn/xóa dịch vụ)
+        // Sử dụng MutationObserver để theo dõi thay đổi của input total_duration_minutes
+        const totalDurationInput = document.getElementById('total_duration_minutes');
+        if (totalDurationInput) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                        // Khi value thay đổi, reload time slots nếu đã chọn employee và date
+                        const employeeId = $('#employee_id').val();
+                        const appointmentDate = $('#appointment_date').val();
+                        if (employeeId && appointmentDate) {
+                            console.log('Total duration changed, reloading time slots...');
+                            loadAvailableTimeSlots();
+                        }
+                    }
+                });
+            });
+
+            observer.observe(totalDurationInput, {
+                attributes: true,
+                attributeFilter: ['value']
+            });
+
+            // Cũng theo dõi thay đổi giá trị trực tiếp (khi set bằng JavaScript)
+            let lastValue = totalDurationInput.value;
+            setInterval(function() {
+                const currentValue = totalDurationInput.value;
+                if (currentValue !== lastValue) {
+                    lastValue = currentValue;
+                    const employeeId = $('#employee_id').val();
+                    const appointmentDate = $('#appointment_date').val();
+                    if (employeeId && appointmentDate) {
+                        console.log('Total duration changed (detected by interval), reloading time slots...');
+                        loadAvailableTimeSlots();
+                    }
+                }
+            }, 500);
+        }
+
         // Clear time slot error when a time slot is selected
         $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
             $('#time_slot-error').hide();
         });
-        
+
         // Format time from HH:MM to HHhMM
         function formatTimeSlot(time) {
             return time.replace(':', 'h');
         }
 
         // Load available time slots when employee or date changes
+        // Debounce để tránh nhiều request đồng thời gây flicker
+        let loadTimeSlotsTimeout = null;
+        let isLoadingTimeSlots = false;
+
         function loadAvailableTimeSlots() {
+            // Clear timeout nếu có
+            if (loadTimeSlotsTimeout) {
+                clearTimeout(loadTimeSlotsTimeout);
+            }
+
+            // BỎ QUA kiểm tra isLoadingTimeSlots để không chặn các request hợp lệ
+            // Chỉ dùng debounce với timeout thay vì chặn hoàn toàn
+
             const employeeId = $('#employee_id').val();
             const appointmentDate = $('#appointment_date').val();
             const timeSlotGrid = $('#time_slot_grid');
             const timeSlotMessage = $('#time_slot_message');
             const timeSlotHidden = $('#time_slot');
             const wordTimeIdInput = $('#word_time_id');
-            
+
             // Reset
             $('.time-slot-container').hide();
             $('.time-slot-slider').empty();
             timeSlotMessage.show();
             timeSlotHidden.val('');
             wordTimeIdInput.val('');
-            
+
             // Check if employee is selected
             if (!employeeId) {
                 timeSlotMessage.text('Vui lòng chọn kỹ thuật viên trước');
                 return;
             }
-            
+
             // Check if date is selected
             if (!appointmentDate) {
                 timeSlotMessage.text('Vui lòng chọn ngày trước');
                 return;
             }
-            
+
             // Show loading
             timeSlotMessage.text('Đang tải khung giờ...');
-            
+
             // Lấy tổng thời gian dịch vụ đã chọn
-            const totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
-            
+            let totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
+
+            // Nếu không có total_duration, tính từ các dịch vụ đã chọn
+            if (totalDuration === 0) {
+                // Tính từ service variants
+                let duration = 0;
+                $('input[name="service_variants[]"]').each(function() {
+                    const variantId = $(this).val();
+                    if (variantId) {
+                        // Lấy duration từ data attribute hoặc default 60
+                        const variantDuration = $(this).data('duration') || 60;
+                        duration += variantDuration;
+                    }
+                });
+
+                // Tính từ services
+                $('input[name="service_id[]"]').each(function() {
+                    const serviceId = $(this).val();
+                    if (serviceId) {
+                        const serviceDuration = $(this).data('duration') || 60;
+                        duration += serviceDuration;
+                    }
+                });
+
+                // Tính từ combos
+                $('input[name="combo_id[]"]').each(function() {
+                    const comboId = $(this).val();
+                    if (comboId) {
+                        const comboDuration = $(this).data('duration') || 60;
+                        duration += comboDuration;
+                    }
+                });
+
+                if (duration > 0) {
+                    totalDuration = duration;
+                }
+            }
+
+            // Debug log để kiểm tra total_duration
+            console.log('=== DEBUG: Loading time slots ===');
+            console.log('Total duration input value:', $('#total_duration_minutes').val());
+            console.log('Total duration (parsed):', totalDuration);
+            console.log('Employee ID:', employeeId);
+            console.log('Appointment date:', appointmentDate);
+
+            // Đánh dấu đang load và set timeout để reset nếu request bị treo
+            isLoadingTimeSlots = true;
+            const loadingTimeout = setTimeout(function() {
+                if (isLoadingTimeSlots) {
+                    console.warn('=== WARNING: Time slots request timeout, resetting flag ===');
+                    isLoadingTimeSlots = false;
+                }
+            }, 10000); // Reset sau 10 giây nếu request không hoàn thành
+
             // Load time slots via AJAX
             $.ajax({
                 url: '{{ route("site.appointment.available-time-slots") }}',
@@ -1843,25 +2097,42 @@
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
+                timeout: 8000, // Timeout sau 8 giây
                 success: function(response) {
+                    // Clear timeout và reset flag sau khi nhận response
+                    clearTimeout(loadingTimeout);
+                    isLoadingTimeSlots = false;
+
+                    // Debug log response
+                    console.log('=== DEBUG: Time slots response ===');
+                    console.log('Response:', response);
+                    if (response.time_slots) {
+                        const slot1130 = response.time_slots.find(s => s.time === '11:30');
+                        if (slot1130) {
+                            console.log('Slot 11:30:', slot1130);
+                            console.log('Available:', slot1130.available);
+                            console.log('Conflict reason:', slot1130.conflict_reason);
+                        }
+                    }
+
                     // LUÔN hiển thị tất cả slots từ 7h-22h (30 slots), kể cả khi không có lịch làm việc
                     if (response.success && response.time_slots && response.time_slots.length > 0) {
                         const currentlySelectedTime = timeSlotHidden.val();
                         let availableCount = 0;
-                        
+
                         // Sort time slots by time
                         const sortedSlots = response.time_slots.sort(function(a, b) {
                             return a.time.localeCompare(b.time);
                         });
-                        
+
                         const $slider = $('.time-slot-slider');
                         $slider.empty();
-                        
+
                         // Layout responsive: Desktop 11 cột x 3 hàng, Mobile tự động điều chỉnh
                         // Hiển thị tất cả slots từ 7h-22h (30 slots), còn 3 slots trống ở cuối
                         const isMobile = window.innerWidth <= 768;
                         const isSmallMobile = window.innerWidth <= 480;
-                        
+
                         let fixedColumns, fixedRows;
                         if (isSmallMobile) {
                             fixedColumns = 6;
@@ -1873,33 +2144,113 @@
                             fixedColumns = 11;
                             fixedRows = 3;
                         }
-                        
+
                         const totalSlots = fixedColumns * fixedRows;
                         const slotsPerPage = totalSlots;
-                        
+
                         // Cập nhật CSS grid động dựa trên kích thước màn hình
                         $('#dynamic-time-slot-style').remove();
                         $('<style>').prop('id', 'dynamic-time-slot-style').html(
                             '.time-slot-page { grid-template-columns: repeat(' + fixedColumns + ', 1fr) !important; grid-template-rows: repeat(' + fixedRows + ', 1fr) !important; }'
                         ).appendTo('head');
-                        
+
                         // Tạo một page duy nhất với layout 11 cột x 3 hàng
                         const currentPage = $('<div></div>').addClass('time-slot-page');
                         $slider.append(currentPage);
-                        
-                        // Thêm tất cả slots từ 7h-22h (30 slots)
-                        sortedSlots.forEach(function(slot) {
-                            const isAvailable = slot.available !== false;
+
+                        // Hàm so sánh thời gian (HH:MM format)
+                        function compareTime(time1, time2) {
+                            const [h1, m1] = time1.split(':').map(Number);
+                            const [h2, m2] = time2.split(':').map(Number);
+                            const total1 = h1 * 60 + m1;
+                            const total2 = h2 * 60 + m2;
+                            return total1 - total2;
+                        }
+
+                        // Kiểm tra xem có đơn đã hoàn thành không và lấy thời gian kết thúc
+                        // Nếu có, đánh dấu các slot <= thời gian kết thúc đơn là unavailable (không ẩn, chỉ gray out)
+                        let completedAppointmentEndTime = null;
+                        if (response.completed_appointment_end_time) {
+                            completedAppointmentEndTime = response.completed_appointment_end_time; // Format: "10:00"
+                            console.log('=== DEBUG: Completed appointment end time ===', completedAppointmentEndTime);
+                        }
+
+                        // Tạo danh sách đầy đủ 30 slots từ 7h-22h (30 phút một slot)
+                        const allTimeSlots = [];
+                        for (let hour = 7; hour <= 22; hour++) {
+                            for (let minute = 0; minute < 60; minute += 30) {
+                                if (hour === 22 && minute > 0) break; // Dừng ở 22h00
+                                const timeString = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                                allTimeSlots.push(timeString);
+                            }
+                        }
+
+                        // Merge slots từ backend với danh sách đầy đủ
+                        const completeSlots = allTimeSlots.map(function(timeString) {
+                            const existingSlot = sortedSlots.find(s => s.time === timeString);
+                            if (existingSlot) {
+                                // Sử dụng slot từ backend
+                                return existingSlot;
+                            } else {
+                                // Tạo slot mới nếu chưa có
+                                return {
+                                    time: timeString,
+                                    display: timeString,
+                                    word_time_id: null,
+                                    available: false,
+                                    conflict_reason: 'Không có trong ca làm việc'
+                                };
+                            }
+                        });
+
+                        // Đánh dấu các slot <= completed appointment end time là unavailable
+                        completeSlots.forEach(function(slot) {
+                            if (completedAppointmentEndTime && compareTime(slot.time, completedAppointmentEndTime) <= 0) {
+                                slot.available = false;
+                                if (!slot.conflict_reason) {
+                                    slot.conflict_reason = 'Đã qua thời gian';
+                                }
+                            }
+                        });
+
+                        // Đếm số slot đã render để debug
+                        let renderedSlotCount = 0;
+
+                        // Render tất cả 30 slots - KHÔNG ẨN, CHỈ GRAY OUT
+                        completeSlots.forEach(function(slot) {
+                            // Nếu có đơn đã hoàn thành, đánh dấu các slot <= thời gian kết thúc đơn là unavailable
+                            // Ví dụ: Đơn hoàn thành lúc 10h00 → đánh dấu 7h, 7h30, 8h, 8h30, 9h, 9h30, 10h là unavailable
+                            // NHƯNG VẪN HIỂN THỊ TẤT CẢ SLOTS (chỉ gray out)
+                            if (completedAppointmentEndTime && compareTime(slot.time, completedAppointmentEndTime) <= 0) {
+                                // Slot này <= thời gian kết thúc đơn → đánh dấu unavailable (không ẩn)
+                                slot.available = false;
+                                if (!slot.conflict_reason) {
+                                    slot.conflict_reason = 'Đã qua thời gian';
+                                }
+                            }
+
+                            // Kiểm tra available chính xác: phải là true (không phải false, null, undefined)
+                            const isAvailable = slot.available === true;
                             const formattedTime = formatTimeSlot(slot.time);
                             const isSelected = currentlySelectedTime === slot.time;
-                            
+
+                            // Debug log cho slot 11:30
+                            if (slot.time === '11:30') {
+                                console.log('=== DEBUG: Rendering slot 11:30 ===');
+                                console.log('Slot object:', slot);
+                                console.log('slot.available:', slot.available);
+                                console.log('slot.available type:', typeof slot.available);
+                                console.log('isAvailable (calculated):', isAvailable);
+                                console.log('slot.conflict_reason:', slot.conflict_reason);
+                            }
+
                             const btn = $('<button></button>')
                                 .attr('type', 'button')
                                 .addClass('time-slot-btn')
                                 .attr('data-time', slot.time)
                                 .attr('data-word-time-id', slot.word_time_id)
                                 .text(formattedTime);
-                            
+
                             if (!isAvailable) {
                                 btn.addClass('unavailable');
                                 // Thêm tooltip nếu có lý do trùng lịch
@@ -1908,6 +2259,26 @@
                                     btn.attr('data-toggle', 'tooltip');
                                     btn.attr('data-placement', 'top');
                                 }
+
+                                // Debug log cho slot 11:30
+                                if (slot.time === '11:30') {
+                                    console.log('=== DEBUG: Slot 11:30 is unavailable ===');
+                                    console.log('Available:', isAvailable);
+                                    console.log('Conflict reason:', slot.conflict_reason);
+                                    console.log('Button classes:', btn.attr('class'));
+                                    console.log('Button title:', btn.attr('title'));
+                                }
+
+                                // Ngăn chặn click vào slot unavailable
+                                btn.on('click', function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    console.log('Blocked click on unavailable slot:', slot.time);
+                                    if (slot.conflict_reason) {
+                                        alert(slot.conflict_reason);
+                                    }
+                                    return false;
+                                });
                             } else {
                                 availableCount++;
                                 if (isSelected) {
@@ -1916,17 +2287,26 @@
                                     wordTimeIdInput.val(slot.word_time_id);
                                 }
                             }
-                            
+
                             currentPage.append(btn);
+                            renderedSlotCount++;
                         });
-                        
+
+                        // Debug log số slot đã render
+                        console.log('=== DEBUG: Slot rendering summary ===');
+                        console.log('Total slots in response:', sortedSlots.length);
+                        console.log('Complete slots (30 slots):', completeSlots.length);
+                        console.log('Rendered slots:', renderedSlotCount);
+                        console.log('Completed appointment end time:', completedAppointmentEndTime || 'null');
+
                         // Khởi tạo tooltip cho các slot unavailable có conflict_reason
                         if (typeof $.fn.tooltip !== 'undefined') {
                             $('.time-slot-btn.unavailable[data-toggle="tooltip"]').tooltip();
                         }
-                        
+
                         // Thêm các empty slots ở cuối để đủ 33 slots (11 cột x 3 hàng)
-                        const remainingSlots = totalSlots - sortedSlots.length;
+                        // Lưu ý: remainingSlots phải tính dựa trên số slot đã render
+                        const remainingSlots = totalSlots - renderedSlotCount;
                         for (let i = 0; i < remainingSlots; i++) {
                             const emptyBtn = $('<button></button>')
                                 .attr('type', 'button')
@@ -1937,31 +2317,33 @@
                                 });
                             currentPage.append(emptyBtn);
                         }
-                        
+
                         // LUÔN hiển thị time slot container để người dùng thấy tất cả slots từ 7h-22h
                         // (kể cả các slots unavailable - sẽ được đánh dấu xám)
                         $('.time-slot-container').show();
-                        
+
                         // Đảm bảo slider hiển thị tất cả, không scroll
                         $('.time-slot-slider').css({
                             'width': '100%',
                             'transform': 'none'
                         });
-                        
+
                         // Ẩn các nút navigation vì hiển thị tất cả slots cùng lúc (11 cột x 3 hàng)
                         $('.time-slot-nav-btn').hide();
-                        
+
                         if (availableCount === 0) {
                             // Nếu không có slot nào available, hiển thị thông báo nhưng vẫn show container với tất cả slots
                             timeSlotMessage.text('Nhân viên này không có ca làm việc vào ngày đã chọn. Tất cả khung giờ đều không khả dụng.').show();
                         } else {
                             timeSlotMessage.hide();
                         }
-                        
+
                         // Không cần update navigation buttons vì đã ẩn
                         // updateNavigationButtons();
                     } else {
                         // Nếu không có time_slots từ server (lỗi), vẫn hiển thị thông báo
+                        clearTimeout(loadingTimeout);
+                        isLoadingTimeSlots = false; // Reset flag
                         $('.time-slot-container').hide();
                         if (employeeId) {
                             timeSlotMessage.text(response.message || 'Không thể tải khung giờ. Vui lòng thử lại.');
@@ -1972,15 +2354,18 @@
                         wordTimeIdInput.val('');
                     }
                 },
-                error: function(xhr) {
+                error: function(xhr, status, error) {
+                    // Reset flag khi có lỗi
+                    clearTimeout(loadingTimeout);
+                    isLoadingTimeSlots = false;
+                    console.error('Error loading time slots:', error);
                     $('.time-slot-container').hide();
-                    let errorMessage = 'Có lỗi xảy ra khi tải khung giờ';
-                    
+
+                    let errorMessage = 'Không thể tải khung giờ. Vui lòng thử lại.';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
-                    
-                    timeSlotMessage.text(errorMessage);
+                    timeSlotMessage.text(errorMessage).show();
                 }
             });
         }
@@ -1998,7 +2383,7 @@
             const $slider = $('.time-slot-slider');
             const containerWidth = $('.time-slot-container').width();
             const currentTransform = $slider.css('transform');
-            
+
             let currentX = 0;
             if (currentTransform && currentTransform !== 'none') {
                 const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
@@ -2006,10 +2391,10 @@
                     currentX = parseFloat(matrix[1].split(',')[4]) || 0;
                 }
             }
-            
+
             const newX = Math.min(0, currentX + containerWidth);
             $slider.css('transform', 'translateX(' + newX + 'px)');
-            
+
             setTimeout(updateNavigationButtons, 300);
         });
 
@@ -2019,7 +2404,7 @@
             const containerWidth = $container.width();
             const sliderWidth = $slider[0].scrollWidth;
             const currentTransform = $slider.css('transform');
-            
+
             let currentX = 0;
             if (currentTransform && currentTransform !== 'none') {
                 const matrix = currentTransform.match(/matrix\(([^)]+)\)/);
@@ -2027,39 +2412,39 @@
                     currentX = parseFloat(matrix[1].split(',')[4]) || 0;
                 }
             }
-            
+
             const maxX = -(sliderWidth - containerWidth);
             const newX = Math.max(maxX, currentX - containerWidth);
             $slider.css('transform', 'translateX(' + newX + 'px)');
-            
+
             setTimeout(updateNavigationButtons, 300);
         });
-        
+
         // Function to calculate and display estimated completion time
         function updateEstimatedCompletionTime() {
             const selectedTime = $('#time_slot').val();
             const totalDurationMinutes = parseInt($('#total_duration_minutes').val()) || 0;
-            
+
             if (selectedTime && totalDurationMinutes > 0) {
                 // Parse selected time (format: HH:MM)
                 const [startHours, startMinutes] = selectedTime.split(':').map(Number);
-                
+
                 // Calculate end time: đơn giản cộng phút
                 let totalMinutes = (startHours * 60) + startMinutes + totalDurationMinutes;
-                
+
                 // Tính giờ và phút kết thúc
                 let endHours = Math.floor(totalMinutes / 60);
                 let endMinutes = totalMinutes % 60;
-                
+
                 // Xử lý trường hợp vượt quá 24h (nếu cần)
                 if (endHours >= 24) {
                     endHours = endHours % 24;
                 }
-                
+
                 // Format times: 7h00, 8h30, etc.
                 const startTimeStr = String(startHours).padStart(2, '0') + 'h' + String(startMinutes).padStart(2, '0');
                 const endTimeStr = String(endHours).padStart(2, '0') + 'h' + String(endMinutes).padStart(2, '0');
-                
+
                 // Update display
                 $('#start_time_display').text(startTimeStr);
                 $('#end_time_display').text(endTimeStr);
@@ -2068,7 +2453,7 @@
                 $('#estimated_completion_time').hide();
             }
         }
-        
+
         // Handle time slot button click
         $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
             // Kiểm tra xem đã chọn kỹ thuật viên chưa
@@ -2078,20 +2463,20 @@
                 $('.time-slot-container').hide();
                             return false;
                         }
-                        
+
             // Remove previous selection
             $('.time-slot-btn').removeClass('selected');
-            
+
             // Add selection to clicked button
             $(this).addClass('selected');
-            
+
             // Clear time slot error
             $('#time_slot-error').hide();
-            
+
             // Set hidden inputs
             const time = $(this).data('time');
             const wordTimeId = $(this).data('word-time-id');
-            
+
             // Đảm bảo set giá trị đúng
                 if (time) {
                     $('#time_slot').val(time);
@@ -2099,10 +2484,10 @@
                 if (wordTimeId) {
                     $('#word_time_id').val(wordTimeId);
             }
-            
+
             // Update estimated completion time
             updateEstimatedCompletionTime();
-            
+
             // Debug: Log để kiểm tra
             console.log('Time slot selected:', {
                 time: time,
@@ -2111,11 +2496,11 @@
                 wordTimeIdValue: $('#word_time_id').val()
             });
         });
-        
-        
+
+
         // Flag to prevent multiple submissions
         let isSubmitting = false;
-        
+
         // Clear all field errors
         function clearFieldErrors() {
             $('.field-error').hide().find('span').text('');
@@ -2130,12 +2515,12 @@
             // Clear time slot error
             $('#time_slot-error').hide();
         }
-        
+
         // Show error for a specific field - chỉ hiển thị nếu thực sự thiếu giá trị
         function showFieldError(fieldId, message) {
             // Kiểm tra xem field có giá trị không trước khi hiển thị lỗi
             let hasValue = false;
-            
+
             if (fieldId === 'name') {
                 const value = $('#name').val();
                 hasValue = value && value.trim() !== '';
@@ -2152,7 +2537,7 @@
                 const value = $('#word_time_id').val();
                 hasValue = value && value !== '' && value !== '0';
             }
-            
+
             // Chỉ hiển thị lỗi nếu thực sự không có giá trị
             if (!hasValue) {
                 const $errorDiv = $('#' + fieldId + '-error');
@@ -2183,7 +2568,7 @@
                 }
             }
         }
-        
+
         // Show error for service section
         function showServiceError(message) {
             const $errorDiv = $('#service-error');
@@ -2192,41 +2577,43 @@
             // Highlight service section
             $('.selected-service-display, .selected-variants-display, .selected-combo-display, .btn-primary').closest('.mb-2').find('.btn-primary').addClass('is-invalid');
         }
-        
+
         // Validate form before submission
         function validateForm() {
             let isValid = true;
-            
+
             // Clear previous errors TRƯỚC KHI validate
             clearFieldErrors();
-            
+
             // Clear errors ngay nếu đã có giá trị (đảm bảo không hiển thị lỗi sai)
             clearErrorsIfHasValue();
-            
-            // Check name - chỉ hiển thị lỗi nếu thực sự trống
-            const name = $('input[name="name"]').val();
+
+            // Check name - BẮT BUỘC (chỉ hiển thị lỗi nếu thực sự trống)
+            const name = $('#name').val();
             const nameTrimmed = name ? String(name).trim() : '';
             if (!nameTrimmed || nameTrimmed === '') {
-                showFieldError('name', 'Mời anh nhập họ và tên');
+                showFieldError('name', 'Vui lòng nhập họ và tên');
                 isValid = false;
             } else {
                 // Clear error nếu đã có giá trị
                 $('#name-error').hide();
                 $('#name').removeClass('is-invalid');
             }
-            
-            // Check phone - chỉ hiển thị lỗi nếu thực sự trống
-            const phone = $('input[name="phone"]').val();
+
+            // Check phone - BẮT BUỘC (chỉ hiển thị lỗi nếu thực sự trống)
+            const phone = $('#phone').val();
             const phoneTrimmed = phone ? String(phone).trim() : '';
             if (!phoneTrimmed || phoneTrimmed === '') {
-                showFieldError('phone', 'Mời anh nhập số điện thoại');
+                showFieldError('phone', 'Vui lòng nhập số điện thoại');
                 isValid = false;
             } else {
                 // Clear error nếu đã có giá trị
                 $('#phone-error').hide();
                 $('#phone').removeClass('is-invalid');
             }
-            
+
+            // Email là TÙY CHỌN - không cần validate
+
             // Check service (at least one must be selected)
             // Kiểm tra service_id[] (array)
             const serviceIds = [];
@@ -2235,7 +2622,7 @@
                     serviceIds.push($(this).val());
                 }
             });
-            
+
             // Kiểm tra service_variants[] (array)
             const serviceVariants = [];
             $('input[name="service_variants[]"]').each(function() {
@@ -2243,7 +2630,7 @@
                     serviceVariants.push($(this).val());
                 }
             });
-            
+
             // Kiểm tra combo_id[] (array)
             const comboIds = [];
             $('input[name="combo_id[]"]').each(function() {
@@ -2251,7 +2638,7 @@
                     comboIds.push($(this).val());
                 }
             });
-            
+
             // Kiểm tra xem có ít nhất một dịch vụ được chọn không
             if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
                 const $errorDiv = $('#service-error');
@@ -2261,12 +2648,12 @@
                 }
                 isValid = false;
             }
-            
+
             // Check employee - kiểm tra kỹ hơn
             const employeeId = $('#employee_id').val();
             const employeeIdTrimmed = employeeId ? String(employeeId).trim() : '';
             const hasEmployeeId = employeeIdTrimmed && employeeIdTrimmed !== '' && employeeIdTrimmed !== '0' && employeeIdTrimmed !== 'null' && employeeIdTrimmed !== 'undefined';
-            
+
             if (!hasEmployeeId) {
                 showFieldError('employee', 'Mời anh chọn kỹ thuật viên');
                 isValid = false;
@@ -2275,12 +2662,12 @@
                 $('#employee-error').hide();
                 $('#employeeToggleBtn').css('color', '');
             }
-            
+
             // Check appointment date - kiểm tra kỹ hơn
             const appointmentDate = $('#appointment_date').val();
             const appointmentDateTrimmed = appointmentDate ? String(appointmentDate).trim() : '';
             const hasAppointmentDate = appointmentDateTrimmed && appointmentDateTrimmed !== '';
-            
+
             if (!hasAppointmentDate) {
                 showFieldError('appointment_date', 'Mời anh chọn ngày đặt lịch');
                 isValid = false;
@@ -2289,12 +2676,12 @@
                 $('#appointment_date-error').hide();
                 $('#appointment_date').removeClass('is-invalid');
             }
-            
+
             // Check time slot - kiểm tra kỹ hơn
             const wordTimeId = $('#word_time_id').val();
             const wordTimeIdTrimmed = wordTimeId ? String(wordTimeId).trim() : '';
             const hasWordTimeId = wordTimeIdTrimmed && wordTimeIdTrimmed !== '' && wordTimeIdTrimmed !== '0' && wordTimeIdTrimmed !== 'null' && wordTimeIdTrimmed !== 'undefined';
-            
+
             if (!hasWordTimeId) {
                 showFieldError('time_slot', 'Mời anh chọn giờ đặt lịch');
                 isValid = false;
@@ -2302,7 +2689,7 @@
                 // Clear error nếu đã chọn
                 $('#time_slot-error').hide();
             }
-            
+
             // Debug log để kiểm tra
             console.log('Validation details:', {
                 hasName: nameTrimmed !== '',
@@ -2313,39 +2700,39 @@
                 hasWordTimeId: hasWordTimeId,
                 isValid: isValid
             });
-            
+
             return isValid;
         }
-        
+
         // Handle form submission via AJAX (remove previous listeners to prevent duplicates)
         $('#appointmentForm').off('submit').on('submit', function(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            
+
             // Prevent multiple submissions - kiểm tra ngay từ đầu
             if (isSubmitting) {
                 console.log('Form is already submitting, ignoring duplicate submission');
                 return false;
             }
-            
+
             // Kiểm tra xem đã có thông báo thành công chưa (tránh submit lại)
             if ($('.alert-success').length > 0) {
                 console.log('Success message already shown, ignoring submission');
                 return false;
             }
-            
+
             // Remove ALL previous error messages and alerts
             $('.validation-error-alert, .alert-danger, .alert-warning').remove();
-            
+
             // Get form reference
             const $form = $(this);
-            
+
             // Validate form - validation will get values directly from DOM
             console.log('Starting validation...');
             const isValid = validateForm();
             console.log('Validation result:', isValid);
-            
+
             // Debug: Log tất cả giá trị để kiểm tra
             console.log('Form values:', {
                 name: $('#name').val(),
@@ -2359,7 +2746,7 @@
                 wordTimeId: $('#word_time_id').val(),
                 timeSlot: $('#time_slot').val()
             });
-            
+
             if (!isValid) {
                 console.log('Validation failed, showing errors');
                 // Scroll to first error
@@ -2369,56 +2756,67 @@
                         scrollTop: firstError.offset().top - 100
                     }, 300);
                 }
-                
+
                 // Prevent form submission
                 isSubmitting = false;
                 return false;
             }
-            
+
             console.log('Validation passed, submitting form...');
-            
+
             // If validation passes, continue with submission
-            
+
             // Remove previous messages
             $('.success-message, .error-message, .alert-success').remove();
-            
+
             // Set submitting flag NGAY LẬP TỨC để ngăn chặn submit lại
             isSubmitting = true;
-            
+
             // Chuẩn bị dữ liệu TRƯỚC KHI disable form
             const formDataObj = {};
-            
+
             // Lấy dữ liệu trực tiếp từ các input (trước khi disable)
+            // Name - BẮT BUỘC
             const name = $('#name').val();
-            if (name && name.trim() !== '') {
-                formDataObj.name = name.trim();
+            const nameTrimmed = name ? String(name).trim() : '';
+            if (nameTrimmed) {
+                formDataObj.name = nameTrimmed;
+            } else {
+                // Nếu name trống, validation đã bắt lỗi ở trên, nhưng vẫn gửi để server validate lại
+                formDataObj.name = '';
             }
-            
+
+            // Phone - BẮT BUỘC
             const phone = $('#phone').val();
-            if (phone && phone.trim() !== '') {
-                formDataObj.phone = phone.trim();
+            const phoneTrimmed = phone ? String(phone).trim() : '';
+            if (phoneTrimmed) {
+                formDataObj.phone = phoneTrimmed;
+            } else {
+                // Nếu phone trống, validation đã bắt lỗi ở trên, nhưng vẫn gửi để server validate lại
+                formDataObj.phone = '';
             }
-            
+
+            // Email - TÙY CHỌN (có thể để trống)
             const email = $('input[name="email"]').val();
             if (email && email.trim() !== '') {
                 formDataObj.email = email.trim();
             }
-            
+
             // Luôn gửi các field required để server có thể validate
             const employeeId = $('#employee_id').val();
             formDataObj.employee_id = employeeId || '';
-            
+
             const appointmentDate = $('#appointment_date').val();
             formDataObj.appointment_date = appointmentDate ? appointmentDate.trim() : '';
-            
+
             const wordTimeId = $('#word_time_id').val();
             formDataObj.word_time_id = wordTimeId || '';
-            
+
             const note = $('textarea[name="note"]').val();
             if (note && note.trim() !== '') {
                 formDataObj.note = note.trim();
             }
-            
+
             // Xử lý service arrays
             // Collect service IDs and remove duplicates
             const serviceIds = [];
@@ -2437,7 +2835,7 @@
             if (serviceIds.length > 0) {
                 formDataObj.service_id = serviceIds;
             }
-            
+
             // Collect service variants and remove duplicates
             const serviceVariants = [];
             const seenVariants = new Set(); // Use Set to track duplicates
@@ -2455,14 +2853,14 @@
             if (serviceVariants.length > 0) {
                 formDataObj.service_variants = serviceVariants;
             }
-            
+
             // Log để debug
             console.log('Service variants collected:', {
                 total_inputs: $('input[name="service_variants[]"]').length,
                 unique_variants: serviceVariants.length,
                 variants: serviceVariants
             });
-            
+
             // Collect combo IDs and remove duplicates
             const comboIds = [];
             const seenComboIds = new Set(); // Use Set to track duplicates
@@ -2480,7 +2878,7 @@
             if (comboIds.length > 0) {
                 formDataObj.combo_id = comboIds;
             }
-            
+
             console.log('Form data object:', formDataObj);
             console.log('Form data keys:', Object.keys(formDataObj));
             console.log('Form data values:', {
@@ -2494,17 +2892,17 @@
                 service_variants: formDataObj.service_variants,
                 combo_id: formDataObj.combo_id
             });
-            
+
             // Disable form và submit button để ngăn chặn submit lại
             const $submitBtn = $('.submit-appointment-btn');
             const originalBtnText = $submitBtn.html();
             $submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
             $form.find('input, button, select, textarea').prop('disabled', true);
-            
+
             // Submit form via AJAX
             // Lấy URL từ route để đảm bảo đúng - sử dụng absolute URL
             const submitUrl = '{{ url(route("site.appointment.store")) }}';
-            
+
             console.log('=== APPOINTMENT SUBMIT DEBUG ===');
             console.log('Submitting to URL:', submitUrl);
             console.log('Form data object:', formDataObj);
@@ -2518,7 +2916,7 @@
             console.log('Name:', formDataObj.name);
             console.log('Phone:', formDataObj.phone);
             console.log('===============================');
-            
+
             $.ajax({
                 url: submitUrl,
                 method: 'POST',
@@ -2533,15 +2931,15 @@
                     if (isSubmitting && response.success) {
                         // Xóa dữ liệu đã lưu trong localStorage sau khi submit thành công
                         localStorage.removeItem('appointmentFormData');
-                        
+
                         // Remove any previous messages (kiểm tra lại)
                         $('.alert-success, .alert-danger, .alert-warning, .validation-error-alert').remove();
-                        
+
                         // Chỉ hiển thị thông báo nếu chưa có
                         if ($('.alert-success').length === 0) {
                             // Extract only the text message without icon
                             let messageText = response.message.replace(/<i[^>]*>.*?<\/i>/gi, '').trim();
-                            
+
                             // Show success message with better styling (chỉ một lần)
                             $('#appointmentForm').prepend(
                                 '<div class="alert alert-success alert-dismissible fade show appointment-success-message" role="alert" style="margin-bottom: 20px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 15px 20px; border-radius: 5px;">' +
@@ -2549,16 +2947,16 @@
                                 '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="float: right; border: none; background: none; font-size: 20px; cursor: pointer;">&times;</button>' +
                                 '</div>'
                             );
-                            
+
                             // Scroll to top to show message
                             $('html, body').animate({ scrollTop: 0 }, 300);
                         }
-                        
+
                         // Prevent any further submissions - disable form hoàn toàn
                         isSubmitting = true;
                         $('#appointmentForm').off('submit');
                         $form.find('input, button, select, textarea').prop('disabled', true);
-                        
+
                         // Redirect to checkout page immediately
                         if (response.redirect_url) {
                             window.location.href = response.redirect_url;
@@ -2577,7 +2975,7 @@
                     isSubmitting = false;
                     $submitBtn.prop('disabled', false).html(originalBtnText);
                     $form.find('input, button, select, textarea').prop('disabled', false);
-                    
+
                     console.log('AJAX Error:', xhr);
                     console.log('Request URL:', submitUrl);
                     console.log('Request Data:', formDataObj);
@@ -2585,25 +2983,25 @@
                     console.log('Status:', xhr.status);
                     console.log('Status Text:', xhr.statusText);
                     console.log('Response Text:', xhr.responseText);
-                    
+
                     // Handle validation errors - display inline errors
                     if (xhr.responseJSON && xhr.responseJSON.errors) {
                         // Clear all errors trước
                         clearFieldErrors();
-                        
+
                         console.log('Server validation errors:', xhr.responseJSON.errors);
-                        
+
                         $.each(xhr.responseJSON.errors, function(key, value) {
                             if (value && value.length > 0) {
                                 console.log('Error for field:', key, 'Message:', value[0]);
-                                
+
                                     // Map backend field names to frontend field IDs
                                     let fieldId = key;
                                     if (key === 'employee_id') fieldId = 'employee';
                                     if (key === 'appointment_date') fieldId = 'appointment_date';
                                     if (key === 'time_slot' || key === 'word_time_id') fieldId = 'time_slot';
                                     if (key === 'service_id' || key === 'service_id.*') fieldId = 'service';
-                                    
+
                                     // Hiển thị lỗi
                                     const $errorDiv = $('#' + fieldId + '-error');
                                     if ($errorDiv.length) {
@@ -2613,7 +3011,7 @@
                                         // Nếu không tìm thấy error div, thử showFieldError
                                         showFieldError(fieldId, value[0]);
                                     }
-                                    
+
                                     // Thêm invalid class cho field
                                     const $field = $('#' + fieldId);
                                     if ($field.length) {
@@ -2621,7 +3019,7 @@
                                 }
                             }
                         });
-                        
+
                         // Scroll to first error
                         const firstError = $('.field-error:visible').first();
                         if (firstError.length) {
@@ -2644,7 +3042,7 @@
                         // Nếu không có errors từ server, có thể là lỗi khác
                         console.error('Unexpected error:', xhr);
                         let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
-                        
+
                         // Kiểm tra các loại lỗi khác nhau
                         if (xhr.responseJSON) {
                             if (xhr.responseJSON.message) {
@@ -2659,7 +3057,7 @@
                         } else if (xhr.status === 404) {
                             errorMessage = 'Không tìm thấy trang. Vui lòng thử lại.';
                         }
-                        
+
                         // Hiển thị alert và scroll to top
                         alert(errorMessage);
                         $('html, body').animate({ scrollTop: 0 }, 300);

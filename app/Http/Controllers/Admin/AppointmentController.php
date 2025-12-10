@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Models\ServiceVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class AppointmentController extends Controller
@@ -62,19 +61,15 @@ class AppointmentController extends Controller
             ->whereDoesntHave('serviceVariants')
             ->get();
         
-        // Lấy dịch vụ có biến thể (load cả variantAttributes)
+        // Lấy dịch vụ có biến thể
         $variantServices = \App\Models\Service::whereNull('deleted_at')
             ->whereHas('serviceVariants')
-            ->with(['serviceVariants' => function($query) {
-                $query->whereNull('deleted_at')->with('variantAttributes');
-            }])
+            ->with('serviceVariants')
             ->get();
         
-        // Lấy combo (load cả comboItems với service và serviceVariant)
+        // Lấy combo
         $combos = \App\Models\Combo::whereNull('deleted_at')
-            ->with(['comboItems' => function($query) {
-                $query->with(['service', 'serviceVariant']);
-            }])
+            ->with('comboItems')
             ->get();
         
         return view('admin.appointments.create', compact('employees', 'singleServices', 'variantServices', 'combos'));
@@ -105,33 +100,8 @@ class AppointmentController extends Controller
             'services.*' => 'required|string',
             'status' => 'required|in:Chờ xử lý,Đã xác nhận,Đang thực hiện,Hoàn thành',
             'note' => 'nullable|string',
-            'appointment_date' => [
-                'nullable',
-                'date',
-                'after_or_equal:today',
-                function ($attribute, $value, $fail) use ($request) {
-                    // Nếu có chọn ngày thì phải có nhân viên
-                    if ($value && !$request->input('employee_id')) {
-                        $fail('Vui lòng chọn nhân viên khi đặt ngày.');
-                    }
-                },
-            ],
-            'appointment_time' => [
-                'nullable',
-                'string',
-                function ($attribute, $value, $fail) use ($request) {
-                    // Nếu có chọn giờ thì phải có ngày và nhân viên
-                    if ($value) {
-                        if (!$request->input('appointment_date')) {
-                            $fail('Vui lòng chọn ngày khi đặt giờ.');
-                        }
-                        if (!$request->input('employee_id')) {
-                            $fail('Vui lòng chọn nhân viên khi đặt giờ.');
-                        }
-                    }
-                },
-            ],
-            'word_time_id' => 'nullable|exists:word_time,id',
+            'appointment_date' => 'nullable|date',
+            'appointment_time' => 'nullable|string',
         ]);
 
         // Validate that at least one service is selected
@@ -216,18 +186,13 @@ class AppointmentController extends Controller
             } elseif ($serviceType === 'combo') {
                 $combo = \App\Models\Combo::find($serviceId);
                 if ($combo) {
-                    // Use duration from combo if available, otherwise calculate from combo items
-                    if (!is_null($combo->duration)) {
-                        $comboDuration = $combo->duration;
-                    } else {
-                        // Calculate from combo items if duration not set
-                        $comboDuration = 0;
-                        foreach ($combo->comboItems as $item) {
-                            if ($item->serviceVariant) {
-                                $comboDuration += $item->serviceVariant->duration ?? 0;
-                            } elseif ($item->service) {
-                                $comboDuration += $item->service->base_duration ?? 0;
-                            }
+                    // Calculate total duration from combo items
+                    $comboDuration = 0;
+                    foreach ($combo->comboItems as $item) {
+                        if ($item->serviceVariant) {
+                            $comboDuration += $item->serviceVariant->duration ?? 0;
+                        } elseif ($item->service) {
+                            $comboDuration += $item->service->base_duration ?? 0;
                         }
                     }
                     
@@ -248,36 +213,6 @@ class AppointmentController extends Controller
         // Set start_at and end_at if date and time provided
         if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
             $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
-            
-            // Validate available time slot
-            if (!empty($validated['employee_id'])) {
-                // Kiểm tra xem time slot có available không
-                $isAvailable = $this->validateTimeSlotAvailability(
-                    $validated['employee_id'],
-                    $validated['appointment_date'],
-                    $validated['appointment_time']
-                );
-                
-                if (!$isAvailable) {
-                    return redirect()->back()
-                        ->withErrors(['appointment_time' => 'Khung giờ đã chọn không còn trống hoặc không nằm trong giờ làm việc của nhân viên.'])
-                        ->withInput();
-                }
-                
-                // Kiểm tra conflict với appointments đã có
-                $conflictAppointment = \App\Models\Appointment::where('employee_id', $validated['employee_id'])
-                    ->whereDate('start_at', $startAt->format('Y-m-d'))
-                    ->whereTime('start_at', $startAt->format('H:i:s'))
-                    ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
-                    ->first();
-                
-                if ($conflictAppointment) {
-                    return redirect()->back()
-                        ->withErrors(['appointment_time' => 'Khung giờ này đã được đặt cho một lịch hẹn khác.'])
-                        ->withInput();
-                }
-            }
-            
             $appointmentData['start_at'] = $startAt;
             
             // Calculate end_at based on total service duration
@@ -317,19 +252,15 @@ class AppointmentController extends Controller
             ->whereDoesntHave('serviceVariants')
             ->get();
         
-        // Lấy dịch vụ có biến thể (load cả variantAttributes)
+        // Lấy dịch vụ có biến thể
         $variantServices = \App\Models\Service::whereNull('deleted_at')
             ->whereHas('serviceVariants')
-            ->with(['serviceVariants' => function($query) {
-                $query->whereNull('deleted_at')->with('variantAttributes');
-            }])
+            ->with('serviceVariants')
             ->get();
         
-        // Lấy combo (load cả comboItems với service và serviceVariant)
+        // Lấy combo
         $combos = \App\Models\Combo::whereNull('deleted_at')
-            ->with(['comboItems' => function($query) {
-                $query->with(['service', 'serviceVariant']);
-            }])
+            ->with('comboItems')
             ->get();
         
         // Xác định loại dịch vụ hiện tại
@@ -407,33 +338,8 @@ class AppointmentController extends Controller
                 'new_services.*' => 'nullable|string',
                 'status' => 'required|in:Chờ xử lý,Đã xác nhận,Đang thực hiện,Hoàn thành,Đã hủy',
                 'note' => 'nullable|string',
-                'appointment_date' => [
-                    'nullable',
-                    'date',
-                    'after_or_equal:today',
-                    function ($attribute, $value, $fail) use ($request) {
-                        // Nếu có chọn ngày thì phải có nhân viên
-                        if ($value && !$request->input('employee_id')) {
-                            $fail('Vui lòng chọn nhân viên khi đặt ngày.');
-                        }
-                    },
-                ],
-                'appointment_time' => [
-                    'nullable',
-                    'string',
-                    function ($attribute, $value, $fail) use ($request) {
-                        // Nếu có chọn giờ thì phải có ngày và nhân viên
-                        if ($value) {
-                            if (!$request->input('appointment_date')) {
-                                $fail('Vui lòng chọn ngày khi đặt giờ.');
-                            }
-                            if (!$request->input('employee_id')) {
-                                $fail('Vui lòng chọn nhân viên khi đặt giờ.');
-                            }
-                        }
-                    },
-                ],
-                'word_time_id' => 'nullable|exists:word_time,id',
+                'appointment_date' => 'nullable|date',
+                'appointment_time' => 'nullable|string',
             ]);
 
             $appointment = $this->appointmentService->getOne($id);
@@ -503,15 +409,13 @@ class AppointmentController extends Controller
                     } elseif ($serviceType === 'combo') {
                         $combo = \App\Models\Combo::find($serviceId);
                         if ($combo) {
-                            // Use duration from combo if available, otherwise calculate from combo items
-                            $comboDuration = $combo->duration ?? 0;
-                            if (!$comboDuration) {
-                                foreach ($combo->comboItems as $item) {
-                                    if ($item->serviceVariant) {
-                                        $comboDuration += $item->serviceVariant->duration ?? 0;
-                                    } elseif ($item->service) {
-                                        $comboDuration += $item->service->base_duration ?? 0;
-                                    }
+                            // Calculate total duration from combo items
+                            $comboDuration = 0;
+                            foreach ($combo->comboItems as $item) {
+                                if ($item->serviceVariant) {
+                                    $comboDuration += $item->serviceVariant->duration ?? 0;
+                                } elseif ($item->service) {
+                                    $comboDuration += $item->service->base_duration ?? 0;
                                 }
                             }
                             
@@ -533,41 +437,6 @@ class AppointmentController extends Controller
             // Set start_at and end_at if date and time provided
             if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
                 $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
-                
-                // Validate available time slot (chỉ validate nếu thay đổi thời gian)
-                $oldStartAt = $appointment->start_at;
-                $isTimeChanged = !$oldStartAt || 
-                                 $oldStartAt->format('Y-m-d H:i') !== $startAt->format('Y-m-d H:i');
-                
-                if ($isTimeChanged && !empty($validated['employee_id'])) {
-                    // Kiểm tra xem time slot có available không
-                    $isAvailable = $this->validateTimeSlotAvailability(
-                        $validated['employee_id'],
-                        $validated['appointment_date'],
-                        $validated['appointment_time']
-                    );
-                    
-                    if (!$isAvailable) {
-                        return redirect()->back()
-                            ->withErrors(['appointment_time' => 'Khung giờ đã chọn không còn trống hoặc không nằm trong giờ làm việc của nhân viên.'])
-                            ->withInput();
-                    }
-                    
-                    // Kiểm tra conflict với appointments đã có (trừ appointment hiện tại)
-                    $conflictAppointment = \App\Models\Appointment::where('employee_id', $validated['employee_id'])
-                        ->whereDate('start_at', $startAt->format('Y-m-d'))
-                        ->whereTime('start_at', $startAt->format('H:i:s'))
-                        ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
-                        ->where('id', '!=', $id)
-                        ->first();
-                    
-                    if ($conflictAppointment) {
-                        return redirect()->back()
-                            ->withErrors(['appointment_time' => 'Khung giờ này đã được đặt cho một lịch hẹn khác.'])
-                            ->withInput();
-                    }
-                }
-                
                 $appointmentData['start_at'] = $startAt;
                 
                 // Calculate total duration from existing services + new services
@@ -773,83 +642,6 @@ class AppointmentController extends Controller
         } catch (\Exception $e) {
             return redirect()->route('admin.appointments.cancelled')
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Validate if a time slot is available for an employee on a specific date.
-     */
-    protected function validateTimeSlotAvailability($employeeId, $appointmentDate, $appointmentTime)
-    {
-        try {
-            $appointmentDate = Carbon::parse($appointmentDate);
-            $appointmentTime = Carbon::createFromFormat('H:i', $appointmentTime);
-            $timeString = $appointmentTime->format('H:i');
-            
-            // Get working schedules for the employee on the selected date
-            $workingSchedules = \App\Models\WorkingSchedule::with('shift')
-                ->where('employee_id', $employeeId)
-                ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
-                ->whereNull('deleted_at')
-                ->get();
-            
-            // Check if time slot is within working hours
-            $isInWorkingTime = false;
-            foreach ($workingSchedules as $schedule) {
-                if (!$schedule->shift) {
-                    continue;
-                }
-                
-                $startTimeString = $schedule->shift->formatted_start_time;
-                $endTimeString = $schedule->shift->formatted_end_time;
-                
-                if (!$startTimeString || !$endTimeString) {
-                    continue;
-                }
-                
-                try {
-                    $shiftStart = Carbon::createFromFormat('H:i', $startTimeString);
-                    $shiftEnd = Carbon::createFromFormat('H:i', $endTimeString);
-                } catch (\Exception $e) {
-                    $shiftStart = Carbon::parse($startTimeString);
-                    $shiftEnd = Carbon::parse($endTimeString);
-                }
-                
-                // Check if slot is within working time range [start, end)
-                if ($appointmentTime->gte($shiftStart) && $appointmentTime->lt($shiftEnd)) {
-                    $isInWorkingTime = true;
-                    break;
-                }
-            }
-            
-            if (!$isInWorkingTime) {
-                return false;
-            }
-            
-            // Check if time slot is not in the past (if today)
-            $now = Carbon::now('Asia/Ho_Chi_Minh');
-            $isToday = $appointmentDate->format('Y-m-d') === $now->format('Y-m-d');
-            
-            if ($isToday) {
-                $currentHour = (int)$now->format('H');
-                $currentMinute = (int)$now->format('i');
-                $currentSlotMinute = $currentMinute < 30 ? 30 : 0;
-                if ($currentSlotMinute === 0) {
-                    $currentHour = $currentHour + 1;
-                }
-                
-                $slotHour = (int)$appointmentTime->format('H');
-                $slotMinute = (int)$appointmentTime->format('i');
-                
-                if ($slotHour < $currentHour || ($slotHour === $currentHour && $slotMinute < $currentSlotMinute)) {
-                    return false;
-                }
-            }
-            
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Error validating time slot availability: ' . $e->getMessage());
-            return false;
         }
     }
 }
