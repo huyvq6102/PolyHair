@@ -121,18 +121,13 @@
                 <div class="card-header bg-white border-0">
                     <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
-                                <i class="fas fa-history me-2"></i>Lịch sử đặt lịch
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
+                            <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
                                 <i class="fas fa-user-cog me-2"></i>Thông tin cá nhân
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="cancelled-tab" data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab">
-                                <i class="fas fa-times-circle me-2"></i>Lịch sử đã hủy
+                            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                                <i class="fas fa-history me-2"></i>Lịch sử đặt lịch
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -145,21 +140,89 @@
                 <div class="card-body">
                     <div class="tab-content" id="myTabContent">
                         
+                        <!-- Tab Thông tin cá nhân -->
+                        <div class="tab-pane fade show active" id="profile" role="tabpanel">
+                            <h5 class="mb-4" id="thong-tin-ca-nhan">Thông tin chi tiết</h5>
+                            <div class="row mb-3">
+                                <div class="col-sm-3"><p class="text-muted mb-0">Họ và tên</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->name }}</p></div>
+                            </div>
+                            <hr>
+                            <div class="row mb-3">
+                                <div class="col-sm-3"><p class="text-muted mb-0">Email</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->email }}</p></div>
+                            </div>
+                            <hr>
+                            <div class="row mb-3">
+                                <div class="col-sm-3"><p class="text-muted mb-0">Số điện thoại</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->phone }}</p></div>
+                            </div>
+                            <hr>
+                            <div class="row mb-3">
+                                <div class="col-sm-3"><p class="text-muted mb-0">Ngày sinh</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->dob ? $user->dob->format('d/m/Y') : 'Chưa cập nhật' }}</p></div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3"><p class="text-muted mb-0">Địa chỉ</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0"></p></div>
+                            </div>
+                        </div>
+
                         <!-- Tab Lịch sử đặt lịch -->
-                        <div class="tab-pane fade show active" id="history" role="tabpanel">
+                        <div class="tab-pane fade" id="history" role="tabpanel">
                             <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
-                            <div class="row g-3">
-                                @php
-                                    $upcomingAppointments = $user->appointments->filter(function($appointment) {
-                                        return $appointment->status != 'Hoàn thành' 
-                                            && $appointment->status != 'Đã thanh toán' 
-                                            && $appointment->status != 'Đã hủy'
-                                            && !$appointment->trashed();
-                                    })->sortBy('start_at');
-                                @endphp
+                            
+                            <!-- Filter by Status -->
+                            @php
+                                // Danh sách các trạng thái theo thứ tự: Chờ xử lý -> Đã xác nhận -> Đang thực hiện -> Hoàn thành -> Đã hủy
+                                // Luôn hiển thị tất cả các trạng thái này, không phụ thuộc vào dữ liệu
+                                $allStatuses = collect([
+                                    'Chờ xử lý',
+                                    'Đã xác nhận',
+                                    'Đang thực hiện',
+                                    'Hoàn thành',
+                                    'Đã hủy'
+                                ]);
                                 
-                                @forelse($upcomingAppointments as $appointment)
-                                <div class="col-12" data-appointment-id="{{ $appointment->id }}">
+                                // Lấy tất cả appointments để filter (bao gồm cả đã hủy)
+                                $allAppointmentsForFilter = $user->appointments->filter(function($appointment) {
+                                    return !$appointment->trashed();
+                                })->sortByDesc('start_at');
+                            @endphp
+                            
+                            @if($allStatuses->count() > 0)
+                            <div class="mb-4">
+                                <div class="d-flex flex-wrap status-filter-buttons" style="gap: 1.5rem;">
+                                    <button type="button" class="btn btn-sm btn-outline-primary status-filter-btn active" data-status="all" style="margin-right: 0.5rem;">
+                                        <i class="fas fa-list me-1"></i>Tất cả
+                                    </button>
+                                    @foreach($allStatuses as $status)
+                                        @php
+                                            $statusClass = 'btn-outline-secondary';
+                                            if ($status === 'Đã xác nhận') {
+                                                $statusClass = 'btn-outline-success';
+                                            } elseif ($status === 'Chờ xử lý') {
+                                                $statusClass = 'btn-outline-warning';
+                                            } elseif ($status === 'Đang thực hiện') {
+                                                $statusClass = 'btn-outline-info';
+                                            } elseif ($status === 'Hoàn thành') {
+                                                $statusClass = 'btn-outline-success';
+                                            } elseif ($status === 'Đã hủy') {
+                                                $statusClass = 'btn-outline-danger';
+                                            }
+                                        @endphp
+                                        <button type="button" class="btn btn-sm {{ $statusClass }} status-filter-btn" data-status="{{ $status }}" style="margin-right: 0.5rem;">
+                                            {{ $status }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
+                            
+                            <div class="row g-3" id="appointments-list">
+                                @forelse($allAppointmentsForFilter as $appointment)
+                                <div class="col-12 appointment-item" data-appointment-id="{{ $appointment->id }}" data-appointment-status="{{ $appointment->status ?? 'Chờ xử lý' }}">
                                     <div class="card border shadow-sm h-100">
                                         <div class="card-body p-3">
                                             <div class="row align-items-center">
@@ -219,6 +282,10 @@
                                                                 $statusBadgeClass = 'bg-warning text-white';
                                                             } elseif ($appointment->status === 'Đang thực hiện') {
                                                                 $statusBadgeClass = 'bg-primary text-white';
+                                                            } elseif ($appointment->status === 'Hoàn thành') {
+                                                                $statusBadgeClass = 'bg-success text-white';
+                                                            } elseif ($appointment->status === 'Đã hủy') {
+                                                                $statusBadgeClass = 'bg-danger text-white';
                                                             }
                                                         @endphp
                                                         <span class="badge {{ $statusBadgeClass }} appointment-status-badge" data-status="{{ $appointment->status }}" style="white-space: nowrap;">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
@@ -287,216 +354,6 @@
                                     </div>
                                 </div>
                                 @endforelse
-                            </div>
-
-                            <hr class="my-4">
-
-                            <h5 class="mb-4">Các lịch hẹn đã hoàn thành</h5>
-                            <div class="row g-3">
-                                @php
-                                    $completedAppointments = $user->appointments->filter(function($appointment) {
-                                        return ($appointment->status == 'Hoàn thành' || $appointment->status == 'Đã thanh toán')
-                                            && $appointment->status != 'Đã hủy'
-                                            && !$appointment->trashed();
-                                    })->sortByDesc('start_at');
-                                @endphp
-                                
-                                @forelse($completedAppointments as $appointment)
-                                    <div class="col-12">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-body p-3">
-                                                <div class="row align-items-center">
-                                                    <div class="col-md-8">
-                                                        <!-- Dòng đầu: Tên dịch vụ -->
-                                                        <h6 class="mb-2 fw-bold">
-                                                            @if($appointment->appointmentDetails->count() > 0)
-                                                                @foreach($appointment->appointmentDetails as $detail)
-                                                                    @if($detail->serviceVariant)
-                                                                        {{ $detail->serviceVariant->name }}
-                                                                    @elseif($detail->combo)
-                                                                        {{ $detail->combo->name }}
-                                                                    @else
-                                                                        {{ $detail->notes ?? 'Dịch vụ' }}
-                                                                    @endif
-                                                                    @if(!$loop->last), @endif
-                                                                @endforeach
-                                                            @else
-                                                                Dịch vụ
-                                                            @endif
-                                                        </h6>
-                                                        
-                                                        <!-- Dòng thứ 2: Mã đơn và trạng thái (cố định, không wrap) -->
-                                                        <div class="d-flex align-items-center gap-2 mb-2" style="flex-wrap: nowrap;">
-                                                            @if($appointment->booking_code)
-                                                                <span class="badge bg-secondary text-white" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->booking_code }}</span>
-                                                            @endif
-                                                            <span class="badge bg-success" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->status }}</span>
-                                                        </div>
-                                                        <!-- Dòng thứ 3: Thông tin barber và thời gian -->
-                                                        <div class="d-flex flex-column gap-1">
-                                                            <small class="text-muted">
-                                                                <i class="fas fa-user-tie me-1"></i>
-                                                                @if($appointment->employee && $appointment->employee->user)
-                                                                    Barber: <strong>{{ $appointment->employee->user->name }}</strong>
-                                                                @endif
-                                                            </small>
-                                                            <small class="text-muted">
-                                                                <i class="fas fa-calendar-alt me-1"></i>
-                                                                @if($appointment->start_at)
-                                                                    <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong>
-                                                                @endif
-                                                            </small>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                                                        <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end">
-                                                            <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
-                                                                <i class="fas fa-eye me-1"></i>Xem
-                                                            </a>
-                                                            @php
-                                                                $existingReview = $appointment->reviews->where('user_id', $user->id)->first();
-                                                            @endphp
-                                                            @if($existingReview)
-                                                                <a href="{{ route('site.reviews.edit', $existingReview->id) }}" class="btn btn-sm btn-outline-warning">
-                                                                    <i class="fas fa-star me-1"></i>Xem đánh giá
-                                                                </a>
-                                                            @else
-                                                                <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-success">
-                                                                    <i class="fas fa-star me-1"></i>Đánh giá
-                                                                </a>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @empty
-                                <div class="col-12">
-                                    <div class="card border text-center py-5">
-                                        <div class="card-body">
-                                            <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
-                                            <p class="text-muted mb-0">Chưa có lịch hẹn đã hoàn thành</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endforelse
-                            </div>
-                        </div>
-
-                        <!-- Tab Lịch sử đã hủy -->
-                        <div class="tab-pane fade" id="cancelled" role="tabpanel">
-                            <h5 class="mb-4">Các lịch hẹn đã hủy</h5>
-                            <div class="row g-3">
-                                @php
-                                    $cancelledAppointments = $user->appointments->filter(function($appointment) {
-                                        return $appointment->status === 'Đã hủy'
-                                            && !$appointment->trashed();
-                                    })->sortByDesc('created_at');
-                                @endphp
-                                
-                                @forelse($cancelledAppointments as $appointment)
-                                    <div class="col-12">
-                                        <div class="card border shadow-sm h-100">
-                                            <div class="card-body p-3">
-                                                <div class="row align-items-center">
-                                                    <div class="col-md-8">
-                                                        <!-- Dòng đầu: Tên dịch vụ -->
-                                                        <h6 class="mb-2 fw-bold">
-                                                            @if($appointment->appointmentDetails->count() > 0)
-                                                                @foreach($appointment->appointmentDetails as $detail)
-                                                                    @if($detail->serviceVariant)
-                                                                        {{ $detail->serviceVariant->name }}
-                                                                    @elseif($detail->combo)
-                                                                        {{ $detail->combo->name }}
-                                                                    @else
-                                                                        {{ $detail->notes ?? 'Dịch vụ' }}
-                                                                    @endif
-                                                                    @if(!$loop->last), @endif
-                                                                @endforeach
-                                                            @else
-                                                                Dịch vụ
-                                                            @endif
-                                                        </h6>
-                                                        
-                                                        <!-- Dòng thứ 2: Mã đơn và trạng thái (cố định, không wrap) -->
-                                                        <div class="d-flex align-items-center gap-2 mb-2" style="flex-wrap: nowrap;">
-                                                            @if($appointment->booking_code)
-                                                                <span class="badge bg-secondary text-white" style="white-space: nowrap; flex-shrink: 0;">{{ $appointment->booking_code }}</span>
-                                                            @endif
-                                                            <span class="badge bg-danger text-white" style="white-space: nowrap; flex-shrink: 0;">Đã hủy</span>
-                                                        </div>
-                                                        <!-- Dòng thứ 3: Thông tin barber và thời gian -->
-                                                        <div class="d-flex flex-column gap-1">
-                                                            <small class="text-muted">
-                                                                <i class="fas fa-user-tie me-1"></i>
-                                                                @if($appointment->employee && $appointment->employee->user)
-                                                                    Barber: <strong>{{ $appointment->employee->user->name }}</strong>
-                                                                @else
-                                                                    <span class="text-warning">Chưa phân công nhân viên</span>
-                                                                @endif
-                                                            </small>
-                                                            <small class="text-muted">
-                                                                <i class="fas fa-calendar-alt me-1"></i>
-                                                                @if($appointment->start_at)
-                                                                    <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong>
-                                                                @endif
-                                                            </small>
-                                                            @if($appointment->cancellation_reason)
-                                                                <small class="text-muted mt-1">
-                                                                    <i class="fas fa-info-circle me-1"></i>Lý do hủy: <em>{{ $appointment->cancellation_reason }}</em>
-                                                                </small>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                                                        <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
-                                                            <i class="fas fa-eye me-1"></i>Xem
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @empty
-                                <div class="col-12">
-                                    <div class="card border text-center py-5">
-                                        <div class="card-body">
-                                            <i class="fas fa-ban fa-3x text-muted mb-3"></i>
-                                            <p class="text-muted mb-0">Chưa có lịch hẹn nào đã hủy</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endforelse
-                            </div>
-                        </div>
-
-                        <!-- Tab Thông tin cá nhân -->
-                        <div class="tab-pane fade" id="profile" role="tabpanel">
-                            <h5 class="mb-4" id="thong-tin-ca-nhan">Thông tin chi tiết</h5>
-                            <div class="row mb-3">
-                                <div class="col-sm-3"><p class="text-muted mb-0">Họ và tên</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->name }}</p></div>
-                            </div>
-                            <hr>
-                            <div class="row mb-3">
-                                <div class="col-sm-3"><p class="text-muted mb-0">Email</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->email }}</p></div>
-                            </div>
-                            <hr>
-                            <div class="row mb-3">
-                                <div class="col-sm-3"><p class="text-muted mb-0">Số điện thoại</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->phone }}</p></div>
-                            </div>
-                            <hr>
-                            <div class="row mb-3">
-                                <div class="col-sm-3"><p class="text-muted mb-0">Ngày sinh</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->dob ? $user->dob->format('d/m/Y') : 'Chưa cập nhật' }}</p></div>
-                            </div>
-                            <hr>
-                            <div class="row">
-                                <div class="col-sm-3"><p class="text-muted mb-0">Địa chỉ</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0"></p></div>
                             </div>
                         </div>
 
@@ -567,8 +424,133 @@
 
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
+    // Filter appointments by status - Isolated to prevent interference from other scripts
+    (function() {
+        'use strict';
+        
+        try {
+            let filterInitialized = false;
+            
+            function handleFilterClick(e) {
+                try {
+                    const button = e.target.closest('.status-filter-btn');
+                    if (!button) return;
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const selectedStatus = button.getAttribute('data-status');
+                    if (!selectedStatus) return;
+                    
+                    console.log('[Filter] Button clicked:', selectedStatus);
+                    
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.status-filter-btn').forEach(function(btn) {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked button
+                    button.classList.add('active');
+                    
+                    // Get all appointment items
+                    const appointmentItems = document.querySelectorAll('.appointment-item');
+                    console.log('[Filter] Total appointments:', appointmentItems.length);
+                    
+                    if (appointmentItems.length === 0) {
+                        console.warn('[Filter] No appointment items found');
+                        return;
+                    }
+                    
+                    let visibleCount = 0;
+                    
+                    // Filter appointments
+                    appointmentItems.forEach(function(item) {
+                        const itemStatus = item.getAttribute('data-appointment-status');
+                        
+                        if (selectedStatus === 'all' || itemStatus === selectedStatus) {
+                            item.style.display = '';
+                            visibleCount++;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                    
+                    console.log('[Filter] Visible count:', visibleCount);
+                    
+                    // Show/hide no results message
+                    const appointmentsContainer = document.getElementById('appointments-list');
+                    let noResultsMsg = document.getElementById('no-results-message');
+                    
+                    if (visibleCount === 0 && appointmentsContainer) {
+                        if (!noResultsMsg) {
+                            noResultsMsg = document.createElement('div');
+                            noResultsMsg.id = 'no-results-message';
+                            noResultsMsg.className = 'col-12';
+                            noResultsMsg.innerHTML = `
+                                <div class="card border text-center py-5">
+                                    <div class="card-body">
+                                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted mb-0">Không có lịch hẹn nào với trạng thái "${selectedStatus === 'all' ? 'Tất cả' : selectedStatus}"</p>
+                                    </div>
+                                </div>
+                            `;
+                            appointmentsContainer.appendChild(noResultsMsg);
+                        } else {
+                            const pTag = noResultsMsg.querySelector('p');
+                            if (pTag) {
+                                pTag.textContent = `Không có lịch hẹn nào với trạng thái "${selectedStatus === 'all' ? 'Tất cả' : selectedStatus}"`;
+                            }
+                            noResultsMsg.style.display = '';
+                        }
+                    } else {
+                        if (noResultsMsg) {
+                            noResultsMsg.style.display = 'none';
+                        }
+                    }
+                } catch (error) {
+                    console.error('[Filter] Error in handleFilterClick:', error);
+                }
+            }
+            
+            function initFilter() {
+                if (filterInitialized) {
+                    return;
+                }
+                
+                try {
+                    // Use event delegation on document with capture phase
+                    document.addEventListener('click', handleFilterClick, true);
+                    filterInitialized = true;
+                    console.log('[Filter] Initialized successfully');
+                } catch (error) {
+                    console.error('[Filter] Error initializing:', error);
+                }
+            }
+            
+            // Initialize when DOM is ready
+            function startFilter() {
+                try {
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', initFilter);
+                    } else {
+                        // DOM already ready, initialize immediately
+                        setTimeout(initFilter, 100);
+                    }
+                } catch (error) {
+                    console.error('[Filter] Error in startFilter:', error);
+                }
+            }
+            
+            // Start the filter
+            startFilter();
+            
+        } catch (error) {
+            console.error('[Filter] Critical error:', error);
+        }
+    })();
+
     // Đảm bảo Bootstrap JS được tải
     var tabEl = document.querySelector('button[data-bs-toggle="tab"]')
     if (tabEl) {
@@ -838,4 +820,4 @@
         }
     })();
 </script>
-@endsection
+@endpush
