@@ -13,7 +13,7 @@
                         @php
                             // Build URL with selected services to preserve them when going back
                             $backUrlParams = [];
-                            
+
                             // Get service IDs
                             if (request('service_id')) {
                                 $queryServices = request()->query('service_id', []);
@@ -27,7 +27,7 @@
                                     $backUrlParams[] = 'service_id[]=' . urlencode($serviceId);
                                 }
                             }
-                            
+
                             // Get variant IDs
                             if (request()->has('service_variants')) {
                                 $url = request()->fullUrl();
@@ -36,29 +36,29 @@
                                 if (isset($parsedUrl['query'])) {
                                     parse_str($parsedUrl['query'], $queryParams);
                                 }
-                                
+
                                 $queryVariants = [];
                                 if (isset($queryParams['service_variants']) && is_array($queryParams['service_variants'])) {
                                     $queryVariants = $queryParams['service_variants'];
                                 } elseif (isset($queryParams['service_variants'])) {
                                     $queryVariants = [$queryParams['service_variants']];
                                 }
-                                
+
                                 foreach ($queryParams as $key => $value) {
                                     if (preg_match('/^service_variants\[(\d+)\]$/', $key, $matches)) {
                                         $queryVariants[] = $value;
                                     }
                                 }
-                                
+
                                 $variantIds = array_filter($queryVariants, function($id) {
                                     return !empty($id) && $id !== '0' && $id !== 0 && is_numeric($id);
                                 });
-                                
+
                                 foreach (array_unique($variantIds) as $variantId) {
                                     $backUrlParams[] = 'service_variants[]=' . urlencode($variantId);
                                 }
                             }
-                            
+
                             // Get combo IDs
                             if (request('combo_id')) {
                                 $queryCombos = request()->query('combo_id', []);
@@ -72,7 +72,7 @@
                                     $backUrlParams[] = 'combo_id[]=' . urlencode($comboId);
                                 }
                             }
-                            
+
                             // Build final URL
                             $backUrl = route('site.appointment.select-services');
                             if (!empty($backUrlParams)) {
@@ -87,14 +87,14 @@
 
                     <!-- Tab Navigation -->
                     <div class="offers-tabs" style="background: #fff; border-bottom: 1px solid #e0e0e0; display: flex;">
-                        <button type="button" 
-                                class="offer-tab active" 
+                        <button type="button"
+                                class="offer-tab active"
                                 data-tab="public"
                                 style="flex: 1; padding: 15px; background: none; border: none; border-bottom: 3px solid #000; color: #000; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             Ưu đãi từ Foly Hair
                         </button>
-                        <button type="button" 
-                                class="offer-tab" 
+                        <button type="button"
+                                class="offer-tab"
                                 data-tab="personal"
                                 style="flex: 1; padding: 15px; background: none; border: none; border-bottom: 3px solid transparent; color: #999; font-size: 14px; font-weight: 400; cursor: pointer; transition: all 0.3s;">
                             Ưu đãi của riêng anh
@@ -132,7 +132,7 @@
                                         @endif
                                     </div>
                                 </div>
-                                <div class="offer-select-box" 
+                                <div class="offer-select-box"
                                      data-promotion-id="{{ $offer->id }}"
                                      style="width: 24px; height: 24px; border: 2px solid #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-top: 4px; transition: all 0.2s;">
                                     <div class="offer-check-indicator" style="width: 14px; height: 14px; background: #0066cc; border-radius: 50%; display: none;"></div>
@@ -143,7 +143,7 @@
                 </div>
             @else
                 <div style="text-align: center; padding: 60px 20px;">
-                    <i class="fa fa-info-circle" style="font-size: 48px; color: #ccc; margin-bottom: 16px; display: block;"></i>
+                <i class="fa fa-info-circle" style="font-size: 48px; color: #ccc; margin-bottom: 16px; display: block;"></i>
                     <p style="font-size: 16px; color: #666; font-weight: 500; margin: 0 0 8px 0;">Không có voucher nào áp dụng được</p>
                     <p style="font-size: 14px; color: #999; margin: 0;">Các dịch vụ bạn đã chọn không đủ điều kiện cho bất kỳ voucher nào.</p>
                 </div>
@@ -179,7 +179,7 @@
                                         @endif
                                     </div>
                                 </div>
-                                <div class="offer-select-box" 
+                                <div class="offer-select-box"
                                      data-promotion-id="{{ $offer->id }}"
                                      style="width: 24px; height: 24px; border: 2px solid #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-top: 4px; transition: all 0.2s;">
                                     <div class="offer-check-indicator" style="width: 14px; height: 14px; background: #0066cc; border-radius: 50%; display: none;"></div>
@@ -189,18 +189,19 @@
                     @endforeach
                 </div>
             @else
-                <div style="text-align: center; padding: 60px 20px;">
+            <div style="text-align: center; padding: 60px 20px;">
                     <i class="fa fa-info-circle" style="font-size: 48px; color: #ccc; margin-bottom: 16px; display: block;"></i>
                     <p style="font-size: 16px; color: #666; font-weight: 500; margin: 0 0 8px 0;">Không có voucher nào áp dụng được</p>
                     <p style="font-size: 14px; color: #999; margin: 0;">Các dịch vụ bạn đã chọn không đủ điều kiện cho bất kỳ voucher nào.</p>
                 </div>
+                </div>
             @endif
         </div>
                     </div>
-                    
+
                     <!-- Action Button (Inside Container) -->
                     <div class="offers-action-bar" style="background: #fff; border-top: 1px solid #e0e0e0; padding: 15px 20px;">
-                        <button type="button" 
+                        <button type="button"
                                 id="applyOfferBtn"
                                 style="width: 100%; padding: 14px; background: #e0e0e0; border: none; border-radius: 8px; color: #999; font-size: 14px; font-weight: 600; text-transform: uppercase; cursor: pointer; transition: all 0.3s;">
                             ÁP DỤNG ƯU ĐÃI
@@ -218,31 +219,31 @@
         font-weight: 600 !important;
         border-bottom-color: #000 !important;
     }
-    
+
     .offer-tab:not(.active) {
         color: #999 !important;
         font-weight: 400 !important;
         border-bottom-color: transparent !important;
     }
-    
+
     .offer-item:hover {
         box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
     }
-    
+
     .offer-item.selected {
         border: 2px solid #0066cc !important;
     }
-    
+
     #applyOfferBtn.has-selection {
         background: #0066cc !important;
         color: #fff !important;
         cursor: pointer !important;
     }
-    
+
     #applyOfferBtn:active {
         transform: scale(0.98);
     }
-    
+
 </style>
 
 <script>
@@ -250,11 +251,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Tab switching
     const tabs = document.querySelectorAll('.offer-tab');
     const tabContents = document.querySelectorAll('.offer-tab-content');
-    
+
     tabs.forEach(tab => {
         tab.addEventListener('click', function() {
             const targetTab = this.getAttribute('data-tab');
-            
+
             // Update tab styles
             tabs.forEach(t => {
                 t.classList.remove('active');
@@ -262,17 +263,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 t.style.color = '#999';
                 t.style.fontWeight = '400';
             });
-            
+
             this.classList.add('active');
             this.style.borderBottomColor = '#000';
             this.style.color = '#000';
             this.style.fontWeight = '600';
-            
+
             // Update tab content
             tabContents.forEach(content => {
                 content.style.display = 'none';
             });
-            
+
             if (targetTab === 'public') {
                 document.getElementById('publicOffersTab').style.display = 'block';
             } else {
@@ -280,13 +281,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Handle offer selection
     const offerSelectBoxes = document.querySelectorAll('.offer-select-box');
     const offerItems = document.querySelectorAll('.offer-item');
     const applyBtn = document.getElementById('applyOfferBtn');
     let selectedPromotionId = null;
-    
+
     function updateApplyButton() {
         if (selectedPromotionId) {
             applyBtn.classList.add('has-selection');
@@ -298,13 +299,13 @@ document.addEventListener('DOMContentLoaded', function() {
             applyBtn.style.color = '#999';
         }
     }
-    
+
     function toggleOfferSelection(selectBox) {
         const promotionId = selectBox.getAttribute('data-promotion-id');
         const indicator = selectBox.querySelector('.offer-check-indicator');
         const offerItem = selectBox.closest('.offer-item');
         const isCurrentlySelected = selectedPromotionId === promotionId;
-        
+
         // If clicking on already selected offer, deselect it
         if (isCurrentlySelected) {
             selectedPromotionId = null;
@@ -324,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.style.border = 'none';
                 item.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
             });
-            
+
             // Select this offer
             selectedPromotionId = promotionId;
             indicator.style.display = 'block';
@@ -334,10 +335,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 offerItem.style.boxShadow = '0 4px 12px rgba(0,102,204,0.2)';
             }
         }
-        
+
         updateApplyButton();
     }
-    
+
     // Handle click on select box
     offerSelectBoxes.forEach(selectBox => {
         selectBox.addEventListener('click', function(e) {
@@ -345,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleOfferSelection(this);
         });
     });
-    
+
     // Handle click on offer item (click anywhere on the card)
     offerItems.forEach(item => {
         item.addEventListener('click', function(e) {
@@ -353,21 +354,21 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.closest('.offer-select-box')) {
                 return;
             }
-            
+
             const selectBox = this.querySelector('.offer-select-box');
             if (selectBox) {
                 toggleOfferSelection(selectBox);
             }
         });
     });
-    
+
     // Handle apply offer button
     applyBtn.addEventListener('click', function() {
         // Build URL with selected services and offer - preserve all existing params
         const currentUrl = window.location.href;
         const urlObj = new URL(currentUrl);
         const params = new URLSearchParams(urlObj.search);
-        
+
         if (selectedPromotionId) {
             // Add or update promotion_id
             params.set('promotion_id', selectedPromotionId);
@@ -375,12 +376,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove promotion_id if no offer selected
             params.delete('promotion_id');
         }
-        
+
         // Redirect back to select-services page with all params
         const selectServicesUrl = '{{ route("site.appointment.select-services") }}' + '?' + params.toString();
         window.location.href = selectServicesUrl;
     });
-    
+
     // Load selected promotion from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const promotionIdFromUrl = urlParams.get('promotion_id');
@@ -398,10 +399,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     // Initialize button state
     updateApplyButton();
 });
 </script>
 @endsection
-

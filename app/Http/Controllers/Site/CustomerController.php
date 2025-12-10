@@ -78,8 +78,7 @@ class CustomerController extends Controller
                     ->orderBy('start_at', 'asc');
             }
         ])->findOrFail($id);
-
-        $appointments = $user->appointments->map(function($appointment) {
+$appointments = $user->appointments->map(function($appointment) {
             $canCancel = false;
             if ($appointment->status === 'Chờ xử lý' && $appointment->created_at) {
                 $createdAt = \Carbon\Carbon::parse($appointment->created_at);
@@ -111,23 +110,23 @@ class CustomerController extends Controller
     {
         try {
             $cutoffTime = \Carbon\Carbon::now()->subMinutes(5);
-            
+
             $appointments = Appointment::where('user_id', $userId)
                 ->where('status', 'Chờ xử lý')
                 ->where('created_at', '<=', $cutoffTime)
                 ->get();
-            
+
             foreach ($appointments as $appointment) {
                 try {
                     DB::beginTransaction();
-                    
+
                     $oldStatus = $appointment->status;
-                    
+
                     // Chuyển status sang "Đã xác nhận"
                     $appointment->update([
                         'status' => 'Đã xác nhận'
                     ]);
-                    
+
                     // Log status change
                     AppointmentLog::create([
                         'appointment_id' => $appointment->id,
@@ -135,7 +134,7 @@ class CustomerController extends Controller
                         'status_to' => 'Đã xác nhận',
                         'modified_by' => null, // Tự động xác nhận
                     ]);
-                    
+
                     DB::commit();
                 } catch (\Exception $e) {
                     DB::rollBack();
