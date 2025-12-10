@@ -122,7 +122,7 @@ $appointments = $user->appointments->map(function($appointment) {
 
                     $oldStatus = $appointment->status;
 
-                    // Chuyển status sang "Đã xác nhận"
+                    // Chuyển status sang "Đã xác nhậnn"
                     $appointment->update([
                         'status' => 'Đã xác nhận'
                     ]);
