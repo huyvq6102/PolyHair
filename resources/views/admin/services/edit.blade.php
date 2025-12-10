@@ -211,6 +211,15 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
+            <div class="form-group">
+                <label for="base_duration">Thời gian (phút) <span class="text-danger">*</span></label>
+                <input type="number" step="1" min="1" name="base_duration" id="base_duration" class="form-control @error('base_duration') is-invalid @enderror" 
+                       value="{{ old('base_duration', $service->base_duration) }}" required placeholder="Nhập thời gian thực hiện dịch vụ (phút)">
+                @error('base_duration')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="form-text text-muted">Thời gian thực hiện dịch vụ tính bằng phút (ví dụ: 30, 60, 90)</small>
+            </div>
         </div>
     </div>
     @endif
@@ -436,6 +445,15 @@
                 @error('combo_price')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
+            </div>
+            <div class="form-group">
+                <label for="combo_duration">Thời gian (phút) <span class="text-danger">*</span></label>
+                <input type="number" step="1" min="1" name="combo_duration" id="combo_duration" class="form-control @error('combo_duration') is-invalid @enderror" 
+                       value="{{ old('combo_duration', $combo->duration) }}" required placeholder="Nhập thời gian thực hiện combo (phút)">
+                @error('combo_duration')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="form-text text-muted">Thời gian thực hiện combo tính bằng phút (ví dụ: 60, 90, 120)</small>
             </div>
             <div class="form-group">
                 <label>Chọn dịch vụ và biến thể <span class="text-danger">*</span></label>

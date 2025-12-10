@@ -204,21 +204,13 @@
 
                             @php
                                 $hasAnyService = request('service_id') || request('service_variants') || request('combo_id');
-<<<<<<< HEAD
                                 
-=======
-
->>>>>>> build/fixService/client/Duy
                                 // Collect all selected items
                                 $allSelectedItems = [];
                                 $totalPrice = 0;
                                 $totalDuration = 0;
                                 $totalCount = 0;
-<<<<<<< HEAD
                                 
-=======
-
->>>>>>> build/fixService/client/Duy
                                 // Get services
                                 if (request('service_id')) {
                                     $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
@@ -236,11 +228,7 @@
                                         $totalCount++;
                                     }
                                 }
-<<<<<<< HEAD
                                 
-=======
-
->>>>>>> build/fixService/client/Duy
                                 // Get variants
                                 if (request('service_variants')) {
                                     $variantIds = is_array(request('service_variants')) ? request('service_variants') : [request('service_variants')];
@@ -259,11 +247,7 @@
                                         $totalCount++;
                                     }
                                 }
-<<<<<<< HEAD
                                 
-=======
-
->>>>>>> build/fixService/client/Duy
                                 // Get combos
                                 if (request('combo_id')) {
                                     $comboIds = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
@@ -289,67 +273,8 @@
                                         $totalCount++;
                                     }
                                 }
-<<<<<<< HEAD
                                 @endphp
                             
-=======
-
-                                // Tính discount từ promotion
-                                $discountAmount = 0;
-                                $finalPrice = $totalPrice;
-                                if (isset($selectedPromotion) && $selectedPromotion) {
-                                    // Kiểm tra promotion có áp dụng cho các dịch vụ đã chọn không
-                                    $isApplicable = false;
-
-                                    // Check if promotion applies to all services
-                                    $hasSpecificServices = ($selectedPromotion->services && $selectedPromotion->services->count() > 0)
-                                        || ($selectedPromotion->combos && $selectedPromotion->combos->count() > 0)
-                                        || ($selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->count() > 0);
-
-                                    $applyToAll = !$hasSpecificServices ||
-                                        (($selectedPromotion->services ? $selectedPromotion->services->count() : 0) +
-                                         ($selectedPromotion->combos ? $selectedPromotion->combos->count() : 0) +
-                                         ($selectedPromotion->serviceVariants ? $selectedPromotion->serviceVariants->count() : 0)) >= 20;
-
-                                    if ($selectedPromotion->apply_scope === 'order' || $applyToAll) {
-                                        $isApplicable = true;
-                                    } else {
-                                        // Check if any selected service/variant/combo matches promotion
-                                        foreach ($allSelectedItems as $item) {
-                                            if ($item['type'] === 'service' && $selectedPromotion->services && $selectedPromotion->services->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
-                                            } elseif ($item['type'] === 'variant' && $selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
-                                            } elseif ($item['type'] === 'combo' && $selectedPromotion->combos && $selectedPromotion->combos->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-
-                                    if ($isApplicable) {
-                                        if ($selectedPromotion->discount_type === 'percent') {
-                                            $discountPercent = $selectedPromotion->discount_percent ?? 0;
-                                            $discountAmount = ($totalPrice * $discountPercent) / 100;
-                                            // Apply max discount if exists
-                                            if ($selectedPromotion->max_discount_amount) {
-                                                $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
-                                            }
-                                        } else {
-                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $totalPrice);
-                                        }
-                                        $finalPrice = max(0, $totalPrice - $discountAmount);
-                                    }
-                                }
-
-                                $formattedTotalPrice = number_format($totalPrice, 0, ',', '.');
-                                $formattedDiscountAmount = number_format($discountAmount, 0, ',', '.');
-                                $formattedFinalPrice = number_format($finalPrice, 0, ',', '.');
-                                @endphp
-
->>>>>>> build/fixService/client/Duy
                             @if($hasAnyService && count($allSelectedItems) > 0)
                                 <!-- Header với icon và số lượng -->
                                 <div style="background: #f8f9fa; padding: 12px 16px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e0e0e0; border-bottom: none;">
@@ -359,11 +284,7 @@
                                                     </div>
                                     <i class="fa fa-chevron-right" style="color: #000; font-size: 12px;"></i>
                                                     </div>
-<<<<<<< HEAD
                                 
-=======
-
->>>>>>> build/fixService/client/Duy
                                 <!-- Danh sách dịch vụ dạng tags -->
                                 <div style="background: #fff; padding: 12px 16px; border-left: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px;">
                                     @foreach($allSelectedItems as $item)
@@ -372,7 +293,6 @@
                                                     </div>
                                                             @endforeach
                                                     </div>
-<<<<<<< HEAD
                                 
                                 <!-- Tổng số tiền -->
                                 <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
@@ -388,35 +308,6 @@
                                 <!-- Nút chọn thêm dịch vụ -->
                                 <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}" 
                                    class="btn w-100" 
-=======
-
-                                <!-- Tổng số tiền -->
-                                <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
-                                    @if(isset($selectedPromotion) && $selectedPromotion && $discountAmount > 0)
-                                        <div style="margin-bottom: 8px;">
-                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                                                <span style="color: #999; font-size: 12px;">Giá gốc:</span>
-                                                <span style="color: #999; font-size: 12px; text-decoration: line-through;">{{ $formattedTotalPrice }} VNĐ</span>
-                                            </div>
-                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                                                <span style="color: #28a745; font-size: 12px;">✓ Giảm:</span>
-                                                <span style="color: #28a745; font-size: 12px; font-weight: 600;">{{ $formattedDiscountAmount }} VNĐ</span>
-                                            </div>
-                                        </div>
-                                    @endif
-                                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                                        <span style="color: #000; font-size: 14px; font-weight: 500;">Tổng số tiền anh cần thanh toán:</span>
-                                        <span style="color: #28a745; font-size: 16px; font-weight: 700;">{{ $formattedFinalPrice }} VNĐ</span>
-                                    </div>
-                                </div>
-
-                                <!-- Hidden input để lưu total duration cho JavaScript -->
-                                <input type="hidden" id="total_duration_minutes" value="{{ $totalDuration }}">
-
-                                <!-- Nút chọn thêm dịch vụ -->
-                                <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}"
-                                   class="btn w-100"
->>>>>>> build/fixService/client/Duy
                                    style="background: #fff; border: 1px solid #0066cc; color: #0066cc; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center; margin-top: 12px;">
                                     <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn thêm dịch vụ ({{ $totalCount }})
                                 </a>
@@ -1321,49 +1212,20 @@
         const savedFormData = localStorage.getItem('appointmentFormData');
         let restoredEmployeeId = null;
         let restoredAppointmentDate = null;
-<<<<<<< HEAD
         
-=======
-
-        // Kiểm tra xem user đã đăng nhập chưa
-        const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
-        const currentUserName = '{{ auth()->user()->name ?? '' }}';
-        const currentUserPhone = '{{ auth()->user()->phone ?? '' }}';
-        const currentUserEmail = '{{ auth()->user()->email ?? '' }}';
-
-        // Nếu user đã đăng nhập, ưu tiên thông tin từ server (không khôi phục từ localStorage)
-        // Chỉ khôi phục thông tin đặt lịch (employee, date, time) từ localStorage
->>>>>>> build/fixService/client/Duy
         if (savedFormData) {
             try {
                 const formData = JSON.parse(savedFormData);
-
-                // Chỉ khôi phục thông tin khách hàng nếu user CHƯA đăng nhập
-                // Nếu user đã đăng nhập, giữ nguyên thông tin từ server (đã được render sẵn)
-                if (!isLoggedIn) {
-                    // User chưa đăng nhập: khôi phục từ localStorage
-                    if (formData.name) {
-                        $('#name').val(formData.name);
-                    }
-                    if (formData.phone) {
-                        $('#phone').val(formData.phone);
-                    }
-                    if (formData.email) {
-                        $('input[name="email"]').val(formData.email);
-                    }
-                } else {
-                    // User đã đăng nhập: xóa thông tin khách hàng cũ trong localStorage để tránh nhầm lẫn
-                    // Chỉ giữ lại thông tin đặt lịch (employee, date, time)
-                    const appointmentData = {
-                        employee_id: formData.employee_id || '',
-                        appointment_date: formData.appointment_date || '',
-                        word_time_id: formData.word_time_id || '',
-                        time_slot: formData.time_slot || ''
-                    };
-                    localStorage.setItem('appointmentFormData', JSON.stringify(appointmentData));
+                // Khôi phục thông tin khách hàng (luôn điền lại khi quay lại)
+                if (formData.name) {
+                    $('#name').val(formData.name);
                 }
-
-                // Khôi phục note (luôn khôi phục vì không liên quan đến user)
+                if (formData.phone) {
+                    $('#phone').val(formData.phone);
+                }
+                if (formData.email) {
+                    $('input[name="email"]').val(formData.email);
+                }
                 if (formData.note) {
                     $('textarea[name="note"]').val(formData.note);
                 }
@@ -1384,19 +1246,6 @@
                 if (formData.time_slot) {
                     $('#time_slot').val(formData.time_slot);
                 }
-
-                // QUAN TRỌNG: Sau khi khôi phục, reload time slots nếu đã có employee, date và total_duration
-                // Điều này đảm bảo khi quay lại từ trang select-services, time slots được load lại với total_duration mới
-                if (restoredEmployeeId && restoredAppointmentDate) {
-                    const totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
-                    if (totalDuration > 0) {
-                        console.log('Restored form data, reloading time slots with total_duration:', totalDuration);
-                        // Delay một chút để đảm bảo DOM đã sẵn sàng
-                        setTimeout(function() {
-                            loadAvailableTimeSlots();
-                        }, 300);
-                    }
-                }
             } catch (e) {
                 console.error('Error restoring form data:', e);
             }
@@ -1405,61 +1254,45 @@
         // Lưu thông tin form vào localStorage trước khi chuyển trang chọn dịch vụ
         $('.select-services-link').on('click', function(e) {
             const formData = {
+                name: $('#name').val() || '',
+                phone: $('#phone').val() || '',
+                email: $('input[name="email"]').val() || '',
+                note: $('textarea[name="note"]').val() || '',
                 employee_id: $('#employee_id').val() || '',
                 appointment_date: $('#appointment_date').val() || '',
                 word_time_id: $('#word_time_id').val() || '',
-                time_slot: $('#time_slot').val() || '',
-                note: $('textarea[name="note"]').val() || ''
+                time_slot: $('#time_slot').val() || ''
             };
-
-            // Chỉ lưu thông tin khách hàng nếu user CHƯA đăng nhập
-            if (!isLoggedIn) {
-                formData.name = $('#name').val() || '';
-                formData.phone = $('#phone').val() || '';
-                formData.email = $('input[name="email"]').val() || '';
-            }
-
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
         });
         
         // Lưu thông tin form khi người dùng nhập (auto-save)
-        // Chỉ lưu thông tin đặt lịch và note, không lưu thông tin khách hàng nếu user đã đăng nhập
         $('#name, #phone, input[name="email"], textarea[name="note"]').on('input change', function() {
             const formData = {
+                name: $('#name').val() || '',
+                phone: $('#phone').val() || '',
+                email: $('input[name="email"]').val() || '',
+                note: $('textarea[name="note"]').val() || '',
                 employee_id: $('#employee_id').val() || '',
                 appointment_date: $('#appointment_date').val() || '',
                 word_time_id: $('#word_time_id').val() || '',
-                time_slot: $('#time_slot').val() || '',
-                note: $('textarea[name="note"]').val() || ''
+                time_slot: $('#time_slot').val() || ''
             };
-
-            // Chỉ lưu thông tin khách hàng nếu user CHƯA đăng nhập
-            if (!isLoggedIn) {
-                formData.name = $('#name').val() || '';
-                formData.phone = $('#phone').val() || '';
-                formData.email = $('input[name="email"]').val() || '';
-            }
-
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
         });
         
         // Lưu khi chọn employee, date, time slot
         $('#employee_id, #appointment_date, #word_time_id, #time_slot').on('change', function() {
             const formData = {
+                name: $('#name').val() || '',
+                phone: $('#phone').val() || '',
+                email: $('input[name="email"]').val() || '',
+                note: $('textarea[name="note"]').val() || '',
                 employee_id: $('#employee_id').val() || '',
                 appointment_date: $('#appointment_date').val() || '',
                 word_time_id: $('#word_time_id').val() || '',
-                time_slot: $('#time_slot').val() || '',
-                note: $('textarea[name="note"]').val() || ''
+                time_slot: $('#time_slot').val() || ''
             };
-
-            // Chỉ lưu thông tin khách hàng nếu user CHƯA đăng nhập
-            if (!isLoggedIn) {
-                formData.name = $('#name').val() || '';
-                formData.phone = $('#phone').val() || '';
-                formData.email = $('input[name="email"]').val() || '';
-            }
-
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
         });
         
@@ -1536,28 +1369,7 @@
             // Nếu đã có employee_id (từ localStorage), enable input date
             $('#appointment_date').prop('disabled', false);
         }
-<<<<<<< HEAD
         
-=======
-
-        // QUAN TRỌNG: Sau khi trang load xong, reload time slots nếu đã có đủ thông tin
-        // Điều này đảm bảo khi quay lại từ trang select-services, time slots được load lại với total_duration mới
-        setTimeout(function() {
-            const employeeId = $('#employee_id').val();
-            const appointmentDate = $('#appointment_date').val();
-            const totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
-
-            if (employeeId && appointmentDate && totalDuration > 0) {
-                console.log('Page loaded with all info, reloading time slots...', {
-                    employeeId: employeeId,
-                    appointmentDate: appointmentDate,
-                    totalDuration: totalDuration
-                });
-                loadAvailableTimeSlots();
-            }
-        }, 500);
-
->>>>>>> build/fixService/client/Duy
         // Load employees by service on page load
             loadEmployeesByService();
             loadEmployeesForCarousel();
@@ -1715,19 +1527,7 @@
                                 itemHtml += '</div>';
                                 $slider.append(itemHtml);
                             });
-<<<<<<< HEAD
                             
-=======
-
-                            // Đảm bảo container hiển thị sau khi load employees
-                            $('#employeeContainer').show();
-
-                            // Debug: Log số lượng employees đã load
-                            console.log('=== DEBUG: Employees loaded ===');
-                            console.log('Total employees:', response.employees.length);
-                            console.log('Employee buttons in DOM:', $('.employee-item-btn').length);
-
->>>>>>> build/fixService/client/Duy
                             // Nếu employee đã chọn không còn trong danh sách, reset
                             if (currentEmployeeId && !response.employees.find(e => e.id == currentEmployeeId)) {
                                 $('#employee_id').val('');
@@ -1785,25 +1585,15 @@
         }
         
         // Xử lý chọn employee - đặt priority cao để chạy trước document click
-        // Sử dụng $(document) để đảm bảo event handler hoạt động ngay cả khi container chưa tồn tại
-        $(document).on('click', '.employee-item-btn', function(e) {
+        $('#employeeContainer').on('click', '.employee-item-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             
             const employeeId = $(this).data('employee-id');
             const employeeName = $(this).data('employee-name');
-<<<<<<< HEAD
             
-=======
-
-            console.log('=== DEBUG: Employee button clicked ===');
-            console.log('Employee ID:', employeeId);
-            console.log('Employee Name:', employeeName);
-
->>>>>>> build/fixService/client/Duy
             if (!employeeId) {
-                console.error('ERROR: No employee ID found!');
                 return false;
             }
             
@@ -1996,50 +1786,7 @@
         
         // Check on page load only (not continuously)
         checkAndClearServiceError();
-<<<<<<< HEAD
         
-=======
-
-        // Reload time slots khi total_duration thay đổi (khi chọn/xóa dịch vụ)
-        // Sử dụng MutationObserver để theo dõi thay đổi của input total_duration_minutes
-        const totalDurationInput = document.getElementById('total_duration_minutes');
-        if (totalDurationInput) {
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                        // Khi value thay đổi, reload time slots nếu đã chọn employee và date
-                        const employeeId = $('#employee_id').val();
-                        const appointmentDate = $('#appointment_date').val();
-                        if (employeeId && appointmentDate) {
-                            console.log('Total duration changed, reloading time slots...');
-                            loadAvailableTimeSlots();
-                        }
-                    }
-                });
-            });
-
-            observer.observe(totalDurationInput, {
-                attributes: true,
-                attributeFilter: ['value']
-            });
-
-            // Cũng theo dõi thay đổi giá trị trực tiếp (khi set bằng JavaScript)
-            let lastValue = totalDurationInput.value;
-            setInterval(function() {
-                const currentValue = totalDurationInput.value;
-                if (currentValue !== lastValue) {
-                    lastValue = currentValue;
-                    const employeeId = $('#employee_id').val();
-                    const appointmentDate = $('#appointment_date').val();
-                    if (employeeId && appointmentDate) {
-                        console.log('Total duration changed (detected by interval), reloading time slots...');
-                        loadAvailableTimeSlots();
-                    }
-                }
-            }, 500);
-        }
-
->>>>>>> build/fixService/client/Duy
         // Clear time slot error when a time slot is selected
         $(document).on('click', '.time-slot-btn:not(.unavailable)', function() {
             $('#time_slot-error').hide();
@@ -2051,19 +1798,7 @@
         }
 
         // Load available time slots when employee or date changes
-        // Debounce để tránh nhiều request đồng thời gây flicker
-        let loadTimeSlotsTimeout = null;
-        let isLoadingTimeSlots = false;
-
         function loadAvailableTimeSlots() {
-            // Clear timeout nếu có
-            if (loadTimeSlotsTimeout) {
-                clearTimeout(loadTimeSlotsTimeout);
-            }
-
-            // BỎ QUA kiểm tra isLoadingTimeSlots để không chặn các request hợp lệ
-            // Chỉ dùng debounce với timeout thay vì chặn hoàn toàn
-
             const employeeId = $('#employee_id').val();
             const appointmentDate = $('#appointment_date').val();
             const timeSlotGrid = $('#time_slot_grid');
@@ -2094,65 +1829,8 @@
             timeSlotMessage.text('Đang tải khung giờ...');
             
             // Lấy tổng thời gian dịch vụ đã chọn
-<<<<<<< HEAD
             const totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
             
-=======
-            let totalDuration = parseInt($('#total_duration_minutes').val()) || 0;
-
-            // Nếu không có total_duration, tính từ các dịch vụ đã chọn
-            if (totalDuration === 0) {
-                // Tính từ service variants
-                let duration = 0;
-                $('input[name="service_variants[]"]').each(function() {
-                    const variantId = $(this).val();
-                    if (variantId) {
-                        // Lấy duration từ data attribute hoặc default 60
-                        const variantDuration = $(this).data('duration') || 60;
-                        duration += variantDuration;
-                    }
-                });
-
-                // Tính từ services
-                $('input[name="service_id[]"]').each(function() {
-                    const serviceId = $(this).val();
-                    if (serviceId) {
-                        const serviceDuration = $(this).data('duration') || 60;
-                        duration += serviceDuration;
-                    }
-                });
-
-                // Tính từ combos
-                $('input[name="combo_id[]"]').each(function() {
-                    const comboId = $(this).val();
-                    if (comboId) {
-                        const comboDuration = $(this).data('duration') || 60;
-                        duration += comboDuration;
-                    }
-                });
-
-                if (duration > 0) {
-                    totalDuration = duration;
-                }
-            }
-
-            // Debug log để kiểm tra total_duration
-            console.log('=== DEBUG: Loading time slots ===');
-            console.log('Total duration input value:', $('#total_duration_minutes').val());
-            console.log('Total duration (parsed):', totalDuration);
-            console.log('Employee ID:', employeeId);
-            console.log('Appointment date:', appointmentDate);
-
-            // Đánh dấu đang load và set timeout để reset nếu request bị treo
-            isLoadingTimeSlots = true;
-            const loadingTimeout = setTimeout(function() {
-                if (isLoadingTimeSlots) {
-                    console.warn('=== WARNING: Time slots request timeout, resetting flag ===');
-                    isLoadingTimeSlots = false;
-                }
-            }, 10000); // Reset sau 10 giây nếu request không hoàn thành
-
->>>>>>> build/fixService/client/Duy
             // Load time slots via AJAX
             $.ajax({
                 url: '{{ route("site.appointment.available-time-slots") }}',
@@ -2165,24 +1843,7 @@
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
-                timeout: 8000, // Timeout sau 8 giây
                 success: function(response) {
-                    // Clear timeout và reset flag sau khi nhận response
-                    clearTimeout(loadingTimeout);
-                    isLoadingTimeSlots = false;
-
-                    // Debug log response
-                    console.log('=== DEBUG: Time slots response ===');
-                    console.log('Response:', response);
-                    if (response.time_slots) {
-                        const slot1130 = response.time_slots.find(s => s.time === '11:30');
-                        if (slot1130) {
-                            console.log('Slot 11:30:', slot1130);
-                            console.log('Available:', slot1130.available);
-                            console.log('Conflict reason:', slot1130.conflict_reason);
-                        }
-                    }
-
                     // LUÔN hiển thị tất cả slots từ 7h-22h (30 slots), kể cả khi không có lịch làm việc
                     if (response.success && response.time_slots && response.time_slots.length > 0) {
                         const currentlySelectedTime = timeSlotHidden.val();
@@ -2225,7 +1886,6 @@
                         // Tạo một page duy nhất với layout 11 cột x 3 hàng
                         const currentPage = $('<div></div>').addClass('time-slot-page');
                         $slider.append(currentPage);
-<<<<<<< HEAD
                         
                         // Thêm tất cả slots từ 7h-22h (30 slots)
                         sortedSlots.forEach(function(slot) {
@@ -2233,95 +1893,6 @@
                             const formattedTime = formatTimeSlot(slot.time);
                             const isSelected = currentlySelectedTime === slot.time;
                             
-=======
-
-                        // Hàm so sánh thời gian (HH:MM format)
-                        function compareTime(time1, time2) {
-                            const [h1, m1] = time1.split(':').map(Number);
-                            const [h2, m2] = time2.split(':').map(Number);
-                            const total1 = h1 * 60 + m1;
-                            const total2 = h2 * 60 + m2;
-                            return total1 - total2;
-                        }
-
-                        // Kiểm tra xem có đơn đã hoàn thành không và lấy thời gian kết thúc
-                        // Nếu có, đánh dấu các slot <= thời gian kết thúc đơn là unavailable (không ẩn, chỉ gray out)
-                        let completedAppointmentEndTime = null;
-                        if (response.completed_appointment_end_time) {
-                            completedAppointmentEndTime = response.completed_appointment_end_time; // Format: "10:00"
-                            console.log('=== DEBUG: Completed appointment end time ===', completedAppointmentEndTime);
-                        }
-
-                        // Tạo danh sách đầy đủ 30 slots từ 7h-22h (30 phút một slot)
-                        const allTimeSlots = [];
-                        for (let hour = 7; hour <= 22; hour++) {
-                            for (let minute = 0; minute < 60; minute += 30) {
-                                if (hour === 22 && minute > 0) break; // Dừng ở 22h00
-                                const timeString = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
-                                allTimeSlots.push(timeString);
-                            }
-                        }
-
-                        // Merge slots từ backend với danh sách đầy đủ
-                        const completeSlots = allTimeSlots.map(function(timeString) {
-                            const existingSlot = sortedSlots.find(s => s.time === timeString);
-                            if (existingSlot) {
-                                // Sử dụng slot từ backend
-                                return existingSlot;
-                            } else {
-                                // Tạo slot mới nếu chưa có
-                                return {
-                                    time: timeString,
-                                    display: timeString,
-                                    word_time_id: null,
-                                    available: false,
-                                    conflict_reason: 'Không có trong ca làm việc'
-                                };
-                            }
-                        });
-
-                        // Đánh dấu các slot <= completed appointment end time là unavailable
-                        completeSlots.forEach(function(slot) {
-                            if (completedAppointmentEndTime && compareTime(slot.time, completedAppointmentEndTime) <= 0) {
-                                slot.available = false;
-                                if (!slot.conflict_reason) {
-                                    slot.conflict_reason = 'Đã qua thời gian';
-                                }
-                            }
-                        });
-
-                        // Đếm số slot đã render để debug
-                        let renderedSlotCount = 0;
-
-                        // Render tất cả 30 slots - KHÔNG ẨN, CHỈ GRAY OUT
-                        completeSlots.forEach(function(slot) {
-                            // Nếu có đơn đã hoàn thành, đánh dấu các slot <= thời gian kết thúc đơn là unavailable
-                            // Ví dụ: Đơn hoàn thành lúc 10h00 → đánh dấu 7h, 7h30, 8h, 8h30, 9h, 9h30, 10h là unavailable
-                            // NHƯNG VẪN HIỂN THỊ TẤT CẢ SLOTS (chỉ gray out)
-                            if (completedAppointmentEndTime && compareTime(slot.time, completedAppointmentEndTime) <= 0) {
-                                // Slot này <= thời gian kết thúc đơn → đánh dấu unavailable (không ẩn)
-                                slot.available = false;
-                                if (!slot.conflict_reason) {
-                                    slot.conflict_reason = 'Đã qua thời gian';
-                                }
-                            }
-
-                            // Kiểm tra available chính xác: phải là true (không phải false, null, undefined)
-                            const isAvailable = slot.available === true;
-                            const formattedTime = formatTimeSlot(slot.time);
-                            const isSelected = currentlySelectedTime === slot.time;
-
-                            // Debug log cho slot 11:30
-                            if (slot.time === '11:30') {
-                                console.log('=== DEBUG: Rendering slot 11:30 ===');
-                                console.log('Slot object:', slot);
-                                console.log('slot.available:', slot.available);
-                                console.log('slot.available type:', typeof slot.available);
-                                console.log('isAvailable (calculated):', isAvailable);
-                                console.log('slot.conflict_reason:', slot.conflict_reason);
-                            }
-
->>>>>>> build/fixService/client/Duy
                             const btn = $('<button></button>')
                                 .attr('type', 'button')
                                 .addClass('time-slot-btn')
@@ -2337,26 +1908,6 @@
                                     btn.attr('data-toggle', 'tooltip');
                                     btn.attr('data-placement', 'top');
                                 }
-
-                                // Debug log cho slot 11:30
-                                if (slot.time === '11:30') {
-                                    console.log('=== DEBUG: Slot 11:30 is unavailable ===');
-                                    console.log('Available:', isAvailable);
-                                    console.log('Conflict reason:', slot.conflict_reason);
-                                    console.log('Button classes:', btn.attr('class'));
-                                    console.log('Button title:', btn.attr('title'));
-                                }
-
-                                // Ngăn chặn click vào slot unavailable
-                                btn.on('click', function(e) {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    console.log('Blocked click on unavailable slot:', slot.time);
-                                    if (slot.conflict_reason) {
-                                        alert(slot.conflict_reason);
-                                    }
-                                    return false;
-                                });
                             } else {
                                 availableCount++;
                                 if (isSelected) {
@@ -2367,28 +1918,15 @@
                             }
                             
                             currentPage.append(btn);
-                            renderedSlotCount++;
                         });
-<<<<<<< HEAD
                         
-=======
-
-                        // Debug log số slot đã render
-                        console.log('=== DEBUG: Slot rendering summary ===');
-                        console.log('Total slots in response:', sortedSlots.length);
-                        console.log('Complete slots (30 slots):', completeSlots.length);
-                        console.log('Rendered slots:', renderedSlotCount);
-                        console.log('Completed appointment end time:', completedAppointmentEndTime || 'null');
-
->>>>>>> build/fixService/client/Duy
                         // Khởi tạo tooltip cho các slot unavailable có conflict_reason
                         if (typeof $.fn.tooltip !== 'undefined') {
                             $('.time-slot-btn.unavailable[data-toggle="tooltip"]').tooltip();
                         }
                         
                         // Thêm các empty slots ở cuối để đủ 33 slots (11 cột x 3 hàng)
-                        // Lưu ý: remainingSlots phải tính dựa trên số slot đã render
-                        const remainingSlots = totalSlots - renderedSlotCount;
+                        const remainingSlots = totalSlots - sortedSlots.length;
                         for (let i = 0; i < remainingSlots; i++) {
                             const emptyBtn = $('<button></button>')
                                 .attr('type', 'button')
@@ -2424,8 +1962,6 @@
                         // updateNavigationButtons();
                     } else {
                         // Nếu không có time_slots từ server (lỗi), vẫn hiển thị thông báo
-                        clearTimeout(loadingTimeout);
-                        isLoadingTimeSlots = false; // Reset flag
                         $('.time-slot-container').hide();
                         if (employeeId) {
                             timeSlotMessage.text(response.message || 'Không thể tải khung giờ. Vui lòng thử lại.');
@@ -2436,13 +1972,8 @@
                         wordTimeIdInput.val('');
                     }
                 },
-                error: function(xhr, status, error) {
-                    // Reset flag khi có lỗi
-                    clearTimeout(loadingTimeout);
-                    isLoadingTimeSlots = false;
-                    console.error('Error loading time slots:', error);
+                error: function(xhr) {
                     $('.time-slot-container').hide();
-<<<<<<< HEAD
                     let errorMessage = 'Có lỗi xảy ra khi tải khung giờ';
                     
                     if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -2450,14 +1981,6 @@
                     }
                     
                     timeSlotMessage.text(errorMessage);
-=======
-
-                    let errorMessage = 'Không thể tải khung giờ. Vui lòng thử lại.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    timeSlotMessage.text(errorMessage).show();
->>>>>>> build/fixService/client/Duy
                 }
             });
         }
@@ -2679,49 +2202,31 @@
             
             // Clear errors ngay nếu đã có giá trị (đảm bảo không hiển thị lỗi sai)
             clearErrorsIfHasValue();
-<<<<<<< HEAD
             
             // Check name - chỉ hiển thị lỗi nếu thực sự trống
             const name = $('input[name="name"]').val();
-=======
-
-            // Check name - BẮT BUỘC (chỉ hiển thị lỗi nếu thực sự trống)
-            const name = $('#name').val();
->>>>>>> build/fixService/client/Duy
             const nameTrimmed = name ? String(name).trim() : '';
             if (!nameTrimmed || nameTrimmed === '') {
-                showFieldError('name', 'Vui lòng nhập họ và tên');
+                showFieldError('name', 'Mời anh nhập họ và tên');
                 isValid = false;
             } else {
                 // Clear error nếu đã có giá trị
                 $('#name-error').hide();
                 $('#name').removeClass('is-invalid');
             }
-<<<<<<< HEAD
             
             // Check phone - chỉ hiển thị lỗi nếu thực sự trống
             const phone = $('input[name="phone"]').val();
-=======
-
-            // Check phone - BẮT BUỘC (chỉ hiển thị lỗi nếu thực sự trống)
-            const phone = $('#phone').val();
->>>>>>> build/fixService/client/Duy
             const phoneTrimmed = phone ? String(phone).trim() : '';
             if (!phoneTrimmed || phoneTrimmed === '') {
-                showFieldError('phone', 'Vui lòng nhập số điện thoại');
+                showFieldError('phone', 'Mời anh nhập số điện thoại');
                 isValid = false;
             } else {
                 // Clear error nếu đã có giá trị
                 $('#phone-error').hide();
                 $('#phone').removeClass('is-invalid');
             }
-<<<<<<< HEAD
             
-=======
-
-            // Email là TÙY CHỌN - không cần validate
-
->>>>>>> build/fixService/client/Duy
             // Check service (at least one must be selected)
             // Kiểm tra service_id[] (array)
             const serviceIds = [];
@@ -2884,35 +2389,16 @@
             const formDataObj = {};
             
             // Lấy dữ liệu trực tiếp từ các input (trước khi disable)
-            // Name - BẮT BUỘC
             const name = $('#name').val();
-            const nameTrimmed = name ? String(name).trim() : '';
-            if (nameTrimmed) {
-                formDataObj.name = nameTrimmed;
-            } else {
-                // Nếu name trống, validation đã bắt lỗi ở trên, nhưng vẫn gửi để server validate lại
-                formDataObj.name = '';
+            if (name && name.trim() !== '') {
+                formDataObj.name = name.trim();
             }
-<<<<<<< HEAD
             
-=======
-
-            // Phone - BẮT BUỘC
->>>>>>> build/fixService/client/Duy
             const phone = $('#phone').val();
-            const phoneTrimmed = phone ? String(phone).trim() : '';
-            if (phoneTrimmed) {
-                formDataObj.phone = phoneTrimmed;
-            } else {
-                // Nếu phone trống, validation đã bắt lỗi ở trên, nhưng vẫn gửi để server validate lại
-                formDataObj.phone = '';
+            if (phone && phone.trim() !== '') {
+                formDataObj.phone = phone.trim();
             }
-<<<<<<< HEAD
             
-=======
-
-            // Email - TÙY CHỌN (có thể để trống)
->>>>>>> build/fixService/client/Duy
             const email = $('input[name="email"]').val();
             if (email && email.trim() !== '') {
                 formDataObj.email = email.trim();
