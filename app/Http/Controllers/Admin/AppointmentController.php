@@ -216,18 +216,13 @@ class AppointmentController extends Controller
             } elseif ($serviceType === 'combo') {
                 $combo = \App\Models\Combo::find($serviceId);
                 if ($combo) {
-                    // Use duration from combo if available, otherwise calculate from combo items
-                    if (!is_null($combo->duration)) {
-                        $comboDuration = $combo->duration;
-                    } else {
-                        // Calculate from combo items if duration not set
-                        $comboDuration = 0;
-                        foreach ($combo->comboItems as $item) {
-                            if ($item->serviceVariant) {
-                                $comboDuration += $item->serviceVariant->duration ?? 0;
-                            } elseif ($item->service) {
-                                $comboDuration += $item->service->base_duration ?? 0;
-                            }
+                    // Calculate total duration from combo items
+                    $comboDuration = 0;
+                    foreach ($combo->comboItems as $item) {
+                        if ($item->serviceVariant) {
+                            $comboDuration += $item->serviceVariant->duration ?? 0;
+                        } elseif ($item->service) {
+                            $comboDuration += $item->service->base_duration ?? 0;
                         }
                     }
                     
@@ -503,15 +498,13 @@ class AppointmentController extends Controller
                     } elseif ($serviceType === 'combo') {
                         $combo = \App\Models\Combo::find($serviceId);
                         if ($combo) {
-                            // Use duration from combo if available, otherwise calculate from combo items
-                            $comboDuration = $combo->duration ?? 0;
-                            if (!$comboDuration) {
-                                foreach ($combo->comboItems as $item) {
-                                    if ($item->serviceVariant) {
-                                        $comboDuration += $item->serviceVariant->duration ?? 0;
-                                    } elseif ($item->service) {
-                                        $comboDuration += $item->service->base_duration ?? 0;
-                                    }
+                            // Calculate total duration from combo items
+                            $comboDuration = 0;
+                            foreach ($combo->comboItems as $item) {
+                                if ($item->serviceVariant) {
+                                    $comboDuration += $item->serviceVariant->duration ?? 0;
+                                } elseif ($item->service) {
+                                    $comboDuration += $item->service->base_duration ?? 0;
                                 }
                             }
                             
