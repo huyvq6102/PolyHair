@@ -6,7 +6,9 @@ use App\Models\Appointment;
 use App\Models\AppointmentDetail;
 use App\Models\AppointmentLog;
 use App\Models\WorkingSchedule;
+use App\Mail\AppointmentCancellationMail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class AppointmentService
 {
@@ -328,8 +330,70 @@ class AppointmentService
                 'modified_by' => $modifiedBy ?? auth()->id(),
             ]);
 
+            // Load đầy đủ relationships cho email
+            $appointment->load([
+                'user',
+                'employee.user',
+                'appointmentDetails.serviceVariant.service',
+                'appointmentDetails.combo'
+            ]);
+
+            // Gửi email thông báo hủy lịch
+            $this->sendCancellationEmail($appointment);
+
             return $appointment;
         });
+    }
+
+    /**
+     * Send cancellation email to customer.
+     */
+    protected function sendCancellationEmail(Appointment $appointment)
+    {
+        // Lấy email từ user
+        $emailToSend = trim($appointment->user->email ?? '');
+
+        // Đảm bảo email hợp lệ
+        if (empty($emailToSend) || !filter_var($emailToSend, FILTER_VALIDATE_EMAIL)) {
+            \Log::warning('Cannot send appointment cancellation email: Invalid or missing email address', [
+                'user_email' => $appointment->user->email ?? 'N/A',
+                'appointment_id' => $appointment->id,
+            ]);
+            return;
+        }
+
+        try {
+            // Gửi email thông báo hủy lịch
+            Mail::to($emailToSend)->send(new AppointmentCancellationMail($appointment));
+
+            \Log::info('Appointment cancellation email sent successfully', [
+                'to' => $emailToSend,
+                'appointment_id' => $appointment->id,
+                'mailer' => config('mail.default'),
+                'mail_host' => config('mail.mailers.smtp.host'),
+                'mail_port' => config('mail.mailers.smtp.port'),
+                'from_address' => config('mail.from.address'),
+            ]);
+        } catch (\Swift_TransportException $e) {
+            // Lỗi kết nối SMTP
+            \Log::error('SMTP connection error when sending appointment cancellation email', [
+                'email_to' => $emailToSend,
+                'appointment_id' => $appointment->id,
+                'error' => $e->getMessage(),
+                'mailer' => config('mail.default'),
+                'mail_host' => config('mail.mailers.smtp.host'),
+                'mail_port' => config('mail.mailers.smtp.port'),
+            ]);
+        } catch (\Exception $e) {
+            // Log lỗi chi tiết nhưng không làm gián đoạn quá trình hủy lịch
+            \Log::error('Failed to send appointment cancellation email', [
+                'user_email' => $emailToSend,
+                'appointment_id' => $appointment->id,
+                'error' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 
     /**
