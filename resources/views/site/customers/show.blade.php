@@ -425,6 +425,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
 <script>
     // Filter appointments by status - Isolated to prevent interference from other scripts
     (function() {
@@ -560,11 +561,189 @@
         })
     }
 
-    // Tự động cập nhật trạng thái lịch hẹn
+    // Real-time update với Pusher + Polling fallback
     (function() {
         const userId = {{ $user->id }};
         let updateInterval = null;
         let lastStatuses = {}; // Lưu trạng thái cuối cùng để so sánh
+        let pusherChannels = {}; // Lưu các Pusher channels đã subscribe
+
+        // Khởi tạo Pusher cho real-time updates
+        function initPusher() {
+            const pusherKey = '{{ config("broadcasting.connections.pusher.key", env("PUSHER_APP_KEY")) }}';
+            const pusherCluster = '{{ config("broadcasting.connections.pusher.options.cluster", env("PUSHER_APP_CLUSTER", "ap1")) }}';
+            
+            if (!pusherKey || typeof Pusher === 'undefined') {
+                console.warn('[Pusher] Pusher not configured, using polling only');
+                return null;
+            }
+            
+            try {
+                const pusher = new Pusher(pusherKey, {
+                    cluster: pusherCluster,
+                    encrypted: true,
+                    authEndpoint: '/broadcasting/auth',
+                    auth: {
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        }
+                    }
+                });
+                
+                // Subscribe cho từng appointment
+                const appointmentElements = document.querySelectorAll('[data-appointment-id]');
+                appointmentElements.forEach(function(element) {
+                    const appointmentId = element.getAttribute('data-appointment-id');
+                    if (appointmentId && !pusherChannels[appointmentId]) {
+                        const channel = pusher.subscribe('private-appointment.' + appointmentId);
+                        pusherChannels[appointmentId] = channel;
+                        
+                        channel.bind('status.updated', function(data) {
+                            console.log('[Pusher] Status updated for appointment', appointmentId, ':', data.status);
+                            console.log('[Pusher] Event data:', data);
+                            
+                            // Cập nhật status trong DOM
+                            const updated = updateAppointmentStatusInDOM(appointmentId, data.status);
+                            
+                            // Nếu appointment không có trong DOM (có thể bị filter), chuyển tab và thử lại
+                            if (!updated) {
+                                console.log('[Pusher] Appointment not found in DOM, switching to correct filter tab');
+                                // Chuyển sang tab filter tương ứng với trạng thái mới
+                                switchToStatusFilterTab(data.status);
+                                
+                                // Sau khi chuyển tab, thử cập nhật lại sau 500ms
+                                setTimeout(function() {
+                                    const retryUpdated = updateAppointmentStatusInDOM(appointmentId, data.status);
+                                    if (!retryUpdated) {
+                                        console.log('[Pusher] Still not found after switching tab, reloading page');
+                                        window.location.reload();
+                                    }
+                                }, 500);
+                            }
+                        });
+                        
+                        console.log('[Pusher] Subscribed to appointment', appointmentId);
+                    }
+                });
+                
+                return pusher;
+            } catch (error) {
+                console.error('[Pusher] Error initializing:', error);
+                return null;
+            }
+        }
+        
+        // Cập nhật status trong DOM
+        function updateAppointmentStatusInDOM(appointmentId, newStatus) {
+            const appointmentElement = document.querySelector(`[data-appointment-id="${appointmentId}"]`);
+            if (!appointmentElement) {
+                console.warn('[Update] Appointment element not found:', appointmentId);
+                // Trả về false để báo rằng không tìm thấy element
+                return false;
+            }
+            
+            const statusBadge = appointmentElement.querySelector('.appointment-status-badge');
+            if (!statusBadge) {
+                console.warn('[Update] Status badge not found for appointment:', appointmentId);
+                return;
+            }
+            
+            const currentStatus = statusBadge.getAttribute('data-status') || statusBadge.textContent.trim();
+            
+            if (currentStatus !== newStatus) {
+                console.log('[Update] ⚠️ STATUS CHANGED! Updating appointment', appointmentId, 'from', currentStatus, 'to', newStatus);
+                
+                // Cập nhật badge
+                statusBadge.textContent = newStatus;
+                statusBadge.setAttribute('data-status', newStatus);
+                appointmentElement.setAttribute('data-appointment-status', newStatus);
+                
+                // Cập nhật class badge
+                statusBadge.className = 'badge ms-2 appointment-status-badge';
+                if (newStatus === 'Đã xác nhận') {
+                    statusBadge.classList.add('bg-success');
+                } else if (newStatus === 'Chờ xử lý') {
+                    statusBadge.classList.add('bg-warning');
+                } else if (newStatus === 'Đang thực hiện') {
+                    statusBadge.classList.add('bg-primary');
+                } else if (newStatus === 'Hoàn thành') {
+                    statusBadge.classList.add('bg-success');
+                } else if (newStatus === 'Đã hủy') {
+                    statusBadge.classList.add('bg-danger');
+                } else if (newStatus === 'Chưa thanh toán') {
+                    statusBadge.classList.add('bg-danger');
+                } else if (newStatus === 'Đã thanh toán') {
+                    statusBadge.classList.add('bg-success');
+                } else {
+                    statusBadge.classList.add('bg-info');
+                }
+                
+                // Cập nhật nút hủy
+                const actionsContainer = appointmentElement.querySelector('.appointment-actions');
+                if (actionsContainer) {
+                    const cancelBtn = actionsContainer.querySelector('.appointment-cancel-btn');
+                    if (newStatus !== 'Chờ xử lý' && cancelBtn) {
+                        cancelBtn.remove();
+                    }
+                }
+                
+                // Hiển thị thông báo
+                showStatusChangeNotification(currentStatus, newStatus);
+                
+                // Tự động chuyển sang tab filter tương ứng với trạng thái mới
+                switchToStatusFilterTab(newStatus);
+                
+                console.log('[Update] ✅ Status updated successfully for appointment:', appointmentId);
+                return true; // Trả về true nếu cập nhật thành công
+            }
+            return true; // Trả về true nếu status không thay đổi (đã đúng rồi)
+        }
+        
+        // Hàm tự động chuyển sang tab filter tương ứng với trạng thái
+        function switchToStatusFilterTab(status) {
+            try {
+                console.log('[Filter] Attempting to switch to status tab:', status);
+                
+                // Tìm button filter có data-status tương ứng
+                const filterButton = document.querySelector(`.status-filter-btn[data-status="${status}"]`);
+                
+                if (filterButton) {
+                    // Kiểm tra xem button đã active chưa
+                    const isAlreadyActive = filterButton.classList.contains('active');
+                    
+                    if (!isAlreadyActive) {
+                        console.log('[Filter] Auto-switching to status tab:', status);
+                        
+                        // Remove active class from all buttons
+                        document.querySelectorAll('.status-filter-btn').forEach(function(btn) {
+                            btn.classList.remove('active');
+                        });
+                        
+                        // Add active class to target button
+                        filterButton.classList.add('active');
+                        
+                        // Trigger filter click để cập nhật danh sách appointments
+                        // Sử dụng click() thay vì dispatchEvent để đảm bảo event handler được gọi
+                        filterButton.click();
+                        
+                        console.log('[Filter] ✅ Switched to status tab:', status);
+                    } else {
+                        console.log('[Filter] Tab already active, just refreshing filter');
+                        // Nếu đã active, chỉ cần refresh filter
+                        filterButton.click();
+                    }
+                } else {
+                    console.warn('[Filter] Filter button not found for status:', status);
+                    // Nếu không tìm thấy tab cụ thể, chuyển sang "Tất cả"
+                    const allButton = document.querySelector('.status-filter-btn[data-status="all"]');
+                    if (allButton) {
+                        allButton.click();
+                    }
+                }
+            } catch (error) {
+                console.error('[Filter] Error switching to status tab:', error);
+            }
+        }
 
         function updateAppointmentStatus() {
             const url = `{{ route('site.customers.appointments-status', $user->id) }}`;
@@ -624,49 +803,8 @@
                             const newStatus = appointment.status;
                             console.log('[Polling] Appointment', appointment.id, '- Current:', currentStatus, 'New:', newStatus);
                             
-                            // Chỉ cập nhật nếu trạng thái thay đổi
-                            if (currentStatus !== newStatus) {
-                                console.log('[Polling] ⚠️ STATUS CHANGED! Updating appointment', appointment.id, 'from', currentStatus, 'to', newStatus);
-                                
-                                // Cập nhật badge text
-                                statusBadge.textContent = newStatus;
-                                statusBadge.setAttribute('data-status', newStatus);
-                                
-                                // Cập nhật class badge
-                                statusBadge.className = 'badge ms-2 appointment-status-badge';
-                                if (newStatus === 'Đã xác nhận') {
-                                    statusBadge.classList.add('bg-success');
-                                } else if (newStatus === 'Chờ xử lý') {
-                                    statusBadge.classList.add('bg-warning');
-                                } else if (newStatus === 'Đang thực hiện') {
-                                    statusBadge.classList.add('bg-primary');
-                                } else if (newStatus === 'Chưa thanh toán') {
-                                    statusBadge.classList.add('bg-danger');
-                                } else if (newStatus === 'Đã thanh toán') {
-                                    statusBadge.classList.add('bg-success');
-                                } else {
-                                    statusBadge.classList.add('bg-info');
-                                }
-
-                                // Cập nhật nút hủy
-                                if (actionsContainer) {
-                                    const cancelBtn = actionsContainer.querySelector('.appointment-cancel-btn');
-                                    if (newStatus === 'Đã xác nhận' || !appointment.can_cancel || newStatus === 'Đã thanh toán' || newStatus === 'Chưa thanh toán') {
-                                        // Ẩn nút hủy nếu đã xác nhận hoặc không thể hủy
-                                        if (cancelBtn) {
-                                            console.log('[Polling] Removing cancel button for appointment:', appointment.id);
-                                            cancelBtn.remove();
-                                        }
-                                    }
-                                }
-                                
-                                // Hiển thị thông báo trạng thái đã thay đổi
-                                showStatusChangeNotification(currentStatus, newStatus);
-                                
-                                console.log('[Polling] ✅ Status updated successfully for appointment:', appointment.id);
-                            } else {
-                                console.log('[Polling] Status unchanged for appointment:', appointment.id);
-                            }
+                            // Sử dụng hàm chung để cập nhật
+                            updateAppointmentStatusInDOM(appointmentId, newStatus);
                         });
                     } else {
                         console.warn('[Polling] No appointments or invalid response:', data);
@@ -694,17 +832,20 @@
                 }
             });
             
-            // Luôn chạy polling nếu có lịch hẹn sắp tới
+            // Khởi tạo Pusher cho real-time updates
+            initPusher();
+            
+            // Luôn chạy polling nếu có lịch hẹn sắp tới (fallback nếu Pusher không hoạt động)
             if (allAppointments.length > 0) {
-                console.log('[Polling] ✅ Starting appointment status polling for', allAppointments.length, 'appointments...');
+                console.log('[Polling] ✅ Starting appointment status polling (fallback) for', allAppointments.length, 'appointments...');
                 // Cập nhật ngay lập tức
                 updateAppointmentStatus();
                 
-                // Cập nhật mỗi 3 giây để phát hiện thay đổi trạng thái từ admin nhanh hơn
+                // Cập nhật mỗi 10 giây (giảm tần suất vì đã có Pusher)
                 updateInterval = setInterval(function() {
-                    console.log('[Polling] Running scheduled update...');
+                    console.log('[Polling] Running scheduled update (fallback)...');
                     updateAppointmentStatus();
-                }, 3000);
+                }, 10000); // Tăng lên 10 giây vì đã có Pusher
                 
                 // Dừng polling sau 2 giờ (để tránh polling vô hạn, nhưng đủ lâu để theo dõi)
                 setTimeout(function() {
@@ -821,5 +962,3 @@
     })();
 </script>
 @endpush
-
-// test

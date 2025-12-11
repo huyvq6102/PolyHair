@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Appointment;
 use App\Models\AppointmentLog;
+use App\Events\AppointmentStatusUpdated;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -36,6 +37,7 @@ class AutoConfirmAppointments extends Command
         
         $appointments = Appointment::where('status', 'Chờ xử lý')
             ->where('created_at', '<=', $cutoffTime)
+            ->whereRaw('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= 5') // Đảm bảo đã qua ít nhất 5 phút
             ->get();
         
         $count = 0;
@@ -57,6 +59,18 @@ class AutoConfirmAppointments extends Command
                         'status_to' => 'Đã xác nhận',
                         'modified_by' => null, // Tự động xác nhận
                     ]);
+
+                    // Refresh và load relationships trước khi broadcast
+                    $appointment->refresh();
+                    $appointment->load([
+                        'user',
+                        'employee.user',
+                        'appointmentDetails.serviceVariant.service',
+                        'appointmentDetails.combo'
+                    ]);
+
+                    // Broadcast status update event
+                    event(new AppointmentStatusUpdated($appointment));
                     
                     $count++;
                 });

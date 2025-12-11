@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Employee;
 use App\Models\Appointment;
 use App\Models\AppointmentLog;
+use App\Events\AppointmentStatusUpdated;
 
 class CustomerController extends Controller
 {
@@ -70,11 +71,9 @@ class CustomerController extends Controller
 
         $user = User::with([
             'appointments' => function($query) {
-                // Lấy tất cả lịch hẹn sắp tới (không chỉ "Chờ xử lý")
-                // Loại bỏ các lịch đã hoàn thành, đã thanh toán, và đã hủy
-                // Nhưng vẫn lấy các trạng thái khác như "Đã xác nhận", "Đang thực hiện", "Chưa thanh toán", "Đã thanh toán"
-                $query->where('status', '!=', 'Đã hủy')
-                    ->whereNotIn('status', ['Hoàn thành'])
+                // Lấy tất cả lịch hẹn (bao gồm cả "Hoàn thành" và "Đã hủy" để polling có thể cập nhật)
+                // Chỉ loại bỏ các lịch đã quá cũ (hơn 30 ngày)
+                $query->where('created_at', '>=', now()->subDays(30))
                     ->orderBy('start_at', 'asc');
             }
         ])->findOrFail($id);
@@ -114,6 +113,7 @@ $appointments = $user->appointments->map(function($appointment) {
             $appointments = Appointment::where('user_id', $userId)
                 ->where('status', 'Chờ xử lý')
                 ->where('created_at', '<=', $cutoffTime)
+                ->whereRaw('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= 5') // Đảm bảo đã qua ít nhất 5 phút
                 ->get();
 
             foreach ($appointments as $appointment) {
@@ -134,6 +134,18 @@ $appointments = $user->appointments->map(function($appointment) {
                         'status_to' => 'Đã xác nhận',
                         'modified_by' => null, // Tự động xác nhận
                     ]);
+
+                    // Refresh và load relationships trước khi broadcast
+                    $appointment->refresh();
+                    $appointment->load([
+                        'user',
+                        'employee.user',
+                        'appointmentDetails.serviceVariant.service',
+                        'appointmentDetails.combo'
+                    ]);
+
+                    // Broadcast status update event
+                    event(new AppointmentStatusUpdated($appointment));
 
                     DB::commit();
                 } catch (\Exception $e) {

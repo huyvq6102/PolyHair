@@ -7,6 +7,7 @@ use App\Models\AppointmentDetail;
 use App\Models\AppointmentLog;
 use App\Models\WorkingSchedule;
 use App\Mail\AppointmentCancellationMail;
+use App\Events\AppointmentStatusUpdated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -179,6 +180,24 @@ class AppointmentService
             'modified_by' => $modifiedBy ?? auth()->id(),
         ]);
 
+        // Refresh appointment và load relationships trước khi broadcast
+        $appointment->refresh();
+        $appointment->load([
+            'user',
+            'employee.user',
+            'appointmentDetails.serviceVariant.service',
+            'appointmentDetails.combo'
+        ]);
+
+        // Broadcast status update event
+        \Illuminate\Support\Facades\Log::info('Broadcasting appointment status update', [
+            'appointment_id' => $appointment->id,
+            'old_status' => $oldStatus,
+            'new_status' => $appointment->status,
+        ]);
+        
+        event(new AppointmentStatusUpdated($appointment));
+
         return $appointment;
     }
 
@@ -330,13 +349,23 @@ class AppointmentService
                 'modified_by' => $modifiedBy ?? auth()->id(),
             ]);
 
-            // Load đầy đủ relationships cho email
+            // Refresh appointment và load relationships trước khi broadcast
+            $appointment->refresh();
             $appointment->load([
                 'user',
                 'employee.user',
                 'appointmentDetails.serviceVariant.service',
                 'appointmentDetails.combo'
             ]);
+
+            // Broadcast status update event
+            \Illuminate\Support\Facades\Log::info('Broadcasting appointment cancellation', [
+                'appointment_id' => $appointment->id,
+                'old_status' => $oldStatus,
+                'new_status' => $appointment->status,
+            ]);
+            
+            event(new AppointmentStatusUpdated($appointment));
 
             // Gửi email thông báo hủy lịch
             $this->sendCancellationEmail($appointment);
@@ -520,10 +549,21 @@ class AppointmentService
             $oldStatus = $appointment->status;
             $newStatus = 'Chờ xử lý'; // Restore to pending status
             
-            $appointment->update([
-                'status' => $newStatus,
-                'cancellation_reason' => null
-            ]);
+            // Reset created_at và updated_at để tránh auto-confirm ngay lập tức
+            $now = now();
+            
+            // Sử dụng DB::table để đảm bảo created_at được update (vì Eloquent có thể không update created_at)
+            DB::table('appointments')
+                ->where('id', $appointment->id)
+                ->update([
+                    'status' => $newStatus,
+                    'cancellation_reason' => null,
+                    'created_at' => $now, // Reset created_at để tránh auto-confirm ngay lập tức
+                    'updated_at' => $now, // Cập nhật updated_at
+                ]);
+            
+            // Refresh appointment để lấy dữ liệu mới
+            $appointment->refresh();
 
             // Note: Working schedule status column has been removed.
             // The working schedule is now managed differently (if needed).
@@ -536,6 +576,35 @@ class AppointmentService
                 'status_to' => $newStatus,
                 'modified_by' => $modifiedBy ?? auth()->id(),
             ]);
+
+            // Refresh appointment và load relationships trước khi broadcast
+            $appointment->refresh();
+            $appointment->load([
+                'user',
+                'employee.user',
+                'appointmentDetails.serviceVariant.service',
+                'appointmentDetails.combo'
+            ]);
+
+            // Broadcast status update event
+            \Illuminate\Support\Facades\Log::info('Broadcasting appointment restore', [
+                'appointment_id' => $appointment->id,
+                'old_status' => $oldStatus,
+                'new_status' => $appointment->status,
+                'booking_code' => $appointment->booking_code,
+            ]);
+            
+            try {
+                event(new AppointmentStatusUpdated($appointment));
+                \Illuminate\Support\Facades\Log::info('Appointment restore event broadcasted successfully', [
+                    'appointment_id' => $appointment->id,
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to broadcast appointment restore event', [
+                    'appointment_id' => $appointment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return $appointment;
         });
@@ -620,6 +689,24 @@ class AppointmentService
                     'status_to' => $data['status'],
                     'modified_by' => auth()->id(),
                 ]);
+
+                // Refresh appointment và load relationships trước khi broadcast
+                $appointment->refresh();
+                $appointment->load([
+                    'user',
+                    'employee.user',
+                    'appointmentDetails.serviceVariant.service',
+                    'appointmentDetails.combo'
+                ]);
+
+                // Broadcast status update event
+                \Illuminate\Support\Facades\Log::info('Broadcasting appointment status update', [
+                    'appointment_id' => $appointment->id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $appointment->status,
+                ]);
+                
+                event(new AppointmentStatusUpdated($appointment));
             }
 
             $result = $appointment->load(['employee.user', 'user', 'appointmentDetails.serviceVariant.service']);
