@@ -86,7 +86,7 @@
                                     $statusColor = '#6c757d'; // Xám
                                 }
                             @endphp
-                            <span class="status-badge {{ $statusClass }}" style="background-color: {{ $statusColor }}; color: #fff; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                            <span id="appointment-status-badge" class="status-badge {{ $statusClass }}" style="background-color: {{ $statusColor }}; color: #fff; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                                 {{ $status }}
                             </span>
                         </span>
@@ -296,6 +296,116 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Pusher configuration
+        const pusherKey = '{{ config("broadcasting.connections.pusher.key", env("PUSHER_APP_KEY")) }}';
+        const pusherCluster = '{{ config("broadcasting.connections.pusher.options.cluster", env("PUSHER_APP_CLUSTER", "ap1")) }}';
+        
+        if (!pusherKey) {
+            console.error('Pusher key is not configured. Please set PUSHER_APP_KEY in .env file.');
+            return;
+        }
+        
+        const pusher = new Pusher(pusherKey, {
+            cluster: pusherCluster,
+            encrypted: true,
+            authEndpoint: '/broadcasting/auth',
+            auth: {
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                }
+            }
+        });
+
+        // Lắng nghe private channel cho appointment này
+        const channel = pusher.subscribe('private-appointment.{{ $appointment->id }}');
+        
+        // Xử lý subscription success
+        channel.bind('pusher:subscription_succeeded', function() {
+            console.log('Successfully subscribed to appointment channel:', '{{ $appointment->id }}');
+        });
+        
+        // Xử lý subscription error
+        channel.bind('pusher:subscription_error', function(status) {
+            console.error('Failed to subscribe to appointment channel:', status);
+        });
+        
+        // Lắng nghe event status.updated
+        channel.bind('status.updated', function(data) {
+            console.log('Appointment status updated event received:', data);
+            console.log('New status:', data.status);
+            
+            // Cập nhật status badge
+            const statusBadge = document.getElementById('appointment-status-badge');
+            if (!statusBadge) {
+                console.error('Status badge element not found!');
+                return;
+            }
+            
+            const status = data.status;
+            console.log('Updating status badge to:', status);
+                const statusColors = {
+                    'Chờ xử lý': '#ffc107',
+                    'Đã xác nhận': '#28a745',
+                    'Đang thực hiện': '#007bff',
+                    'Hoàn thành': '#28a745',
+                    'Đã hủy': '#6c757d',
+                    'Đã thanh toán': '#17a2b8',
+                    'Chưa thanh toán': '#dc3545'
+                };
+                
+                const statusClasses = {
+                    'Chờ xử lý': 'status-pending',
+                    'Đã xác nhận': 'status-confirmed',
+                    'Đang thực hiện': 'status-in-progress',
+                    'Hoàn thành': 'status-completed',
+                    'Đã hủy': 'status-cancelled',
+                    'Đã thanh toán': 'status-paid',
+                    'Chưa thanh toán': 'status-unpaid'
+                };
+                
+                const color = statusColors[status] || '#ffc107';
+                const statusClass = statusClasses[status] || 'status-pending';
+                
+                // Cập nhật text và style
+                statusBadge.textContent = status;
+                statusBadge.className = 'status-badge ' + statusClass;
+                statusBadge.style.backgroundColor = color;
+                
+                // Thêm animation
+                statusBadge.style.transition = 'all 0.3s ease';
+                statusBadge.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    statusBadge.style.transform = 'scale(1)';
+                }, 300);
+                
+                // Hiển thị thông báo
+                if (typeof toastr !== 'undefined') {
+                    toastr.success('Trạng thái lịch hẹn đã được cập nhật: ' + status, 'Thông báo', {
+                        timeOut: 3000,
+                        positionClass: 'toast-top-right'
+                    });
+                } else {
+                    alert('Trạng thái lịch hẹn đã được cập nhật: ' + status);
+                }
+            }
+        });
+        
+        // Xử lý lỗi kết nối
+        pusher.connection.bind('error', function(err) {
+            console.error('Pusher connection error:', err);
+        });
+        
+        pusher.connection.bind('connected', function() {
+            console.log('Pusher connected successfully');
+        });
+    });
+</script>
+@endpush
 
 @endsection
 
