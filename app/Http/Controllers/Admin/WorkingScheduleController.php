@@ -118,10 +118,14 @@ class WorkingScheduleController extends Controller
     {
         $validated = $request->validate([
             'schedule_type' => 'required|in:day,week',
-            'stylist_id' => 'required|exists:employees,id',
-            'barber_id' => 'required|exists:employees,id',
-            'shampooer_id' => 'required|exists:employees,id',
-            'receptionist_id' => 'required|exists:employees,id',
+            'stylist_ids' => 'required|array|min:1',
+            'stylist_ids.*' => 'required|exists:employees,id',
+            'barber_ids' => 'required|array|min:1',
+            'barber_ids.*' => 'required|exists:employees,id',
+            'shampooer_ids' => 'required|array|min:1',
+            'shampooer_ids.*' => 'required|exists:employees,id',
+            'receptionist_ids' => 'required|array|min:1',
+            'receptionist_ids.*' => 'required|exists:employees,id',
             'work_date' => 'required_if:schedule_type,day|nullable|date',
             'week_start_date' => 'required_if:schedule_type,week|nullable|date',
             'shift_ids' => 'required|array|min:1',
@@ -129,38 +133,57 @@ class WorkingScheduleController extends Controller
         ]);
 
         // Kiểm tra nhân viên có đúng vị trí không
-        $stylist = Employee::findOrFail($validated['stylist_id']);
-        $barber = Employee::findOrFail($validated['barber_id']);
-        $shampooer = Employee::findOrFail($validated['shampooer_id']);
-        $receptionist = Employee::findOrFail($validated['receptionist_id']);
+        $stylistIds = $validated['stylist_ids'];
+        $barberIds = $validated['barber_ids'];
+        $shampooerIds = $validated['shampooer_ids'];
+        $receptionistIds = $validated['receptionist_ids'];
 
-        if ($stylist->position !== 'Stylist') {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Nhân viên được chọn cho vị trí Stylist không đúng vị trí.');
-        }
-        if ($barber->position !== 'Barber') {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Nhân viên được chọn cho vị trí Barber không đúng vị trí.');
-        }
-        if ($shampooer->position !== 'Shampooer') {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Nhân viên được chọn cho vị trí Shampooer không đúng vị trí.');
-        }
-        if ($receptionist->position !== 'Receptionist') {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Nhân viên được chọn cho vị trí Receptionist không đúng vị trí.');
+        // Kiểm tra Stylist
+        $stylists = Employee::whereIn('id', $stylistIds)->get();
+        foreach ($stylists as $stylist) {
+            if ($stylist->position !== 'Stylist') {
+                $stylistName = $stylist->user->name ?? 'N/A';
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Nhân viên '{$stylistName}' không đúng vị trí Stylist.");
+            }
         }
 
-        $employeeIds = [
-            $validated['stylist_id'],
-            $validated['barber_id'],
-            $validated['shampooer_id'],
-            $validated['receptionist_id'],
-        ];
+        // Kiểm tra Barber
+        $barbers = Employee::whereIn('id', $barberIds)->get();
+        foreach ($barbers as $barber) {
+            if ($barber->position !== 'Barber') {
+                $barberName = $barber->user->name ?? 'N/A';
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Nhân viên '{$barberName}' không đúng vị trí Barber.");
+            }
+        }
+
+        // Kiểm tra Shampooer
+        $shampooers = Employee::whereIn('id', $shampooerIds)->get();
+        foreach ($shampooers as $shampooer) {
+            if ($shampooer->position !== 'Shampooer') {
+                $shampooerName = $shampooer->user->name ?? 'N/A';
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Nhân viên '{$shampooerName}' không đúng vị trí Shampooer.");
+            }
+        }
+
+        // Kiểm tra Receptionist
+        $receptionists = Employee::whereIn('id', $receptionistIds)->get();
+        foreach ($receptionists as $receptionist) {
+            if ($receptionist->position !== 'Receptionist') {
+                $receptionistName = $receptionist->user->name ?? 'N/A';
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Nhân viên '{$receptionistName}' không đúng vị trí Receptionist.");
+            }
+        }
+
+        // Gộp tất cả nhân viên vào một mảng
+        $employeeIds = array_merge($stylistIds, $barberIds, $shampooerIds, $receptionistIds);
         $shiftIds = $validated['shift_ids'];
         $scheduleType = $validated['schedule_type'];
 
@@ -299,29 +322,100 @@ class WorkingScheduleController extends Controller
         $schedule = WorkingSchedule::findOrFail($id);
 
         $validated = $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_ids' => 'required|array|min:1',
+            'employee_ids.*' => 'required|exists:employees,id',
             'work_date' => 'required|date',
             'shift_id' => 'required|exists:working_shifts,id',
         ]);
 
-        // Kiểm tra trùng lịch (loại trừ lịch hiện tại)
-        $conflict = $this->checkScheduleConflict(
-            $validated['employee_id'],
-            $validated['work_date'],
-            $validated['shift_id'],
-            $id
-        );
+        $employeeIds = $validated['employee_ids'];
+        $workDate = $validated['work_date'];
+        $shiftId = $validated['shift_id'];
 
-        if ($conflict) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Lịch này bị trùng với lịch khác: ' . $conflict);
+        // Nếu chỉ có 1 nhân viên, cập nhật lịch hiện tại
+        if (count($employeeIds) === 1) {
+            $employeeId = $employeeIds[0];
+            
+            // Kiểm tra trùng lịch (loại trừ lịch hiện tại)
+            $conflict = $this->checkScheduleConflict(
+                $employeeId,
+                $workDate,
+                $shiftId,
+                $id
+            );
+
+            if ($conflict) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Lịch này bị trùng với lịch khác: ' . $conflict);
+            }
+
+            $schedule->update([
+                'employee_id' => $employeeId,
+                'work_date' => $workDate,
+                'shift_id' => $shiftId,
+            ]);
+
+            return redirect()->route('admin.working-schedules.index')
+                ->with('success', 'Lịch nhân viên đã được cập nhật thành công!');
+        } else {
+            // Nếu có nhiều nhân viên, xóa lịch cũ và tạo lịch mới cho tất cả nhân viên
+            $createdCount = 0;
+            $skippedCount = 0;
+            $conflicts = [];
+
+            // Xóa lịch cũ
+            $schedule->delete();
+
+            // Tạo lịch mới cho tất cả nhân viên đã chọn
+            foreach ($employeeIds as $employeeId) {
+                // Kiểm tra trùng lịch
+                $conflict = $this->checkScheduleConflict(
+                    $employeeId,
+                    $workDate,
+                    $shiftId
+                );
+
+                if ($conflict) {
+                    $skippedCount++;
+                    $employee = Employee::with('user')->find($employeeId);
+                    $shift = WorkingShift::find($shiftId);
+                    $employeeName = $employee->user->name ?? "ID: {$employeeId}";
+                    $shiftName = $shift->name ?? "ID: {$shiftId}";
+                    $dateLabel = \Carbon\Carbon::parse($workDate)->format('d/m/Y');
+                    $conflicts[] = "{$employeeName} ({$employee->position}) - {$dateLabel} - Ca {$shiftName}: " . $conflict;
+                    continue;
+                }
+
+                // Tạo lịch
+                WorkingSchedule::create([
+                    'employee_id' => $employeeId,
+                    'work_date' => $workDate,
+                    'shift_id' => $shiftId,
+                ]);
+
+                $createdCount++;
+            }
+
+            // Thông báo kết quả
+            $message = '';
+            if ($createdCount > 0) {
+                $message = "Đã cập nhật thành công {$createdCount} lịch làm việc!";
+            }
+            if ($skippedCount > 0) {
+                $message .= ($message ? ' ' : '') . "Bỏ qua {$skippedCount} lịch do trùng.";
+            }
+
+            if (empty($conflicts)) {
+                return redirect()->route('admin.working-schedules.index')
+                    ->with('success', $message ?: 'Lịch nhân viên đã được cập nhật thành công!');
+            } else {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('warning', $message)
+                    ->with('conflicts', $conflicts);
+            }
         }
-
-        $schedule->update($validated);
-
-        return redirect()->route('admin.working-schedules.index')
-            ->with('success', 'Lịch nhân viên đã được cập nhật thành công!');
     }
 
     /**

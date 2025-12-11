@@ -30,20 +30,22 @@
 
             <div class="form-row">
                 <div class="form-group col-md-6">
-                    <label for="employee_id">Nhân viên <span class="text-danger">*</span></label>
-                    <select name="employee_id" id="employee_id" class="form-control @error('employee_id') is-invalid @enderror" required>
-                        <option value="">-- Chọn nhân viên --</option>
+                    <label for="employee_ids">Nhân viên <span class="text-danger">*</span></label>
+                    <select name="employee_ids[]" id="employee_ids" class="form-control select2-multiple @error('employee_ids') is-invalid @enderror @error('employee_ids.*') is-invalid @enderror" multiple required>
                         @foreach($employees as $employee)
-                            <option value="{{ $employee->id }}" {{ old('employee_id', $schedule->employee_id) == $employee->id ? 'selected' : '' }}>
+                            <option value="{{ $employee->id }}" {{ (old('employee_ids') && in_array($employee->id, old('employee_ids'))) || $schedule->employee_id == $employee->id ? 'selected' : '' }}>
                                 {{ $employee->user->name ?? 'N/A' }} - {{ $employee->position ?? 'N/A' }}
                             </option>
                         @endforeach
                     </select>
-                    @error('employee_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                    @error('employee_ids')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @elseif($errors->has('employee_ids.*'))
+                        <div class="invalid-feedback d-block">{{ $errors->first('employee_ids.*') }}</div>
                     @else
-                        <div class="invalid-feedback">Vui lòng chọn nhân viên</div>
+                        <div class="invalid-feedback">Vui lòng chọn ít nhất một nhân viên</div>
                     @enderror
+                    <small class="form-text text-muted">Bạn có thể chọn nhiều nhân viên. Hệ thống sẽ tạo lịch cho tất cả nhân viên đã chọn.</small>
                 </div>
                 <div class="form-group col-md-6">
                     <label for="work_date">Ngày làm việc <span class="text-danger">*</span></label>
@@ -101,6 +103,27 @@
         });
     }, false);
 })();
+
+// Khởi tạo Select2 cho multi-select
+$(document).ready(function() {
+    $('#employee_ids').select2({
+        placeholder: 'Chọn nhân viên',
+        allowClear: false,
+        width: '100%',
+        closeOnSelect: false
+    });
+
+    // Cập nhật validation khi thay đổi
+    $('#employee_ids').on('change', function() {
+        const employeeCount = $('#employee_ids').val() ? $('#employee_ids').val().length : 0;
+        
+        if (employeeCount > 0) {
+            $('#employee_ids')[0].setCustomValidity('');
+        } else {
+            $('#employee_ids')[0].setCustomValidity('Vui lòng chọn ít nhất một nhân viên');
+        }
+    });
+});
 </script>
 @endpush
 

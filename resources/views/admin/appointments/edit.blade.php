@@ -256,10 +256,12 @@
                         <label for="appointment_date">Ngày đặt</label>
                         <input type="date" name="appointment_date" id="appointment_date" 
                                value="{{ old('appointment_date', $appointment->start_at ? $appointment->start_at->format('Y-m-d') : '') }}" 
-                               class="form-control @error('appointment_date') is-invalid @enderror">
+                               class="form-control @error('appointment_date') is-invalid @enderror"
+                               min="{{ date('Y-m-d') }}">
                         @error('appointment_date')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        <small class="form-text text-muted">Không được chọn ngày trong quá khứ</small>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -271,6 +273,7 @@
                         @error('appointment_time')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        <small class="form-text text-muted">Nếu chọn ngày hôm nay, giờ phải lớn hơn giờ hiện tại</small>
                     </div>
                 </div>
             </div>
@@ -344,5 +347,73 @@
     })();
     
     // Không cần lọc dịch vụ theo nhân viên - hiển thị tất cả dịch vụ
+    
+    // Validation: Không cho phép chọn ngày giờ trong quá khứ
+    $(document).ready(function() {
+        const appointmentDateInput = $('#appointment_date');
+        const appointmentTimeInput = $('#appointment_time');
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        
+        // Set min date to today
+        appointmentDateInput.attr('min', todayStr);
+        
+        // Validate date and time on change
+        function validateDateTime() {
+            const selectedDate = appointmentDateInput.val();
+            const selectedTime = appointmentTimeInput.val();
+            
+            if (!selectedDate || !selectedTime) {
+                return true; // Allow empty values
+            }
+            
+            const selectedDateTime = new Date(selectedDate + ' ' + selectedTime);
+            const now = new Date();
+            
+            // Check if selected datetime is in the past
+            if (selectedDateTime < now) {
+                alert('Không được chọn ngày giờ trong quá khứ! Vui lòng chọn ngày giờ từ bây giờ trở đi.');
+                // Reset to current date/time
+                appointmentDateInput.val(todayStr);
+                const currentTime = now.toTimeString().slice(0, 5); // Format: HH:MM
+                appointmentTimeInput.val(currentTime);
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Validate when date changes
+        appointmentDateInput.on('change', function() {
+            const selectedDate = $(this).val();
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            // If selected date is today, set min time to current time
+            if (selectedDate === todayStr) {
+                const now = new Date();
+                const currentTime = now.toTimeString().slice(0, 5);
+                appointmentTimeInput.attr('min', currentTime);
+            } else {
+                // If future date, remove min time restriction
+                appointmentTimeInput.removeAttr('min');
+            }
+            
+            validateDateTime();
+        });
+        
+        // Validate when time changes
+        appointmentTimeInput.on('change', function() {
+            validateDateTime();
+        });
+        
+        // Validate on form submit
+        $('#appointment-edit-form').on('submit', function(e) {
+            if (!validateDateTime()) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
 </script>
 @endpush

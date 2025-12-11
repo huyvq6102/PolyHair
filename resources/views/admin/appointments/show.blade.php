@@ -17,71 +17,80 @@
         <h6 class="m-0 font-weight-bold text-primary">Thông tin lịch hẹn</h6>
     </div>
     <div class="card-body">
-        <form action="{{ route('admin.appointments.update', $appointment->id) }}" method="POST">
-            @csrf
-            @method('PUT')
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Khách hàng:</label>
-                        <p class="form-control-plaintext">{{ $appointment->user->name ?? 'N/A' }}</p>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Nhân viên:</label>
-                        <p class="form-control-plaintext">{{ $appointment->employee->user->name ?? 'Chưa phân công' }}</p>
-                    </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Khách hàng:</label>
+                    <p class="form-control-plaintext">{{ $appointment->user->name ?? 'N/A' }}</p>
                 </div>
             </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Thời gian bắt đầu:</label>
-                        <p class="form-control-plaintext">{{ $appointment->start_at ? $appointment->start_at->format('d/m/Y H:i') : 'N/A' }}</p>
-                    </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Nhân viên:</label>
+                    <p class="form-control-plaintext">{{ $appointment->employee->user->name ?? 'Chưa phân công' }}</p>
                 </div>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="status">Trạng thái <span class="text-danger">*</span></label>
-                <select name="status" id="status" class="form-control @error('status') is-invalid @enderror" required>
-                    <option value="Chờ xử lý" {{ $appointment->status == 'Chờ xử lý' ? 'selected' : '' }}>Chờ xử lý</option>
-                    <option value="Đã xác nhận" {{ $appointment->status == 'Đã xác nhận' ? 'selected' : '' }}>Đã xác nhận</option>
-                    <option value="Đang thực hiện" {{ $appointment->status == 'Đang thực hiện' ? 'selected' : '' }}>Đang thực hiện</option>
-                    <option value="Hoàn thành" {{ $appointment->status == 'Hoàn thành' ? 'selected' : '' }}>Hoàn thành</option>
-                    <option value="Đã hủy" {{ $appointment->status == 'Đã hủy' ? 'selected' : '' }}>Đã hủy</option>
-                    <option value="Chưa thanh toán" {{ $appointment->status == 'Chưa thanh toán' ? 'selected' : '' }}>Chưa thanh toán</option>
-                    <option value="Đã thanh toán" {{ $appointment->status == 'Đã thanh toán' ? 'selected' : '' }}>Đã thanh toán</option>
-                </select>
-                @error('status')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Thời gian bắt đầu:</label>
+                    <p class="form-control-plaintext">{{ $appointment->start_at ? $appointment->start_at->format('d/m/Y H:i') : 'N/A' }}</p>
+                </div>
             </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Thời gian kết thúc:</label>
+                    <p class="form-control-plaintext">{{ $appointment->end_at ? $appointment->end_at->format('d/m/Y H:i') : 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
 
-            @if($appointment->note)
-            <div class="form-group">
-                <label>Ghi chú:</label>
-                <p class="form-control-plaintext">{{ $appointment->note }}</p>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Trạng thái:</label>
+                    <div>
+                        <span class="badge badge-{{ $appointment->status == 'Hoàn thành' ? 'success' : ($appointment->status == 'Đã hủy' ? 'danger' : ($appointment->status == 'Đã xác nhận' ? 'info' : ($appointment->status == 'Đã thanh toán' ? 'success' : 'warning'))) }} badge-lg" style="font-size: 14px; padding: 8px 12px;">
+                            {{ $appointment->status }}
+                        </span>
+                    </div>
+                    <small class="form-text text-muted">Trạng thái chỉ có thể thay đổi ở trang chỉnh sửa</small>
+                </div>
             </div>
-            @endif
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label>Mã đơn:</label>
+                    <p class="form-control-plaintext">
+                        <strong>{{ $appointment->booking_code ?? '#' . str_pad($appointment->id, 6, '0', STR_PAD_LEFT) }}</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
 
-            @if($appointment->cancellation_reason)
-            <div class="form-group">
-                <label>Lý do hủy:</label>
-                <p class="form-control-plaintext text-danger">{{ $appointment->cancellation_reason }}</p>
-            </div>
-            @endif
+        @if($appointment->note)
+        <div class="form-group">
+            <label>Ghi chú:</label>
+            <p class="form-control-plaintext">{{ $appointment->note }}</p>
+        </div>
+        @endif
 
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Cập nhật trạng thái
-                </button>
-                <a href="{{ route('admin.appointments.index') }}" class="btn btn-secondary">Hủy</a>
-            </div>
-        </form>
+        @if($appointment->cancellation_reason)
+        <div class="form-group">
+            <label>Lý do hủy:</label>
+            <p class="form-control-plaintext text-danger">{{ $appointment->cancellation_reason }}</p>
+        </div>
+        @endif
+
+        <div class="form-group">
+            <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Chỉnh sửa lịch hẹn
+            </a>
+            <a href="{{ route('admin.appointments.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
     </div>
 </div>
 

@@ -65,7 +65,21 @@
                                value="{{ $filters['service'] ?? '' }}" placeholder="Nhập tên dịch vụ">
                     </div>
                 </div>
-                <div class="col-md-9">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="appointment_date">Ngày đặt</label>
+                        <input type="date" name="appointment_date" id="appointment_date" class="form-control" 
+                               value="{{ $filters['appointment_date'] ?? '' }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="booking_code">Mã đơn</label>
+                        <input type="text" name="booking_code" id="booking_code" class="form-control" 
+                               value="{{ $filters['booking_code'] ?? '' }}" placeholder="Nhập mã đơn">
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="form-group" style="margin-top: 32px;">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-search"></i> Tìm kiếm
