@@ -39,6 +39,8 @@ class AppointmentController extends Controller
             'email' => $request->get('email'),
             'employee_name' => $request->get('employee_name'),
             'service' => $request->get('service'),
+            'appointment_date' => $request->get('appointment_date'),
+            'booking_code' => $request->get('booking_code'),
         ];
 
         $appointments = $this->appointmentService->getAllWithFilters($filters);
@@ -437,6 +439,15 @@ class AppointmentController extends Controller
             // Set start_at and end_at if date and time provided
             if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
                 $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
+                
+                // Kiểm tra không được chọn ngày giờ trong quá khứ
+                $now = Carbon::now('Asia/Ho_Chi_Minh');
+                if ($startAt->lt($now)) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Không được chọn ngày giờ trong quá khứ! Vui lòng chọn ngày giờ từ bây giờ trở đi.');
+                }
+                
                 $appointmentData['start_at'] = $startAt;
                 
                 // Calculate total duration from existing services + new services

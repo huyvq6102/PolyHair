@@ -69,6 +69,16 @@ class AppointmentService
             });
         }
 
+        // Filter by appointment date
+        if (isset($filters['appointment_date']) && !empty($filters['appointment_date'])) {
+            $query->whereDate('start_at', $filters['appointment_date']);
+        }
+
+        // Search by booking code
+        if (isset($filters['booking_code']) && !empty($filters['booking_code'])) {
+            $query->where('booking_code', 'like', '%' . $filters['booking_code'] . '%');
+        }
+
         return $query->orderBy('id', 'desc')->get();
     }
 
