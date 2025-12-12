@@ -31,7 +31,7 @@
       <div class="album-card">
         <div class="album-img"><img src="{{ $item['img'] }}" alt="{{ $item['name'] }}"></div>
         <div class="album-name">{{ $item['name'] }}</div>
-        <a class="album-link" href="{{ $item['link'] }}">Xem thêm</a>
+
       </div>
       @endforeach
     </div>
@@ -121,7 +121,7 @@
         'https://storage.30shine.com/web/v4/images/sao-toa-sang/5.jpg',
         'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/15.png',
       ] as $img)
-        <a class="fb-card" href="#">
+        <a class="fb-card" ">
           <div class="fb-img"><img src="{{ $img }}" alt="Feedback"></div>
         </a>
       @endforeach
@@ -142,10 +142,8 @@
                     mà còn mang lại sự tự tin và phong cách mới cho vẻ ngoại hình của bạn.
                 </p>
             </div>
-            
-            <div class="text-center mt-4">
-                <a href="#" class="btn-view-all">Xem tất cả</a>
-            </div>
+
+
         </div>
 
         <div class="stylist-right">

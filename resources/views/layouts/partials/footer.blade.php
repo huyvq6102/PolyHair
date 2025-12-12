@@ -10,12 +10,12 @@
                             POLY HAIR SALON
                         </h3>
                         <ul>
-                            <li><a href="#">Những câu hỏi thường gặp</a></li>
-                            <li><a href="#">Chính sách bảo mật</a></li>
-                            <li><a href="#">Chính sách bảo hành</a></li>
-                            <li><a href="#">Chính sách mua hàng</a></li>
-                            <li><a href="#">Chính sách người dùng</a></li>
-                            <li><a href="{{ route('site.contact.index') }}">Liên hệ</a></li>
+                            <li><a >Những câu hỏi thường gặp</a></li>
+                            <li><a >Chính sách bảo mật</a></li>
+                            <li><a >Chính sách bảo hành</a></li>
+                            <li><a >Chính sách mua hàng</a></li>
+                            <li><a >Chính sách người dùng</a></li>
+                            <li><a href="{{ route('site.contact.index') }}">Về Poly Hair</a></li>
                         </ul>
                     </div>
                 </div>
@@ -27,7 +27,7 @@
                             Tổng Đài Hỗ Trợ
                         </h3>
                         <ul>
-                            <li>Hotline: <a href="tel:1900636883">1900 636 883</a></li>
+                            <li>Hotline: <a >1900 636 883</a></li>
                             <li>Giờ mở cửa: 9h00 - 20h00</li>
                             <li>Trụ sở văn phòng: 159 Đ. Calmette, Phường Hoàn Kiếm, Thành phố Hà Nội</li>
                         </ul>
@@ -57,25 +57,25 @@
                         </h3>
                         <ul class="social-media-list">
                             <li>
-                                <a href="#" class="social-item">
+                                <a  class="social-item">
                                     <span class="social-icon facebook"><i class="fa fa-facebook"></i></span>
                                     <span>178K follow</span>
                                 </a>
                             </li>
                             <li>
-                                <a href="#" class="social-item">
+                                <a  class="social-item">
                                     <span class="social-icon zalo"><i class="fa fa-comment"></i></span>
                                     <span>140K follow</span>
                                 </a>
                             </li>
                             <li>
-                                <a href="#" class="social-item">
+                                <a  class="social-item">
                                     <span class="social-icon tiktok"><i class="fa fa-music"></i></span>
                                     <span>650K follow</span>
                                 </a>
                             </li>
                             <li>
-                                <a href="#" class="social-item">
+                                <a  class="social-item">
                                     <span class="social-icon instagram"><i class="fa fa-instagram"></i></span>
                                     <span>140K follow</span>
                                 </a>
@@ -122,7 +122,7 @@
                         Cơ quan cấp: Chi cục Thuế Hà Nội
                     </p>
                     <p class="copy_right text-center" style="margin-bottom: 10px;">
-                        Hotline: <a href="tel:1900636883" style="color: #fff;">1900 63 68 83</a> - Email: <a href="mailto:POLYHAIRR@gmail.com" style="color: #fff;">mkttraky@gmail.com</a>
+                        Hotline: <a href="tel:1900636883" style="color: #fff;">1900 63 68 83</a> - Email: <a href="mailto:POLYHAIR@gmail.com" style="color: #fff;">POLYHAIR@gmail.com</a>
                     </p>
                     <p class="copy_right text-center" style="font-weight: 600;">
                         POLY HAIR SALON - HỆ THỐNG SALON LÀM TÓC CHUYÊN NGHIỆP HÀNG ĐẦU VIỆT NAM
