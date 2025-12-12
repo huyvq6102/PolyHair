@@ -376,7 +376,17 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('site.appointment.create', compact('employees', 'wordTimes', 'serviceCategories', 'combos'));
+        // Load promotion nếu có promotion_id trong URL
+        $selectedPromotion = null;
+        if ($request->has('promotion_id') && $request->input('promotion_id')) {
+            $promotionId = $request->input('promotion_id');
+            $selectedPromotion = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+                ->whereNull('deleted_at')
+                ->where('status', 'active')
+                ->find($promotionId);
+        }
+
+        return view('site.appointment.create', compact('employees', 'wordTimes', 'serviceCategories', 'combos', 'selectedPromotion'));
     }
 
     /**
