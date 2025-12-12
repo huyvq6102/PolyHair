@@ -328,7 +328,7 @@
                                                                 class="select-variant-btn"
                                                                 data-service-id="{{ $service->id }}"
                                                                 style="width: 100%; padding: 10px 16px; margin-bottom: 12px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; transition: all 0.3s ease; text-align: left; display: flex; align-items: center; justify-content: space-between;">
-                                                            <span>Chọn biến thể</span>
+                                                            <span>Chọn gói dịch vụ</span>
                                                             <i class="fa fa-chevron-down" style="font-size: 11px; transition: transform 0.3s ease;"></i>
                                                         </button>
 
