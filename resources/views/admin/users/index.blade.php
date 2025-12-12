@@ -165,8 +165,75 @@
         
         <!-- Pagination -->
         @if($users->hasPages())
-            <div class="d-flex justify-content-center mt-4">
-                {{ $users->appends(request()->query())->links() }}
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <!-- Text hiển thị thông tin -->
+                <div class="text-muted">
+                    Đang xem {{ $users->firstItem() ?? 0 }} đến {{ $users->lastItem() ?? 0 }} trong tổng số {{ $users->total() }} mục
+                </div>
+                
+                <!-- Nút phân trang -->
+                <nav>
+                    <ul class="pagination mb-0">
+                        <!-- Nút Trước -->
+                        <li class="page-item {{ $users->onFirstPage() ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ $users->previousPageUrl() ? $users->appends(request()->query())->previousPageUrl() : '#' }}" 
+                               style="{{ $users->onFirstPage() ? 'background-color: #f8f9fa; color: #6c757d; cursor: not-allowed;' : 'background-color: white; color: #007bff;' }}">
+                                Trước
+                            </a>
+                        </li>
+                        
+                        <!-- Các số trang -->
+                        @php
+                            $currentPage = $users->currentPage();
+                            $lastPage = $users->lastPage();
+                            
+                            // Tính toán phạm vi trang hiển thị (hiển thị tối đa 5 trang)
+                            $startPage = max(1, $currentPage - 2);
+                            $endPage = min($lastPage, $currentPage + 2);
+                            
+                            // Điều chỉnh nếu gần đầu hoặc cuối
+                            if ($endPage - $startPage < 4) {
+                                if ($startPage == 1) {
+                                    $endPage = min($lastPage, $startPage + 4);
+                                } else {
+                                    $startPage = max(1, $endPage - 4);
+                                }
+                            }
+                        @endphp
+                        
+                        @for($page = $startPage; $page <= $endPage; $page++)
+                            @if($page == $currentPage)
+                                <li class="page-item active">
+                                    <span class="page-link" style="background-color: #007bff; color: white; border-color: #007bff;">
+                                        {{ $page }}
+                                    </span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $users->appends(request()->query())->url($page) }}" 
+                                       style="background-color: white; color: #007bff;">
+                                        {{ $page }}
+                                    </a>
+                                </li>
+                            @endif
+                        @endfor
+                        
+                        <!-- Nút Tiếp -->
+                        <li class="page-item {{ $users->hasMorePages() ? '' : 'disabled' }}">
+                            <a class="page-link" href="{{ $users->nextPageUrl() ? $users->appends(request()->query())->nextPageUrl() : '#' }}" 
+                               style="{{ $users->hasMorePages() ? 'background-color: white; color: #007bff;' : 'background-color: #f8f9fa; color: #6c757d; cursor: not-allowed;' }}">
+                                Tiếp
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        @else
+            <!-- Hiển thị thông tin khi không có phân trang -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Đang xem {{ $users->count() > 0 ? 1 : 0 }} đến {{ $users->count() }} trong tổng số {{ $users->total() }} mục
+                </div>
             </div>
         @endif
     </div>
