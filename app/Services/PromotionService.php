@@ -224,7 +224,7 @@ class PromotionService
             ];
         }
 
-        // Kiểm tra trạng thái khuyến mãi
+        // 1. Check Status explicitly set by admin
         if ($promotion->status === 'inactive') {
             return [
                 'valid' => false,
@@ -234,89 +234,29 @@ class PromotionService
             ];
         }
 
-        if ($promotion->status === 'expired') {
+        // 2. Check Date Range
+        $startDate = $promotion->start_date ? $promotion->start_date->startOfDay() : null;
+        $endDate = $promotion->end_date ? $promotion->end_date->endOfDay() : null;
+
+        if ($startDate && $now->lt($startDate)) {
             return [
                 'valid' => false,
                 'promotion' => $promotion,
                 'discount_amount' => 0,
-                'message' => 'Mã khuyến mại này đã hết hạn.'
+                'message' => 'Mã khuyến mại này chưa đến thời gian áp dụng. (Bắt đầu: ' . $startDate->format('d/m/Y') . ')'
             ];
         }
 
-        if ($promotion->status === 'scheduled') {
+        if ($endDate && $now->gt($endDate)) {
             return [
                 'valid' => false,
                 'promotion' => $promotion,
                 'discount_amount' => 0,
-                'message' => 'Mã khuyến mại này chưa đến thời gian áp dụng.'
+                'message' => 'Mã khuyến mại này đã hết hạn. (Kết thúc: ' . $endDate->format('d/m/Y') . ')'
             ];
-        }
-
-        // Chỉ chấp nhận status = 'active'
-        if ($promotion->status !== 'active') {
-            return [
-                'valid' => false,
-                'promotion' => $promotion,
-                'discount_amount' => 0,
-                'message' => 'Mã khuyến mại này không khả dụng.'
-            ];
-        }
-
-        // Kiểm tra ngày bắt đầu và kết thúc (double check)
-        if ($promotion->start_date && Carbon::parse($promotion->start_date)->gt($now)) {
-            return [
-                'valid' => false,
-                'promotion' => $promotion,
-                'discount_amount' => 0,
-                'message' => 'Mã khuyến mại này chưa đến thời gian áp dụng.'
-            ];
-        }
-
-        if ($promotion->end_date && Carbon::parse($promotion->end_date)->lt($now)) {
-            return [
-                'valid' => false,
-                'promotion' => $promotion,
-                'discount_amount' => 0,
-                'message' => 'Mã khuyến mại này đã hết hạn.'
-            ];
-        }
-
-        // Kiểm tra thời gian áp dụng sau khi đã tìm thấy promotion
-        $messages = [];
-        $now = now();
-        
-        if ($promotion->start_date) {
-            // start_date đã được cast thành Carbon trong model
-            // So sánh với start of day để cho phép sử dụng trong cả ngày
-            $startDate = $promotion->start_date->startOfDay();
-            $todayStart = $now->copy()->startOfDay();
-            
-            if ($startDate->gt($todayStart)) {
-                $messages[] = 'Mã khuyến mại này chưa đến thời gian áp dụng. (Bắt đầu: ' . $startDate->format('d/m/Y') . ')';
-            }
         }
         
-        if ($promotion->end_date) {
-            // end_date đã được cast thành Carbon trong model
-            // So sánh với end of day để cho phép sử dụng trong cả ngày
-            $endDate = $promotion->end_date->endOfDay();
-            $todayEnd = $now->copy()->endOfDay();
-            
-            if ($endDate->lt($todayEnd)) {
-                $messages[] = 'Mã khuyến mại này đã hết hạn. (Kết thúc: ' . $endDate->format('d/m/Y') . ')';
-            }
-        }
-        
-        if (!empty($messages)) {
-            return [
-                'valid' => false,
-                'promotion' => $promotion,
-                'discount_amount' => 0,
-                'message' => implode(' ', $messages)
-            ];
-        }
-
-        // Kiểm tra per_user_limit
+        // 3. Check User Limit
         if ($promotion->per_user_limit && $userId) {
             $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promotion->id)
                 ->where('user_id', $userId)
@@ -332,180 +272,236 @@ class PromotionService
             }
         }
 
-        $discountAmount = 0;
+        // 4. Check Min Order Amount
+        if ($promotion->min_order_amount && $subtotal < $promotion->min_order_amount) {
+            return [
+                'valid' => false,
+                'promotion' => $promotion,
+                'discount_amount' => 0,
+                'message' => 'Đơn hàng chưa đạt mức tối thiểu ' . number_format($promotion->min_order_amount, 0, ',', '.') . '₫.'
+            ];
+        }
 
-        // Xử lý theo apply_scope
+        $discountAmount = 0;
+        $applicableAmount = 0;
+
+        // 5. Calculate Discount
         if ($promotion->apply_scope === 'service') {
-            // Áp dụng theo dịch vụ: chỉ giảm cho các dịch vụ/combo/variant có trong promotion
-            // Nếu promotion không có dịch vụ/combo/variant nào được chọn, áp dụng cho tất cả
-            $hasSpecificServices = $promotion->services->count() > 0 
-                || $promotion->combos->count() > 0 
-                || $promotion->serviceVariants->count() > 0;
-            
-            // Nếu promotion có dịch vụ/combo/variant được chọn, nhưng số lượng rất nhiều
-            // (ví dụ: chọn tất cả), thì coi như áp dụng cho tất cả
-            // Giả sử nếu có hơn 50 dịch vụ/combo/variant được chọn, coi như "tất cả"
-            $totalSelected = $promotion->services->count() 
-                + $promotion->combos->count() 
-                + $promotion->serviceVariants->count();
-            
-            // Nếu số lượng được chọn quá nhiều (>= 20), coi như áp dụng cho tất cả
-            // Hoặc nếu không có gì được chọn, cũng áp dụng cho tất cả
-            $applyToAll = !$hasSpecificServices || $totalSelected >= 20;
-            
-            $applicableAmount = 0;
+            // Get IDs of applicable items (ensure integer)
+            $validServiceIds = $promotion->services->pluck('id')->map(fn($id) => (int)$id)->toArray();
+            $validComboIds = $promotion->combos->pluck('id')->map(fn($id) => (int)$id)->toArray();
+            $validVariantIds = $promotion->serviceVariants->pluck('id')->map(fn($id) => (int)$id)->toArray();
+
+            // If no specific services selected, assume it applies to ALL services
+            $applyToAll = empty($validServiceIds) && empty($validComboIds) && empty($validVariantIds);
 
             foreach ($cartItems as $item) {
-                $itemPrice = 0;
-                $isApplicable = false;
+                $itemType = $item['type'] ?? '';
+                $itemId = $item['id'] ?? 0;
+                $quantity = $item['quantity'] ?? 1;
+                
+                // Helper to check and add price
+                $checkAndAdd = function($price, $sId = null, $cId = null, $vId = null) use (
+                    $applyToAll, $validServiceIds, $validComboIds, $validVariantIds, &$applicableAmount
+                ) {
+                    if ($price <= 0) return;
 
-                // Service Variant
-                if (isset($item['type']) && $item['type'] === 'service_variant') {
-                    $variant = \App\Models\ServiceVariant::with('service')->find($item['id']);
+                    if ($applyToAll) {
+                        $applicableAmount += $price;
+                        return;
+                    }
+
+                    $isValid = false;
+                    
+                    // 1. Direct checks
+                    if ($vId && in_array((int)$vId, $validVariantIds, true)) $isValid = true;
+                    if ($cId && in_array((int)$cId, $validComboIds, true)) $isValid = true;
+                    if ($sId && in_array((int)$sId, $validServiceIds, true)) $isValid = true;
+                    
+                    // 2. Combo content check (if not valid yet and is a combo)
+                    if (!$isValid && $cId && !empty($validServiceIds)) {
+                        $combo = \App\Models\Combo::with('services')->find($cId);
+                        if ($combo) {
+                            foreach ($combo->services as $cSvc) {
+                                if (in_array((int)$cSvc->id, $validServiceIds, true)) {
+                                    $isValid = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if ($isValid) {
+                        $applicableAmount += $price;
+                    }
+                };
+
+                // Handle Cart Item Types
+                if ($itemType === 'service_variant') {
+                    $variant = \App\Models\ServiceVariant::with('service')->find($itemId);
                     if ($variant) {
-                        $itemPrice = $variant->price * ($item['quantity'] ?? 1);
-                        
-                        // Nếu áp dụng cho tất cả (không có dịch vụ cụ thể hoặc chọn quá nhiều)
-                        if ($applyToAll) {
-                            $isApplicable = true;
-                        } else {
-                            // Kiểm tra variant có trong promotion không
-                            if ($promotion->serviceVariants->contains('id', $variant->id)) {
-                                $isApplicable = true;
-                            }
-                            // Hoặc kiểm tra service cha có trong promotion không
-                            elseif ($variant->service && $promotion->services->contains('id', $variant->service->id)) {
-                                $isApplicable = true;
-                            }
-                        }
+                        $price = $variant->price * $quantity;
+                        $checkAndAdd($price, $variant->service_id, null, $variant->id);
                     }
-                }
-                // Combo
-                elseif (isset($item['type']) && $item['type'] === 'combo') {
-                    $combo = \App\Models\Combo::find($item['id']);
+                } elseif ($itemType === 'combo') {
+                    $combo = \App\Models\Combo::find($itemId);
                     if ($combo) {
-                        $itemPrice = $combo->price * ($item['quantity'] ?? 1);
-                        // Nếu áp dụng cho tất cả (không có dịch vụ cụ thể hoặc chọn quá nhiều)
-                        if ($applyToAll) {
-                            $isApplicable = true;
-                        } elseif ($promotion->combos->contains('id', $combo->id)) {
-                            $isApplicable = true;
-                        }
+                        $price = $combo->price * $quantity;
+                        $checkAndAdd($price, null, $combo->id, null);
                     }
-                }
-                // Appointment
-                elseif (isset($item['type']) && $item['type'] === 'appointment') {
+                } elseif ($itemType === 'appointment') {
                     $appointment = \App\Models\Appointment::with([
                         'appointmentDetails.serviceVariant.service',
                         'appointmentDetails.combo'
-                    ])->find($item['id']);
+                    ])->find($itemId);
 
-                    if ($appointment && $appointment->appointmentDetails->count() > 0) {
+                    if ($appointment) {
                         foreach ($appointment->appointmentDetails as $detail) {
-                            // Tính giá từ price_snapshot hoặc từ variant/combo (giống như trong CheckoutController)
-                            $detailPrice = $detail->price_snapshot;
+                            $price = $detail->price_snapshot; // Prioritize snapshot
                             
-                            if ($detailPrice === null) {
-                                if ($detail->serviceVariant) {
-                                    $detailPrice = $detail->serviceVariant->price ?? 0;
-                                } elseif ($detail->combo) {
-                                    $detailPrice = $detail->combo->price ?? 0;
-                                } else {
-                                    // Nếu không có variant/combo, vẫn có thể có price_snapshot
-                                    // Nếu không có gì cả, thì giá = 0
-                                    $detailPrice = 0;
+                            // Fallback price if snapshot is missing
+                            if ($price === null) {
+                                $price = $detail->serviceVariant->price 
+                                    ?? ($detail->combo->price ?? 0);
+                            }
+
+                            $sId = null;
+                            $vId = $detail->service_variant_id;
+                            $cId = $detail->combo_id;
+                            $notes = $detail->notes;
+                            
+                            // Handle Soft Deleted or Missing Relations
+                            if ($vId && !$detail->serviceVariant) {
+                                $trashedVariant = \App\Models\ServiceVariant::withTrashed()->find($vId);
+                                if ($trashedVariant) {
+                                    $sId = $trashedVariant->service_id;
                                 }
+                            } else {
+                                $sId = $detail->serviceVariant ? $detail->serviceVariant->service_id : null;
                             }
                             
-                            // Bỏ qua nếu giá = 0 (không hợp lệ)
-                            if ($detailPrice <= 0) {
-                                continue;
-                            }
-                            
-                        // Nếu áp dụng cho tất cả (không có dịch vụ cụ thể hoặc chọn quá nhiều)
-                        if ($applyToAll) {
-                            $isApplicable = true;
-                            $itemPrice += $detailPrice;
-                        } else {
-                                $detailApplicable = false;
+                            // Handle Note-based Services (Custom/Legacy)
+                            if (!$sId && !$vId && !$cId && $notes) {
+                                // Try to find service by name matching the notes
+                                // We use a loose match or exact match depending on data quality
+                                // Try exact match first
+                                $serviceByNote = \App\Models\Service::where('name', $notes)->first();
+                                if (!$serviceByNote) {
+                                     // Try loose match
+                                     $serviceByNote = \App\Models\Service::where('name', 'like', "%{$notes}%")->first();
+                                }
                                 
-                                // Kiểm tra service variant
-                                if ($detail->service_variant_id) {
-                                    if ($promotion->serviceVariants->contains('id', $detail->service_variant_id)) {
-                                        $detailApplicable = true;
-                                    }
-                                    // Hoặc kiểm tra service cha
-                                    elseif ($detail->serviceVariant && $detail->serviceVariant->service) {
-                                        if ($promotion->services->contains('id', $detail->serviceVariant->service->id)) {
-                                            $detailApplicable = true;
-                                        }
-                                    }
-                                }
-                                // Kiểm tra combo
-                                elseif ($detail->combo_id) {
-                                    if ($promotion->combos->contains('id', $detail->combo_id)) {
-                                        $detailApplicable = true;
-                                    }
-                                }
-                                // Nếu không có variant/combo nhưng có price_snapshot (service không có variant)
-                                // Trong trường hợp này, nếu promotion có services được chọn, không thể biết service nào
-                                // Nên chỉ áp dụng nếu promotion áp dụng cho tất cả (đã xử lý ở trên)
-                                
-                                if ($detailApplicable) {
-                                    $isApplicable = true;
-                                    $itemPrice += $detailPrice;
+                                if ($serviceByNote) {
+                                    $sId = $serviceByNote->id;
                                 }
                             }
+                            
+                            if ($cId && !$detail->combo) {
+                                // Try finding trashed combo
+                                $trashedCombo = \App\Models\Combo::withTrashed()->find($cId);
+                                if ($trashedCombo) {
+                                    // Logic for trashed combo content check if needed
+                                }
+                            }
+
+                            // Fallback price
+                            if ($price === null) {
+                                $price = $detail->price_snapshot ?? 0;
+                                if ($price == 0 && $vId) {
+                                     $v = $detail->serviceVariant ?? \App\Models\ServiceVariant::withTrashed()->find($vId);
+                                     $price = $v->price ?? 0;
+                                }
+                            }
+                            
+                            $checkAndAdd($price, $sId, $cId, $vId);
                         }
                     }
-                }
-
-                if ($isApplicable) {
-                    $applicableAmount += $itemPrice;
                 }
             }
 
             if ($applicableAmount <= 0) {
+                // Debug info construction
+                $debugInfo = "Debug: ValidServices=[" . implode(',', $validServiceIds) . "], ValidCombos=[" . implode(',', $validComboIds) . "], ValidVariants=[" . implode(',', $validVariantIds) . "]. ";
+                $debugInfo .= "CartItems checked: ";
+                
+                $itemsInfo = [];
+                foreach ($cartItems as $item) {
+                     $type = $item['type'] ?? 'unknown';
+                     $iId = $item['id'] ?? 0;
+                     
+                     if ($type === 'service_variant') {
+                         $v = \App\Models\ServiceVariant::withTrashed()->find($iId);
+                         $sId = $v ? $v->service_id : 'null';
+                         $itemsInfo[] = "Variant $iId (Service $sId)";
+                     } elseif ($type === 'appointment') {
+                         $appt = \App\Models\Appointment::with(['appointmentDetails.serviceVariant', 'appointmentDetails.combo'])->find($iId);
+                         $apptDetails = [];
+                         if ($appt) {
+                             foreach ($appt->appointmentDetails as $d) {
+                                 $dsId = $d->serviceVariant ? $d->serviceVariant->service_id : 'null';
+                                 $dRawV = $d->service_variant_id ?? 'null';
+                                 $dRawC = $d->combo_id ?? 'null';
+                                 $dNotes = $d->notes ? "Note:{$d->notes}" : '';
+                                 
+                                 if ($dsId === 'null' && $dRawV !== 'null') {
+                                     $trashedV = \App\Models\ServiceVariant::withTrashed()->find($dRawV);
+                                     if ($trashedV) $dsId = $trashedV->service_id . "(trashed)";
+                                 }
+                                 
+                                 // Check resolved by note
+                                 if ($dsId === 'null' && $dRawV === 'null' && $dRawC === 'null' && $d->notes) {
+                                     $svc = \App\Models\Service::where('name', $d->notes)->first();
+                                     if (!$svc) $svc = \App\Models\Service::where('name', 'like', "%{$d->notes}%")->first();
+                                     if ($svc) $dsId = $svc->id . "(byNote)";
+                                 }
+                                 
+                                 $apptDetails[] = "Detail(S:$dsId, RawV:$dRawV, RawC:$dRawC, $dNotes)";
+                             }
+                         }
+                         $itemsInfo[] = "Appt $iId [" . implode(',', $apptDetails) . "]";
+                     } elseif ($type === 'combo') {
+                         $itemsInfo[] = "Combo $iId";
+                     } else {
+                         $itemsInfo[] = "$type $iId";
+                     }
+                }
+                $debugInfo .= implode('; ', $itemsInfo);
+
                 return [
                     'valid' => false,
                     'promotion' => $promotion,
                     'discount_amount' => 0,
-                    'message' => 'Mã khuyến mại này không áp dụng cho các dịch vụ trong giỏ hàng của bạn.'
+                    'message' => 'Mã khuyến mại không áp dụng cho các dịch vụ trong giỏ hàng. ' . $debugInfo
                 ];
             }
-
-            // Tính giảm giá trên phần áp dụng được
+            
+            // Calculate based on applicable amount
             if ($promotion->discount_type === 'percent') {
                 $discountAmount = $applicableAmount * ($promotion->discount_percent / 100);
             } else {
-                $discountAmount = $promotion->discount_amount ?? 0;
+                // Fixed amount: usually applied once per order, or per item?
+                // Standard logic: Fixed amount off the total applicable items value.
+                // But ensure we don't discount more than the applicable amount.
+                $discountAmount = min($promotion->discount_amount, $applicableAmount);
             }
 
         } else {
-            // Áp dụng theo hóa đơn: kiểm tra min_order_amount và giảm trên toàn bộ đơn
-            if ($promotion->min_order_amount && $subtotal < $promotion->min_order_amount) {
-                return [
-                    'valid' => false,
-                    'promotion' => $promotion,
-                    'discount_amount' => 0,
-                    'message' => 'Đơn hàng của bạn chưa đạt mức tối thiểu ' . number_format($promotion->min_order_amount, 0, ',', '.') . '₫ để áp dụng mã khuyến mại này.'
-                ];
-            }
-
-            // Tính giảm giá trên toàn bộ đơn
+            // Apply Scope: ORDER (All items)
+            $applicableAmount = $subtotal;
+            
             if ($promotion->discount_type === 'percent') {
                 $discountAmount = $subtotal * ($promotion->discount_percent / 100);
             } else {
-                $discountAmount = $promotion->discount_amount ?? 0;
+                $discountAmount = $promotion->discount_amount;
             }
         }
 
-        // Áp dụng max_discount_amount nếu có (cho discount_type = percent)
-        if ($promotion->discount_type === 'percent' && $promotion->max_discount_amount) {
+        // 6. Max Discount Amount (for percent)
+        if ($promotion->discount_type === 'percent' && $promotion->max_discount_amount > 0) {
             $discountAmount = min($discountAmount, $promotion->max_discount_amount);
         }
 
-        // Đảm bảo discount không vượt quá subtotal
+        // 7. Final cap at subtotal (cannot discount more than total value)
         $discountAmount = min($discountAmount, $subtotal);
 
         return [
@@ -521,21 +517,21 @@ class PromotionService
      */
     public function autoUpdateStatus(array &$data)
     {
-        $now = Carbon::now()->startOfDay();
-        $startDate = Carbon::parse($data['start_date'])->startOfDay();
-        $endDate = isset($data['end_date']) ? Carbon::parse($data['end_date'])->endOfDay() : null;
-
-        // Nếu admin đã chọn 'inactive', giữ nguyên
+        // Not modifying 'inactive' status if explicitly set
         if (isset($data['status']) && $data['status'] === 'inactive') {
             return;
         }
 
-        if ($startDate->gt($now)) {
-            $data['status'] = 'scheduled'; // Ngày bắt đầu trong tương lai
-        } elseif ($endDate && $endDate->lt($now)) {
-            $data['status'] = 'expired'; // Ngày kết thúc đã qua
+        $now = Carbon::now();
+        $startDate = isset($data['start_date']) ? Carbon::parse($data['start_date'])->startOfDay() : null;
+        $endDate = isset($data['end_date']) ? Carbon::parse($data['end_date'])->endOfDay() : null;
+
+        if ($startDate && $now->lt($startDate)) {
+            $data['status'] = 'scheduled';
+        } elseif ($endDate && $now->gt($endDate)) {
+            $data['status'] = 'expired';
         } else {
-            $data['status'] = 'active'; // Đang trong thời gian áp dụng
+            $data['status'] = 'active';
         }
     }
 }

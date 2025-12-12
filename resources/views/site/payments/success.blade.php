@@ -20,7 +20,7 @@
                     <p class="mb-0 text-muted"><small>Đã áp dụng mã khuyến mại: {{ $couponCode }}</small></p>
                 @endif
             </div>
-            <a href="{{ route('site.home') }}" class="btn btn-primary mt-3">Quay về trang chủ</a>
+            <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary mt-3">Chọn dịch vụ</a>
         </div>
     </div>
 </div>
