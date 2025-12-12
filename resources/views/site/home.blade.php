@@ -148,21 +148,41 @@
 
         <div class="stylist-right">
             <div class="stylist-grid">
-                @foreach([
-                    ['name'=>'Hùng Phạm','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/dsc01646-88180.jpg'],
-                    ['name'=>'Tuấn Anh','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/e21400bd6a6ece30977f-11410.jpg'],
-                    ['name'=>'Phương Vũ','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/c2ddd31d-58b8-4d17-9263-a94a60c4f0ac-1616.jpeg'],
-                    ['name'=>'Duy Khánh','img'=>'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/dsc01326-1-8054.jpg'],
-                ] as $sty)
-                <div class="stylist-card">
-                    <div class="stylist-img">
-                        <img src="{{ $sty['img'] }}" alt="{{ $sty['name'] }}">
+                @php
+                    // Lấy danh sách nhân viên từ database
+                    $allEmployees = \App\Models\Employee::with(['user.role'])
+                        ->whereNotNull('user_id')
+                        ->where('position', 'Stylist')
+                        ->where('status', '!=', 'Vô hiệu hóa')
+                        ->whereHas('user', function($query) {
+                            $query->where('role_id', '!=', 1); // Loại trừ admin
+                        })
+                        ->orderBy('id', 'desc')
+                        ->limit(4)
+                        ->get();
+
+                    // Ảnh mặc định giữ nguyên
+                    $defaultImages = [
+                        'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/dsc01646-88180.jpg',
+                        'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/e21400bd6a6ece30977f-11410.jpg',
+                        'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/c2ddd31d-58b8-4d17-9263-a94a60c4f0ac-1616.jpeg',
+                        'https://trakyhairsalon.com/thumbs/375x500x1/upload/news/dsc01326-1-8054.jpg',
+                    ];
+                @endphp
+                @foreach($allEmployees as $index => $employee)
+                    @php
+                        $employeeName = $employee->user->name ?? 'Nhân viên';
+                        $employeeImage = $defaultImages[$index] ?? $defaultImages[0];
+                    @endphp
+                    <div class="stylist-card">
+                        <div class="stylist-img">
+                            <img src="{{ $employeeImage }}" alt="{{ $employeeName }}">
+                        </div>
+                        <div class="stylist-meta">
+                            <h3 class="stylist-name">{{ $employeeName }}</h3>
+                            <a href="{{ route('site.appointment.create') }}" class="stylist-book">Đặt lịch ngay</a>
+                        </div>
                     </div>
-                    <div class="stylist-meta">
-                        <h3 class="stylist-name">{{ $sty['name'] }}</h3>
-                        <a href="{{ route('site.appointment.create') }}" class="stylist-book">Đặt lịch ngay</a>
-                    </div>
-                </div>
                 @endforeach
             </div>
         </div>
