@@ -11,7 +11,7 @@
 
                     <!-- Header -->
                     <div class="text-center mb-2" style="margin-bottom: 15px;">
-                        <h2 class="fw-bold mb-1" style="color: #000; font-size: 18px; margin-bottom: 4px;">
+                        <h2 class="fw-bold mb-1" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 18px; margin-bottom: 4px;">
                             <i class="fa fa-calendar-check-o"></i> ĐẶT LỊCH NGAY
                         </h2>
                         <p class="text-muted mb-0" style="font-size: 12px; color: #666; margin: 0;">
@@ -144,7 +144,7 @@
                         <!-- Thông tin khách hàng -->
                         <div class="mb-2">
                             <div style="margin-bottom: 10px;">
-                                <h5 class="fw-semibold mb-0" style="color: #000; font-size: 14px;">
+                                <h5 class="fw-semibold mb-0" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px;">
                                     1. Thông tin khách hàng
                                 </h5>
                             </div>
@@ -198,7 +198,7 @@
 
                         <!-- Chọn dịch vụ -->
                         <div class="mb-2" style="margin-top: 15px;">
-                            <h5 class="fw-semibold mb-2" style="color: #000; font-size: 14px; margin-bottom: 8px;">
+                            <h5 class="fw-semibold mb-2" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px; margin-bottom: 8px;">
                                 2. DỊCH VỤ <span class="text-danger">*</span>
                             </h5>
 
@@ -402,16 +402,16 @@
                             </div>
                             <style>
                                 .btn-primary:hover {
-                                    background: #FFC107 !important;
-                                    color: #000 !important;
-                                    border: 1px solid #FFC107 !important;
+                                    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+                                    color: #fff !important;
+                                    border: 1px solid #8b5a2b !important;
                                 }
                             </style>
                         </div>
 
                         <!-- Thời gian -->
                         <div class="mb-2" style="margin-top: 15px;">
-                            <h5 class="fw-semibold mb-2" style="color: #000; font-size: 14px; margin-bottom: 8px;">
+                            <h5 class="fw-semibold mb-2" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px; margin-bottom: 8px;">
                                 3. Chọn ngày, giờ và stylist
                             </h5>
 
@@ -691,13 +691,13 @@
     }
 
     .submit-appointment-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
-        border: 1px solid #FFC107 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
+        border: 1px solid #8b5a2b !important;
     }
 
     .submit-appointment-btn:hover i {
-        color: #000 !important;
+        color: #fff !important;
     }
 
     /* Fill User Info Button - giống nút Chọn dịch vụ */
@@ -706,11 +706,11 @@
     }
 
     .fill-user-info-btn:hover {
-        background: #FFC107 !important;
-        border-color: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        border-color: #8b5a2b !important;
+        color: #fff !important;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 8px rgba(139, 90, 43, 0.3);
     }
 
     /* Custom Select Box */
@@ -837,8 +837,8 @@
     }
 
     .time-slot-nav-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
     }
 
     .time-slot-nav-btn:disabled {
@@ -877,9 +877,9 @@
     }
 
     .time-slot-btn.selected {
-        background: #000;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
         color: #fff;
-        border-color: #000;
+        border-color: #8b5a2b;
         font-weight: 600;
     }
 
@@ -1010,8 +1010,8 @@
     }
 
     .employee-nav-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
     }
 
     .employee-nav-btn:disabled {
@@ -1110,8 +1110,8 @@
     }
 
     .employee-carousel .owl-nav button:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
     }
 
     /* Responsive Design */
