@@ -186,7 +186,8 @@
                     <!-- Header with Back Button -->
                     <div class="header-with-back mb-4" style="display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 20px;">
                         <!-- Back Arrow Button -->
-                        <a href="{{ route('site.appointment.create') }}"
+                        <a href="#"
+                           id="backToAppointmentBtn"
                            class="back-arrow-btn"
                            style="position: absolute; left: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #000; text-decoration: none; border-radius: 50%; transition: all 0.3s ease; background: transparent;">
                             <i class="fa fa-arrow-left" style="font-size: 18px;"></i>
@@ -2025,8 +2026,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle done button click
-    function handleDoneClick() {
+    // Build URL with selected services (used by both Done button and Back button)
+    function buildAppointmentUrl() {
         const params = new URLSearchParams();
 
         // Add service IDs
@@ -2056,7 +2057,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const queryString = params.toString();
-        const createUrl = '{{ route("site.appointment.create") }}' + (queryString ? '?' + queryString : '');
+        return '{{ route("site.appointment.create") }}' + (queryString ? '?' + queryString : '');
+    }
+
+    // Handle done button click
+    function handleDoneClick() {
+        const createUrl = buildAppointmentUrl();
+        window.location.href = createUrl;
+    }
+
+    // Handle back button click
+    function handleBackClick(e) {
+        e.preventDefault();
+        const createUrl = buildAppointmentUrl();
         window.location.href = createUrl;
     }
 
@@ -2388,6 +2401,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const doneButton = document.getElementById('doneButton');
     if (doneButton) {
         doneButton.addEventListener('click', handleDoneClick);
+    }
+
+    // Handle back button - preserve selected services when going back
+    const backToAppointmentBtn = document.getElementById('backToAppointmentBtn');
+    if (backToAppointmentBtn) {
+        backToAppointmentBtn.addEventListener('click', handleBackClick);
     }
 
     // Offers section visibility is now controlled by updateOffersSection() based on selected services
