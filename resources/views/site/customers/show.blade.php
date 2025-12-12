@@ -299,12 +299,12 @@
                                                         @php
                                                             // Chỉ hiển thị nút hủy nếu:
                                                             // 1. Status = 'Chờ xử lý'
-                                                            // 2. Chưa quá 5 phút kể từ khi đặt
+                                                            // 2. Chưa quá 30 phút kể từ khi đặt
                                                             $canCancel = false;
                                                             if ($appointment->status === 'Chờ xử lý' && $appointment->created_at) {
                                                                 $createdAt = \Carbon\Carbon::parse($appointment->created_at);
                                                                 $minutesSinceCreated = $createdAt->diffInMinutes(now());
-                                                                $canCancel = $minutesSinceCreated <= 5;
+                                                                $canCancel = $minutesSinceCreated <= 30;
                                                             }
                                                         @endphp
                                                         @if($canCancel)
@@ -320,7 +320,7 @@
                                                                             <h5 class="modal-title" id="cancelModalLabel{{ $appointment->id }}">Xác nhận hủy lịch hẹn</h5>
                                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                                         </div>
-                                                                        <form action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST">
+                                                                        <form action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST" id="cancelForm{{ $appointment->id }}">
                                                                             @csrf
                                                                             <div class="modal-body">
                                                                                 <p>Bạn có chắc chắn muốn hủy lịch hẹn này?</p>
@@ -960,5 +960,26 @@
             return 'bg-info text-white';
         }
     })();
+
+    // Refresh CSRF token khi mở modal hủy lịch để tránh lỗi 419
+    document.addEventListener('DOMContentLoaded', function() {
+        // Lắng nghe sự kiện khi modal được mở
+        document.querySelectorAll('[id^="cancelModal"]').forEach(function(modal) {
+            modal.addEventListener('show.bs.modal', function() {
+                // Lấy form trong modal
+                const form = modal.querySelector('form');
+                if (form) {
+                    // Lấy CSRF token mới từ meta tag
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                    if (csrfToken) {
+                        const tokenInput = form.querySelector('input[name="_token"]');
+                        if (tokenInput) {
+                            tokenInput.value = csrfToken.getAttribute('content');
+                        }
+                    }
+                }
+            });
+        });
+    });
 </script>
 @endpush

@@ -96,8 +96,43 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="badge badge-{{ $user->status == 'Hoạt động' ? 'success' : ($user->status == 'Vô hiệu hóa' ? 'warning' : 'danger') }}">
-                                    {{ $user->status ?? 'N/A' }}
+                                @php
+                                    $statusDisplay = $user->status ?? 'N/A';
+                                    $statusClass = 'secondary';
+                                    
+                                    // Kiểm tra nếu có banned_until và chưa hết thời gian
+                                    $isTemporarilyBanned = $user->banned_until && now()->lessThan($user->banned_until);
+                                    
+                                    if ($user->status === 'Cấm') {
+                                        $statusDisplay = 'Cấm';
+                                        $statusClass = 'danger';
+                                    } elseif ($isTemporarilyBanned) {
+                                        // Nếu có banned_until và chưa hết thời gian, hiển thị "Vô hiệu hóa" dù status là gì
+                                        $statusDisplay = 'Vô hiệu hóa';
+                                        $statusClass = 'warning';
+                                        
+                                        // Tính thời gian còn lại và format đẹp
+                                        $diffInMinutes = now()->diffInMinutes($user->banned_until, false);
+                                        if ($diffInMinutes > 0) {
+                                            $hours = floor($diffInMinutes / 60);
+                                            $minutes = $diffInMinutes % 60;
+                                            
+                                            if ($hours > 0 && $minutes > 0) {
+                                                $statusDisplay .= ' (Còn ' . $hours . 'h' . $minutes . 'p)';
+                                            } elseif ($hours > 0) {
+                                                $statusDisplay .= ' (Còn ' . $hours . 'h)';
+                                            } else {
+                                                $statusDisplay .= ' (Còn ' . $minutes . 'p)';
+                                            }
+                                        }
+                                    } elseif ($user->status === 'Hoạt động') {
+                                        $statusClass = 'success';
+                                    } elseif ($user->status === 'Vô hiệu hóa') {
+                                        $statusClass = 'warning';
+                                    }
+                                @endphp
+                                <span class="badge badge-{{ $statusClass }}">
+                                    {{ $statusDisplay }}
                                 </span>
                             </td>
                             <td>

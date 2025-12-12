@@ -269,7 +269,12 @@ class WorkingScheduleController extends Controller
         $schedule = WorkingSchedule::with(['employee.user', 'shift'])->findOrFail($id);
 
         // Check permission if user is employee
-        if (auth()->user()->isEmployee() && !auth()->user()->isAdmin()) {
+        $currentUser = auth()->user();
+        if (!$currentUser) {
+            abort(401, 'Unauthorized');
+        }
+        
+        if ($currentUser->isEmployee() && !$currentUser->isAdmin()) {
             $currentEmployee = \App\Models\Employee::where('user_id', auth()->id())->first();
             if (!$currentEmployee || $schedule->employee_id !== $currentEmployee->id) {
                 abort(403, 'Bạn chỉ có thể xem chi tiết lịch làm việc của chính mình.');

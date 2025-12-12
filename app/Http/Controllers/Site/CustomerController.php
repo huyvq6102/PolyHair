@@ -19,11 +19,16 @@ class CustomerController extends Controller
     public function show($id)
     {
         // Nếu muốn chỉ cho người dùng xem thông tin của chính họ:
-        if (Auth::id() != $id && !Auth::user()->isAdmin()) {
+        $currentUser = Auth::user();
+        if (!$currentUser) {
+            return redirect()->route('login');
+        }
+        
+        if (Auth::id() != $id && !$currentUser->isAdmin()) {
             abort(403, 'Bạn không có quyền xem thông tin người dùng này.');
         }
 
-        // Tự động cập nhật trạng thái lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" nếu đã quá 5 phút
+        // Tự động cập nhật trạng thái lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" nếu đã quá 30 phút
         $this->autoConfirmPendingAppointments($id);
 
         $user = User::with([
@@ -62,7 +67,12 @@ class CustomerController extends Controller
     public function getAppointmentsStatus($id)
     {
         // Kiểm tra quyền
-        if (Auth::id() != $id && !Auth::user()->isAdmin()) {
+        $currentUser = Auth::user();
+        if (!$currentUser) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        
+        if (Auth::id() != $id && !$currentUser->isAdmin()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -82,7 +92,7 @@ $appointments = $user->appointments->map(function($appointment) {
             if ($appointment->status === 'Chờ xử lý' && $appointment->created_at) {
                 $createdAt = \Carbon\Carbon::parse($appointment->created_at);
                 $minutesSinceCreated = $createdAt->diffInMinutes(now());
-                $canCancel = $minutesSinceCreated <= 5;
+                $canCancel = $minutesSinceCreated <= 30;
             }
 
             return [
@@ -103,17 +113,17 @@ $appointments = $user->appointments->map(function($appointment) {
     }
 
     /**
-     * Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 5 phút
+     * Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 30 phút
      */
     private function autoConfirmPendingAppointments($userId)
     {
         try {
-            $cutoffTime = \Carbon\Carbon::now()->subMinutes(5);
+            $cutoffTime = \Carbon\Carbon::now()->subMinutes(30);
 
             $appointments = Appointment::where('user_id', $userId)
                 ->where('status', 'Chờ xử lý')
                 ->where('created_at', '<=', $cutoffTime)
-                ->whereRaw('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= 5') // Đảm bảo đã qua ít nhất 5 phút
+                ->whereRaw('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= 30') // Đảm bảo đã qua ít nhất 30 phút
                 ->get();
 
             foreach ($appointments as $appointment) {

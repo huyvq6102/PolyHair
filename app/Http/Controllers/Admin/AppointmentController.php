@@ -527,7 +527,8 @@ class AppointmentController extends Controller
         ]);
 
         try {
-            $this->appointmentService->cancelAppointment($id, $validated['cancellation_reason'] ?? null);
+            $result = $this->appointmentService->cancelAppointment($id, $validated['cancellation_reason'] ?? null);
+            // Admin hủy không cần kiểm tra ban
             return redirect()->route('admin.appointments.index')
                 ->with('success', 'Lịch hẹn đã được hủy thành công!');
         } catch (\Exception $e) {
