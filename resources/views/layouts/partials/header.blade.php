@@ -58,11 +58,11 @@
                                                         @endforeach
                                                     </ul>
                                                     </li>
-                                                <li><a class="{{ str_contains($currentRoute, 'blog') ? 'active' : '' }}" href="{{ route('site.blog.index') }}">TIN TỨC</a></li>
+
                                                 <li>
                                                     <a class="{{ str_contains($currentRoute, 'review') ? 'active' : '' }}" href="{{ route('site.reviews.index') }}">ĐÁNH GIÁ</a>
                                                     <ul class="submenu">
-                                                        <li><a href="{{ route('site.reviews.index') }}">Xem đánh giá & Bình luận</a></li>
+                                                        <li><a href="{{ route('site.reviews.index') }}">Xem đánh giá</a></li>
                                                         @auth
                                                             <li><a href="{{ route('site.reviews.general.create') }}">Gửi bình luận</a></li>
                                                         @else
@@ -201,6 +201,17 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         display: inline-block;
+    }
+
+    /* Giảm khoảng cách giữa các mục trong submenu ĐÁNH GIÁ */
+    #navigation > li > ul.submenu li {
+        padding: 2px 0 !important;
+        margin: 0 !important;
+    }
+
+    #navigation > li > ul.submenu li a {
+        padding: 6px 15px !important;
+        line-height: 1.4 !important;
     }
 
 </style>
