@@ -6,10 +6,10 @@
 <link rel="stylesheet" href="{{ asset('css/appointment-show.css') }}">
 <style>
     .btn-primary:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 12px rgba(139, 90, 43, 0.3);
     }
 </style>
 @endpush

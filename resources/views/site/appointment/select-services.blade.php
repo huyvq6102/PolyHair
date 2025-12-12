@@ -722,17 +722,17 @@
 
     .btn-primary:hover,
     .select-service-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
-        border-color: #FFC107 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
+        border-color: #8b5a2b !important;
     }
 
     /* Button hover for variant services */
     .svc-actions .btn-primary:hover,
     .svc-actions .select-service-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
-        border-color: #FFC107 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
+        border-color: #8b5a2b !important;
     }
 
     /* Back Arrow Button Styles */
