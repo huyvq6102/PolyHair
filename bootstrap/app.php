@@ -20,6 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'employee' => \App\Http\Middleware\EnsureUserIsEmployee::class,
             'staff' => \App\Http\Middleware\EnsureUserIsStaff::class,
+            'check.banned' => \App\Http\Middleware\CheckBannedUser::class,
+        ]);
+        
+        // Tự động check banned user cho tất cả các route đã authenticated
+        $middleware->web(append: [
+            \App\Http\Middleware\CheckBannedUser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -446,7 +446,8 @@ class EmployeeAppointmentController extends Controller
 
         $validated = $request->validated();
 
-        $this->appointmentService->cancelAppointment($id, $validated['cancellation_reason']);
+        $result = $this->appointmentService->cancelAppointment($id, $validated['cancellation_reason']);
+        // Employee hủy không cần kiểm tra ban
 
         return redirect()->route('employee.appointments.show', $id)
             ->with('success', 'Đơn đặt đã được hủy thành công!');

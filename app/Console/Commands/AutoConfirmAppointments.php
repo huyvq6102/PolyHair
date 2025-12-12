@@ -23,7 +23,7 @@ class AutoConfirmAppointments extends Command
      *
      * @var string
      */
-    protected $description = 'Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 5 phút';
+    protected $description = 'Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 30 phút';
 
     /**
      * Execute the console command.
@@ -32,12 +32,12 @@ class AutoConfirmAppointments extends Command
     {
         $this->info('Đang kiểm tra lịch hẹn cần tự động xác nhận...');
         
-        // Tìm các lịch hẹn có status = 'Chờ xử lý' và đã quá 5 phút kể từ khi tạo
-        $cutoffTime = Carbon::now()->subMinutes(5);
+        // Tìm các lịch hẹn có status = 'Chờ xử lý' và đã quá 30 phút kể từ khi tạo
+        $cutoffTime = Carbon::now()->subMinutes(30);
         
         $appointments = Appointment::where('status', 'Chờ xử lý')
             ->where('created_at', '<=', $cutoffTime)
-            ->whereRaw('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= 5') // Đảm bảo đã qua ít nhất 5 phút
+            ->whereRaw('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= 30') // Đảm bảo đã qua ít nhất 30 phút
             ->get();
         
         $count = 0;

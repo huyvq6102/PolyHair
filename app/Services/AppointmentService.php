@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Appointment;
 use App\Models\AppointmentDetail;
 use App\Models\AppointmentLog;
+use App\Models\User;
 use App\Models\WorkingSchedule;
 use App\Mail\AppointmentCancellationMail;
 use App\Events\AppointmentStatusUpdated;
@@ -341,12 +342,13 @@ class AppointmentService
         return DB::transaction(function () use ($id, $reason, $modifiedBy) {
             $appointment = Appointment::findOrFail($id);
             $oldStatus = $appointment->status;
+            $user = $appointment->user;
             
             $appointment->update([
                 'status' => 'Đã hủy',
                 'cancellation_reason' => $reason
             ]);
-
+            
             // Note: Working schedule status column has been removed.
             // The working schedule is now managed differently (if needed).
             // Free up working schedule time slot logic removed as status column no longer exists.
@@ -379,9 +381,132 @@ class AppointmentService
 
             // Gửi email thông báo hủy lịch
             $this->sendCancellationEmail($appointment);
+            
+            // Chỉ kiểm tra và ban nếu là khách hàng tự hủy (không phải admin/employee)
+            // Kiểm tra SAU KHI hủy để đếm chính xác số lần hủy bao gồm cả lịch vừa hủy
+            $shouldCheckBan = !$user->isAdmin() && !$user->isEmployee();
+            $wasBanned = false;
+            
+            if ($shouldCheckBan) {
+                $wasBanned = $this->checkAndBanUserIfNeeded($user);
+            }
+            
+            // Refresh user để lấy thông tin mới nhất
+            $user->refresh();
+            
+            // Trả về thông tin về việc ban để controller có thể xử lý
+            return [
+                'appointment' => $appointment,
+                'was_banned' => $wasBanned,
+                'user' => $user,
+            ];
 
             return $appointment;
         });
+    }
+
+    /**
+     * Kiểm tra và ban tài khoản nếu hủy quá giới hạn.
+     * 
+     * @return bool True nếu user bị ban, False nếu không
+     */
+    protected function checkAndBanUserIfNeeded($user)
+    {
+        $now = now();
+        
+        // Đếm số lần hủy trong ngày (từ 00:00 hôm nay)
+        $todayStart = $now->copy()->startOfDay();
+        $cancellationsToday = Appointment::where('user_id', $user->id)
+            ->where('status', 'Đã hủy')
+            ->where('created_at', '>=', $todayStart)
+            ->count();
+        
+        // Đếm số lần hủy trong tuần (7 ngày gần nhất)
+        $weekStart = $now->copy()->subDays(7);
+        $cancellationsThisWeek = Appointment::where('user_id', $user->id)
+            ->where('status', 'Đã hủy')
+            ->where('created_at', '>=', $weekStart)
+            ->count();
+        
+        // Đếm số lần hủy trong tháng (30 ngày gần nhất)
+        $monthStart = $now->copy()->subDays(30);
+        $cancellationsThisMonth = Appointment::where('user_id', $user->id)
+            ->where('status', 'Đã hủy')
+            ->where('created_at', '>=', $monthStart)
+            ->count();
+        
+        // Log để debug
+        \Log::info('Checking ban for user', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'cancellations_today' => $cancellationsToday,
+            'cancellations_week' => $cancellationsThisWeek,
+            'cancellations_month' => $cancellationsThisMonth,
+            'is_banned' => $user->isBanned(),
+            'banned_until' => $user->banned_until,
+            'status' => $user->status,
+        ]);
+        
+        // Kiểm tra giới hạn: 3/ngày, 7/tuần, 15/tháng
+        $exceededLimit = false;
+        $banReason = '';
+        
+        if ($cancellationsToday >= 3) {
+            $exceededLimit = true;
+            $banReason = "Hủy lịch hẹn quá 3 lần trong ngày ({$cancellationsToday} lần)";
+        } elseif ($cancellationsThisWeek >= 7) {
+            $exceededLimit = true;
+            $banReason = "Hủy lịch hẹn quá 7 lần trong tuần ({$cancellationsThisWeek} lần)";
+        } elseif ($cancellationsThisMonth >= 15) {
+            $exceededLimit = true;
+            $banReason = "Hủy lịch hẹn quá 15 lần trong tháng ({$cancellationsThisMonth} lần)";
+        }
+        
+        if ($exceededLimit) {
+            // Kiểm tra nếu user đã bị cấm vĩnh viễn (status = "Cấm") thì không ban lại
+            if ($user->status === 'Cấm') {
+                \Log::info('User is already permanently banned, skipping ban', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                ]);
+                return;
+            }
+            
+            // Nếu đã bị ban tạm thời nhưng chưa hết thời gian, không ban lại
+            if ($user->isBanned()) {
+                \Log::info('User is already banned, skipping ban', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'banned_until' => $user->banned_until,
+                    'status' => $user->status,
+                ]);
+                return;
+            }
+            
+            // Ban tài khoản: Tất cả các trường hợp vô hiệu hóa đều bị cấm 1 giờ
+            $banHours = 1; // Vô hiệu hóa: khóa 1 giờ
+            
+            $user->ban($banHours, $banReason);
+            
+            // Refresh để lấy giá trị banned_until mới nhất
+            $user->refresh();
+            
+            \Log::warning('User banned due to excessive cancellations', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'cancellations_today' => $cancellationsToday,
+                'cancellations_week' => $cancellationsThisWeek,
+                'cancellations_month' => $cancellationsThisMonth,
+                'ban_reason' => $banReason,
+                'ban_hours' => $banHours,
+                'banned_until' => $user->banned_until,
+                'status' => $user->status,
+            ]);
+            
+            return true; // User đã bị ban
+        }
+        
+        return false; // User không bị ban
     }
 
     /**
