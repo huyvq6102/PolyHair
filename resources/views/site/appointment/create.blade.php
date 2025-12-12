@@ -240,7 +240,8 @@
                                             'price' => $variant->price ?? 0,
                                             'duration' => $variant->duration ?? 60,
                                             'type' => 'variant',
-                                            'id' => $variant->id
+                                            'id' => $variant->id,
+                                            'parent_service_id' => $variant->service_id ?? null // Store parent service ID for discount calculation
                                         ];
                                         $totalPrice += $variant->price ?? 0;
                                         $totalDuration += $variant->duration ?? 60;
@@ -274,13 +275,10 @@
                                     }
                                 }
 
-                                // Tính discount từ promotion
+                                // Tính discount từ promotion - giống logic trong select-services.blade.php
                                 $discountAmount = 0;
                                 $finalPrice = $totalPrice;
                                 if (isset($selectedPromotion) && $selectedPromotion) {
-                                    // Kiểm tra promotion có áp dụng cho các dịch vụ đã chọn không
-                                    $isApplicable = false;
-
                                     // Check if promotion applies to all services
                                     $hasSpecificServices = ($selectedPromotion->services && $selectedPromotion->services->count() > 0)
                                         || ($selectedPromotion->combos && $selectedPromotion->combos->count() > 0)
@@ -291,34 +289,50 @@
                                          ($selectedPromotion->combos ? $selectedPromotion->combos->count() : 0) +
                                          ($selectedPromotion->serviceVariants ? $selectedPromotion->serviceVariants->count() : 0)) >= 20;
 
+                                    // Calculate applicable price (only for services that match promotion)
+                                    $applicablePrice = 0;
                                     if ($selectedPromotion->apply_scope === 'order' || $applyToAll) {
-                                        $isApplicable = true;
+                                        // Apply to all services
+                                        $applicablePrice = $totalPrice;
                                     } else {
-                                        // Check if any selected service/variant/combo matches promotion
+                                        // Only apply to matching services
                                         foreach ($allSelectedItems as $item) {
+                                            $isItemApplicable = false;
+                                            
                                             if ($item['type'] === 'service' && $selectedPromotion->services && $selectedPromotion->services->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
-                                            } elseif ($item['type'] === 'variant' && $selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
+                                                $isItemApplicable = true;
+                                            } elseif ($item['type'] === 'variant') {
+                                                // Check direct variant match
+                                                if ($selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->contains('id', $item['id'])) {
+                                                    $isItemApplicable = true;
+                                                } else {
+                                                    // Check if variant's parent service is in promotion
+                                                    $parentServiceId = $item['parent_service_id'] ?? null;
+                                                    if ($parentServiceId && $selectedPromotion->services && $selectedPromotion->services->contains('id', $parentServiceId)) {
+                                                        $isItemApplicable = true;
+                                                    }
+                                                }
                                             } elseif ($item['type'] === 'combo' && $selectedPromotion->combos && $selectedPromotion->combos->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
+                                                $isItemApplicable = true;
+                                            }
+                                            
+                                            if ($isItemApplicable) {
+                                                $applicablePrice += $item['price'];
                                             }
                                         }
                                     }
 
-                                    if ($isApplicable) {
+                                    // Calculate discount on applicable price only
+                                    if ($applicablePrice > 0) {
                                         if ($selectedPromotion->discount_type === 'percent') {
                                             $discountPercent = $selectedPromotion->discount_percent ?? 0;
-                                            $discountAmount = ($totalPrice * $discountPercent) / 100;
+                                            $discountAmount = ($applicablePrice * $discountPercent) / 100;
                                             // Apply max discount if exists
                                             if ($selectedPromotion->max_discount_amount) {
                                                 $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
                                             }
                                         } else {
-                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $totalPrice);
+                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $applicablePrice);
                                         }
                                         $finalPrice = max(0, $totalPrice - $discountAmount);
                                     }
