@@ -169,7 +169,7 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-12">
-                @if($appointment->status == 'Chờ xử lý' || $appointment->status == 'Chờ xác nhận')
+                @if($appointment->status == 'Chờ xác nhận')
                     <form action="{{ route('employee.appointments.confirm', $appointment->id) }}" method="POST" class="d-inline">
                         @csrf
                         <button type="submit" class="btn btn-success btn-lg">
@@ -196,7 +196,7 @@
                     </form>
                 @endif
 
-                @if($appointment->status == 'Chờ xử lý' || $appointment->status == 'Chờ xác nhận')
+                @if($appointment->status == 'Chờ xác nhận')
                     <button type="button" class="btn btn-danger btn-lg" data-toggle="modal" data-target="#cancelModal">
                         <i class="fas fa-times"></i> Hủy đơn
                     </button>

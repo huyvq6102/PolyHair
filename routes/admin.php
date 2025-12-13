@@ -36,6 +36,28 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     // Working Schedule (View Only for Staff)
     Route::get('working-schedules', [WorkingScheduleController::class, 'index'])->name('working-schedules.index');
 
+    // Routes accessible by both Admin and Employee
+    // Users Management (Accessible by Staff)
+    Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
+    Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
+    Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
+    Route::resource('users', UserController::class);
+
+    // Employees Management (Accessible by Staff)
+    Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
+    Route::post('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+    Route::delete('employees/{employee}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
+    Route::resource('employees', EmployeeController::class);
+    Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
+    Route::get('employee-skills/{employee}/edit', [EmployeeSkillController::class, 'edit'])->name('employee-skills.edit');
+    Route::put('employee-skills/{employee}', [EmployeeSkillController::class, 'update'])->name('employee-skills.update');
+
+    // Promotions (Accessible by Staff)
+    Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
+    Route::put('promotions/{id}/restore', [PromotionController::class, 'restore'])->name('promotions.restore');
+    Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
+    Route::resource('promotions', PromotionController::class);
+
     // Protected Admin Routes
     Route::middleware(['admin'])->group(function () {
 
@@ -60,32 +82,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
         Route::resource('services', ServiceController::class);
         Route::resource('service-categories', ServiceCategoryController::class);
 
-        // Promotions
-        Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
-        Route::put('promotions/{id}/restore', [PromotionController::class, 'restore'])->name('promotions.restore');
-        Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
-        Route::resource('promotions', PromotionController::class);
-
         // Payments
         Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
         Route::resource('payments', PaymentController::class);
 
         Route::resource('orders', OrderController::class);
 
-        // Users
-        Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
-        Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
-        Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
-        Route::resource('users', UserController::class);
-
-        // Employees
-        Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
-        Route::post('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
-        Route::delete('employees/{employee}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
-        Route::resource('employees', EmployeeController::class);
-        Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
-        Route::get('employee-skills/{employee}/edit', [EmployeeSkillController::class, 'edit'])->name('employee-skills.edit');
-        Route::put('employee-skills/{employee}', [EmployeeSkillController::class, 'update'])->name('employee-skills.update');
         Route::resource('news', NewsController::class);
 
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
@@ -103,8 +105,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     });
 });
 
-// Employee appointment routes (accessible by employees)
-Route::prefix('admin/employee')->name('employee.')->middleware(['auth'])->group(function () {
+// Employee appointment routes (accessible by employees only)
+Route::prefix('admin/employee')->name('employee.')->middleware(['auth', 'employee'])->group(function () {
     Route::get('appointments', [EmployeeAppointmentController::class, 'index'])->name('appointments.index');
     Route::get('appointments/create', [EmployeeAppointmentController::class, 'create'])->name('appointments.create');
     Route::post('appointments', [EmployeeAppointmentController::class, 'store'])->name('appointments.store');
@@ -114,4 +116,6 @@ Route::prefix('admin/employee')->name('employee.')->middleware(['auth'])->group(
     Route::post('appointments/{id}/complete', [EmployeeAppointmentController::class, 'complete'])->name('appointments.complete');
     Route::post('appointments/{id}/cancel', [EmployeeAppointmentController::class, 'cancel'])->name('appointments.cancel');
     Route::delete('appointments/{id}', [EmployeeAppointmentController::class, 'destroy'])->name('appointments.destroy');
+    Route::get('appointments/{id}/edit', [EmployeeAppointmentController::class, 'edit'])->name('appointments.edit');
+    Route::put('appointments/{id}', [EmployeeAppointmentController::class, 'update'])->name('appointments.update');
 });
