@@ -51,8 +51,6 @@ class Promotion extends Model
     public function services(): BelongsToMany
     {
         return $this->belongsToMany(Service::class, 'promotion_service', 'promotion_id', 'service_id')
-            ->wherePivotNull('combo_id')
-            ->wherePivotNull('service_variant_id')
             ->withTimestamps();
     }
 
@@ -63,8 +61,6 @@ class Promotion extends Model
     {
         return $this->belongsToMany(Combo::class, 'promotion_service', 'promotion_id', 'combo_id')
             ->wherePivotNotNull('combo_id')
-            ->wherePivotNull('service_id')
-            ->wherePivotNull('service_variant_id')
             ->withTimestamps();
     }
 
@@ -75,8 +71,6 @@ class Promotion extends Model
     {
         return $this->belongsToMany(ServiceVariant::class, 'promotion_service', 'promotion_id', 'service_variant_id')
             ->wherePivotNotNull('service_variant_id')
-            ->wherePivotNull('service_id')
-            ->wherePivotNull('combo_id')
             ->withTimestamps();
     }
 }

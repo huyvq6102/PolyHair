@@ -40,8 +40,19 @@ class ServiceController extends Controller
         $categoryId = $request->get('category');
         $typeId = $request->get('type'); // For backward compatibility
         $keyword = $request->get('keyword', '');
+        $priceRange = $request->get('price_range');
         $minPrice = $request->get('min_price');
         $maxPrice = $request->get('max_price');
+        
+        // Xử lý price_range nếu có
+        if ($priceRange && $priceRange !== 'custom') {
+            $rangeParts = explode('-', $priceRange);
+            if (count($rangeParts) == 2) {
+                $minPrice = $rangeParts[0];
+                $maxPrice = $rangeParts[1] == '999999999' ? null : $rangeParts[1];
+            }
+        }
+        
         $sortBy = $request->get('sort_by', 'id_desc'); // 'id_desc', 'name_asc', 'name_desc', 'price_asc', 'price_desc'
 
         $items = collect();
@@ -176,6 +187,19 @@ class ServiceController extends Controller
                 'query' => $queryParams
             ]
         );
+
+        // If AJAX request, return JSON or HTML partial
+        if ($request->ajax()) {
+            $html = view('site.partials.service-list-items', compact('items'))->render();
+            $pagination = view('site.partials.service-pagination', compact('items'))->render();
+            
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'pagination' => $pagination,
+                'count' => $items->count()
+            ]);
+        }
 
         return view('site.service-list', compact('items', 'types', 'typeId', 'categories', 'filterType', 'categoryId', 'keyword', 'minPrice', 'maxPrice', 'sortBy'));
     }

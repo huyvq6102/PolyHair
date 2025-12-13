@@ -6,7 +6,7 @@
     <div class="service-detail-page" style="min-height: calc(100vh - 120px); margin-top: 120px; padding: 0; background: transparent;">
         <div class="container-fluid" style="max-width: 100%; padding: 0;">
             <!-- Back Button -->
-            <div class="container" style="max-width: 1400px; padding: 20px 15px 0;">
+            <div class="container" style="padding: 20px 15px 0;">
                 <a href="{{ route('site.services.index') }}" class="back-button" style="display: inline-flex; align-items: center; color: #4A3600; text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 5px; transition: all 0.3s; margin-bottom: 20px;" onmouseover="this.style.background='#f0f0f0'; this.style.color='#BC9321';" onmouseout="this.style.background='transparent'; this.style.color='#4A3600';">
                     <i class="fa fa-arrow-left mr-2" style="margin-right: 6px;"></i>
                     Quay lại
@@ -14,12 +14,12 @@
             </div>
 
             <!-- Banner Section với 3 ảnh ngẫu nhiên -->
-            <div class="container" style="max-width: 1400px; padding: 20px 15px;">
+            <div class="container" style="padding: 20px 15px;">
                 <div class="service-banner" style="background: linear-gradient(135deg, #1a4d7a 0%, #2c5f8f 50%, #1a4d7a 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
                     <!-- Decorative elements -->
                     <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(74, 144, 226, 0.3) 0%, transparent 100%); transform: skewX(-20deg);"></div>
                     <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(74, 144, 226, 0.3) 100%); transform: skewX(20deg);"></div>
-                    
+
                     <div style="position: relative; z-index: 1;">
                         <!-- Title -->
                         <div class="text-center mb-4">
@@ -27,7 +27,7 @@
                                 {{ $service->name ?? 'Chi tiết dịch vụ' }}
                             </h1>
                         </div>
-                        
+
                         <!-- 3 ảnh ngẫu nhiên -->
                         <div class="banner-images" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 800px; margin: 0 auto;">
                             @php
@@ -48,7 +48,7 @@
                                 $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
                                 $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
                                 $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
-                                
+
                                 if ($isUonService) {
                                     $bannerFolder = 'uon';
                                 } elseif ($isNhuomService) {
@@ -61,8 +61,8 @@
                             @endphp
                             @foreach($bannerImages as $bannerImg)
                                 <div class="banner-image-card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.3); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
-                                    <img src="{{ asset('legacy/images/' . $bannerFolder . '/' . $bannerImg) }}" 
-                                         alt="Banner image" 
+                                    <img src="{{ asset('legacy/images/' . $bannerFolder . '/' . $bannerImg) }}"
+                                         alt="Banner image"
                                          style="width: 100%; height: 200px; object-fit: cover; display: block;"
                                          onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}';">
                                 </div>
@@ -74,7 +74,7 @@
 
             <!-- Service Process Section -->
             <div class="service-process-section" style="padding: 60px 0; background: transparent;">
-                <div class="container" style="max-width: 1400px;">
+                <div class="container">
                     <div class="d-flex align-items-center mb-4">
                         <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: #000; margin-right: 12px; border-radius: 4px;"></span>
                         <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #000; margin: 0; text-transform: uppercase;">
@@ -99,7 +99,7 @@
                             Dịch vụ cắt xả mang đến kiểu tóc hiện đại, gọn gàng và phù hợp phong cách cá nhân.
                         @endif
                     </p>
-                    
+
                     <div class="process-steps-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px;">
                         @php
                             // Kiểm tra category hoặc tên dịch vụ để quyết định hiển thị bước nào
@@ -108,7 +108,7 @@
                             $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
                             $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
                             $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
-                            
+
                             if ($isUonService) {
                                 // Dịch vụ uốn
                                 $steps = [
@@ -157,9 +157,9 @@
                                             $imageUrl = asset('legacy/images/products/default.jpg');
                                         }
                                     @endphp
-                                    <img src="{{ $imageUrl }}" 
-                                         alt="{{ $step['title'] }}" 
-                                         class="step-image" 
+                                    <img src="{{ $imageUrl }}"
+                                         alt="{{ $step['title'] }}"
+                                         class="step-image"
                                          style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;"
                                          onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}'; this.style.opacity='0.5';"
                                          onmouseover="this.style.transform='scale(1.05)';"
@@ -176,7 +176,7 @@
 
             <!-- Service Details Section -->
             <div class="service-details-section" style="padding: 40px 0; background: transparent;">
-                <div class="container" style="max-width: 1400px;">
+                <div class="container">
                     <div class="row" style="margin: 0;">
                         <!-- Service Variants -->
                         @if($service->serviceVariants && $service->serviceVariants->count() > 0)
@@ -213,7 +213,7 @@
             </div>
 
             <!-- Booking Button - Centered -->
-            <div class="text-center" style="padding: 40px 0;">
+            <div class="text-center" style="padding: 20px 0 40px 0;">
                 <a href="{{ route('site.appointment.create') }}" class="btn-booking" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
                     <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
                     Đặt lịch ngay

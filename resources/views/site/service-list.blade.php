@@ -26,20 +26,20 @@
       <div class="service-left-inner">
         <h4 class="service-title mb-3">Bộ lọc</h4>
 
-        <form method="GET" action="{{ route('site.services.index') }}" id="filterForm" onsubmit="return handleFilterSubmit(event)">
+        <form method="GET" action="{{ route('site.services.index') }}" id="filterForm">
           <!-- Search by Name -->
           <div class="filter-group mb-4">
             <h5 class="filter-title mb-2">Tìm kiếm</h5>
-            <input type="text" name="keyword" class="form-control filter-select" placeholder="Nhập tên dịch vụ..." value="{{ $keyword ?? '' }}" onkeyup="if(event.key === 'Enter') this.form.submit()">
+            <input type="text" name="keyword" class="form-control filter-select" placeholder="Nhập tên dịch vụ..." value="{{ $keyword ?? '' }}" id="keywordInput">
           </div>
 
           <!-- Filter by Type -->
           <div class="filter-group mb-4">
             <h5 class="filter-title mb-2">Loại dịch vụ</h5>
-            <select name="filter_type" class="form-control filter-select" onchange="this.form.submit()">
+            <select name="filter_type" class="form-control filter-select" id="filterType">
               <option value="all" {{ ($filterType ?? 'all') == 'all' ? 'selected' : '' }}>Tất cả</option>
-              <option value="service_single" {{ ($filterType ?? '') == 'service_single' ? 'selected' : '' }}>Dịch vụ đơn</option>
-              <option value="service_variant" {{ ($filterType ?? '') == 'service_variant' ? 'selected' : '' }}>Dịch vụ biến thể</option>
+              <option value="service_single" {{ ($filterType ?? '') == 'service_single' ? 'selected' : '' }}>Dịch vụ lẻ</option>
+              <option value="service_variant" {{ ($filterType ?? '') == 'service_variant' ? 'selected' : '' }}>Gói dịch vụ</option>
               <option value="combo" {{ ($filterType ?? '') == 'combo' ? 'selected' : '' }}>Combo</option>
             </select>
           </div>
@@ -48,7 +48,7 @@
           @if(isset($categories) && $categories->count() > 0)
           <div class="filter-group mb-4">
             <h5 class="filter-title mb-2">Danh mục</h5>
-            <select name="category" class="form-control filter-select" onchange="this.form.submit()">
+            <select name="category" class="form-control filter-select" id="categorySelect">
               <option value="">Tất cả danh mục</option>
               @foreach($categories as $category)
                 <option value="{{ $category->id }}" {{ (isset($categoryId) && $categoryId == $category->id) ? 'selected' : '' }}>
@@ -62,16 +62,30 @@
           <!-- Filter by Price -->
           <div class="filter-group mb-4">
             <h5 class="filter-title mb-2">Khoảng giá</h5>
-            <div class="price-inputs">
-              <input type="number" name="min_price" class="form-control filter-select mb-2" placeholder="Giá tối thiểu (vnđ)" value="{{ $minPrice ?? '' }}" min="0" step="1000">
-              <input type="number" name="max_price" class="form-control filter-select" placeholder="Giá tối đa (vnđ)" value="{{ $maxPrice ?? '' }}" min="0" step="1000">
+            <select name="price_range" class="form-control filter-select mb-2" id="priceRange">
+              <option value="">Tất cả mức giá</option>
+              <option value="0-50000" {{ (isset($minPrice) && $minPrice == 0 && isset($maxPrice) && $maxPrice == 50000) ? 'selected' : '' }}>Dưới 50.000 VNĐ</option>
+              <option value="50000-100000" {{ (isset($minPrice) && $minPrice == 50000 && isset($maxPrice) && $maxPrice == 100000) ? 'selected' : '' }}>50.000 - 100.000 VNĐ</option>
+              <option value="100000-200000" {{ (isset($minPrice) && $minPrice == 100000 && isset($maxPrice) && $maxPrice == 200000) ? 'selected' : '' }}>100.000 - 200.000 VNĐ</option>
+              <option value="200000-300000" {{ (isset($minPrice) && $minPrice == 200000 && isset($maxPrice) && $maxPrice == 300000) ? 'selected' : '' }}>200.000 - 300.000 VNĐ</option>
+              <option value="300000-500000" {{ (isset($minPrice) && $minPrice == 300000 && isset($maxPrice) && $maxPrice == 500000) ? 'selected' : '' }}>300.000 - 500.000 VNĐ</option>
+              <option value="500000-1000000" {{ (isset($minPrice) && $minPrice == 500000 && isset($maxPrice) && $maxPrice == 1000000) ? 'selected' : '' }}>500.000 - 1.000.000 VNĐ</option>
+              <option value="1000000-999999999" {{ (isset($minPrice) && $minPrice == 1000000) ? 'selected' : '' }}>Trên 1.000.000 VNĐ</option>
+              <option value="custom">Tùy chỉnh</option>
+            </select>
+            <div class="price-inputs" id="customPriceInputs" style="display: none;">
+              <input type="text" name="min_price" class="form-control filter-select mb-2" placeholder="Giá tối thiểu (vnđ)" value="{{ $minPrice ?? '' }}" id="minPrice" data-price-input>
+              <input type="text" name="max_price" class="form-control filter-select" placeholder="Giá tối đa (vnđ)" value="{{ $maxPrice ?? '' }}" id="maxPrice" data-price-input>
+              <div id="priceError" class="text-danger mt-2" style="display: none; font-size: 12px;">
+                <i class="fa fa-exclamation-circle"></i> Vui lòng điền khoảng giá phù hợp (Giá tối thiểu phải nhỏ hơn hoặc bằng giá tối đa)
+              </div>
             </div>
           </div>
 
           <!-- Sort -->
           <div class="filter-group mb-4">
             <h5 class="filter-title mb-2">Sắp xếp</h5>
-            <select name="sort_by" class="form-control filter-select" onchange="this.form.submit()">
+            <select name="sort_by" class="form-control filter-select" id="sortBy">
               <option value="id_desc" {{ ($sortBy ?? 'id_desc') == 'id_desc' ? 'selected' : '' }}>Mới nhất</option>
               <option value="name_asc" {{ ($sortBy ?? '') == 'name_asc' ? 'selected' : '' }}>Tên A-Z</option>
               <option value="name_desc" {{ ($sortBy ?? '') == 'name_desc' ? 'selected' : '' }}>Tên Z-A</option>
@@ -96,136 +110,300 @@
 
     <div class="service_right">
 
-      <div class="service-grid">
-        @forelse($items as $item)
-          @php
-            // Format giá tiền
-            $formattedPrice = number_format($item['price'], 0, ',', '.') . 'vnđ';
-
-            // Đường dẫn ảnh
-            $imagePath = $item['image']
-                ? asset('legacy/images/products/' . $item['image'])
-                : asset('legacy/images/products/default.jpg');
-
-            // Badge type
-            if ($item['type'] == 'service_single') {
-              $typeBadge = 'Dịch vụ đơn';
-              $typeClass = 'badge-primary';
-            } elseif ($item['type'] == 'service_variant') {
-              $typeBadge = 'Dịch vụ biến thể';
-              $typeClass = 'badge-info';
-            } else {
-              $typeBadge = 'Combo';
-              $typeClass = 'badge-success';
-            }
-          @endphp
-          <div class="svc-card">
-            <a class="svc-img" href="{{ $item['link'] }}">
-              <img src="{{ $imagePath }}" alt="{{ $item['name'] }}">
-              <span class="badge {{ $typeClass }} position-absolute" style="top: 10px; right: 10px;">{{ $typeBadge }}</span>
-            </a>
-            <div class="svc-body">
-              <div class="svc-left">
-                <h4 class="svc-name">{{ $item['name'] }}</h4>
-                <div class="svc-price">Giá từ: <span>{{ $formattedPrice }}</span></div>
-              </div>
-              <div class="svc-right">
-                <span class="svc-rating">5 ★ Đánh giá</span>
-                <a class="svc-book" href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
-              </div>
-            </div>
-          </div>
-        @empty
-          <div class="col-12 text-center py-5">
-            <p>Chưa có dịch vụ hoặc combo nào.</p>
-          </div>
-        @endforelse
+      <div class="service-grid" id="serviceGrid">
+        @include('site.partials.service-list-items', ['items' => $items])
       </div>
 
-      <!-- Pagination -->
-      @if($items->hasPages())
-      <div class="d-flex justify-content-center mt-4">
-        <nav aria-label="Service pagination">
-          <ul class="pagination service-pagination">
-            {{-- Previous Page Link --}}
-            @if ($items->onFirstPage())
-              <li class="page-item disabled" aria-disabled="true">
-                <span class="page-link" aria-hidden="true">&lsaquo; Trước</span>
-              </li>
-            @else
-              <li class="page-item">
-                <a class="page-link" href="{{ $items->previousPageUrl() }}" rel="prev">&lsaquo; Trước</a>
-              </li>
-            @endif
-
-            {{-- Pagination Elements --}}
-            @foreach ($items->getUrlRange(1, $items->lastPage()) as $page => $url)
-              @if ($page == $items->currentPage())
-                <li class="page-item active" aria-current="page">
-                  <span class="page-link">{{ $page }}</span>
-                </li>
-              @else
-                <li class="page-item">
-                  <a class="page-link" href="{{ $url }}">{{ $page }}</a>
-                </li>
-              @endif
-            @endforeach
-
-            {{-- Next Page Link --}}
-            @if ($items->hasMorePages())
-              <li class="page-item">
-                <a class="page-link" href="{{ $items->nextPageUrl() }}" rel="next">Sau &rsaquo;</a>
-              </li>
-            @else
-              <li class="page-item disabled" aria-disabled="true">
-                <span class="page-link" aria-hidden="true">Sau &rsaquo;</span>
-              </li>
-            @endif
-          </ul>
-        </nav>
+      <div id="servicePagination">
+        @include('site.partials.service-pagination', ['items' => $items])
       </div>
-      @endif
 
     </div>
   </div>
 </section>
 
     <!-- service_area_end -->
-    
-<script>
-function handleFilterSubmit(event) {
-    // Lưu vị trí scroll hiện tại
-    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
-    sessionStorage.setItem('filterScrollPosition', scrollPosition);
-    
-    // Cho phép form submit bình thường
-    return true;
-}
 
-// Sau khi trang load, scroll về vị trí đã lưu
+<script>
 document.addEventListener('DOMContentLoaded', function() {
-    const savedPosition = sessionStorage.getItem('filterScrollPosition');
-    if (savedPosition) {
-        // Scroll về vị trí filter (khoảng 120px từ đầu trang)
-        const filterElement = document.querySelector('.service_left');
-        if (filterElement) {
-            setTimeout(function() {
-                const filterTop = filterElement.offsetTop - 120;
-                window.scrollTo({
-                    top: filterTop,
-                    behavior: 'smooth'
-                });
-                // Xóa vị trí đã lưu sau khi scroll
-                sessionStorage.removeItem('filterScrollPosition');
-            }, 100);
-        } else {
-            // Nếu không tìm thấy filter, scroll về vị trí đã lưu
-            window.scrollTo({
-                top: parseInt(savedPosition),
-                behavior: 'smooth'
-            });
-            sessionStorage.removeItem('filterScrollPosition');
+    const filterForm = document.getElementById('filterForm');
+    const serviceGrid = document.getElementById('serviceGrid');
+    const servicePagination = document.getElementById('servicePagination');
+    let isLoading = false;
+
+    // Hàm load data bằng AJAX
+    function loadServices(url, isPagination = false) {
+        if (isLoading) return;
+        isLoading = true;
+
+        // Hiển thị loading indicator
+        serviceGrid.innerHTML = '<div class="col-12 text-center py-5"><p>Đang tải...</p></div>';
+        servicePagination.innerHTML = '';
+
+        // Lưu vị trí scroll hiện tại (chỉ khi không phải pagination)
+        const currentScrollPosition = !isPagination ? (window.pageYOffset || document.documentElement.scrollTop) : null;
+
+        // Gửi AJAX request
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cập nhật grid và pagination
+                serviceGrid.innerHTML = data.html;
+                servicePagination.innerHTML = data.pagination || '';
+
+                // Cập nhật URL mà không reload trang
+                window.history.pushState({}, '', url);
+
+                // Nếu là pagination, scroll lên đầu phần service grid
+                if (isPagination) {
+                    setTimeout(function() {
+                        const serviceSection = document.querySelector('.service-section');
+                        if (serviceSection) {
+                            const sectionTop = serviceSection.offsetTop - 120; // Trừ header height
+                            window.scrollTo({
+                                top: sectionTop,
+                                behavior: 'smooth'
+                            });
+                        } else {
+                            // Fallback: scroll lên đầu trang
+                            window.scrollTo({
+                                top: 0,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }, 100);
+                } else {
+                    // Giữ nguyên vị trí scroll khi filter
+                    if (currentScrollPosition !== null) {
+                        window.scrollTo(0, currentScrollPosition);
+                    }
+                }
+
+                // Re-attach pagination event listeners
+                attachPaginationListeners();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            serviceGrid.innerHTML = '<div class="col-12 text-center py-5"><p>Có lỗi xảy ra. Vui lòng thử lại.</p></div>';
+        })
+        .finally(() => {
+            isLoading = false;
+        });
+    }
+
+    // Hàm build URL từ form
+    function buildUrl(page = 1) {
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams();
+
+        // Xử lý price range
+        const priceRange = document.getElementById('priceRange').value;
+        if (priceRange && priceRange !== 'custom') {
+            // Nếu chọn khoảng giá có sẵn, gửi price_range
+            params.append('price_range', priceRange);
+        } else if (priceRange === 'custom') {
+            // Nếu chọn tùy chỉnh, lấy giá trị từ input (loại bỏ dấu chấm)
+            const minPrice = document.getElementById('minPrice').value.replace(/[^\d]/g, '');
+            const maxPrice = document.getElementById('maxPrice').value.replace(/[^\d]/g, '');
+            if (minPrice) params.append('min_price', minPrice);
+            if (maxPrice) params.append('max_price', maxPrice);
         }
+
+        // Thêm các tham số từ form (trừ price_range, min_price, max_price vì đã xử lý ở trên)
+        for (const [key, value] of formData.entries()) {
+            if (value && key !== 'page' && key !== 'price_range' && key !== 'min_price' && key !== 'max_price') {
+                params.append(key, value);
+            }
+        }
+
+        // Thêm page
+        if (page > 1) {
+            params.append('page', page);
+        }
+
+        const baseUrl = '{{ route("site.services.index") }}';
+        return baseUrl + (params.toString() ? '?' + params.toString() : '');
+    }
+
+    // Xử lý form submit
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Validate giá nếu đang ở chế độ custom
+        const priceRange = document.getElementById('priceRange').value;
+        if (priceRange === 'custom') {
+            if (!validatePriceRange()) {
+                return false;
+            }
+        }
+
+        loadServices(buildUrl(1));
+    });
+
+    // Xử lý thay đổi select (auto submit)
+    const autoSubmitSelects = ['filterType', 'categorySelect', 'sortBy', 'priceRange'];
+    autoSubmitSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (select) {
+            select.addEventListener('change', function() {
+                if (selectId === 'priceRange') {
+                    // Xử lý price range
+                    const priceRange = this.value;
+                    const customInputs = document.getElementById('customPriceInputs');
+                    const minPriceInput = document.getElementById('minPrice');
+                    const maxPriceInput = document.getElementById('maxPrice');
+                    const priceError = document.getElementById('priceError');
+
+                    if (priceRange === 'custom') {
+                        customInputs.style.display = 'block';
+                        // Xóa giá trị từ khoảng giá đã chọn trước đó
+                        minPriceInput.value = '';
+                        maxPriceInput.value = '';
+                        // Ẩn thông báo lỗi nếu có
+                        if (priceError) {
+                            priceError.style.display = 'none';
+                        }
+                        // Reset border color
+                        minPriceInput.style.borderColor = '';
+                        maxPriceInput.style.borderColor = '';
+                    } else {
+                        customInputs.style.display = 'none';
+                        if (priceRange) {
+                            const [min, max] = priceRange.split('-');
+                            minPriceInput.value = min;
+                            maxPriceInput.value = max === '999999999' ? '' : max;
+                        } else {
+                            minPriceInput.value = '';
+                            maxPriceInput.value = '';
+                        }
+                        loadServices(buildUrl(1));
+                    }
+                } else {
+                    loadServices(buildUrl(1));
+                }
+            });
+        }
+    });
+
+    // Hàm validate giá
+    function validatePriceRange() {
+        const minPriceInput = document.getElementById('minPrice');
+        const maxPriceInput = document.getElementById('maxPrice');
+        const priceError = document.getElementById('priceError');
+
+        const minPrice = parseInt(minPriceInput.value.replace(/[^\d]/g, '')) || 0;
+        const maxPrice = parseInt(maxPriceInput.value.replace(/[^\d]/g, '')) || 0;
+
+        // Chỉ validate nếu cả 2 đều có giá trị
+        if (minPrice > 0 && maxPrice > 0 && minPrice > maxPrice) {
+            priceError.style.display = 'block';
+            minPriceInput.style.borderColor = '#dc3545';
+            maxPriceInput.style.borderColor = '#dc3545';
+            return false;
+        } else {
+            priceError.style.display = 'none';
+            minPriceInput.style.borderColor = '';
+            maxPriceInput.style.borderColor = '';
+            return true;
+        }
+    }
+
+    // Format số khi nhập vào input giá
+    function formatPriceInput(input) {
+        // Lấy giá trị, loại bỏ tất cả ký tự không phải số
+        let value = input.value.replace(/[^\d]/g, '');
+
+        // Format với dấu chấm phân cách hàng nghìn
+        if (value) {
+            value = parseInt(value).toLocaleString('vi-VN');
+            input.value = value;
+        }
+
+        // Validate sau khi format
+        validatePriceRange();
+    }
+
+    // Xử lý format cho các input giá
+    const priceInputs = document.querySelectorAll('[data-price-input]');
+    priceInputs.forEach(input => {
+        // Format khi blur (rời khỏi input)
+        input.addEventListener('blur', function() {
+            formatPriceInput(this);
+        });
+
+        // Format khi nhập
+        input.addEventListener('input', function() {
+            formatPriceInput(this);
+        });
+
+        // Lấy số thực khi submit (loại bỏ dấu chấm)
+        input.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                if (validatePriceRange()) {
+                    this.value = this.value.replace(/[^\d]/g, '');
+                    loadServices(buildUrl(1));
+                }
+            }
+        });
+    });
+
+    // Xử lý khi chọn price range
+    const priceRangeSelect = document.getElementById('priceRange');
+    if (priceRangeSelect && priceRangeSelect.value === 'custom') {
+        document.getElementById('customPriceInputs').style.display = 'block';
+    }
+
+    // Xử lý Enter trong input keyword
+    const keywordInput = document.getElementById('keywordInput');
+    if (keywordInput) {
+        keywordInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                loadServices(buildUrl(1));
+            }
+        });
+    }
+
+    // Hàm attach pagination listeners
+    function attachPaginationListeners() {
+        const paginationLinks = document.querySelectorAll('[data-ajax-pagination]');
+        paginationLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('href');
+                if (url) {
+                    loadServices(url, true); // true = isPagination
+                }
+            });
+        });
+    }
+
+    // Attach pagination listeners khi trang load
+    attachPaginationListeners();
+
+    // Xử lý nút "Áp dụng"
+    const applyButton = filterForm.querySelector('button[type="submit"]');
+    if (applyButton) {
+        applyButton.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Validate giá nếu đang ở chế độ custom
+            const priceRange = document.getElementById('priceRange').value;
+            if (priceRange === 'custom') {
+                if (!validatePriceRange()) {
+                    return false;
+                }
+            }
+
+            loadServices(buildUrl(1));
+        });
     }
 });
 </script>

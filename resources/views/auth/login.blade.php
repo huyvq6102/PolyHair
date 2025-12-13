@@ -37,18 +37,10 @@
 
 <section class="auth-hero">
     <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6 mb-5 mb-lg-0">
-                <span class="text-uppercase" style="letter-spacing:4px;">Trải nghiệm PolyHair</span>
-                <h1 class="mt-3 mb-4">Đăng nhập<br>để tiếp tục</h1>
-                <p>
-                    Khám phá các dịch vụ chăm sóc tóc đẳng cấp, đặt lịch nhanh chóng và nhận ưu đãi cá nhân hoá.
-                    Đăng nhập ngay để tiếp tục hành trình trải nghiệm hệ sinh thái làm đẹp chuyên nghiệp tại PolyHair.
-                </p>
-            </div>
-            <div class="col-lg-5 ml-auto">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
                 <div class="auth-form-wrapper">
-                    <h3 class="text-center text-white mb-4">Đăng nhập</h3>
+                    <h3 class="text-center mb-4" style="color: #fff;">Đăng nhập</h3>
                         
                         @if(session('success'))
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
