@@ -20,8 +20,28 @@
                     <p class="mb-0 text-muted"><small>Đã áp dụng mã khuyến mại: {{ $couponCode }}</small></p>
                 @endif
             </div>
-            <a href="{{ route('site.home') }}" class="btn btn-primary mt-3">Quay về trang chủ</a>
+            <a href="{{ route('site.home') }}" class="btn btn-primary mt-3 success-btn" style="background: #000; border: none; color: #fff; padding: 10px 30px; font-size: 14px; font-weight: 600; border-radius: 8px; transition: all 0.3s ease;">Xong</a>
         </div>
     </div>
 </div>
+<style>
+    .success-btn {
+        background: #000 !important;
+        border: none !important;
+        color: #fff !important;
+        padding: 10px 30px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        cursor: pointer !important;
+    }
+    
+    .success-btn:hover {
+        background: #FFC107 !important;
+        color: #000 !important;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    }
+</style>
 @endsection
