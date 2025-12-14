@@ -11,7 +11,7 @@
 
                     <!-- Header -->
                     <div class="text-center mb-2" style="margin-bottom: 15px;">
-                        <h2 class="fw-bold mb-1" style="color: #000; font-size: 18px; margin-bottom: 4px;">
+                        <h2 class="fw-bold mb-1" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 18px; margin-bottom: 4px;">
                             <i class="fa fa-calendar-check-o"></i> ĐẶT LỊCH NGAY
                         </h2>
                         <p class="text-muted mb-0" style="font-size: 12px; color: #666; margin: 0;">
@@ -144,7 +144,7 @@
                         <!-- Thông tin khách hàng -->
                         <div class="mb-2">
                             <div style="margin-bottom: 10px;">
-                                <h5 class="fw-semibold mb-0" style="color: #000; font-size: 14px;">
+                                <h5 class="fw-semibold mb-0" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px;">
                                     1. Thông tin khách hàng
                                 </h5>
                             </div>
@@ -189,16 +189,20 @@
                                 </label>
                                 <input type="email"
                                        name="email"
+                                       id="email"
                                        class="form-control"
                                        style="font-size: 12px; padding: 8px 12px; height: 38px; border: 1px solid #ddd; border-radius: 6px;"
                                        placeholder="Email (tùy chọn)"
                                        value="{{ old('email', auth()->user()->email ?? '') }}">
+                                <div class="field-error" id="email-error" style="display: none; color: #dc3545; font-size: 10px; margin-top: 3px;">
+                                    <i class="fa fa-exclamation-circle"></i> <span></span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Chọn dịch vụ -->
                         <div class="mb-2" style="margin-top: 15px;">
-                            <h5 class="fw-semibold mb-2" style="color: #000; font-size: 14px; margin-bottom: 8px;">
+                            <h5 class="fw-semibold mb-2" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px; margin-bottom: 8px;">
                                 2. DỊCH VỤ <span class="text-danger">*</span>
                             </h5>
 
@@ -240,7 +244,8 @@
                                             'price' => $variant->price ?? 0,
                                             'duration' => $variant->duration ?? 60,
                                             'type' => 'variant',
-                                            'id' => $variant->id
+                                            'id' => $variant->id,
+                                            'parent_service_id' => $variant->service_id ?? null // Store parent service ID for discount calculation
                                         ];
                                         $totalPrice += $variant->price ?? 0;
                                         $totalDuration += $variant->duration ?? 60;
@@ -274,13 +279,10 @@
                                     }
                                 }
 
-                                // Tính discount từ promotion
+                                // Tính discount từ promotion - giống logic trong select-services.blade.php
                                 $discountAmount = 0;
                                 $finalPrice = $totalPrice;
                                 if (isset($selectedPromotion) && $selectedPromotion) {
-                                    // Kiểm tra promotion có áp dụng cho các dịch vụ đã chọn không
-                                    $isApplicable = false;
-
                                     // Check if promotion applies to all services
                                     $hasSpecificServices = ($selectedPromotion->services && $selectedPromotion->services->count() > 0)
                                         || ($selectedPromotion->combos && $selectedPromotion->combos->count() > 0)
@@ -291,34 +293,50 @@
                                          ($selectedPromotion->combos ? $selectedPromotion->combos->count() : 0) +
                                          ($selectedPromotion->serviceVariants ? $selectedPromotion->serviceVariants->count() : 0)) >= 20;
 
+                                    // Calculate applicable price (only for services that match promotion)
+                                    $applicablePrice = 0;
                                     if ($selectedPromotion->apply_scope === 'order' || $applyToAll) {
-                                        $isApplicable = true;
+                                        // Apply to all services
+                                        $applicablePrice = $totalPrice;
                                     } else {
-                                        // Check if any selected service/variant/combo matches promotion
+                                        // Only apply to matching services
                                         foreach ($allSelectedItems as $item) {
+                                            $isItemApplicable = false;
+                                            
                                             if ($item['type'] === 'service' && $selectedPromotion->services && $selectedPromotion->services->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
-                                            } elseif ($item['type'] === 'variant' && $selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
+                                                $isItemApplicable = true;
+                                            } elseif ($item['type'] === 'variant') {
+                                                // Check direct variant match
+                                                if ($selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->contains('id', $item['id'])) {
+                                                    $isItemApplicable = true;
+                                                } else {
+                                                    // Check if variant's parent service is in promotion
+                                                    $parentServiceId = $item['parent_service_id'] ?? null;
+                                                    if ($parentServiceId && $selectedPromotion->services && $selectedPromotion->services->contains('id', $parentServiceId)) {
+                                                        $isItemApplicable = true;
+                                                    }
+                                                }
                                             } elseif ($item['type'] === 'combo' && $selectedPromotion->combos && $selectedPromotion->combos->contains('id', $item['id'])) {
-                                                $isApplicable = true;
-                                                break;
+                                                $isItemApplicable = true;
+                                            }
+                                            
+                                            if ($isItemApplicable) {
+                                                $applicablePrice += $item['price'];
                                             }
                                         }
                                     }
 
-                                    if ($isApplicable) {
+                                    // Calculate discount on applicable price only
+                                    if ($applicablePrice > 0) {
                                         if ($selectedPromotion->discount_type === 'percent') {
                                             $discountPercent = $selectedPromotion->discount_percent ?? 0;
-                                            $discountAmount = ($totalPrice * $discountPercent) / 100;
+                                            $discountAmount = ($applicablePrice * $discountPercent) / 100;
                                             // Apply max discount if exists
                                             if ($selectedPromotion->max_discount_amount) {
                                                 $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
                                             }
                                         } else {
-                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $totalPrice);
+                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $applicablePrice);
                                         }
                                         $finalPrice = max(0, $totalPrice - $discountAmount);
                                     }
@@ -388,16 +406,16 @@
                             </div>
                             <style>
                                 .btn-primary:hover {
-                                    background: #FFC107 !important;
-                                    color: #000 !important;
-                                    border: 1px solid #FFC107 !important;
+                                    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+                                    color: #fff !important;
+                                    border: 1px solid #8b5a2b !important;
                                 }
                             </style>
                         </div>
 
                         <!-- Thời gian -->
                         <div class="mb-2" style="margin-top: 15px;">
-                            <h5 class="fw-semibold mb-2" style="color: #000; font-size: 14px; margin-bottom: 8px;">
+                            <h5 class="fw-semibold mb-2" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px; margin-bottom: 8px;">
                                 3. Chọn ngày, giờ và stylist
                             </h5>
 
@@ -677,13 +695,13 @@
     }
 
     .submit-appointment-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
-        border: 1px solid #FFC107 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
+        border: 1px solid #8b5a2b !important;
     }
 
     .submit-appointment-btn:hover i {
-        color: #000 !important;
+        color: #fff !important;
     }
 
     /* Fill User Info Button - giống nút Chọn dịch vụ */
@@ -692,11 +710,11 @@
     }
 
     .fill-user-info-btn:hover {
-        background: #FFC107 !important;
-        border-color: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        border-color: #8b5a2b !important;
+        color: #fff !important;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 8px rgba(139, 90, 43, 0.3);
     }
 
     /* Custom Select Box */
@@ -823,8 +841,8 @@
     }
 
     .time-slot-nav-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
     }
 
     .time-slot-nav-btn:disabled {
@@ -863,9 +881,9 @@
     }
 
     .time-slot-btn.selected {
-        background: #000;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
         color: #fff;
-        border-color: #000;
+        border-color: #8b5a2b;
         font-weight: 600;
     }
 
@@ -996,8 +1014,8 @@
     }
 
     .employee-nav-btn:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
     }
 
     .employee-nav-btn:disabled {
@@ -1096,8 +1114,8 @@
     }
 
     .employee-carousel .owl-nav button:hover {
-        background: #FFC107 !important;
-        color: #000 !important;
+        background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+        color: #fff !important;
     }
 
     /* Responsive Design */
@@ -1306,7 +1324,7 @@
                         $('#phone').val(formData.phone);
                     }
                     if (formData.email) {
-                        $('input[name="email"]').val(formData.email);
+                        $('#email').val(formData.email);
                     }
                 } else {
                     // User đã đăng nhập: xóa thông tin khách hàng cũ trong localStorage để tránh nhầm lẫn
@@ -1379,7 +1397,7 @@
             if (!isLoggedIn) {
                 formData.name = $('#name').val() || '';
                 formData.phone = $('#phone').val() || '';
-                formData.email = $('input[name="email"]').val() || '';
+                formData.email = $('#email').val() || '';
             }
 
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
@@ -1387,7 +1405,7 @@
 
         // Lưu thông tin form khi người dùng nhập (auto-save)
         // Chỉ lưu thông tin đặt lịch và note, không lưu thông tin khách hàng nếu user đã đăng nhập
-        $('#name, #phone, input[name="email"], textarea[name="note"]').on('input change', function() {
+        $('#name, #phone, #email, textarea[name="note"]').on('input change', function() {
             const formData = {
                 employee_id: $('#employee_id').val() || '',
                 appointment_date: $('#appointment_date').val() || '',
@@ -1400,7 +1418,7 @@
             if (!isLoggedIn) {
                 formData.name = $('#name').val() || '';
                 formData.phone = $('#phone').val() || '';
-                formData.email = $('input[name="email"]').val() || '';
+                formData.email = $('#email').val() || '';
             }
 
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
@@ -1420,7 +1438,7 @@
             if (!isLoggedIn) {
                 formData.name = $('#name').val() || '';
                 formData.phone = $('#phone').val() || '';
-                formData.email = $('input[name="email"]').val() || '';
+                formData.email = $('#email').val() || '';
             }
 
             localStorage.setItem('appointmentFormData', JSON.stringify(formData));
@@ -1437,10 +1455,27 @@
                 $('#name').removeClass('is-invalid');
             }
 
-            // Clear phone error nếu đã có giá trị
-            if ($('#phone').val() && $('#phone').val().trim() !== '') {
-                $('#phone-error').hide();
-                $('#phone').removeClass('is-invalid');
+            // Clear phone error nếu đã có giá trị và đúng format
+            const phoneValue = $('#phone').val();
+            if (phoneValue && phoneValue.trim() !== '') {
+                const phoneRegex = /^0\d{9}$/;
+                if (phoneRegex.test(phoneValue.trim())) {
+                    $('#phone-error').hide();
+                    $('#phone').removeClass('is-invalid');
+                }
+            }
+
+            // Clear email error nếu đã có giá trị và đúng format
+            const emailValue = $('#email').val();
+            if (emailValue && emailValue.trim() !== '') {
+                if (emailValue.trim().includes('@')) {
+                    $('#email-error').hide();
+                    $('#email').removeClass('is-invalid');
+                }
+            } else {
+                // Email là tùy chọn, nếu trống thì clear error
+                $('#email-error').hide();
+                $('#email').removeClass('is-invalid');
             }
 
             // Clear employee error nếu đã có giá trị
@@ -1847,7 +1882,9 @@
             }
         });
 
+        // Clear error khi đang nhập (không validate real-time)
         $('input[name="phone"]').on('input keyup change paste', function() {
+            // Chỉ clear error khi đang nhập, không validate
             const value = $(this).val();
             if (value && value.trim().length > 0) {
                 $('#phone-error').hide();
@@ -1855,13 +1892,65 @@
             }
         });
 
-        // Clear error khi focus vào input (nếu đã có giá trị)
-        $('input[name="name"], input[name="phone"]').on('focus', function() {
+        // Validate phone khi blur (rời khỏi ô input)
+        $('input[name="phone"]').on('blur', function() {
+            const value = $(this).val();
+            const phoneTrimmed = value ? String(value).trim() : '';
+            
+            if (phoneTrimmed && phoneTrimmed.length > 0) {
+                // Validate format: phải đủ 10 số và bắt đầu bằng số 0
+                const phoneRegex = /^0\d{9}$/;
+                if (!phoneRegex.test(phoneTrimmed)) {
+                    // Hiển thị lỗi nếu format không đúng
+                    showFieldError('phone', 'số điện thoại không đúng');
+                } else {
+                    // Clear error nếu đúng format
+                    $('#phone-error').hide();
+                    $(this).removeClass('is-invalid');
+                }
+            }
+        });
+
+        // Clear error khi đang nhập (không validate real-time)
+        $('#email').on('input keyup change paste', function() {
+            // Chỉ clear error khi đang nhập, không validate
             const value = $(this).val();
             if (value && value.trim().length > 0) {
-                const fieldName = $(this).attr('name');
-                $('#' + fieldName + '-error').hide();
+                $('#email-error').hide();
                 $(this).removeClass('is-invalid');
+            } else {
+                // Nếu trống, chỉ ẩn lỗi (vì email là tùy chọn)
+                $('#email-error').hide();
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        // Validate email khi blur (rời khỏi ô input)
+        $('#email').on('blur', function() {
+            const value = $(this).val();
+            const emailTrimmed = value ? String(value).trim() : '';
+            
+            if (emailTrimmed && emailTrimmed.length > 0) {
+                // Kiểm tra email có chứa ký tự @
+                if (!emailTrimmed.includes('@')) {
+                    showFieldError('email', 'email không đúng định dạng');
+                } else {
+                    // Clear error nếu đúng format
+                    $('#email-error').hide();
+                    $(this).removeClass('is-invalid');
+                }
+            }
+        });
+
+        // Clear error khi focus vào input (nếu đã có giá trị)
+        $('input[name="name"], input[name="phone"], #email').on('focus', function() {
+            const value = $(this).val();
+            if (value && value.trim().length > 0) {
+                const fieldName = $(this).attr('name') || $(this).attr('id');
+                if (fieldName) {
+                    $('#' + fieldName + '-error').hide();
+                    $(this).removeClass('is-invalid');
+                }
             }
         });
 
@@ -2688,56 +2777,22 @@
             $('#time_slot-error').hide();
         }
 
-        // Show error for a specific field - chỉ hiển thị nếu thực sự thiếu giá trị
+        // Show error for a specific field
         function showFieldError(fieldId, message) {
-            // Kiểm tra xem field có giá trị không trước khi hiển thị lỗi
-            let hasValue = false;
-
-            if (fieldId === 'name') {
-                const value = $('#name').val();
-                hasValue = value && value.trim() !== '';
-            } else if (fieldId === 'phone') {
-                const value = $('#phone').val();
-                hasValue = value && value.trim() !== '';
-            } else if (fieldId === 'employee') {
-                const value = $('#employee_id').val();
-                hasValue = value && value !== '' && value !== '0';
-            } else if (fieldId === 'appointment_date') {
-                const value = $('#appointment_date').val();
-                hasValue = value && value.trim() !== '';
-            } else if (fieldId === 'time_slot') {
-                const value = $('#word_time_id').val();
-                hasValue = value && value !== '' && value !== '0';
+            const $errorDiv = $('#' + fieldId + '-error');
+            if ($errorDiv.length) {
+                $errorDiv.find('span').text(message);
+                $errorDiv.show();
             }
-
-            // Chỉ hiển thị lỗi nếu thực sự không có giá trị
-            if (!hasValue) {
-                const $errorDiv = $('#' + fieldId + '-error');
-                if ($errorDiv.length) {
-                    $errorDiv.find('span').text(message);
-                    $errorDiv.show();
-                    const $field = $('#' + fieldId);
-                    if ($field.length) {
-                        $field.addClass('is-invalid');
-                    }
-                    // Xử lý đặc biệt cho employee
-                    if (fieldId === 'employee') {
-                        $('#employeeToggleBtn').css('color', '#dc3545');
-                    }
-                }
-            } else {
-                // Nếu đã có giá trị, clear error
-                const $errorDiv = $('#' + fieldId + '-error');
-                if ($errorDiv.length) {
-                    $errorDiv.hide();
-                }
-                const $field = $('#' + fieldId);
-                if ($field.length) {
-                    $field.removeClass('is-invalid');
-                }
-                if (fieldId === 'employee') {
-                    $('#employeeToggleBtn').css('color', '');
-                }
+            
+            const $field = $('#' + fieldId);
+            if ($field.length) {
+                $field.addClass('is-invalid');
+            }
+            
+            // Xử lý đặc biệt cho employee
+            if (fieldId === 'employee') {
+                $('#employeeToggleBtn').css('color', '#dc3545');
             }
         }
 
@@ -2772,19 +2827,43 @@
                 $('#name').removeClass('is-invalid');
             }
 
-            // Check phone - BẮT BUỘC (chỉ hiển thị lỗi nếu thực sự trống)
+            // Check phone - BẮT BUỘC
             const phone = $('#phone').val();
             const phoneTrimmed = phone ? String(phone).trim() : '';
             if (!phoneTrimmed || phoneTrimmed === '') {
                 showFieldError('phone', 'Vui lòng nhập số điện thoại');
                 isValid = false;
             } else {
-                // Clear error nếu đã có giá trị
-                $('#phone-error').hide();
-                $('#phone').removeClass('is-invalid');
+                // Validate format: phải đủ 10 số và bắt đầu bằng số 0
+                const phoneRegex = /^0\d{9}$/;
+                if (!phoneRegex.test(phoneTrimmed)) {
+                    showFieldError('phone', 'số điện thoại không đúng');
+                    isValid = false;
+                } else {
+                    // Clear error nếu đã đúng format
+                    $('#phone-error').hide();
+                    $('#phone').removeClass('is-invalid');
+                }
             }
 
-            // Email là TÙY CHỌN - không cần validate
+            // Check email - TÙY CHỌN nhưng nếu có thì phải đúng format
+            const email = $('#email').val();
+            const emailTrimmed = email ? String(email).trim() : '';
+            if (emailTrimmed && emailTrimmed !== '') {
+                // Kiểm tra email có chứa ký tự @
+                if (!emailTrimmed.includes('@')) {
+                    showFieldError('email', 'email không đúng định dạng');
+                    isValid = false;
+                } else {
+                    // Clear error nếu đã đúng format
+                    $('#email-error').hide();
+                    $('#email').removeClass('is-invalid');
+                }
+            } else {
+                // Clear error nếu để trống (vì email là tùy chọn)
+                $('#email-error').hide();
+                $('#email').removeClass('is-invalid');
+            }
 
             // Check service (at least one must be selected)
             // Kiểm tra service_id[] (array)
@@ -2909,7 +2988,7 @@
             console.log('Form values:', {
                 name: $('#name').val(),
                 phone: $('#phone').val(),
-                email: $('input[name="email"]').val(),
+                email: $('#email').val(),
                 serviceIds: $('input[name="service_id[]"]').length,
                 serviceVariants: $('input[name="service_variants[]"]').length,
                 comboIds: $('input[name="combo_id[]"]').length,
@@ -2969,7 +3048,7 @@
             }
 
             // Email - TÙY CHỌN (có thể để trống)
-            const email = $('input[name="email"]').val();
+            const email = $('#email').val();
             if (email && email.trim() !== '') {
                 formDataObj.email = email.trim();
             }
@@ -3129,11 +3208,13 @@
                         $('#appointmentForm').off('submit');
                         $form.find('input, button, select, textarea').prop('disabled', true);
 
-                        // Redirect to checkout page immediately
+                        // Redirect to appointment success page or home
                         if (response.redirect_url) {
                             window.location.href = response.redirect_url;
+                        } else if (response.appointment_id) {
+                            window.location.href = '{{ route("site.appointment.success", ":id") }}'.replace(':id', response.appointment_id);
                         } else {
-                            window.location.href = '{{ route("site.payments.checkout") }}';
+                            window.location.href = '{{ route("site.home") }}';
                         }
                     } else {
                         // Re-enable button if not successful

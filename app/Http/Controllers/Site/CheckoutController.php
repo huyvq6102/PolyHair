@@ -15,20 +15,13 @@ use Illuminate\Support\Facades\Schema;
 class CheckoutController extends Controller
 {
 
-    public function checkout(){
+    private function getCartData()
+    {
         $cart = Session::get('cart', []);
-        $user = auth()->user();
-
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập để tiếp tục !');
-        }
-
         $services = [];
         $subtotal = 0;
-        $promotionAmount = 0; 
 
         foreach ($cart as $cartKey => $item) {
-
             // -------------------------
             // SERVICE VARIANT
             // -------------------------
@@ -43,7 +36,9 @@ class CheckoutController extends Controller
                         'cart_id' => $cartKey,
                         'name' => $variant->service->name . ' - ' . $variant->name,
                         'price' => $price,
-                        'type'  => 'service'
+                        'type'  => 'service',
+                        // Add raw data for promotion service
+                        'raw_item' => $item
                     ];
 
                     $subtotal += $price;
@@ -64,7 +59,8 @@ class CheckoutController extends Controller
                         'cart_id' => $cartKey,
                         'name' => 'Combo: ' . $combo->name,
                         'price' => $price,
-                        'type'  => 'combo'
+                        'type'  => 'combo',
+                        'raw_item' => $item
                     ];
 
                     $subtotal += $price;
@@ -99,7 +95,6 @@ class CheckoutController extends Controller
                             ];
                         }
                         // Handle Single Services (no variant) in Appointment
-                        // These are stored with service_variant_id = null and service name in notes
                         elseif (!$detail->serviceVariant && !$detail->combo_id && $detail->notes) {
                             $price = $detail->price_snapshot ?? 0;
 
@@ -126,11 +121,29 @@ class CheckoutController extends Controller
                             ];
                         }
                     }
-
+                    // Appointment itself is the item for promotion calculation logic if passed directly, 
+                    // but logic uses individual items inside.
+                    // Actually PromotionService iterates over the cart items passed to it.
+                    // So we need to pass the cart items, not the flattened services array for display.
+                    // But we calculate subtotal here.
+                    
                     $subtotal += $appointmentTotal;
                 }
             }
         }
+        
+        return [$cart, $services, $subtotal];
+    }
+
+    public function checkout(){
+        $user = auth()->user();
+
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập để tiếp tục !');
+        }
+
+        list($cart, $services, $subtotal) = $this->getCartData();
+        $promotionAmount = 0; 
 
         // -------------------------
         // KHUYẾN MẠI (PROMOTION)
@@ -198,16 +211,25 @@ class CheckoutController extends Controller
         ]);
 
         $code = $request->input('coupon_code');
+        $user = auth()->user();
 
-        $promo = Promotion::where('code', $code)
-            ->where('status', 'active')
-            ->whereDate('start_date', '<=', now())
-            ->whereDate('end_date', '>=', now())
-            ->first();
+        // Calculate Cart Data
+        list($cart, $services, $subtotal) = $this->getCartData();
 
-        if (!$promo) {
-            return back()->with('error', 'Mã khuyến mại không hợp lệ hoặc đã hết hạn.');
+        // Sử dụng PromotionService để validate promotion
+        $promotionService = app(PromotionService::class);
+        $result = $promotionService->validateAndCalculateDiscount(
+            $code, 
+            $cart, 
+            $subtotal,
+            $user ? $user->id : null
+        );
+        
+        if (!$result['valid']) {
+            return back()->with('error', $result['message']);
         }
+        
+        $promo = $result['promotion'];
 
         Session::put('coupon_code', $code);
 

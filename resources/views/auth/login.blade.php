@@ -32,6 +32,25 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
+    /* Làm tiêu đề sáng hơn trên nền tối */
+    .auth-hero h1 {
+        color: #f6f7fb;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    }
+    /* Nút hiện/ẩn mật khẩu dạng icon */
+    .password-toggle-btn {
+        border-color: #4b5563;
+        color: #e5e7eb;
+        background: #1f2937;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+    .password-toggle-btn:hover {
+        color: #fff;
+        background: #111827;
+    }
 </style>
 @endpush
 
@@ -68,6 +87,15 @@
                             </div>
                         @endif
 
+                        @if(session('error'))
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                {{ session('error') }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        @endif
+
                         @if ($errors->any())
                             <div class="alert alert-danger">
                                 <ul class="mb-0">
@@ -93,11 +121,30 @@
 
                             <div class="form-group">
                                 <label for="password">Mật khẩu <span class="text-danger">*</span></label>
-                                <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" 
-                                       value="" required autocomplete="current-password" placeholder="Nhập mật khẩu mới">
-                                @error('password')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                <div class="input-group">
+                                    <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" 
+                                           value="" required autocomplete="current-password" placeholder="Nhập mật khẩu mới">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary password-toggle-btn" id="toggle-password" aria-label="Hiển thị hoặc ẩn mật khẩu" onclick="togglePasswordVisibility()">
+                                            <span class="toggle-icon icon-eye" aria-hidden="true">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
+                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                </svg>
+                                            </span>
+                                            <span class="toggle-icon icon-eye-off" aria-hidden="true" style="display: none;">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a21.77 21.77 0 0 1 5.11-6.41"></path>
+                                                    <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24"></path>
+                                                    <path d="M1 1l22 22"></path>
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                    @error('password')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -144,4 +191,24 @@
         </div>
     </div>
 </section>
+@push('scripts')
+<script>
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('password');
+        const toggleButton = document.getElementById('toggle-password');
+        if (!passwordInput || !toggleButton) return;
+
+        const eye = toggleButton.querySelector('.icon-eye');
+        const eyeOff = toggleButton.querySelector('.icon-eye-off');
+
+        const isHidden = passwordInput.type === 'password';
+        passwordInput.type = isHidden ? 'text' : 'password';
+
+        if (eye && eyeOff) {
+            eye.style.display = isHidden ? 'none' : 'inline-flex';
+            eyeOff.style.display = isHidden ? 'inline-flex' : 'none';
+        }
+    }
+</script>
+@endpush
 @endsection

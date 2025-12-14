@@ -70,6 +70,22 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        // Kiểm tra tài khoản có bị khóa không
+        $user = Auth::user();
+        if ($user && $user->isBanned()) {
+            Auth::logout();
+            $bannedUntil = $user->banned_until;
+            $timeRemaining = $this->formatBanTimeRemaining($bannedUntil);
+            
+            throw ValidationException::withMessages([
+                'login' => 'Tài khoản của bạn đã bị khóa. ' . 
+                          ($timeRemaining 
+                              ? "Tài khoản sẽ được mở khóa sau {$timeRemaining}. " 
+                              : 'Tài khoản sẽ được mở khóa sớm. ') .
+                          ($user->ban_reason ? "Lý do: {$user->ban_reason}" : ''),
+            ]);
+        }
     }
 
     /**
@@ -101,5 +117,36 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('login')).'|'.$this->ip());
+    }
+
+    /**
+     * Format thời gian còn lại của ban thành chuỗi dễ đọc.
+     */
+    protected function formatBanTimeRemaining($bannedUntil)
+    {
+        if (!$bannedUntil) {
+            return null;
+        }
+
+        $now = now();
+        if ($now->greaterThanOrEqualTo($bannedUntil)) {
+            return null;
+        }
+
+        // Sử dụng diffInRealMinutes để có số chính xác hơn, sau đó làm tròn lên
+        $diffInMinutes = (int) ceil($now->diffInRealMinutes($bannedUntil, false));
+        
+        if ($diffInMinutes < 60) {
+            return $diffInMinutes . ' phút';
+        }
+
+        $hours = floor($diffInMinutes / 60);
+        $minutes = $diffInMinutes % 60;
+
+        if ($minutes == 0) {
+            return $hours . ' giờ';
+        }
+
+        return $hours . ' giờ ' . $minutes . ' phút';
     }
 }

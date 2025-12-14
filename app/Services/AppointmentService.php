@@ -5,8 +5,12 @@ namespace App\Services;
 use App\Models\Appointment;
 use App\Models\AppointmentDetail;
 use App\Models\AppointmentLog;
+use App\Models\User;
 use App\Models\WorkingSchedule;
+use App\Mail\AppointmentCancellationMail;
+use App\Events\AppointmentStatusUpdated;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class AppointmentService
 {
@@ -187,6 +191,24 @@ class AppointmentService
             'modified_by' => $modifiedBy ?? auth()->id(),
         ]);
 
+        // Refresh appointment và load relationships trước khi broadcast
+        $appointment->refresh();
+        $appointment->load([
+            'user',
+            'employee.user',
+            'appointmentDetails.serviceVariant.service',
+            'appointmentDetails.combo'
+        ]);
+
+        // Broadcast status update event
+        \Illuminate\Support\Facades\Log::info('Broadcasting appointment status update', [
+            'appointment_id' => $appointment->id,
+            'old_status' => $oldStatus,
+            'new_status' => $appointment->status,
+        ]);
+        
+        event(new AppointmentStatusUpdated($appointment));
+
         return $appointment;
     }
 
@@ -266,7 +288,7 @@ class AppointmentService
      */
     public function getForEmployeeWithFilters($employeeId, array $filters = [], $perPage = 10)
     {
-        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service'])
+        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
             ->where(function($q) use ($employeeId) {
                 // Appointments assigned to employee directly
                 $q->where('employee_id', $employeeId)
@@ -320,12 +342,13 @@ class AppointmentService
         return DB::transaction(function () use ($id, $reason, $modifiedBy) {
             $appointment = Appointment::findOrFail($id);
             $oldStatus = $appointment->status;
+            $user = $appointment->user;
             
             $appointment->update([
                 'status' => 'Đã hủy',
                 'cancellation_reason' => $reason
             ]);
-
+            
             // Note: Working schedule status column has been removed.
             // The working schedule is now managed differently (if needed).
             // Free up working schedule time slot logic removed as status column no longer exists.
@@ -338,8 +361,203 @@ class AppointmentService
                 'modified_by' => $modifiedBy ?? auth()->id(),
             ]);
 
+            // Refresh appointment và load relationships trước khi broadcast
+            $appointment->refresh();
+            $appointment->load([
+                'user',
+                'employee.user',
+                'appointmentDetails.serviceVariant.service',
+                'appointmentDetails.combo'
+            ]);
+
+            // Broadcast status update event
+            \Illuminate\Support\Facades\Log::info('Broadcasting appointment cancellation', [
+                'appointment_id' => $appointment->id,
+                'old_status' => $oldStatus,
+                'new_status' => $appointment->status,
+            ]);
+            
+            event(new AppointmentStatusUpdated($appointment));
+
+            // Gửi email thông báo hủy lịch
+            $this->sendCancellationEmail($appointment);
+            
+            // Chỉ kiểm tra và ban nếu là khách hàng tự hủy (không phải admin/employee)
+            // Kiểm tra SAU KHI hủy để đếm chính xác số lần hủy bao gồm cả lịch vừa hủy
+            $shouldCheckBan = !$user->isAdmin() && !$user->isEmployee();
+            $wasBanned = false;
+            
+            if ($shouldCheckBan) {
+                $wasBanned = $this->checkAndBanUserIfNeeded($user);
+            }
+            
+            // Refresh user để lấy thông tin mới nhất
+            $user->refresh();
+            
+            // Trả về thông tin về việc ban để controller có thể xử lý
+            return [
+                'appointment' => $appointment,
+                'was_banned' => $wasBanned,
+                'user' => $user,
+            ];
+
             return $appointment;
         });
+    }
+
+    /**
+     * Kiểm tra và ban tài khoản nếu hủy quá giới hạn.
+     * 
+     * @return bool True nếu user bị ban, False nếu không
+     */
+    protected function checkAndBanUserIfNeeded($user)
+    {
+        $now = now();
+        
+        // Đếm số lần hủy trong ngày (từ 00:00 hôm nay)
+        $todayStart = $now->copy()->startOfDay();
+        $cancellationsToday = Appointment::where('user_id', $user->id)
+            ->where('status', 'Đã hủy')
+            ->where('created_at', '>=', $todayStart)
+            ->count();
+        
+        // Đếm số lần hủy trong tuần (7 ngày gần nhất)
+        $weekStart = $now->copy()->subDays(7);
+        $cancellationsThisWeek = Appointment::where('user_id', $user->id)
+            ->where('status', 'Đã hủy')
+            ->where('created_at', '>=', $weekStart)
+            ->count();
+        
+        // Đếm số lần hủy trong tháng (30 ngày gần nhất)
+        $monthStart = $now->copy()->subDays(30);
+        $cancellationsThisMonth = Appointment::where('user_id', $user->id)
+            ->where('status', 'Đã hủy')
+            ->where('created_at', '>=', $monthStart)
+            ->count();
+        
+        // Log để debug
+        \Log::info('Checking ban for user', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'cancellations_today' => $cancellationsToday,
+            'cancellations_week' => $cancellationsThisWeek,
+            'cancellations_month' => $cancellationsThisMonth,
+            'is_banned' => $user->isBanned(),
+            'banned_until' => $user->banned_until,
+            'status' => $user->status,
+        ]);
+        
+        // Kiểm tra giới hạn: 3/ngày, 7/tuần, 15/tháng
+        $exceededLimit = false;
+        $banReason = '';
+        
+        if ($cancellationsToday >= 3) {
+            $exceededLimit = true;
+            $banReason = "Hủy lịch hẹn quá 3 lần trong ngày ({$cancellationsToday} lần)";
+        } elseif ($cancellationsThisWeek >= 7) {
+            $exceededLimit = true;
+            $banReason = "Hủy lịch hẹn quá 7 lần trong tuần ({$cancellationsThisWeek} lần)";
+        } elseif ($cancellationsThisMonth >= 15) {
+            $exceededLimit = true;
+            $banReason = "Hủy lịch hẹn quá 15 lần trong tháng ({$cancellationsThisMonth} lần)";
+        }
+        
+        if ($exceededLimit) {
+            // Kiểm tra nếu user đã bị cấm vĩnh viễn (status = "Cấm") thì không ban lại
+            if ($user->status === 'Cấm') {
+                \Log::info('User is already permanently banned, skipping ban', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                ]);
+                return;
+            }
+            
+            // Nếu đã bị ban tạm thời nhưng chưa hết thời gian, không ban lại
+            if ($user->isBanned()) {
+                \Log::info('User is already banned, skipping ban', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'banned_until' => $user->banned_until,
+                    'status' => $user->status,
+                ]);
+                return;
+            }
+            
+            // Ban tài khoản: Tất cả các trường hợp vô hiệu hóa đều bị cấm 1 giờ
+            $banHours = 1; // Vô hiệu hóa: khóa 1 giờ
+            
+            $user->ban($banHours, $banReason);
+            
+            // Refresh để lấy giá trị banned_until mới nhất
+            $user->refresh();
+            
+            \Log::warning('User banned due to excessive cancellations', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'cancellations_today' => $cancellationsToday,
+                'cancellations_week' => $cancellationsThisWeek,
+                'cancellations_month' => $cancellationsThisMonth,
+                'ban_reason' => $banReason,
+                'ban_hours' => $banHours,
+                'banned_until' => $user->banned_until,
+                'status' => $user->status,
+            ]);
+            
+            return true; // User đã bị ban
+        }
+        
+        return false; // User không bị ban
+    }
+
+    /**
+     * Send cancellation email to customer.
+     */
+    protected function sendCancellationEmail(Appointment $appointment)
+    {
+        // Lấy email từ user
+        $emailToSend = trim($appointment->user->email ?? '');
+
+        // Đảm bảo email hợp lệ
+        if (empty($emailToSend) || !filter_var($emailToSend, FILTER_VALIDATE_EMAIL)) {
+            \Log::warning('Cannot send appointment cancellation email: Invalid or missing email address', [
+                'user_email' => $appointment->user->email ?? 'N/A',
+                'appointment_id' => $appointment->id,
+            ]);
+            return;
+        }
+
+        try {
+            // Gửi email thông báo hủy lịch
+            Mail::to($emailToSend)->send(new AppointmentCancellationMail($appointment));
+
+            \Log::info('Appointment cancellation email sent successfully', [
+                'to' => $emailToSend,
+                'appointment_id' => $appointment->id,
+                'mailer' => config('mail.default'),
+                'mail_host' => config('mail.mailers.smtp.host'),
+                'mail_port' => config('mail.mailers.smtp.port'),
+                'from_address' => config('mail.from.address'),
+            ]);
+        } catch (\Swift_TransportException $e) {
+            // Lỗi kết nối SMTP
+            \Log::error('SMTP connection error when sending appointment cancellation email', [
+                'email_to' => $emailToSend,
+                'appointment_id' => $appointment->id,
+                'error' => $e->getMessage(),
+                'mailer' => config('mail.default'),
+                'mail_host' => config('mail.mailers.smtp.host'),
+                'mail_port' => config('mail.mailers.smtp.port'),
+            ]);
+        } catch (\Exception $e) {
+            // Log lỗi chi tiết nhưng không làm gián đoạn quá trình hủy lịch
+            \Log::error('Failed to send appointment cancellation email', [
+                'user_email' => $emailToSend,
+                'appointment_id' => $appointment->id,
+                'error' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 
     /**
@@ -466,10 +684,21 @@ class AppointmentService
             $oldStatus = $appointment->status;
             $newStatus = 'Chờ xử lý'; // Restore to pending status
             
-            $appointment->update([
-                'status' => $newStatus,
-                'cancellation_reason' => null
-            ]);
+            // Reset created_at và updated_at để tránh auto-confirm ngay lập tức
+            $now = now();
+            
+            // Sử dụng DB::table để đảm bảo created_at được update (vì Eloquent có thể không update created_at)
+            DB::table('appointments')
+                ->where('id', $appointment->id)
+                ->update([
+                    'status' => $newStatus,
+                    'cancellation_reason' => null,
+                    'created_at' => $now, // Reset created_at để tránh auto-confirm ngay lập tức
+                    'updated_at' => $now, // Cập nhật updated_at
+                ]);
+            
+            // Refresh appointment để lấy dữ liệu mới
+            $appointment->refresh();
 
             // Note: Working schedule status column has been removed.
             // The working schedule is now managed differently (if needed).
@@ -482,6 +711,35 @@ class AppointmentService
                 'status_to' => $newStatus,
                 'modified_by' => $modifiedBy ?? auth()->id(),
             ]);
+
+            // Refresh appointment và load relationships trước khi broadcast
+            $appointment->refresh();
+            $appointment->load([
+                'user',
+                'employee.user',
+                'appointmentDetails.serviceVariant.service',
+                'appointmentDetails.combo'
+            ]);
+
+            // Broadcast status update event
+            \Illuminate\Support\Facades\Log::info('Broadcasting appointment restore', [
+                'appointment_id' => $appointment->id,
+                'old_status' => $oldStatus,
+                'new_status' => $appointment->status,
+                'booking_code' => $appointment->booking_code,
+            ]);
+            
+            try {
+                event(new AppointmentStatusUpdated($appointment));
+                \Illuminate\Support\Facades\Log::info('Appointment restore event broadcasted successfully', [
+                    'appointment_id' => $appointment->id,
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to broadcast appointment restore event', [
+                    'appointment_id' => $appointment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return $appointment;
         });
@@ -566,6 +824,24 @@ class AppointmentService
                     'status_to' => $data['status'],
                     'modified_by' => auth()->id(),
                 ]);
+
+                // Refresh appointment và load relationships trước khi broadcast
+                $appointment->refresh();
+                $appointment->load([
+                    'user',
+                    'employee.user',
+                    'appointmentDetails.serviceVariant.service',
+                    'appointmentDetails.combo'
+                ]);
+
+                // Broadcast status update event
+                \Illuminate\Support\Facades\Log::info('Broadcasting appointment status update', [
+                    'appointment_id' => $appointment->id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $appointment->status,
+                ]);
+                
+                event(new AppointmentStatusUpdated($appointment));
             }
 
             $result = $appointment->load(['employee.user', 'user', 'appointmentDetails.serviceVariant.service']);

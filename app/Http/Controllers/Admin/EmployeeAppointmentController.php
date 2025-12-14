@@ -66,10 +66,10 @@ class EmployeeAppointmentController extends Controller
         $categories = $this->serviceCategoryService->getAll();
         $services = $this->serviceService->getAll()->load('serviceVariants');
 
-        // Active promotions that can be applied by employee (same rule as checkout)
+        // Active promotions that can be applied by employee (chỉ lấy status = 'active')
+        // Command sẽ tự động cập nhật trạng thái dựa trên ngày
         $promotions = Promotion::where('status', 'active')
-            ->whereDate('start_date', '<=', now())
-            ->whereDate('end_date', '>=', now())
+            ->whereNull('deleted_at')
             ->orderBy('name')
             ->get();
 
@@ -212,7 +212,7 @@ class EmployeeAppointmentController extends Controller
             $appointment = $this->appointmentService->create([
                 'user_id' => $userId,
                 'employee_id' => $validated['staff_id'] ?? $employee->id,
-                'status' => 'Chờ xử lý',
+                'status' => 'Chờ xác nhận',
                 'start_at' => $startAt,
                 'end_at' => $endAt,
                 'note' => $validated['note'] ?? null,
@@ -220,10 +220,11 @@ class EmployeeAppointmentController extends Controller
 
             // If employee selected a promotion code, link it to this appointment & customer
             if (!empty($validated['promotion_code'] ?? null)) {
+                // Chỉ chấp nhận promotion có status = 'active'
+                // Command sẽ tự động cập nhật trạng thái dựa trên ngày
                 $promotion = Promotion::where('code', $validated['promotion_code'])
                     ->where('status', 'active')
-                    ->whereDate('start_date', '<=', now())
-                    ->whereDate('end_date', '>=', now())
+                    ->whereNull('deleted_at')
                     ->first();
 
                 if ($promotion) {
@@ -278,7 +279,7 @@ class EmployeeAppointmentController extends Controller
             10
         );
 
-        return view('admin.employee-appointments.index', compact('appointments', 'filters'));
+        return view('admin.employee-appointments.index', compact('appointments', 'filters', 'employee'));
     }
 
     /**
@@ -332,9 +333,9 @@ class EmployeeAppointmentController extends Controller
                 ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
         }
 
-        if ($appointment->status !== 'Chờ xử lý' && $appointment->status !== 'Chờ xác nhận') {
+        if ($appointment->status !== 'Chờ xác nhận' && $appointment->status !== 'Chờ xử lý') {
             return redirect()->route('employee.appointments.show', $id)
-                ->with('error', 'Chỉ có thể xác nhận đơn ở trạng thái "Chờ xử lý" hoặc "Chờ xác nhận".');
+                ->with('error', 'Chỉ có thể xác nhận đơn ở trạng thái "Chờ xác nhận" hoặc "Chờ xử lý".');
         }
 
         $this->appointmentService->updateStatus($id, 'Đã xác nhận');
@@ -437,15 +438,16 @@ class EmployeeAppointmentController extends Controller
                 ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
         }
 
-        // Check if appointment can be cancelled (only Chờ xử lý or Chờ xác nhận)
-        if ($appointment->status !== 'Chờ xử lý' && $appointment->status !== 'Chờ xác nhận') {
+        // Check if appointment can be cancelled (only Chờ xác nhận or Chờ xử lý)
+        if ($appointment->status !== 'Chờ xác nhận' && $appointment->status !== 'Chờ xử lý') {
             return redirect()->route('employee.appointments.show', $id)
-                ->with('error', 'Không thể hủy đơn đặt đã được xác nhận hoặc đang thực hiện.');
+                ->with('error', 'Chỉ có thể hủy đơn đặt ở trạng thái "Chờ xác nhận" hoặc "Chờ xử lý".');
         }
 
         $validated = $request->validated();
 
-        $this->appointmentService->cancelAppointment($id, $validated['cancellation_reason']);
+        $result = $this->appointmentService->cancelAppointment($id, $validated['cancellation_reason']);
+        // Employee hủy không cần kiểm tra ban
 
         return redirect()->route('employee.appointments.show', $id)
             ->with('success', 'Đơn đặt đã được hủy thành công!');
@@ -475,10 +477,10 @@ class EmployeeAppointmentController extends Controller
                 ->with('error', 'Bạn không có quyền xóa đơn đặt này.');
         }
 
-        // Check if appointment can be deleted (only Chờ xử lý or Chờ xác nhận)
-        if ($appointment->status !== 'Chờ xử lý' && $appointment->status !== 'Chờ xác nhận') {
+        // Check if appointment can be deleted (only Chờ xác nhận or Chờ xử lý)
+        if ($appointment->status !== 'Chờ xác nhận' && $appointment->status !== 'Chờ xử lý') {
             return redirect()->route('employee.appointments.show', $id)
-                ->with('error', 'Chỉ có thể xóa đơn đặt chưa được xác nhận.');
+                ->with('error', 'Chỉ có thể xóa đơn đặt ở trạng thái "Chờ xác nhận" hoặc "Chờ xử lý".');
         }
 
         try {
@@ -493,6 +495,254 @@ class EmployeeAppointmentController extends Controller
             ]);
             return redirect()->route('employee.appointments.show', $id)
                 ->with('error', 'Có lỗi xảy ra khi xóa đơn đặt. Vui lòng thử lại.');
+        }
+    }
+
+    /**
+     * Show the form for editing the specified appointment.
+     * Only Receptionist can edit appointments.
+     */
+    public function edit(string $id)
+    {
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'Bạn không phải là nhân viên.');
+        }
+
+        // Check if employee is Receptionist
+        if ($employee->position !== 'Receptionist') {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Chỉ nhân viên lễ tân mới được phép sửa lịch hẹn.');
+        }
+
+        $appointment = $this->appointmentService->getOne($id);
+
+        // Check if appointment belongs to this employee (directly or via appointment details)
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
+        if (!$hasAccess) {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Bạn không có quyền sửa đơn đặt này.');
+        }
+
+        // Get all employees (for assignment)
+        $employees = \App\Models\Employee::whereIn('position', ['Stylist', 'Barber'])
+            ->with('user')
+            ->get();
+        
+        // Get single services (no variants)
+        $singleServices = \App\Models\Service::whereNull('deleted_at')
+            ->whereDoesntHave('serviceVariants')
+            ->get();
+        
+        // Get services with variants
+        $variantServices = \App\Models\Service::whereNull('deleted_at')
+            ->whereHas('serviceVariants')
+            ->with('serviceVariants')
+            ->get();
+        
+        // Get combos
+        $combos = \App\Models\Combo::whereNull('deleted_at')
+            ->with('comboItems')
+            ->get();
+        
+        // Determine current service type
+        $currentServiceType = 'variant';
+        $currentServiceId = null;
+        $currentServiceVariantId = null;
+        $currentComboId = null;
+        
+        if ($appointment->appointmentDetails->count() > 0) {
+            $detail = $appointment->appointmentDetails->first();
+            if ($detail->combo_id) {
+                $currentServiceType = 'combo';
+                $currentComboId = $detail->combo_id;
+            } elseif ($detail->service_variant_id) {
+                $currentServiceType = 'variant';
+                $currentServiceVariantId = $detail->service_variant_id;
+            } else {
+                $currentServiceType = 'single';
+                if ($detail->notes) {
+                    $service = \App\Models\Service::where('name', $detail->notes)
+                        ->whereNull('deleted_at')
+                        ->whereDoesntHave('serviceVariants')
+                        ->first();
+                    if ($service) {
+                        $currentServiceId = $service->id;
+                    }
+                }
+            }
+        }
+        
+        return view('admin.employee-appointments.edit', compact(
+            'appointment', 
+            'employees', 
+            'singleServices', 
+            'variantServices', 
+            'combos',
+            'currentServiceType',
+            'currentServiceId',
+            'currentServiceVariantId',
+            'currentComboId'
+        ));
+    }
+
+    /**
+     * Update the specified appointment in storage.
+     * Only Receptionist can update appointments.
+     */
+    public function update(Request $request, string $id)
+    {
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'Bạn không phải là nhân viên.');
+        }
+
+        // Check if employee is Receptionist
+        if ($employee->position !== 'Receptionist') {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Chỉ nhân viên lễ tân mới được phép sửa lịch hẹn.');
+        }
+
+        $appointment = $this->appointmentService->getOne($id);
+
+        // Check if appointment belongs to this employee (directly or via appointment details)
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
+        if (!$hasAccess) {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Bạn không có quyền sửa đơn đặt này.');
+        }
+
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'phone' => 'required|string|max:20',
+                'email' => 'nullable|email|max:255',
+                'employee_id' => [
+                    'nullable',
+                    'exists:employees,id',
+                ],
+                'new_services' => 'nullable|array',
+                'new_services.*' => 'nullable|string',
+                'status' => 'required|in:Chờ xử lý,Chờ xác nhận,Đã xác nhận,Đang thực hiện,Hoàn thành,Đã hủy',
+                'note' => 'nullable|string',
+                'appointment_date' => 'nullable|date',
+                'appointment_time' => 'nullable|string',
+            ]);
+
+            // Update user info
+            $customer = $appointment->user;
+            if ($customer) {
+                $customer->update([
+                    'name' => $validated['name'],
+                    'phone' => $validated['phone'],
+                    'email' => $validated['email'] ?? $customer->email,
+                ]);
+            }
+
+            // Prepare appointment data
+            $appointmentData = [
+                'user_id' => $customer->id,
+                'employee_id' => $validated['employee_id'] ?? $appointment->employee_id,
+                'status' => $validated['status'],
+                'note' => $validated['note'] ?? null,
+            ];
+
+            // Calculate total duration and prepare service variant data
+            $totalDuration = 0;
+            $serviceVariantData = [];
+
+            if (!empty($validated['new_services'])) {
+                foreach ($validated['new_services'] as $serviceStr) {
+                    if (empty($serviceStr)) continue;
+                    
+                    $parts = explode(':', $serviceStr);
+                    $serviceType = $parts[0] ?? '';
+                    $serviceId = $parts[1] ?? null;
+
+                    if ($serviceType === 'variant' && $serviceId) {
+                        $variant = \App\Models\ServiceVariant::find($serviceId);
+                        if ($variant) {
+                            $totalDuration += $variant->duration ?? 60;
+                            $serviceVariantData[] = [
+                                'service_variant_id' => $variant->id,
+                                'employee_id' => $validated['employee_id'] ?? $appointment->employee_id,
+                                'price_snapshot' => $variant->price,
+                                'duration' => $variant->duration ?? 60,
+                                'status' => 'Chờ',
+                            ];
+                        }
+                    } elseif ($serviceType === 'combo' && $serviceId) {
+                        $combo = \App\Models\Combo::find($serviceId);
+                        if ($combo) {
+                            $totalDuration += $combo->duration ?? 60;
+                            $serviceVariantData[] = [
+                                'combo_id' => $combo->id,
+                                'employee_id' => $validated['employee_id'] ?? $appointment->employee_id,
+                                'price_snapshot' => $combo->price,
+                                'duration' => $combo->duration ?? 60,
+                                'status' => 'Chờ',
+                            ];
+                        }
+                    } elseif ($serviceType === 'single' && $serviceId) {
+                        $service = \App\Models\Service::find($serviceId);
+                        if ($service) {
+                            $duration = $service->base_duration ?? 60;
+                            $price = $service->base_price ?? 0;
+                            $totalDuration += $duration;
+                            $serviceVariantData[] = [
+                                'service_variant_id' => null,
+                                'employee_id' => $validated['employee_id'] ?? $appointment->employee_id,
+                                'price_snapshot' => $price,
+                                'duration' => $duration,
+                                'status' => 'Chờ',
+                                'notes' => $service->name,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Set start_at and end_at if date and time provided
+            if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
+                $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
+                $appointmentData['start_at'] = $startAt;
+                
+                if ($totalDuration > 0) {
+                    $appointmentData['end_at'] = $startAt->copy()->addMinutes($totalDuration);
+                } else {
+                    // Use existing duration if no new services
+                    if ($appointment->end_at && $appointment->start_at) {
+                        $existingDuration = $appointment->start_at->diffInMinutes($appointment->end_at);
+                        $appointmentData['end_at'] = $startAt->copy()->addMinutes($existingDuration);
+                    }
+                }
+            }
+
+            $this->appointmentService->update($id, $appointmentData, $serviceVariantData);
+
+            return redirect()->route('employee.appointments.index')
+                ->with('success', 'Lịch hẹn đã được cập nhật thành công!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            \Log::error('Error updating appointment by employee', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra khi cập nhật lịch hẹn: ' . $e->getMessage());
         }
     }
 }

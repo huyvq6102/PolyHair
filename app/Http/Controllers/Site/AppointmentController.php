@@ -408,13 +408,24 @@ class AppointmentController extends Controller
         $restoredAppointmentDate = $request->input('appointment_date') ?? Session::get('appointment_date');
         $restoredWordTimeId = $request->input('word_time_id') ?? Session::get('word_time_id');
 
+        // Load promotion nếu có promotion_id trong URL
+        $selectedPromotion = null;
+        if ($request->has('promotion_id') && $request->input('promotion_id')) {
+            $promotionId = $request->input('promotion_id');
+            $selectedPromotion = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+                ->whereNull('deleted_at')
+                ->where('status', 'active')
+                ->find($promotionId);
+        }
+
         return view('site.appointment.create', compact(
             'employees', 
             'wordTimes', 
             'serviceCategories', 
             'combos',
             'restoredAppointmentDate',
-            'restoredWordTimeId'
+            'restoredWordTimeId',
+            'selectedPromotion'
         ));
     }
 
@@ -797,9 +808,7 @@ class AppointmentController extends Controller
             // Nếu là guest (không đăng nhập), redirect đến trang chi tiết lịch đặt
             // Nếu đã đăng nhập, redirect đến trang thanh toán
             $isGuest = !Auth::check();
-            $redirectUrl = $isGuest 
-                ? route('site.appointment.show', $appointment->id)
-                : route('site.payments.checkout');
+            $redirectUrl = route('site.appointment.success', $appointment->id);
             
             $successMessage = $isGuest
                 ? '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Vui lòng kiểm tra thông tin lịch đặt của bạn.'
@@ -881,10 +890,40 @@ class AppointmentController extends Controller
         $appointment = \App\Models\Appointment::with([
             'user',
             'employee.user',
-            'appointmentDetails.serviceVariant.service'
+            'appointmentDetails.serviceVariant.service',
+            'appointmentDetails.combo',
+            'promotionUsages.promotion'
         ])->findOrFail($id);
 
-        return view('site.appointment.success', compact('appointment'));
+        // Tính tổng tiền từ appointment details
+        $subtotal = 0;
+        foreach ($appointment->appointmentDetails as $detail) {
+            $price = $detail->price_snapshot ?? 0;
+            if ($detail->serviceVariant) {
+                $price = $detail->price_snapshot ?? ($detail->serviceVariant->price ?? 0);
+            } elseif ($detail->combo) {
+                $price = $detail->price_snapshot ?? ($detail->combo->price ?? 0);
+            }
+            $subtotal += $price;
+        }
+
+        // Tính tổng giảm giá từ promotions
+        $promotionAmount = 0;
+        foreach ($appointment->promotionUsages as $usage) {
+            if ($usage->promotion) {
+                $promotionAmount += $usage->discount_amount ?? 0;
+            }
+        }
+
+        // Tính tổng sau giảm giá
+        $totalAfterDiscount = max(0, $subtotal - $promotionAmount);
+
+        return view('site.appointment.success', [
+            'appointment' => $appointment,
+            'subtotal' => $subtotal,
+            'promotionAmount' => $promotionAmount,
+            'totalAfterDiscount' => $totalAfterDiscount,
+        ]);
     }
 
     /**
@@ -1765,24 +1804,69 @@ class AppointmentController extends Controller
         try {
             $appointment = \App\Models\Appointment::findOrFail($id);
 
-            // Kiểm tra quyền: chỉ chủ sở hữu mới được hủy
-            if (auth()->id() != $appointment->user_id && !auth()->user()->isAdmin()) {
-                return back()->with('error', 'Bạn không có quyền hủy lịch hẹn này.');
+            // Kiểm tra quyền: cho phép cả guest và logged in user hủy
+            $currentUser = auth()->user();
+            
+            // Nếu đã đăng nhập, kiểm tra quyền
+            if ($currentUser) {
+                if (auth()->id() != $appointment->user_id && !$currentUser->isAdmin()) {
+                    return back()->with('error', 'Bạn không có quyền hủy lịch hẹn này.');
+                }
+            }
+            // Guest: cho phép hủy nếu thỏa điều kiện (status và thời gian sẽ được kiểm tra ở dưới)
+
+            // Kiểm tra tài khoản có bị khóa không (chỉ cho logged in user)
+            $user = auth()->user();
+            if ($user && $user->isBanned()) {
+                $bannedUntil = $user->banned_until;
+                $timeRemaining = $this->formatBanTimeRemaining($bannedUntil);
+                $banMessage = 'Tài khoản của bạn đã bị khóa. ' . 
+                             ($timeRemaining 
+                                 ? "Tài khoản sẽ được mở khóa sau {$timeRemaining}. " 
+                                 : 'Tài khoản sẽ được mở khóa sớm. ') .
+                             ($user->ban_reason ? "Lý do: {$user->ban_reason}" : '');
+                return back()->with('error', $banMessage);
             }
 
             // Kiểm tra xem có thể hủy không
-            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 5 phút
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 phút
             if ($appointment->status !== 'Chờ xử lý') {
+                if ($appointment->status === 'Đã xác nhận') {
+                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 30 phút kể từ khi đặt.');
+                }
                 return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
             }
 
-            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 5 phút kể từ khi đặt
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 phút kể từ khi đặt
             $createdAt = \Carbon\Carbon::parse($appointment->created_at);
             $now = now();
             $minutesSinceCreated = $createdAt->diffInMinutes($now);
 
-            if ($minutesSinceCreated > 5) {
-                return back()->with('error', 'Không thể hủy lịch hẹn sau 5 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+            if ($minutesSinceCreated > 30) {
+                // Tự động chuyển trạng thái nếu đã quá 30 phút nhưng vẫn còn "Chờ xử lý"
+                if ($appointment->status === 'Chờ xử lý') {
+                    $appointment->update(['status' => 'Đã xác nhận']);
+                    
+                    // Log status change
+                    \App\Models\AppointmentLog::create([
+                        'appointment_id' => $appointment->id,
+                        'status_from' => 'Chờ xử lý',
+                        'status_to' => 'Đã xác nhận',
+                        'modified_by' => null, // Tự động xác nhận
+                    ]);
+                    
+                    // Broadcast status update
+                    $appointment->refresh();
+                    $appointment->load([
+                        'user',
+                        'employee.user',
+                        'appointmentDetails.serviceVariant.service',
+                        'appointmentDetails.combo'
+                    ]);
+                    event(new \App\Events\AppointmentStatusUpdated($appointment));
+                }
+                
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
             }
 
             // Lấy lý do hủy từ form hoặc dùng mặc định
@@ -1792,7 +1876,30 @@ class AppointmentController extends Controller
             }
 
             // Hủy lịch hẹn
-            $this->appointmentService->cancelAppointment($id, $reason, auth()->id());
+            $modifiedBy = auth()->id(); // null nếu là guest
+            $result = $this->appointmentService->cancelAppointment($id, $reason, $modifiedBy);
+            
+            // Kiểm tra nếu user bị ban sau khi hủy
+            if (isset($result['was_banned']) && $result['was_banned']) {
+                $user = $result['user'];
+                $bannedUntil = $user->banned_until;
+                $timeRemaining = $this->formatBanTimeRemaining($bannedUntil);
+                
+                // Logout user
+                auth()->logout();
+                request()->session()->invalidate();
+                request()->session()->regenerateToken();
+                
+                // Tạo thông báo
+                $banMessage = 'Tài khoản của bạn đã bị khóa vì hủy quá 3 đơn/ngày. ' . 
+                             ($timeRemaining 
+                                 ? "Tài khoản sẽ được mở khóa sau {$timeRemaining}. " 
+                                 : 'Tài khoản sẽ được mở khóa sớm. ') .
+                             ($user->ban_reason ? "Lý do: {$user->ban_reason}" : '');
+                
+                return redirect()->route('login')
+                    ->with('error', $banMessage);
+            }
 
             return back()->with('success', 'Lịch hẹn đã được hủy thành công.');
 
@@ -1925,5 +2032,36 @@ class AppointmentController extends Controller
                 'message' => 'Có lỗi xảy ra: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Format thời gian còn lại của ban thành chuỗi dễ đọc.
+     */
+    protected function formatBanTimeRemaining($bannedUntil)
+    {
+        if (!$bannedUntil) {
+            return null;
+        }
+
+        $now = now();
+        if ($now->greaterThanOrEqualTo($bannedUntil)) {
+            return null;
+        }
+
+        // Sử dụng diffInRealMinutes để có số chính xác hơn, sau đó làm tròn lên
+        $diffInMinutes = (int) ceil($now->diffInRealMinutes($bannedUntil, false));
+        
+        if ($diffInMinutes < 60) {
+            return $diffInMinutes . ' phút';
+        }
+
+        $hours = floor($diffInMinutes / 60);
+        $minutes = $diffInMinutes % 60;
+
+        if ($minutes == 0) {
+            return $hours . ' giờ';
+        }
+
+        return $hours . ' giờ ' . $minutes . ' phút';
     }
 }

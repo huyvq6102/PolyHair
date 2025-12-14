@@ -6,18 +6,22 @@
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý người dùng</h1>
-    <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Thêm mới
-    </a>
+    @if(auth()->user()->isAdmin())
+        <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Thêm mới
+        </a>
+    @endif
 </div>
 
 <!-- Filter -->
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Bộ lọc người dùng</h6>
-        <a href="{{ route('admin.users.trash') }}" class="btn btn-warning btn-sm">
-            <i class="fas fa-trash"></i> Thùng rác
-        </a>
+        @if(auth()->user()->isAdmin())
+            <a href="{{ route('admin.users.trash') }}" class="btn btn-warning btn-sm">
+                <i class="fas fa-trash"></i> Thùng rác
+            </a>
+        @endif
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('admin.users.index') }}" class="form-inline">
@@ -96,27 +100,69 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="badge badge-{{ $user->status == 'Hoạt động' ? 'success' : ($user->status == 'Vô hiệu hóa' ? 'warning' : 'danger') }}">
-                                    {{ $user->status ?? 'N/A' }}
+                                @php
+                                    $statusDisplay = $user->status ?? 'N/A';
+                                    $statusClass = 'secondary';
+                                    
+                                    // Kiểm tra nếu có banned_until và chưa hết thời gian
+                                    $isTemporarilyBanned = $user->banned_until && now()->lessThan($user->banned_until);
+                                    
+                                    if ($user->status === 'Cấm') {
+                                        $statusDisplay = 'Cấm';
+                                        $statusClass = 'danger';
+                                    } elseif ($isTemporarilyBanned) {
+                                        // Nếu có banned_until và chưa hết thời gian, hiển thị "Vô hiệu hóa" dù status là gì
+                                        $statusDisplay = 'Vô hiệu hóa';
+                                        $statusClass = 'warning';
+                                        
+                                        // Tính thời gian còn lại và format đẹp
+                                        $diffInMinutes = now()->diffInMinutes($user->banned_until, false);
+                                        if ($diffInMinutes > 0) {
+                                            $hours = floor($diffInMinutes / 60);
+                                            $minutes = $diffInMinutes % 60;
+                                            
+                                            if ($hours > 0 && $minutes > 0) {
+                                                $statusDisplay .= ' (Còn ' . $hours . 'h' . $minutes . 'p)';
+                                            } elseif ($hours > 0) {
+                                                $statusDisplay .= ' (Còn ' . $hours . 'h)';
+                                            } else {
+                                                $statusDisplay .= ' (Còn ' . $minutes . 'p)';
+                                            }
+                                        }
+                                    } elseif ($user->status === 'Hoạt động') {
+                                        $statusClass = 'success';
+                                    } elseif ($user->status === 'Vô hiệu hóa') {
+                                        $statusClass = 'warning';
+                                    }
+                                @endphp
+                                <span class="badge badge-{{ $statusClass }}">
+                                    {{ $statusDisplay }}
                                 </span>
                             </td>
-                            <td>
-                                <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Sửa
-                                </a>
-                                @if(!$user->isAdmin())
-                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i> Xóa
-                                        </button>
-                                    </form>
-                                @else
-                                    <button type="button" class="btn btn-sm btn-secondary" disabled title="Không thể xóa tài khoản quản trị viên">
-                                        <i class="fas fa-lock"></i> Không thể xóa
-                                    </button>
-                                @endif
+                            <td class="text-center">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <a href="{{ route('admin.users.show', $user->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @if(auth()->user()->isAdmin())
+                                        <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary" title="Sửa thông tin">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        @if(!$user->isAdmin())
+                                            <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Xóa người dùng">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button type="button" class="btn btn-sm btn-secondary" disabled title="Không thể xóa tài khoản quản trị viên">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                        @endif
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -130,13 +176,100 @@
         
         <!-- Pagination -->
         @if($users->hasPages())
-            <div class="d-flex justify-content-center mt-4">
-                {{ $users->appends(request()->query())->links() }}
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <!-- Text hiển thị thông tin -->
+                <div class="text-muted">
+                    Đang xem {{ $users->firstItem() ?? 0 }} đến {{ $users->lastItem() ?? 0 }} trong tổng số {{ $users->total() }} mục
+                </div>
+                
+                <!-- Nút phân trang -->
+                <nav>
+                    <ul class="pagination mb-0">
+                        <!-- Nút Trước -->
+                        <li class="page-item {{ $users->onFirstPage() ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ $users->previousPageUrl() ? $users->appends(request()->query())->previousPageUrl() : '#' }}" 
+                               style="{{ $users->onFirstPage() ? 'background-color: #f8f9fa; color: #6c757d; cursor: not-allowed;' : 'background-color: white; color: #007bff;' }}">
+                                Trước
+                            </a>
+                        </li>
+                        
+                        <!-- Các số trang -->
+                        @php
+                            $currentPage = $users->currentPage();
+                            $lastPage = $users->lastPage();
+                            
+                            // Tính toán phạm vi trang hiển thị (hiển thị tối đa 5 trang)
+                            $startPage = max(1, $currentPage - 2);
+                            $endPage = min($lastPage, $currentPage + 2);
+                            
+                            // Điều chỉnh nếu gần đầu hoặc cuối
+                            if ($endPage - $startPage < 4) {
+                                if ($startPage == 1) {
+                                    $endPage = min($lastPage, $startPage + 4);
+                                } else {
+                                    $startPage = max(1, $endPage - 4);
+                                }
+                            }
+                        @endphp
+                        
+                        @for($page = $startPage; $page <= $endPage; $page++)
+                            @if($page == $currentPage)
+                                <li class="page-item active">
+                                    <span class="page-link" style="background-color: #007bff; color: white; border-color: #007bff;">
+                                        {{ $page }}
+                                    </span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $users->appends(request()->query())->url($page) }}" 
+                                       style="background-color: white; color: #007bff;">
+                                        {{ $page }}
+                                    </a>
+                                </li>
+                            @endif
+                        @endfor
+                        
+                        <!-- Nút Tiếp -->
+                        <li class="page-item {{ $users->hasMorePages() ? '' : 'disabled' }}">
+                            <a class="page-link" href="{{ $users->nextPageUrl() ? $users->appends(request()->query())->nextPageUrl() : '#' }}" 
+                               style="{{ $users->hasMorePages() ? 'background-color: white; color: #007bff;' : 'background-color: #f8f9fa; color: #6c757d; cursor: not-allowed;' }}">
+                                Tiếp
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        @else
+            <!-- Hiển thị thông tin khi không có phân trang -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Đang xem {{ $users->count() > 0 ? 1 : 0 }} đến {{ $users->count() }} trong tổng số {{ $users->total() }} mục
+                </div>
             </div>
         @endif
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .gap-1 {
+        gap: 0.25rem;
+    }
+    .gap-1 > * {
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 form {
+        display: inline-block;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 button, .gap-1 a {
+        white-space: nowrap;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>

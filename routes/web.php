@@ -11,7 +11,6 @@ use App\Http\Controllers\Site\AppointmentController;
 use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Site\CustomerController;
-use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\ReviewController;
 
 // Site Routes
@@ -61,27 +60,17 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::get('/employees-by-service', [AppointmentController::class, 'getEmployeesByService'])->name('employees-by-service');
     Route::post('/save-time-selection', [AppointmentController::class, 'saveTimeSelection'])->name('save-time-selection');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
-    Route::middleware('auth')->group(function () {
-        Route::post('/{id}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');
-    });
+    Route::post('/{id}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');
     Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
 });
 
 // Customer Routes
-Route::prefix('customer')->name('site.customers.')->group(function () {
+Route::middleware('auth')->prefix('customer')->name('site.customers.')->group(function () {
     Route::get('/{id}/appointments-status', [CustomerController::class, 'getAppointmentsStatus'])->name('appointments-status');
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
 });
 
-// Payment Routes
-Route::prefix('check-out')->name('site.payments.')->group(function () {
-    Route::get('/', [CheckoutController::class, 'checkout'])->name('checkout');
-    Route::post('/process', [CheckoutController::class, 'processPayment'])->name('process');
-    Route::get('/success/{appointmentId}', [CheckoutController::class, 'paymentSuccess'])->name('success');
-    Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('applyCoupon');
-    Route::post('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('removeCoupon');
-    Route::get('/vnpay-return', [CheckoutController::class, 'vnpayReturn'])->name('vnpay.return'); // Callback VNPAY
-});
+// Payment Routes - Đã xóa
 
 // Review Routes
 Route::prefix('reviews')->name('site.reviews.')->group(function () {

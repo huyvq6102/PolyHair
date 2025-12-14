@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Appointment;
 use App\Models\AppointmentLog;
+use App\Events\AppointmentStatusUpdated;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -22,7 +23,7 @@ class AutoConfirmAppointments extends Command
      *
      * @var string
      */
-    protected $description = 'Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 5 phút';
+    protected $description = 'Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 30 phút';
 
     /**
      * Execute the console command.
@@ -31,11 +32,12 @@ class AutoConfirmAppointments extends Command
     {
         $this->info('Đang kiểm tra lịch hẹn cần tự động xác nhận...');
         
-        // Tìm các lịch hẹn có status = 'Chờ xử lý' và đã quá 5 phút kể từ khi tạo
-        $cutoffTime = Carbon::now()->subMinutes(5);
+        // Tìm các lịch hẹn có status = 'Chờ xử lý' và đã quá 30 phút kể từ khi tạo
+        $cutoffTime = Carbon::now()->subMinutes(30);
         
         $appointments = Appointment::where('status', 'Chờ xử lý')
             ->where('created_at', '<=', $cutoffTime)
+            ->whereRaw('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= 30') // Đảm bảo đã qua ít nhất 30 phút
             ->get();
         
         $count = 0;
@@ -57,6 +59,18 @@ class AutoConfirmAppointments extends Command
                         'status_to' => 'Đã xác nhận',
                         'modified_by' => null, // Tự động xác nhận
                     ]);
+
+                    // Refresh và load relationships trước khi broadcast
+                    $appointment->refresh();
+                    $appointment->load([
+                        'user',
+                        'employee.user',
+                        'appointmentDetails.serviceVariant.service',
+                        'appointmentDetails.combo'
+                    ]);
+
+                    // Broadcast status update event
+                    event(new AppointmentStatusUpdated($appointment));
                     
                     $count++;
                 });

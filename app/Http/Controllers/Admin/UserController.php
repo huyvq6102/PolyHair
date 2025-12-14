@@ -83,6 +83,18 @@ class UserController extends Controller
             $validated['status'] = 'Hoạt động';
         }
 
+        // Xử lý logic status và ban khi tạo mới
+        if ($validated['status'] === 'Cấm') {
+            $validated['banned_until'] = null;
+            $validated['ban_reason'] = 'Bị cấm bởi quản trị viên';
+        } elseif ($validated['status'] === 'Vô hiệu hóa') {
+            $validated['banned_until'] = now()->addHours(1);
+            $validated['ban_reason'] = 'Bị vô hiệu hóa bởi quản trị viên';
+        } else {
+            $validated['banned_until'] = null;
+            $validated['ban_reason'] = null;
+        }
+
         User::create($validated);
 
         return redirect()->route('admin.users.index')
@@ -148,6 +160,30 @@ class UserController extends Controller
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
+        }
+
+        // Xử lý logic status và ban
+        if (isset($validated['status'])) {
+            if ($validated['status'] === 'Cấm') {
+                // Cấm vĩnh viễn
+                $validated['banned_until'] = null;
+                $validated['ban_reason'] = $validated['ban_reason'] ?? 'Bị cấm bởi quản trị viên';
+            } elseif ($validated['status'] === 'Hoạt động') {
+                // Mở khóa tài khoản - xóa banned_until nếu có
+                $validated['banned_until'] = null;
+                $validated['ban_reason'] = null;
+            } elseif ($validated['status'] === 'Vô hiệu hóa') {
+                // Nếu đang là Vô hiệu hóa nhưng chưa có banned_until, set 1 giờ
+                if (!$user->banned_until) {
+                    $validated['banned_until'] = now()->addHours(1);
+                    $validated['ban_reason'] = $validated['ban_reason'] ?? 'Bị vô hiệu hóa bởi quản trị viên';
+                }
+            }
+        } else {
+            // Nếu không set status nhưng có banned_until, tự động set status = "Vô hiệu hóa"
+            if ($user->banned_until && now()->lessThan($user->banned_until) && $user->status !== 'Cấm') {
+                $validated['status'] = 'Vô hiệu hóa';
+            }
         }
 
         $user->update($validated);

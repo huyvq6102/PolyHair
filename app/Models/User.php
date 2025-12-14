@@ -29,6 +29,8 @@ class User extends Authenticatable
         'dob',
         'status',
         'role_id',
+        'banned_until',
+        'ban_reason',
     ];
 
     /**
@@ -50,6 +52,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'dob' => 'date',
+            'banned_until' => 'datetime',
         ];
     }
 
@@ -138,5 +141,99 @@ class User extends Authenticatable
     public function isEmployee(): bool
     {
         return $this->employee()->exists();
+    }
+
+    /**
+     * Check if user is currently banned.
+     */
+    public function isBanned(): bool
+    {
+        // Nếu status = "Cấm" → bị cấm vĩnh viễn
+        if ($this->status === 'Cấm') {
+            return true;
+        }
+
+        // Nếu status = "Hoạt động" → không bị cấm (ưu tiên status)
+        // Tự động xóa banned_until nếu có để đồng bộ dữ liệu
+        if ($this->status === 'Hoạt động') {
+            if ($this->banned_until || $this->ban_reason) {
+                $this->update([
+                    'banned_until' => null,
+                    'ban_reason' => null,
+                ]);
+            }
+            return false;
+        }
+
+        // Nếu status = "Vô hiệu hóa" và có banned_until
+        if ($this->status === 'Vô hiệu hóa' && $this->banned_until) {
+            // Nếu thời gian khóa đã hết, tự động mở khóa
+            if (now()->greaterThan($this->banned_until)) {
+                $this->update([
+                    'banned_until' => null,
+                    'ban_reason' => null,
+                    'status' => 'Hoạt động', // Khôi phục trạng thái
+                ]);
+                return false;
+            }
+            return true;
+        }
+
+        // Nếu có banned_until nhưng status không phải "Vô hiệu hóa" hoặc "Hoạt động"
+        // (trường hợp dữ liệu không đồng bộ)
+        if ($this->banned_until && $this->status !== 'Vô hiệu hóa' && $this->status !== 'Hoạt động') {
+            // Tự động cập nhật status
+            $this->update([
+                'status' => 'Vô hiệu hóa',
+            ]);
+            // Kiểm tra lại thời gian
+            if (now()->greaterThan($this->banned_until)) {
+                $this->update([
+                    'banned_until' => null,
+                    'ban_reason' => null,
+                    'status' => 'Hoạt động',
+                ]);
+                return false;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Ban user for specified hours (Vô hiệu hóa).
+     */
+    public function ban(int $hours = 1, string $reason = null): void
+    {
+        $this->update([
+            'banned_until' => now()->addHours($hours),
+            'ban_reason' => $reason ?? 'Hủy lịch hẹn quá nhiều lần',
+            'status' => 'Vô hiệu hóa', // Cập nhật status
+        ]);
+    }
+
+    /**
+     * Unban user.
+     */
+    public function unban(): void
+    {
+        $this->update([
+            'banned_until' => null,
+            'ban_reason' => null,
+            'status' => 'Hoạt động', // Khôi phục trạng thái
+        ]);
+    }
+
+    /**
+     * Permanently ban user (Cấm).
+     */
+    public function permanentlyBan(string $reason = null): void
+    {
+        $this->update([
+            'banned_until' => null, // Clear temporary ban if exists
+            'ban_reason' => $reason ?? 'Bị cấm vĩnh viễn',
+            'status' => 'Cấm', // Cập nhật status
+        ]);
     }
 }
