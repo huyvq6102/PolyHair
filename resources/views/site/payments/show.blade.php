@@ -125,7 +125,7 @@
                         @endif
 
                         <!-- Coupon Section -->
-                        <div class="mb-4">
+                        <!-- <div class="mb-4">
                             @if(isset($appliedCoupon) && $appliedCoupon)
                                 <div class="alert alert-info d-flex justify-content-between align-items-center">
                                     <span>
@@ -149,7 +149,7 @@
                                     <button class="btn btn-outline-secondary" type="submit">Áp dụng</button>
                                 </form>
                             @endif
-                        </div>
+                        </div> -->
 
                         <ul class="list-group list-group-flush">
                             @foreach($services as $s)
