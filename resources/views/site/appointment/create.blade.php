@@ -3062,11 +3062,13 @@
                         $('#appointmentForm').off('submit');
                         $form.find('input, button, select, textarea').prop('disabled', true);
 
-                        // Redirect to checkout page immediately
+                        // Redirect to appointment success page or home
                         if (response.redirect_url) {
                             window.location.href = response.redirect_url;
+                        } else if (response.appointment_id) {
+                            window.location.href = '{{ route("site.appointment.success", ":id") }}'.replace(':id', response.appointment_id);
                         } else {
-                            window.location.href = '{{ route("site.payments.checkout") }}';
+                            window.location.href = '{{ route("site.home") }}';
                         }
                     } else {
                         // Re-enable button if not successful

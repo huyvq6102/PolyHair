@@ -768,9 +768,7 @@ class AppointmentController extends Controller
             // Nếu là guest (không đăng nhập), redirect đến trang chi tiết lịch đặt
             // Nếu đã đăng nhập, redirect đến trang thanh toán
             $isGuest = !Auth::check();
-            $redirectUrl = $isGuest 
-                ? route('site.appointment.show', $appointment->id)
-                : route('site.payments.checkout');
+            $redirectUrl = route('site.appointment.success', $appointment->id);
             
             $successMessage = $isGuest
                 ? '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Vui lòng kiểm tra thông tin lịch đặt của bạn.'
@@ -852,10 +850,40 @@ class AppointmentController extends Controller
         $appointment = \App\Models\Appointment::with([
             'user',
             'employee.user',
-            'appointmentDetails.serviceVariant.service'
+            'appointmentDetails.serviceVariant.service',
+            'appointmentDetails.combo',
+            'promotionUsages.promotion'
         ])->findOrFail($id);
 
-        return view('site.appointment.success', compact('appointment'));
+        // Tính tổng tiền từ appointment details
+        $subtotal = 0;
+        foreach ($appointment->appointmentDetails as $detail) {
+            $price = $detail->price_snapshot ?? 0;
+            if ($detail->serviceVariant) {
+                $price = $detail->price_snapshot ?? ($detail->serviceVariant->price ?? 0);
+            } elseif ($detail->combo) {
+                $price = $detail->price_snapshot ?? ($detail->combo->price ?? 0);
+            }
+            $subtotal += $price;
+        }
+
+        // Tính tổng giảm giá từ promotions
+        $promotionAmount = 0;
+        foreach ($appointment->promotionUsages as $usage) {
+            if ($usage->promotion) {
+                $promotionAmount += $usage->discount_amount ?? 0;
+            }
+        }
+
+        // Tính tổng sau giảm giá
+        $totalAfterDiscount = max(0, $subtotal - $promotionAmount);
+
+        return view('site.appointment.success', [
+            'appointment' => $appointment,
+            'subtotal' => $subtotal,
+            'promotionAmount' => $promotionAmount,
+            'totalAfterDiscount' => $totalAfterDiscount,
+        ]);
     }
 
     /**
@@ -1716,17 +1744,18 @@ class AppointmentController extends Controller
         try {
             $appointment = \App\Models\Appointment::findOrFail($id);
 
-            // Kiểm tra quyền: chỉ chủ sở hữu mới được hủy
+            // Kiểm tra quyền: cho phép cả guest và logged in user hủy
             $currentUser = auth()->user();
-            if (!$currentUser) {
-                return redirect()->route('login');
-            }
             
-            if (auth()->id() != $appointment->user_id && !$currentUser->isAdmin()) {
-                return back()->with('error', 'Bạn không có quyền hủy lịch hẹn này.');
+            // Nếu đã đăng nhập, kiểm tra quyền
+            if ($currentUser) {
+                if (auth()->id() != $appointment->user_id && !$currentUser->isAdmin()) {
+                    return back()->with('error', 'Bạn không có quyền hủy lịch hẹn này.');
+                }
             }
+            // Guest: cho phép hủy nếu thỏa điều kiện (status và thời gian sẽ được kiểm tra ở dưới)
 
-            // Kiểm tra tài khoản có bị khóa không
+            // Kiểm tra tài khoản có bị khóa không (chỉ cho logged in user)
             $user = auth()->user();
             if ($user && $user->isBanned()) {
                 $bannedUntil = $user->banned_until;
@@ -1787,7 +1816,8 @@ class AppointmentController extends Controller
             }
 
             // Hủy lịch hẹn
-            $result = $this->appointmentService->cancelAppointment($id, $reason, auth()->id());
+            $modifiedBy = auth()->id(); // null nếu là guest
+            $result = $this->appointmentService->cancelAppointment($id, $reason, $modifiedBy);
             
             // Kiểm tra nếu user bị ban sau khi hủy
             if (isset($result['was_banned']) && $result['was_banned']) {
