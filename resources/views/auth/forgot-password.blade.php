@@ -5,6 +5,12 @@
 @section('content')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('legacy/content/css/auth-pages.css') }}">
+<style>
+    .auth-hero h1 {
+        color: #f6f7fb;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    }
+</style>
 @endpush
 
 <section class="auth-hero">
