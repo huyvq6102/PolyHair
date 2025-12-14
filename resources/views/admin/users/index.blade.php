@@ -6,18 +6,22 @@
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý người dùng</h1>
-    <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Thêm mới
-    </a>
+    @if(auth()->user()->isAdmin())
+        <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Thêm mới
+        </a>
+    @endif
 </div>
 
 <!-- Filter -->
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Bộ lọc người dùng</h6>
-        <a href="{{ route('admin.users.trash') }}" class="btn btn-warning btn-sm">
-            <i class="fas fa-trash"></i> Thùng rác
-        </a>
+        @if(auth()->user()->isAdmin())
+            <a href="{{ route('admin.users.trash') }}" class="btn btn-warning btn-sm">
+                <i class="fas fa-trash"></i> Thùng rác
+            </a>
+        @endif
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('admin.users.index') }}" class="form-inline">
@@ -135,23 +139,30 @@
                                     {{ $statusDisplay }}
                                 </span>
                             </td>
-                            <td>
-                                <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Sửa
-                                </a>
-                                @if(!$user->isAdmin())
-                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i> Xóa
-                                        </button>
-                                    </form>
-                                @else
-                                    <button type="button" class="btn btn-sm btn-secondary" disabled title="Không thể xóa tài khoản quản trị viên">
-                                        <i class="fas fa-lock"></i> Không thể xóa
-                                    </button>
-                                @endif
+                            <td class="text-center">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <a href="{{ route('admin.users.show', $user->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @if(auth()->user()->isAdmin())
+                                        <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-primary" title="Sửa thông tin">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        @if(!$user->isAdmin())
+                                            <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $user->name }}');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Xóa người dùng">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button type="button" class="btn btn-sm btn-secondary" disabled title="Không thể xóa tài khoản quản trị viên">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                        @endif
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -239,6 +250,26 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .gap-1 {
+        gap: 0.25rem;
+    }
+    .gap-1 > * {
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 form {
+        display: inline-block;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 button, .gap-1 a {
+        white-space: nowrap;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>
