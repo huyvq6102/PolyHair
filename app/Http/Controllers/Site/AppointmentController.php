@@ -244,6 +244,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_id'])) {
                 unset($queryParams['service_id']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -258,6 +267,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_variants'])) {
                 unset($queryParams['service_variants']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -272,6 +290,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['combo_id'])) {
                 unset($queryParams['combo_id']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -376,7 +403,19 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('site.appointment.create', compact('employees', 'wordTimes', 'serviceCategories', 'combos'));
+        // Restore appointment_date và word_time_id từ Session nếu có
+        // Ưu tiên lấy từ request (query params), nếu không có thì lấy từ Session
+        $restoredAppointmentDate = $request->input('appointment_date') ?? Session::get('appointment_date');
+        $restoredWordTimeId = $request->input('word_time_id') ?? Session::get('word_time_id');
+
+        return view('site.appointment.create', compact(
+            'employees', 
+            'wordTimes', 
+            'serviceCategories', 
+            'combos',
+            'restoredAppointmentDate',
+            'restoredWordTimeId'
+        ));
     }
 
     /**
@@ -846,6 +885,26 @@ class AppointmentController extends Controller
         ])->findOrFail($id);
 
         return view('site.appointment.success', compact('appointment'));
+    }
+
+    /**
+     * Save appointment date and word_time_id to session.
+     * Called when user selects a time slot.
+     */
+    public function saveTimeSelection(Request $request)
+    {
+        $request->validate([
+            'appointment_date' => 'required|date',
+            'word_time_id' => 'required|exists:word_time,id',
+        ]);
+
+        Session::put('appointment_date', $request->input('appointment_date'));
+        Session::put('word_time_id', $request->input('word_time_id'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Time selection saved'
+        ]);
     }
 
     /**
