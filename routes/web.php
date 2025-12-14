@@ -54,6 +54,7 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
     
     Route::get('/select-offers', [AppointmentController::class, 'selectOffers'])->name('select-offers');
     Route::get('/test-email', [\App\Http\Controllers\Site\TestEmailController::class, 'testEmail'])->name('test-email');
+    Route::post('/save-selected-time', [AppointmentController::class, 'saveSelectedTime'])->name('save-selected-time');
     Route::post('/', [AppointmentController::class, 'store'])->name('store');
     Route::match(['get', 'post'], '/available-time-slots', [AppointmentController::class, 'getAvailableTimeSlots'])->name('available-time-slots');
     Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');

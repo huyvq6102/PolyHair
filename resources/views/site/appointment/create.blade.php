@@ -1343,12 +1343,38 @@
                     // Enable input date nếu đã có employee
                     $('#appointment_date').prop('disabled', false);
                 }
+
+                // ✅ Ưu tiên restore từ Session (nếu có)
+                // Session được ưu tiên vì nó persist qua redirect, còn localStorage có thể bị mất
+                @if(isset($savedDate) && isset($savedWordTimeId))
+                    const savedDate = '{{ $savedDate }}';
+                    const savedWordTimeId = '{{ $savedWordTimeId }}';
+                    
+                    if (savedDate) {
+                        $('#appointment_date').val(savedDate);
+                        restoredAppointmentDate = savedDate;
+                        console.log('✅ [Session] Restored appointment_date:', savedDate);
+                    }
+                    
+                    if (savedWordTimeId) {
+                        $('#word_time_id').val(savedWordTimeId);
+                        console.log('✅ [Session] Restored word_time_id:', savedWordTimeId);
+                    }
+                @endif
+
+                // Fallback: restore từ localStorage nếu không có Session
                 if (formData.appointment_date) {
-                    $('#appointment_date').val(formData.appointment_date);
-                    restoredAppointmentDate = formData.appointment_date;
+                    // Chỉ set nếu chưa có từ Session
+                    if (!$('#appointment_date').val()) {
+                        $('#appointment_date').val(formData.appointment_date);
+                        restoredAppointmentDate = formData.appointment_date;
+                    }
                 }
                 if (formData.word_time_id) {
-                    $('#word_time_id').val(formData.word_time_id);
+                    // Chỉ set nếu chưa có từ Session
+                    if (!$('#word_time_id').val()) {
+                        $('#word_time_id').val(formData.word_time_id);
+                    }
                 }
                 if (formData.time_slot) {
                     $('#time_slot').val(formData.time_slot);
@@ -2453,6 +2479,42 @@
                             timeSlotMessage.hide();
                         }
 
+                        // ✅ Auto-select time slot nếu đã có trong Session
+                        // Điều này đảm bảo khi trang reload (do redirect), giờ đã chọn sẽ tự động được highlight lại
+                        @if(isset($savedWordTimeId))
+                            const savedWordTimeId = '{{ $savedWordTimeId }}';
+                            const savedTimeSlot = response.time_slots.find(function(slot) {
+                                return slot.word_time_id == savedWordTimeId;
+                            });
+                            
+                            if (savedTimeSlot) {
+                                // Delay một chút để đảm bảo DOM đã render xong tất cả time slot buttons
+                                setTimeout(function() {
+                                    const $savedBtn = $('.time-slot-btn[data-word-time-id="' + savedWordTimeId + '"]');
+                                    
+                                    if ($savedBtn.length) {
+                                        if (!$savedBtn.hasClass('unavailable')) {
+                                            // Nếu slot available, click để highlight và set đầy đủ giá trị
+                                            $savedBtn.trigger('click');
+                                            console.log('✅ [Session] Đã auto-select time slot từ Session:', savedTimeSlot.time);
+                                        } else {
+                                            // Nếu slot không available, vẫn set hidden input để giữ giá trị
+                                            $('#word_time_id').val(savedWordTimeId);
+                                            $('#time_slot').val(savedTimeSlot.time);
+                                            console.log('⚠️ [Session] Đã restore time slot từ Session (không available):', savedTimeSlot.time);
+                                        }
+                                    } else {
+                                        // Nếu không tìm thấy button (có thể do slot không có trong response)
+                                        // Vẫn set hidden input để giữ giá trị
+                                        $('#word_time_id').val(savedWordTimeId);
+                                        console.log('⚠️ [Session] Không tìm thấy button cho word_time_id:', savedWordTimeId);
+                                    }
+                                }, 200); // Delay 200ms để đảm bảo DOM đã render xong
+                            } else {
+                                console.log('⚠️ [Session] Không tìm thấy time slot với word_time_id:', savedWordTimeId);
+                            }
+                        @endif
+
                         // Không cần update navigation buttons vì đã ẩn
                         // updateNavigationButtons();
                     } else {
@@ -2598,6 +2660,34 @@
                 }
                 if (wordTimeId) {
                     $('#word_time_id').val(wordTimeId);
+            }
+
+            // ✅ Lưu vào Session khi user chọn giờ
+            // Điều này đảm bảo khi redirect (do thêm/xóa dịch vụ), giờ đã chọn vẫn được giữ lại
+            const appointmentDate = $('#appointment_date').val();
+            if (appointmentDate && wordTimeId) {
+                $.ajax({
+                    url: '{{ route("site.appointment.save-selected-time") }}',
+                    method: 'POST',
+                    data: {
+                        appointment_date: appointmentDate,
+                        word_time_id: wordTimeId,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            console.log('✅ [Session] Đã lưu thời gian vào Session:', {
+                                appointment_date: appointmentDate,
+                                word_time_id: wordTimeId,
+                                time: time
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('❌ [Session] Lỗi khi lưu thời gian vào Session:', xhr);
+                        // Không block user nếu lưu Session thất bại, vì localStorage vẫn hoạt động
+                    }
+                });
             }
 
             // Update estimated completion time

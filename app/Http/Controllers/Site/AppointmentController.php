@@ -386,7 +386,41 @@ class AppointmentController extends Controller
                 ->find($promotionId);
         }
 
-        return view('site.appointment.create', compact('employees', 'wordTimes', 'serviceCategories', 'combos', 'selectedPromotion'));
+        // ✅ Restore appointment_date và word_time_id từ Session
+        // Điều này đảm bảo khi redirect (do thêm/xóa dịch vụ), giờ đã chọn vẫn được giữ lại
+        $savedDate = Session::get('appointment_selected_date');
+        $savedWordTimeId = Session::get('appointment_selected_word_time_id');
+
+        return view('site.appointment.create', compact(
+            'employees', 
+            'wordTimes', 
+            'serviceCategories', 
+            'combos', 
+            'selectedPromotion',
+            'savedDate',        // Pass vào view để restore
+            'savedWordTimeId'   // Pass vào view để restore
+        ));
+    }
+
+    /**
+     * Lưu appointment_date và word_time_id vào Session khi user chọn giờ.
+     * Method này được gọi từ JavaScript khi user click vào time slot.
+     */
+    public function saveSelectedTime(Request $request)
+    {
+        $request->validate([
+            'appointment_date' => 'required|date|after_or_equal:today',
+            'word_time_id' => 'required|exists:word_time,id',
+        ]);
+
+        // Lưu vào Session để giữ lại khi redirect
+        Session::put('appointment_selected_date', $request->input('appointment_date'));
+        Session::put('appointment_selected_word_time_id', $request->input('word_time_id'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã lưu thời gian đã chọn'
+        ]);
     }
 
     /**
@@ -665,6 +699,10 @@ class AppointmentController extends Controller
             }
 
             DB::commit();
+
+            // ✅ Xóa Session sau khi đặt lịch thành công
+            // Để tránh giữ lại thông tin cũ cho lần đặt lịch tiếp theo
+            Session::forget(['appointment_selected_date', 'appointment_selected_word_time_id']);
 
             // CRITICAL: Remove any existing appointments from cart before adding new one
             // This ensures we don't have old appointments with wrong data in cart
