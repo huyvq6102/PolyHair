@@ -31,12 +31,12 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            // Họ tên chỉ chữ, khoảng trắng, dấu và dấu gạch nối cơ bản
+            // Họ tên chỉ chữ cái, số và khoảng trắng
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                'regex:/^[\p{L}\s\-\'\.]+$/u',
+                'regex:/^[\p{L}\p{N}\s]+$/u',
             ],
             'email' => [
                 'required',
@@ -45,14 +45,42 @@ class RegisteredUserController extends Controller
                 'max:255',
                 'unique:'.User::class,
             ],
-            // Điện thoại: chỉ số, cho phép dấu + đầu và dài 8-15 ký tự
+            // Điện thoại: phải có đúng 10 số và bắt đầu bằng số 0
             'phone' => [
                 'required',
-                'regex:/^\+?[0-9]{8,15}$/',
+                'regex:/^0[0-9]{9}$/',
             ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'gender' => ['nullable', 'in:Nam,Nữ,Khác'],
             'dob' => ['nullable', 'date'],
+        ], [
+            // Name validation messages
+            'name.required' => 'Vui lòng nhập họ và tên.',
+            'name.string' => 'Họ và tên phải là chuỗi ký tự.',
+            'name.max' => 'Họ và tên không được vượt quá 255 ký tự.',
+            'name.regex' => 'Họ và tên chỉ được chứa chữ cái, số và khoảng trắng.',
+            
+            // Email validation messages
+            'email.required' => 'Vui lòng nhập email.',
+            'email.string' => 'Email phải là chuỗi ký tự.',
+            'email.email' => 'Email không đúng định dạng.',
+            'email.max' => 'Email không được vượt quá 255 ký tự.',
+            'email.unique' => 'Email này đã được sử dụng. Vui lòng chọn email khác.',
+            
+            // Phone validation messages
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.regex' => 'Số điện thoại phải có đúng 10 số và bắt đầu bằng số 0.',
+            
+            // Password validation messages
+            'password.required' => 'Vui lòng nhập mật khẩu.',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
+            'password.min' => 'Mật khẩu phải có ít nhất :min ký tự.',
+            
+            // Gender validation messages
+            'gender.in' => 'Giới tính không hợp lệ.',
+            
+            // Date of birth validation messages
+            'dob.date' => 'Ngày sinh không đúng định dạng.',
         ]);
 
         // Tìm role "Khách hàng"
