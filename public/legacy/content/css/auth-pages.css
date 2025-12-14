@@ -1,7 +1,9 @@
 .auth-hero {
-    background: #fff;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url('/legacy/images/about/about_lft.png');
+    background-size: cover;
+    background-position: center;
     padding: 150px 0 110px;
-    color: #333;
+    color: #fff;
     position: relative;
     z-index: 1;
 }
@@ -10,12 +12,17 @@
     font-size: 46px;
     font-weight: 700;
     text-transform: uppercase;
+    color: #fff;
+}
+
+.auth-hero span {
+    color: #fff;
 }
 
 .auth-hero p {
     font-size: 16px;
     line-height: 1.8;
-    color: #d8dee8;
+    color: #fff;
 }
 
 .auth-form-wrapper {
@@ -65,9 +72,11 @@
 }
 
 .register-hero {
-    background: #fff;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.75)), url('/legacy/images/about/about_lft.png');
+    background-size: cover;
+    background-position: center;
     padding: 160px 0 120px;
-    color: #333;
+    color: #fff;
     position: relative;
 }
 
@@ -75,12 +84,17 @@
     font-size: 44px;
     font-weight: 700;
     text-transform: uppercase;
+    color: #fff;
+}
+
+.register-hero span {
+    color: #fff;
 }
 
 .register-hero p {
     font-size: 16px;
     line-height: 1.8;
-    color: #dfe6f1;
+    color: #fff;
 }
 
 .register-form-wrapper {
