@@ -6,18 +6,22 @@
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý nhân viên</h1>
-    <a href="{{ route('admin.employees.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Thêm mới
-    </a>
+    @if(auth()->user()->isAdmin())
+        <a href="{{ route('admin.employees.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Thêm mới
+        </a>
+    @endif
 </div>
 
 <!-- Filter -->
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Lọc nhân viên</h6>
-        <a href="{{ route('admin.employees.trash') }}" class="btn btn-warning btn-sm">
-            <i class="fas fa-trash"></i> Thùng rác
-        </a>
+        @if(auth()->user()->isAdmin())
+            <a href="{{ route('admin.employees.trash') }}" class="btn btn-warning btn-sm">
+                <i class="fas fa-trash"></i> Thùng rác
+            </a>
+        @endif
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('admin.employees.index') }}" class="form-inline">
@@ -83,20 +87,24 @@
                                     {{ $employee->status }}
                                 </span>
                             </td>
-                            <td>
-                                <a href="{{ route('admin.employees.show', $employee->id) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i> Xem
-                                </a>
-                                <a href="{{ route('admin.employees.edit', $employee->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Sửa
-                                </a>
-                                <form action="{{ route('admin.employees.destroy', $employee->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $employee->user->name ?? 'Nhân viên' }}');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i> Xóa
-                                    </button>
-                                </form>
+                            <td class="text-center">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <a href="{{ route('admin.employees.show', $employee->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @if(auth()->user()->isAdmin())
+                                        <a href="{{ route('admin.employees.edit', $employee->id) }}" class="btn btn-sm btn-primary" title="Sửa thông tin">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('admin.employees.destroy', $employee->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete('{{ $employee->user->name ?? 'Nhân viên' }}');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Xóa nhân viên">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -110,6 +118,26 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .gap-1 {
+        gap: 0.25rem;
+    }
+    .gap-1 > * {
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 form {
+        display: inline-block;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 button, .gap-1 a {
+        white-space: nowrap;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>

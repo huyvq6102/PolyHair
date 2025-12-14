@@ -288,7 +288,7 @@ class AppointmentService
      */
     public function getForEmployeeWithFilters($employeeId, array $filters = [], $perPage = 10)
     {
-        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service'])
+        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
             ->where(function($q) use ($employeeId) {
                 // Appointments assigned to employee directly
                 $q->where('employee_id', $employeeId)

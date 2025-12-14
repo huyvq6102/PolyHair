@@ -41,18 +41,18 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="fullName">Họ và tên</label>
-                                    <input type="text" class="form-control" id="fullName" value="{{ $customer['name'] }}"
+                                    <input type="text" disabled class="form-control" id="fullName" value="{{ $customer['name'] }}"
                                         required>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="phone">Số điện thoại</label>
-                                    <input type="text" class="form-control" id="phone" value="{{ $customer['phone'] }}"
+                                    <input type="text" disabled class="form-control" id="phone" value="{{ $customer['phone'] }}"
                                         required>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label for="email">Email</label>
-                                <input type="email" class="form-control" id="email" value="{{ $customer['email'] }}"
+                                <input type="email" disabled class="form-control" id="email" value="{{ $customer['email'] }}"
                                     required>
                             </div>
                         </form>
@@ -125,7 +125,7 @@
                         @endif
 
                         <!-- Coupon Section -->
-                        <div class="mb-4">
+                        <!-- <div class="mb-4">
                             @if(isset($appliedCoupon) && $appliedCoupon)
                                 <div class="alert alert-info d-flex justify-content-between align-items-center">
                                     <span>
@@ -149,7 +149,7 @@
                                     <button class="btn btn-outline-secondary" type="submit">Áp dụng</button>
                                 </form>
                             @endif
-                        </div>
+                        </div> -->
 
                         <ul class="list-group list-group-flush">
                             @foreach($services as $s)
