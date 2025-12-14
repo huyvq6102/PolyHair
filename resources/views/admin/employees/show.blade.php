@@ -89,11 +89,13 @@
                 </div>
                 @endif
                 
-                <div class="mt-4">
-                    <a href="{{ route('admin.employees.edit', $employee->id) }}" class="btn btn-primary">
-                        <i class="fas fa-edit"></i> Sửa thông tin
-                    </a>
-                </div>
+                @if(auth()->user()->isAdmin())
+                    <div class="mt-4">
+                        <a href="{{ route('admin.employees.edit', $employee->id) }}" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Sửa thông tin
+                        </a>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

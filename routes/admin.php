@@ -36,21 +36,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     // Working Schedule (View Only for Staff)
     Route::get('working-schedules', [WorkingScheduleController::class, 'index'])->name('working-schedules.index');
 
-    // Routes accessible by both Admin and Employee
-    // Users Management (Accessible by Staff)
-    Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
-    Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
-    Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
-    Route::resource('users', UserController::class);
+    // Routes accessible by both Admin and Employee (View Only)
+    // Users Management (View Only for Staff)
+    Route::get('users', [UserController::class, 'index'])->name('users.index');
+    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
 
-    // Employees Management (Accessible by Staff)
-    Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
-    Route::post('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
-    Route::delete('employees/{employee}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
-    Route::resource('employees', EmployeeController::class);
+    // Employees Management (View Only for Staff)
+    Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
+    Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
     Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
-    Route::get('employee-skills/{employee}/edit', [EmployeeSkillController::class, 'edit'])->name('employee-skills.edit');
-    Route::put('employee-skills/{employee}', [EmployeeSkillController::class, 'update'])->name('employee-skills.update');
 
     // Promotions (Accessible by Staff)
     Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
@@ -60,6 +54,28 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
 
     // Protected Admin Routes
     Route::middleware(['admin'])->group(function () {
+
+        // Users Management (Admin Only - Full CRUD)
+        Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
+        Route::get('users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
+        Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
+
+        // Employees Management (Admin Only - Full CRUD)
+        Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
+        Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+        Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
+        Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+        Route::post('employees/{employee}/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
+        Route::delete('employees/{employee}/force-delete', [EmployeeController::class, 'forceDelete'])->name('employees.force-delete');
+        Route::get('employee-skills/{employee}/edit', [EmployeeSkillController::class, 'edit'])->name('employee-skills.edit');
+        Route::put('employee-skills/{employee}', [EmployeeSkillController::class, 'update'])->name('employee-skills.update');
 
         // Working Schedule Management (Admin Only)
         Route::get('working-schedules/trash', [WorkingScheduleController::class, 'trash'])->name('working-schedules.trash');
