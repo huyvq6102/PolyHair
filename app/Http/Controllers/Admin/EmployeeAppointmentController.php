@@ -533,29 +533,29 @@ class EmployeeAppointmentController extends Controller
         $employees = \App\Models\Employee::whereIn('position', ['Stylist', 'Barber'])
             ->with('user')
             ->get();
-        
+
         // Get single services (no variants)
         $singleServices = \App\Models\Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
             ->get();
-        
+
         // Get services with variants
         $variantServices = \App\Models\Service::whereNull('deleted_at')
             ->whereHas('serviceVariants')
             ->with('serviceVariants')
             ->get();
-        
+
         // Get combos
         $combos = \App\Models\Combo::whereNull('deleted_at')
             ->with('comboItems')
             ->get();
-        
+
         // Determine current service type
         $currentServiceType = 'variant';
         $currentServiceId = null;
         $currentServiceVariantId = null;
         $currentComboId = null;
-        
+
         if ($appointment->appointmentDetails->count() > 0) {
             $detail = $appointment->appointmentDetails->first();
             if ($detail->combo_id) {
@@ -577,12 +577,12 @@ class EmployeeAppointmentController extends Controller
                 }
             }
         }
-        
+
         return view('admin.employee-appointments.edit', compact(
-            'appointment', 
-            'employees', 
-            'singleServices', 
-            'variantServices', 
+            'appointment',
+            'employees',
+            'singleServices',
+            'variantServices',
             'combos',
             'currentServiceType',
             'currentServiceId',
@@ -664,7 +664,7 @@ class EmployeeAppointmentController extends Controller
             if (!empty($validated['new_services'])) {
                 foreach ($validated['new_services'] as $serviceStr) {
                     if (empty($serviceStr)) continue;
-                    
+
                     $parts = explode(':', $serviceStr);
                     $serviceType = $parts[0] ?? '';
                     $serviceId = $parts[1] ?? null;
@@ -716,7 +716,7 @@ class EmployeeAppointmentController extends Controller
             if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
                 $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
                 $appointmentData['start_at'] = $startAt;
-                
+
                 if ($totalDuration > 0) {
                     $appointmentData['end_at'] = $startAt->copy()->addMinutes($totalDuration);
                 } else {
@@ -739,7 +739,7 @@ class EmployeeAppointmentController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Có lỗi xảy ra khi cập nhật lịch hẹn: ' . $e->getMessage());

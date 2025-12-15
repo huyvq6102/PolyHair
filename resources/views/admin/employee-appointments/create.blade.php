@@ -58,104 +58,74 @@
         <form method="POST" action="{{ route('employee.appointments.store') }}" id="appointmentForm">
             @csrf
 
-            <!-- Chọn hoặc thêm khách hàng -->
-            <div class="form-group">
-                <label>Khách hàng <span class="text-danger">*</span></label>
-                <div class="mb-3">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="customer_type" id="customer_existing" value="existing" checked>
-                        <label class="form-check-label" for="customer_existing">
-                            Chọn khách hàng có sẵn
-                        </label>
+            <input type="hidden" name="customer_type" value="new">
+
+            <!-- Form thêm khách hàng mới -->
+            <div id="new_customer_section">
+                <div class="border rounded p-3 bg-light">
+                    <h5 class="font-weight-bold text-primary mb-3">Thông tin khách hàng</h5>
+                    <div class="form-group">
+                        <label for="new_customer_name">Họ và tên <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               name="new_customer_name" 
+                               id="new_customer_name" 
+                               class="form-control @error('new_customer_name') is-invalid @enderror" 
+                               value="{{ old('new_customer_name') }}"
+                               placeholder="Nhập họ và tên"
+                               required>
+                        @error('new_customer_name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="customer_type" id="customer_new" value="new">
-                        <label class="form-check-label" for="customer_new">
-                            Thêm khách hàng mới
-                        </label>
+
+                    <div class="form-group">
+                        <label for="new_customer_phone">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="tel" 
+                               name="new_customer_phone" 
+                               id="new_customer_phone" 
+                               class="form-control @error('new_customer_phone') is-invalid @enderror" 
+                               value="{{ old('new_customer_phone') }}"
+                               placeholder="Nhập số điện thoại"
+                               required>
+                        @error('new_customer_phone')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
-                </div>
 
-                <!-- Chọn khách hàng có sẵn -->
-                <div id="existing_customer_section">
-                    <select name="user_id" id="user_id" class="form-control @error('user_id') is-invalid @enderror">
-                        <option value="">-- Chọn khách hàng --</option>
-                        @foreach($customers as $customer)
-                            <option value="{{ $customer->id }}" {{ old('user_id') == $customer->id ? 'selected' : '' }}>
-                                {{ $customer->name }} - {{ $customer->phone }} {{ $customer->email ? '(' . $customer->email . ')' : '' }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('user_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-
-                </div>
-                </div>
-
-                <!-- Form thêm khách hàng mới -->
-                <div id="new_customer_section" style="display: none;">
-                    <div class="border rounded p-3 bg-light">
-                        <div class="form-group">
-                            <label for="new_customer_name">Họ và tên <span class="text-danger">*</span></label>
-                            <input type="text" 
-                                   name="new_customer_name" 
-                                   id="new_customer_name" 
-                                   class="form-control @error('new_customer_name') is-invalid @enderror" 
-                                   value="{{ old('new_customer_name') }}"
-                                   placeholder="Nhập họ và tên">
-                            @error('new_customer_name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="new_customer_phone">Số điện thoại <span class="text-danger">*</span></label>
-                            <input type="tel" 
-                                   name="new_customer_phone" 
-                                   id="new_customer_phone" 
-                                   class="form-control @error('new_customer_phone') is-invalid @enderror" 
-                                   value="{{ old('new_customer_phone') }}"
-                                   placeholder="Nhập số điện thoại">
-                            @error('new_customer_phone')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="new_customer_email">Email</label>
-                            <input type="email" 
-                                   name="new_customer_email" 
-                                   id="new_customer_email" 
-                                   class="form-control @error('new_customer_email') is-invalid @enderror" 
-                                   value="{{ old('new_customer_email') }}"
-                                   placeholder="Nhập email (tùy chọn)">
-                            @error('new_customer_email')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                    <div class="form-group">
+                        <label for="new_customer_email">Email</label>
+                        <input type="email" 
+                               name="new_customer_email" 
+                               id="new_customer_email" 
+                               class="form-control @error('new_customer_email') is-invalid @enderror" 
+                               value="{{ old('new_customer_email') }}"
+                               placeholder="Nhập email (tùy chọn)">
+                        @error('new_customer_email')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
             </div>
 
-                <!-- Chọn nhân viên thực hiện -->
-                <div class="mt-4">
-                    <label for="staff_id">Nhân viên thực hiện <span class="text-danger">*</span></label>
-                    <select name="staff_id" id="staff_id" class="form-control @error('staff_id') is-invalid @enderror">
-                        <option value="">-- Chọn nhân viên (Thợ tạo kiểu/Thợ cắt tóc nam) --</option>
-                        @foreach($staffMembers as $staff)
+            <!-- Chọn nhân viên thực hiện -->
+            <div class="mt-4">
+                <label for="staff_id">Nhân viên thực hiện <span class="text-danger">*</span></label>
+                <select name="staff_id" id="staff_id" class="form-control @error('staff_id') is-invalid @enderror" required>
+                    <option value="">-- Chọn nhân viên (Thợ tạo kiểu/Thợ cắt tóc nam) --</option>
+                    @foreach($staffMembers as $staff)
+                        @if($staff->position === 'Stylist' || $staff->position === 'Barber')
                             <option value="{{ $staff->id }}" {{ old('staff_id') == $staff->id ? 'selected' : '' }}>
                                 {{ $staff->user->name ?? 'N/A' }} ({{ \App\Models\Employee::getPositionVietnamese($staff->position ?? '') ?: 'N/A' }})
                             </option>
-                        @endforeach
-                    </select>
-                    @error('staff_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                    <small class="form-text text-muted">
-                        Vui lòng chọn Thợ tạo kiểu hoặc Thợ cắt tóc nam sẽ thực hiện dịch vụ.
-                    </small>
-                </div>
+                        @endif
+                    @endforeach
+                </select>
+                @error('staff_id')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="form-text text-muted">
+                    Vui lòng chọn Thợ tạo kiểu hoặc Thợ cắt tóc nam sẽ thực hiện dịch vụ.
+                </small>
             </div>
 
             <!-- Chọn dịch vụ -->
@@ -314,29 +284,6 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        // Toggle between existing and new customer
-        $('input[name="customer_type"]').on('change', function() {
-            if ($(this).val() === 'existing') {
-                $('#existing_customer_section').show();
-                $('#new_customer_section').hide();
-                $('#user_id').prop('required', true);
-                $('#new_customer_name, #new_customer_phone').prop('required', false);
-            } else {
-                $('#existing_customer_section').hide();
-                $('#new_customer_section').show();
-                $('#user_id').prop('required', false).val('');
-                $('#new_customer_name, #new_customer_phone').prop('required', true);
-            }
-        });
-
-        // Set initial state
-        if ($('input[name="customer_type"]:checked').val() === 'new') {
-            $('#existing_customer_section').hide();
-            $('#new_customer_section').show();
-            $('#user_id').prop('required', false);
-            $('#new_customer_name, #new_customer_phone').prop('required', true);
-        }
-
         // Validate at least one service or variant is selected
         $('#appointmentForm').on('submit', function(e) {
             var checkedVariants = $('.service-variant-checkbox:checked').length;
@@ -348,19 +295,10 @@
             }
 
             // Validate customer selection
-            var customerType = $('input[name="customer_type"]:checked').val();
-            if (customerType === 'existing') {
-                if (!$('#user_id').val()) {
-                    e.preventDefault();
-                    alert('Vui lòng chọn khách hàng!');
-                    return false;
-                }
-            } else {
-                if (!$('#new_customer_name').val() || !$('#new_customer_phone').val()) {
-                    e.preventDefault();
-                    alert('Vui lòng nhập đầy đủ thông tin khách hàng mới!');
-                    return false;
-                }
+            if (!$('#new_customer_name').val() || !$('#new_customer_phone').val()) {
+                e.preventDefault();
+                alert('Vui lòng nhập đầy đủ thông tin khách hàng mới!');
+                return false;
             }
         });
 

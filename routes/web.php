@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Site\CustomerController;
 use App\Http\Controllers\Site\ReviewController;
+use App\Http\Controllers\Site\CheckoutController;
 
 // Site Routes
 Route::get('/', [HomeController::class, 'index'])->name('site.home');
@@ -70,7 +71,15 @@ Route::middleware('auth')->prefix('customer')->name('site.customers.')->group(fu
     Route::get('/{id}', [CustomerController::class, 'show'])->name('show');
 });
 
-// Payment Routes - Đã xóa
+// Payment Routes
+Route::prefix('payment')->name('site.payments.')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'checkout'])->name('checkout');
+    Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('apply-coupon');
+    Route::get('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('remove-coupon');
+    Route::post('/process', [CheckoutController::class, 'processPayment'])->name('process');
+    Route::get('/vnpay-return', [CheckoutController::class, 'vnpayReturn'])->name('vnpay-return');
+    Route::get('/success/{appointmentId?}', [CheckoutController::class, 'paymentSuccess'])->name('success');
+});
 
 // Review Routes
 Route::prefix('reviews')->name('site.reviews.')->group(function () {
