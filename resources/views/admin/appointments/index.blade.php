@@ -154,22 +154,21 @@
                                 <a href="{{ route('admin.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                @if($appointment->status != 'Đã hủy' && $appointment->status != 'Đã thanh toán')
+                                    <a href="{{ route('site.payments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </a>
+                                @endif
                                 @if($appointment->status != 'Đã hủy')
-                                <a href="{{ route('site.payments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                </a>
-                                <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <a href="{{ route('site.payments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                </a>
-                                <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
-                                        <i class="fas fa-ban"></i>
-                                    </button>
-                                </form>
+                                    <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    </form>
                                 @else
                                     <span class="btn btn-sm btn-secondary" title="Lịch đã hủy" disabled>
                                         <i class="fas fa-ban"></i>
