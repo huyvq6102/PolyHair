@@ -1,4 +1,4 @@
-@extends('layouts.site')
+@extends('admin.layouts.app')
 @section('content')
 <style>
     .payment-method-option {

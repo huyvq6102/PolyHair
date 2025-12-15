@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .success-section {
-        padding: 140px 0 60px;
+        padding: 0 0 60px;
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
         min-height: 80vh;
         display: flex;
