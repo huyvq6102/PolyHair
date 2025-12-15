@@ -30,6 +30,11 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
+        // Load role relationship if not already loaded
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+
         // Redirect based on user role
         if ($user->isAdmin()) {
             return redirect()->intended(route('admin.dashboard', absolute: false));
@@ -40,6 +45,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('admin.working-schedules.index', absolute: false));
         }
 
+        // For customers and other roles, redirect to home page
+        // They cannot access admin panel (middleware will block them)
         return redirect()->intended(route('site.home', absolute: false));
     }
 
