@@ -39,11 +39,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     // Routes accessible by both Admin and Employee (View Only)
     // Users Management (View Only for Staff)
     Route::get('users', [UserController::class, 'index'])->name('users.index');
-    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
 
     // Employees Management (View Only for Staff)
     Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
-    Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
     Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
 
     // Promotions (Accessible by Staff)
@@ -56,6 +54,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::middleware(['admin'])->group(function () {
 
         // Users Management (Admin Only - Full CRUD)
+        // IMPORTANT: Specific routes (create, trash) must come BEFORE parameterized routes ({user})
         Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
         Route::get('users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('users', [UserController::class, 'store'])->name('users.store');
@@ -66,6 +65,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
         Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
 
         // Employees Management (Admin Only - Full CRUD)
+        // IMPORTANT: Specific routes (create, trash) must come BEFORE parameterized routes ({employee})
         Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
         Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
         Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
@@ -119,6 +119,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
             Route::get('/show/{id}', [ReviewController::class, 'show'])->name('show');
         });
     });
+
+    // Routes accessible by both Admin and Employee (View Only) - Must come AFTER admin routes
+    // Users Management (View Only for Staff)
+    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+
+    // Employees Management (View Only for Staff)
+    Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
 });
 
 // Employee appointment routes (accessible by employees only)

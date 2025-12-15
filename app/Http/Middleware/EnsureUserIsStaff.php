@@ -16,7 +16,7 @@ class EnsureUserIsStaff
     public function handle(Request $request, Closure $next): Response
     {
         if (!auth()->check()) {
-            return redirect()->route('login');
+            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để truy cập.');
         }
 
         $user = auth()->user();
@@ -31,6 +31,12 @@ class EnsureUserIsStaff
             return $next($request);
         }
 
-        abort(403, 'Unauthorized access.');
+        // User is not admin or employee - deny access
+        auth()->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        return redirect()->route('login')
+            ->with('error', 'Bạn không có quyền truy cập vào trang quản trị. Chỉ có quản trị viên và nhân viên mới được phép truy cập.');
     }
 }
