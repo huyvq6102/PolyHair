@@ -338,6 +338,12 @@
                            value="{{ old("combos.$comboKey.price", $combo['price'] ?? '') }}">
                 </div>
                 <div class="form-group col-md-2">
+                    <label>Thời lượng (phút)</label>
+                    <input type="number" class="form-control"
+                           name="combos[{{ $comboKey }}][duration]"
+                           value="{{ old("combos.$comboKey.duration", $combo['duration'] ?? '') }}">
+                </div>
+                <div class="form-group col-md-2">
                     <label>Thứ tự</label>
                     <input type="number" class="form-control"
                            name="combos[{{ $comboKey }}][sort_order]"
@@ -475,6 +481,10 @@
             <div class="form-group col-md-2">
                 <label>Giá combo</label>
                 <input type="number" step="0.01" class="form-control" name="combos[__KEY__][price]">
+            </div>
+            <div class="form-group col-md-2">
+                <label>Thời lượng (phút)</label>
+                <input type="number" class="form-control" name="combos[__KEY__][duration]">
             </div>
             <div class="form-group col-md-2">
                 <label>Thứ tự</label>

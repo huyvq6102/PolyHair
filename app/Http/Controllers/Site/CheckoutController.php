@@ -238,10 +238,11 @@ class CheckoutController extends Controller
         $taxablePrice = max(0, $subtotal - $promotionAmount);
         
         // VAT Calculation (giống như PaymentService)
-        $VAT = $taxablePrice * 0.1;
-        $total = $taxablePrice + $VAT;
+        // $VAT = $taxablePrice * 0.1;
+        $VAT = 0;
+        $total = $taxablePrice; // + $VAT;
 
-        return view('site.payments.show', [
+        return view('admin.payments.checkout', [
             'customer' => $customerData,
             'services' => $services,
             'promotion' => $promotionAmount,
@@ -391,7 +392,7 @@ class CheckoutController extends Controller
 
             // Các phương thức khác (Tiền mặt, Credit Card giả định...)
             Session::forget('cart_backup'); // Success for non-vnpay
-            return view('site.payments.success', [
+            return view('admin.payments.success', [
                 'appointmentId' => $payment->appointment_id,
                 'invoiceCode'   => $payment->invoice_code,
                 'total'         => $payment->total,
@@ -444,7 +445,7 @@ class CheckoutController extends Controller
                         }
                     }
                     
-                    return view('site.payments.success', [
+                    return view('admin.payments.success', [
                         'appointmentId' => $payment->appointment_id,
                         'invoiceCode'   => $payment->invoice_code,
                         'total'         => $payment->total,
@@ -488,6 +489,6 @@ class CheckoutController extends Controller
     }
     
     public function paymentSuccess($appointmentId){
-        return view('site.payments.success', compact('appointmentId'));
+        return view('admin.payments.success', compact('appointmentId'));
     }
 }

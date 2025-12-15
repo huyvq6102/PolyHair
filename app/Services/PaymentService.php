@@ -220,8 +220,9 @@ class PaymentService
             $taxablePrice = max(0, $total - $discountAmount);
 
             // VAT Calculation (Assuming VAT is calculated on the final price after discount)
-            $VAT = $taxablePrice * 0.1;
-            $grandTotal = $taxablePrice + $VAT;
+            // $VAT = $taxablePrice * 0.1;
+            $VAT = 0;
+            $grandTotal = $taxablePrice; // + $VAT;
 
             // Create Payment Record
             // Nếu thanh toán tại quầy, vẫn tạo payment record nhưng có thể đánh dấu là chưa thanh toán
@@ -233,7 +234,7 @@ class PaymentService
                 'order_id'       => $orderId,
                 'invoice_code'   => $this->generateInvoiceCode(),
                 'price'          => $taxablePrice, // Storing the Net Price after discount
-                'VAT'            => $VAT,
+                // 'VAT'            => $VAT,
                 'total'          => $grandTotal,
                 'created_by'     => $user->name,
                 'payment_type'   => $paymentMethod,

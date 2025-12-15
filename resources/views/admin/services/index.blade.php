@@ -52,6 +52,7 @@
                         <th>Tên dịch vụ</th>
                         <th>Loại</th>
                         <th>Giá</th>
+                        <th>Thời lượng</th>
                         <th>Hình ảnh</th>
                         <th>Nhóm dịch vụ</th>
                         <th>Trạng thái</th>
@@ -89,6 +90,23 @@
                                         {{ number_format($minPrice, 0, ',', '.') }} đ
                                     @else
                                         {{ number_format($minPrice, 0, ',', '.') }} - {{ number_format($maxPrice, 0, ',', '.') }} đ
+                                    @endif
+                                @else
+                                    N/A
+                                @endif
+                            </td>
+                            <td>
+                                @if($service->base_duration)
+                                    {{ $service->base_duration }} phút
+                                @elseif($service->serviceVariants->count() > 0)
+                                    @php
+                                        $minDuration = $service->serviceVariants->min('duration');
+                                        $maxDuration = $service->serviceVariants->max('duration');
+                                    @endphp
+                                    @if($minDuration == $maxDuration)
+                                        {{ $minDuration }} phút
+                                    @else
+                                        {{ $minDuration }} - {{ $maxDuration }} phút
                                     @endif
                                 @else
                                     N/A
@@ -136,7 +154,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">Chưa có dịch vụ nào</td>
+                            <td colspan="10" class="text-center">Chưa có dịch vụ nào</td>
                         </tr>
                     @endforelse
                     
@@ -153,6 +171,13 @@
                                     </span>
                                 </td>
                                 <td>{{ number_format($combo->price, 0, ',', '.') }} đ</td>
+                                <td>
+                                    @if($combo->duration)
+                                        {{ $combo->duration }} phút
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
                                 <td>
                                     @if($combo->image)
                                         <img src="{{ asset('legacy/images/products/' . $combo->image) }}" alt="{{ $combo->name }}" width="60" height="60" class="img-thumbnail">
