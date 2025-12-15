@@ -140,17 +140,17 @@
                             @php
                                 // Tính lại nếu chưa có
                                 $displayTaxablePrice = $taxablePrice ?? ($subtotal - $promotion);
-                                $displayVAT = $vat ?? ($displayTaxablePrice * 0.1);
+                                // $displayVAT = $vat ?? ($displayTaxablePrice * 0.1);
                             @endphp
 
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span>Tạm tính</span>
                                 <span>{{ number_format($displayTaxablePrice) }}đ</span>
                             </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            {{-- <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span>VAT (10%)</span>
                                 <span>{{ number_format($displayVAT) }}đ</span>
-                            </li>
+                            </li> --}}
 
                             <li
                                 class="list-group-item d-flex justify-content-between align-items-center border-top pt-3 px-0">
