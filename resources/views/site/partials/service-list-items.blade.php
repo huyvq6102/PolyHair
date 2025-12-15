@@ -113,6 +113,22 @@
       $typeBadge = 'Combo';
       $typeClass = 'badge-success';
     }
+
+    // Tạo booking params cho nút đặt lịch
+    $bookingParams = [];
+    if ($item['type'] == 'combo') {
+      $bookingParams['combo_id'] = [$item['id']];
+    } elseif ($item['type'] == 'service_variant' && isset($item['serviceVariants']) && $item['serviceVariants']->count() > 0) {
+      $defaultVariant = $item['serviceVariants']->where('is_default', true)->first();
+      if (!$defaultVariant) {
+        $defaultVariant = $item['serviceVariants']->first();
+      }
+      if ($defaultVariant) {
+        $bookingParams['service_variants'] = [$defaultVariant->id];
+      }
+    } elseif ($item['type'] == 'service_single') {
+      $bookingParams['service_id'] = [$item['id']];
+    }
   @endphp
   <div class="svc-card" style="position: relative;">
     <a class="svc-img" href="{{ $item['link'] }}" style="position: relative;">
@@ -139,7 +155,7 @@
       </div>
       <div class="svc-right">
         <span class="svc-rating">5 ★ Đánh giá</span>
-        <a class="svc-book" href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
+        <a class="svc-book" href="{{ route('site.appointment.create', $bookingParams) }}">Đặt lịch ngay</a>
       </div>
     </div>
   </div>

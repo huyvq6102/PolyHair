@@ -303,7 +303,35 @@
                     <!-- Header with Back Button -->
                     <div class="header-with-back mb-4" style="display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 20px;">
                         <!-- Back Arrow Button -->
-                        <a href="{{ route('site.appointment.create') }}"
+                        @php
+                            // Lấy tất cả query parameters hiện tại để truyền lại khi quay lại
+                            $backParams = request()->except(['add_more', 'search']);
+                            // Đảm bảo các parameters quan trọng được giữ lại
+                            if (request('service_id')) {
+                                $backParams['service_id'] = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
+                            }
+                            if (request('service_variants')) {
+                                $variantParams = request()->query('service_variants', []);
+                                if (!is_array($variantParams)) {
+                                    $variantParams = $variantParams ? [$variantParams] : [];
+                                }
+                                $backParams['service_variants'] = $variantParams;
+                            }
+                            if (request('combo_id')) {
+                                $backParams['combo_id'] = is_array(request('combo_id')) ? request('combo_id') : [request('combo_id')];
+                            }
+                            // Giữ lại employee_id, appointment_date, word_time_id nếu có
+                            if (request('employee_id')) {
+                                $backParams['employee_id'] = request('employee_id');
+                            }
+                            if (request('appointment_date')) {
+                                $backParams['appointment_date'] = request('appointment_date');
+                            }
+                            if (request('word_time_id')) {
+                                $backParams['word_time_id'] = request('word_time_id');
+                            }
+                        @endphp
+                        <a href="{{ route('site.appointment.create', $backParams) }}"
                            class="back-arrow-btn"
                            style="position: absolute; left: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #000; text-decoration: none; border-radius: 50%; transition: all 0.3s ease; background: transparent;">
                             <i class="fa fa-arrow-left" style="font-size: 18px;"></i>

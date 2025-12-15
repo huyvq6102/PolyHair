@@ -362,15 +362,19 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Load promotion nếu có promotion_id trong URL
-        $selectedPromotion = null;
-        if ($request->has('promotion_id') && $request->input('promotion_id')) {
-            $promotionId = $request->input('promotion_id');
-            $selectedPromotion = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
-                ->whereNull('deleted_at')
-                ->where('status', 'active')
-                ->find($promotionId);
-        }
+        // Load all active promotions (không cần promotion_id trong URL nữa)
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where(function($query) {
+                $now = \Carbon\Carbon::now();
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                })->where(function($q) use ($now) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                });
+            })
+            ->get();
 
         // ✅ Restore appointment_date và word_time_id từ Session
         // Điều này đảm bảo khi redirect (do thêm/xóa dịch vụ), giờ đã chọn vẫn được giữ lại
@@ -382,7 +386,7 @@ class AppointmentController extends Controller
             'wordTimes', 
             'serviceCategories', 
             'combos', 
-            'selectedPromotion',
+            'activePromotions',
             'savedDate',        // Pass vào view để restore
             'savedWordTimeId'   // Pass vào view để restore
         ));
