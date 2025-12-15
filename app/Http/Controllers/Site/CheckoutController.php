@@ -135,14 +135,66 @@ class CheckoutController extends Controller
         return [$cart, $services, $subtotal];
     }
 
-    public function checkout(){
+    public function checkout(Request $request){
         $user = auth()->user();
 
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập để tiếp tục !');
+        // Check if appointment_id is passed (e.g. from Admin or Link)
+        if ($request->has('appointment_id')) {
+            $appointmentId = $request->input('appointment_id');
+            $appointment = \App\Models\Appointment::find($appointmentId);
+
+            if ($appointment) {
+                if ($appointment->status === 'Đã thanh toán') {
+                    // Redirect to appointment details page with a message
+                    return redirect()->route('admin.appointments.show', $appointment->id)
+                                     ->with('info', 'Lịch hẹn này đã được thanh toán.');
+                }
+                // Set cart to this appointment only
+                Session::put('cart', [
+                    'appointment_' . $appointment->id => [
+                        'type' => 'appointment',
+                        'id' => $appointment->id,
+                        'quantity' => 1
+                    ]
+                ]);
+                // If user is not logged in, we might still want to proceed if we have a valid appointment?
+                // For now, we'll rely on the logic below.
+            }
         }
 
         list($cart, $services, $subtotal) = $this->getCartData();
+
+        // Determine Customer Info
+        $customerData = null;
+        
+        // Priority: Appointment User
+        foreach ($cart as $item) {
+            if (isset($item['type']) && $item['type'] === 'appointment') {
+                $appt = \App\Models\Appointment::with('user')->find($item['id']);
+                if ($appt && $appt->user) {
+                    $customerData = [
+                        'name' => $appt->user->name,
+                        'phone' => $appt->user->phone,
+                        'email' => $appt->user->email
+                    ];
+                }
+            }
+        }
+
+        // Fallback: Logged in User
+        if (!$customerData && $user) {
+            $customerData = [
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'email' => $user->email
+            ];
+        }
+
+        // If no user logged in AND no appointment user found -> Redirect Login
+        if (!$user && !$customerData) {
+            return redirect()->route('login')->with('error', 'Bạn cần đăng nhập để tiếp tục !');
+        }
+
         $promotionAmount = 0; 
 
         // -------------------------
@@ -154,11 +206,19 @@ class CheckoutController extends Controller
 
         if ($couponCode) {
             $promotionService = app(PromotionService::class);
+            // Use the determined user ID for promotion validation if available, else logged in user
+            $userIdForPromo = $user ? $user->id : null;
+            
+            // If we have an appointment user, maybe we should use THAT ID?
+            // But strict promotion rules might require the logged-in account to own the promotion?
+            // Let's stick to logged-in user for now, or if admin is paying, maybe skipping user check?
+            // PromotionService uses user_id to check usage limits.
+            
             $result = $promotionService->validateAndCalculateDiscount(
                 $couponCode,
                 $cart,
                 $subtotal,
-                $user->id
+                $userIdForPromo
             );
 
             if ($result['valid']) {
@@ -182,11 +242,7 @@ class CheckoutController extends Controller
         $total = $taxablePrice + $VAT;
 
         return view('site.payments.show', [
-            'customer' => [
-                'name' => $user->name,
-                'phone' => $user->phone,
-                'email' => $user->email
-            ],
+            'customer' => $customerData,
             'services' => $services,
             'promotion' => $promotionAmount,
             'appliedCoupon' => $appliedCoupon, // Để hiển thị mã đã dùng ở view
@@ -254,8 +310,22 @@ class CheckoutController extends Controller
                 'cart_content' => $cart,
                 'payment_method' => $request->input('payment_method')
             ]);
+            
+            // Determine the "Payer" user (Customer)
+            $payer = $user;
+            
+            // Check if cart has appointment and use that user if available
+            foreach ($cart as $item) {
+                if (isset($item['type']) && $item['type'] === 'appointment') {
+                    $appt = \App\Models\Appointment::find($item['id']);
+                    if ($appt && $appt->user) {
+                        $payer = $appt->user;
+                        break; 
+                    }
+                }
+            }
 
-            if (!$user || empty($cart)) {
+            if (!$payer || empty($cart)) {
                 return redirect()->route('site.payments.checkout')
                     ->with('error', 'Không thể thanh toán – giỏ hàng trống hoặc chưa đăng nhập.');
             }
@@ -264,7 +334,46 @@ class CheckoutController extends Controller
             $paymentMethod = $request->input('payment_method', 'cash');
 
             // Gọi Service để tạo đơn hàng (Status sẽ là Pending nếu là vnpay)
-            $payment = $paymentService->processPayment($user, $cart, $paymentMethod, $couponCode);
+            $payment = $paymentService->processPayment($payer, $cart, $paymentMethod, $couponCode);
+
+            // -------------------------
+            // AUTO-COMPLETE CASH PAYMENT FOR ADMIN/STAFF
+            // -------------------------
+            if ($paymentMethod === 'cash') {
+                $authUser = auth()->user();
+                // If the person performing the action is Admin or Staff
+                // Or if we decide that "Cash" in this context always means "Paid" (Simpler for now?)
+                // Let's stick to Admin/Staff check to be safe.
+                if ($authUser && ($authUser->isAdmin() || $authUser->isEmployee())) {
+                     // Mark payment as completed
+                     $payment->status = 'completed';
+                     $payment->save();
+                     
+                     // Mark appointment as Paid
+                     if ($payment->appointment_id) {
+                         $appt = \App\Models\Appointment::find($payment->appointment_id);
+                         if ($appt) {
+                             $appt->status = 'Đã thanh toán';
+                             $appt->save();
+                             
+                             // Update details status
+                             foreach ($appt->appointmentDetails as $detail) {
+                                $detail->status = 'Hoàn thành';
+                                $detail->save();
+                             }
+                         }
+                     }
+                     
+                     // Mark order as Paid
+                     if ($payment->order_id) {
+                         $order = \App\Models\Order::find($payment->order_id);
+                         if ($order) {
+                             $order->status = 'Đã thanh toán';
+                             $order->save();
+                         }
+                     }
+                }
+            }
 
             // Backup cart before clearing
             Session::put('cart_backup', $cart);
