@@ -85,9 +85,21 @@
                             <td>
                                 @if($appointment->appointmentDetails->count() > 0)
                                     @foreach($appointment->appointmentDetails->take(2) as $detail)
-                                        <span class="badge badge-info">
-                                            {{ $detail->serviceVariant->service->name ?? 'N/A' }}
-                                        </span>
+                                        @if($detail->combo_id && $detail->combo)
+                                            <span class="badge badge-info">
+                                                {{ $detail->combo->name ?? ($detail->notes ?? 'Combo') }}
+                                            </span>
+                                        @elseif($detail->serviceVariant && $detail->serviceVariant->service)
+                                            <span class="badge badge-info">
+                                                {{ $detail->serviceVariant->service->name }}
+                                            </span>
+                                        @elseif($detail->notes)
+                                            <span class="badge badge-info">
+                                                {{ $detail->notes }}
+                                            </span>
+                                        @else
+                                            <span class="badge badge-secondary">Dịch vụ</span>
+                                        @endif
                                     @endforeach
                                     @if($appointment->appointmentDetails->count() > 2)
                                         <span class="badge badge-secondary">
@@ -115,18 +127,47 @@
                                 </span>
                             </td>
                             <td>
-                                <a href="{{ route('employee.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i> Xem
-                                </a>
-                                @if(in_array($appointment->status, ['Chờ xử lý', 'Chờ xác nhận']))
-                                    <form action="{{ route('employee.appointments.destroy', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đơn đặt này?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i> Xóa
+                                <div class="d-flex flex-wrap gap-1">
+                                    <a href="{{ route('employee.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    @if(isset($employee) && $employee && $employee->position === 'Receptionist')
+                                        <a href="{{ route('employee.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa lịch hẹn">
+                                            <i class="fas fa-edit"></i> Sửa
+                                        </a>
+                                    @endif
+                                    
+                                    @if($appointment->status == 'Chờ xác nhận' || $appointment->status == 'Chờ xử lý')
+                                        <form action="{{ route('employee.appointments.confirm', $appointment->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success" title="Xác nhận đơn" onclick="return confirm('Bạn có chắc chắn muốn xác nhận đơn đặt này?');">
+                                                <i class="fas fa-check"></i> Xác nhận
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-danger" title="Hủy đơn" data-toggle="modal" data-target="#cancelModal{{ $appointment->id }}">
+                                            <i class="fas fa-times"></i> Hủy
                                         </button>
-                                    </form>
-                                @endif
+                                    @endif
+
+                                    @if($appointment->status == 'Đã xác nhận')
+                                        <form action="{{ route('employee.appointments.start', $appointment->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-info" title="Bắt đầu thực hiện" onclick="return confirm('Bạn có chắc chắn muốn bắt đầu thực hiện đơn đặt này?');">
+                                                <i class="fas fa-play"></i> Bắt đầu
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                    @if($appointment->status == 'Đang thực hiện')
+                                        <form action="{{ route('employee.appointments.complete', $appointment->id) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success" title="Hoàn thành" onclick="return confirm('Bạn có chắc chắn muốn hoàn thành đơn đặt này?');">
+                                                <i class="fas fa-check-circle"></i> Hoàn thành
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -193,6 +234,41 @@
         @endif
     </div>
 </div>
+
+<!-- Cancel Modals for each appointment -->
+@foreach($appointments as $appointment)
+    @if($appointment->status == 'Chờ xác nhận' || $appointment->status == 'Chờ xử lý')
+    <div class="modal fade" id="cancelModal{{ $appointment->id }}" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel{{ $appointment->id }}" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{{ route('employee.appointments.cancel', $appointment->id) }}" method="POST">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cancelModalLabel{{ $appointment->id }}">Hủy đơn đặt #{{ $appointment->booking_code ?? $appointment->id }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="cancellation_reason{{ $appointment->id }}">Lý do hủy <span class="text-danger">*</span></label>
+                            <textarea name="cancellation_reason" id="cancellation_reason{{ $appointment->id }}" class="form-control @error('cancellation_reason') is-invalid @enderror" 
+                                      rows="4" required placeholder="Nhập lý do hủy đơn...">{{ old('cancellation_reason') }}</textarea>
+                            @error('cancellation_reason')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+@endforeach
 @endsection
 
 @push('styles')
@@ -217,6 +293,21 @@
         color: #858796;
         background-color: #fff;
         border-color: #d1d3e2;
+    }
+    .gap-1 {
+        gap: 0.25rem;
+    }
+    .gap-1 > * {
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 form {
+        display: inline-block;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 button, .gap-1 a {
+        white-space: nowrap;
     }
 </style>
 @endpush

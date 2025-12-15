@@ -28,22 +28,57 @@
         </li>
     @endif
 
-    <!-- Nav Item - Appointments (Visible to All) -->
-    <!-- Nav Item - Appointments (Visible to All) -->
-    <li
-        class="nav-item {{ ($isEmployee && str_contains($currentRoute, 'employee.appointments')) || (!$isEmployee && str_contains($currentRoute, 'admin.appointments')) ? 'active' : '' }}">
-        <a class="nav-link"
-            href="{{ $isEmployee ? route('employee.appointments.index') : route('admin.appointments.index') }}">
-            <i class="fas fa-fw fa-calendar-alt"></i>
-            <span>{{ $isEmployee ? 'Quản lý đơn đặt' : 'Lịch hẹn' }}</span>
-        </a>
-    </li>
+    @if($isEmployee)
+        <!-- Nav Item - Quản lý đơn đặt (Visible to Employee Only) -->
+        <li class="nav-item {{ str_contains($currentRoute, 'employee.appointments') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('employee.appointments.index') }}">
+                <i class="fas fa-fw fa-clipboard-list"></i>
+                <span>Quản lý đơn đặt</span>
+            </a>
+        </li>
+    @else
+        <!-- Nav Item - Appointments (Visible to Admin Only) -->
+        <li class="nav-item {{ str_contains($currentRoute, 'admin.appointments') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('admin.appointments.index') }}">
+                <i class="fas fa-fw fa-calendar-alt"></i>
+                <span>Lịch hẹn</span>
+            </a>
+        </li>
+    @endif
 
     <!-- Nav Item - Working schedules (Visible to All) -->
     <li class="nav-item {{ str_contains($currentRoute, 'working-schedule') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('admin.working-schedules.index') }}">
             <i class="fas fa-fw fa-user-clock"></i>
             <span>Lịch nhân viên</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Users (Visible to All Staff) -->
+    <li class="nav-item {{ $userMenuActive ? 'active' : '' }}">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages2"
+            aria-expanded="{{ $userMenuActive ? 'true' : 'false' }}" aria-controls="collapsePages">
+            <i class="fas fa-fw fa-folder"></i>
+            <span>Thành viên</span>
+        </a>
+        <div id="collapsePages2" class="collapse {{ $userMenuActive ? 'show' : '' }}" aria-labelledby="headingPages"
+            data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.users') ? 'active' : '' }}"
+                    href="{{ route('admin.users.index') }}">Quản lý người dùng</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.employees') ? 'active' : '' }}"
+                    href="{{ route('admin.employees.index') }}">Quản lý nhân viên</a>
+                <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.employee-skills') ? 'active' : '' }}"
+                    href="{{ route('admin.employee-skills.index') }}">Chuyên môn nhân viên</a>
+            </div>
+        </div>
+    </li>
+
+    <!-- Nav Item - Promotions (Visible to All Staff) -->
+    <li class="nav-item {{ $promotionMenuActive ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.promotions.index') }}">
+            <i class="fas fa-fw fa-gift"></i>
+            <span>Khuyến mãi</span>
         </a>
     </li>
 
@@ -68,26 +103,6 @@
             </div>
         </li>
 
-        <!-- Nav Item - Users -->
-        <li class="nav-item {{ $userMenuActive ? 'active' : '' }}">
-            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages2"
-                aria-expanded="{{ $userMenuActive ? 'true' : 'false' }}" aria-controls="collapsePages">
-                <i class="fas fa-fw fa-folder"></i>
-                <span>Thành viên</span>
-            </a>
-            <div id="collapsePages2" class="collapse {{ $userMenuActive ? 'show' : '' }}" aria-labelledby="headingPages"
-                data-parent="#accordionSidebar">
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.users') ? 'active' : '' }}"
-                        href="{{ route('admin.users.index') }}">Quản lý người dùng</a>
-                    <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.employees') ? 'active' : '' }}"
-                        href="{{ route('admin.employees.index') }}">Quản lý nhân viên</a>
-                    <a class="collapse-item {{ \Illuminate\Support\Str::startsWith($currentRoute, 'admin.employee-skills') ? 'active' : '' }}"
-                        href="{{ route('admin.employee-skills.index') }}">Chuyên môn nhân viên</a>
-                </div>
-            </div>
-        </li>
-
         <!-- Nav Item - Orders -->
         <li class="nav-item {{ str_contains($currentRoute, 'payment') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.payments.index') }}">
@@ -96,15 +111,7 @@
             </a>
         </li>
 
-        <!-- Nav Item - Promotions -->
-        <li class="nav-item {{ $promotionMenuActive ? 'active' : '' }}">
-            <a class="nav-link" href="{{ route('admin.promotions.index') }}">
-                <i class="fas fa-fw fa-gift"></i>
-                <span>Khuyến mãi</span>
-            </a>
-        </li>
-
-        <li class="nav-item {{ $promotionMenuActive ? 'active' : '' }}">
+        <li class="nav-item {{ str_contains($currentRoute, 'reviews') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.reviews.index') }}">
                 <i class="fas fa-fw fa-gift"></i>
                 <span>Bình luận</span>

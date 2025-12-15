@@ -5,6 +5,12 @@
 @section('content')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('legacy/content/css/auth-pages.css') }}">
+<style>
+    .register-hero h1 {
+        color: #f6f7fb;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    }
+</style>
 @endpush
 
 <section class="register-hero">
@@ -71,11 +77,16 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="phone">Số điện thoại <span class="text-danger">*</span></label>
-                                        <input type="text" name="phone" id="phone" class="form-control @error('phone') is-invalid @enderror" 
-                                               value="{{ old('phone') }}" required>
+                                        <input type="tel" name="phone" id="phone" class="form-control @error('phone') is-invalid @enderror" 
+                                               value="{{ old('phone') }}" required 
+                                               pattern="^0[0-9]{9}$" 
+                                               placeholder="0123456789"
+                                               maxlength="10"
+                                               title="Số điện thoại phải có đúng 10 số và bắt đầu bằng số 0">
                                         @error('phone')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
+                                        <small class="form-text text-muted">Ví dụ: 0123456789</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

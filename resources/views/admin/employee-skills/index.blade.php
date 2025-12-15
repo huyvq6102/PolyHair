@@ -73,10 +73,12 @@
                                     @endforeach
                                 @endif
                             </td>
-                            <td>
-                                <a href="{{ route('admin.employee-skills.edit', $employee->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Chỉnh sửa
-                                </a>
+                            <td class="text-center">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <a href="{{ route('admin.employee-skills.edit', $employee->id) }}" class="btn btn-sm btn-primary" title="Chỉnh sửa chuyên môn">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -96,4 +98,24 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .gap-1 {
+        gap: 0.25rem;
+    }
+    .gap-1 > * {
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 form {
+        display: inline-block;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    .gap-1 button, .gap-1 a {
+        white-space: nowrap;
+    }
+</style>
+@endpush
 

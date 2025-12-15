@@ -36,9 +36,10 @@
 
 .appointment-content {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 30px;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 25px;
     margin-bottom: 30px;
+    align-items: start;
 }
 
 @media (max-width: 991px) {
@@ -49,31 +50,53 @@
 
 .appointment-card {
     background: #fff;
-    border-radius: 10px;
-    padding: 30px;
+    border-radius: 12px;
+    padding: 25px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.appointment-info-card {
+    min-height: 100%;
+}
+
+.appointment-services-card {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .card-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
     color: #4A3600;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
     border-bottom: 2px solid #f0f0f0;
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .card-title i {
     color: #BC9321;
+    font-size: 16px;
+}
+
+.info-content {
+    flex: 1;
 }
 
 .info-row {
     display: flex;
     justify-content: space-between;
-    padding: 15px 0;
+    align-items: center;
+    padding: 12px 0;
     border-bottom: 1px solid #f0f0f0;
 }
 
@@ -84,7 +107,8 @@
 .info-label {
     font-weight: 500;
     color: #666;
-    min-width: 150px;
+    font-size: 14px;
+    min-width: 130px;
 }
 
 .info-value {
@@ -92,6 +116,7 @@
     font-weight: 500;
     text-align: right;
     flex: 1;
+    font-size: 14px;
 }
 
 .status-badge {
@@ -127,8 +152,41 @@
     color: #721c24;
 }
 
+.service-list-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 15px;
+    overflow-x: hidden;
+}
+
 .service-list {
-    margin-top: 20px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 450px;
+    padding-right: 5px;
+    margin-right: -5px;
+    width: 100%;
+}
+
+.service-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.service-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.service-list::-webkit-scrollbar-thumb {
+    background: #BC9321;
+    border-radius: 10px;
+}
+
+.service-list::-webkit-scrollbar-thumb:hover {
+    background: #9a7a1a;
 }
 
 .service-item-link {
@@ -140,25 +198,30 @@
 .service-item {
     display: flex;
     justify-content: space-between;
-    padding: 15px;
+    align-items: center;
+    padding: 12px 15px;
     background: #f8f9fa;
     border-radius: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     position: relative;
+    border: 1px solid #e9ecef;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .service-item:hover {
     background: #e9ecef;
-    transform: translateX(5px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: #BC9321;
+    box-shadow: 0 2px 6px rgba(188, 147, 33, 0.15);
 }
 
 .service-item-link:hover .service-item {
     background: #e9ecef;
-    transform: translateX(5px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: #BC9321;
+    box-shadow: 0 2px 6px rgba(188, 147, 33, 0.15);
 }
 
 .service-item:last-child {
@@ -167,24 +230,59 @@
 
 .service-info {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .service-name {
     font-weight: 600;
     color: #333;
-    margin-bottom: 5px;
+    font-size: 14px;
+    margin-bottom: 6px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
-.service-details {
-    font-size: 13px;
+.service-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.service-type {
+    font-size: 11px;
+    color: #666;
+    background: #e9ecef;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.service-duration {
+    font-size: 11px;
     color: #666;
 }
 
 .service-price {
-    font-size: 18px;
+    display: flex;
+    align-items: baseline;
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+.price-amount {
+    font-size: 14px;
     font-weight: 600;
     color: #BC9321;
-    margin-left: 15px;
+}
+
+.price-currency {
+    font-size: 12px;
+    color: #BC9321;
+    margin-left: 2px;
 }
 
 /* Tooltip với ảnh và thuộc tính */
@@ -264,27 +362,41 @@
 }
 
 .total-section {
-    background: linear-gradient(135deg, #4A3600 0%, #5a4a00 100%);
+    background: linear-gradient(135deg, #4A3600 0%, #6B4E1F 100%);
     color: #fff;
-    padding: 20px;
+    padding: 18px 20px;
     border-radius: 8px;
-    margin-top: 20px;
+    margin-top: 15px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(74, 54, 0, 0.2);
 }
 
 .total-row {
     display: flex;
     justify-content: space-between;
-    font-size: 18px;
-    margin-bottom: 10px;
+    align-items: center;
+    font-size: 15px;
 }
 
 .total-label {
     font-weight: 500;
+    font-size: 15px;
 }
 
 .total-value {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+}
+
+.total-amount {
     font-weight: 700;
-    font-size: 24px;
+    font-size: 20px;
+}
+
+.total-currency {
+    font-size: 16px;
+    font-weight: 600;
 }
 
 .action-buttons {

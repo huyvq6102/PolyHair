@@ -71,12 +71,12 @@
                                                     </ul>
                                                 </li>
                                                 <li><a class="{{ str_contains($currentRoute, 'contact') ? 'active' : '' }}" href="{{ route('site.contact.index') }}">VỀ POLY HAIR</a></li>
-                                                    <li class="d-lg-none ">
+                                                    {{-- <li class="d-lg-none ">
                                                         <a href="{{ route('site.cart.index') }}">
                                                             <i class="fa fa-shopping-bag mr-2" aria-hidden="true"></i> Giỏ hàng
                                                             <span class="bag">{{ $cartCount ?? 0 }}</span>
                                                         </a>
-                                                    </li>
+                                                    </li> --}}
                                                 <li class="d-lg-none">
                                                         <a href="{{ route('login') }}">Đăng nhập</a>
                                                     </li>
@@ -87,12 +87,12 @@
                                         </nav>
                                     </div>
 
-                                    <div class="icon cart-icon ml-3">
+                                    {{-- <div class="icon cart-icon ml-3">
                                         <a href="{{ route('site.cart.index') }}">
                                             <i class="fa fa-shopping-bag text-black" aria-hidden="true"></i>
                                             <span class="bag">{{ $cartCount }}</span>
                                         </a>
-                                    </div>
+                                    </div> --}}
 
                                     @auth
                                         <div class="dropdown ml-3" style="position: relative;">
