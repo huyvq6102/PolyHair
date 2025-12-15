@@ -1,35 +1,37 @@
 <section>
-    <h3>Thông tin tài khoản</h3>
-    <p>Cập nhật thông tin tài khoản và địa chỉ email của bạn.</p>
+    <h3 style="color: #333; margin-bottom: 15px;">Thông tin tài khoản</h3>
+    <p style="color: #666; margin-bottom: 25px;">Cập nhật thông tin tài khoản và địa chỉ email của bạn.</p>
 
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data">
+    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data" id="profileForm" novalidate>
         @csrf
         @method('patch')
 
         <div class="form-group">
             <label for="name">Họ và tên <span class="text-danger">*</span></label>
             <input type="text" id="name" name="name" class="form-control @error('name') is-invalid @enderror" 
-                   value="{{ old('name', $user->name) }}" required autofocus>
+                   value="{{ old('name', $user->name) }}" autofocus>
             @error('name')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
+            <span class="custom-error-message" id="name-error"></span>
         </div>
 
         <div class="form-group">
             <label for="email">Email <span class="text-danger">*</span></label>
             <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror" 
-                   value="{{ old('email', $user->email) }}" required>
+                   value="{{ old('email', $user->email) }}">
             @error('email')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
+            <span class="custom-error-message" id="email-error"></span>
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                 <div class="mt-2">
-                    <p class="text-white" style="font-size: 14px;">
+                    <p style="font-size: 14px; color: #666;">
                         Địa chỉ email của bạn chưa được xác minh.
                         <button form="send-verification" class="btn btn-link p-0 text-warning" style="text-decoration: underline;">
                             Nhấn vào đây để gửi lại email xác minh.

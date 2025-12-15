@@ -31,7 +31,7 @@ class PasswordController extends Controller
         // Regenerate session token for security
         $request->session()->regenerate();
 
-        // Redirect back to profile with success message
-        return back()->with('status', 'Mật khẩu đã được cập nhật thành công!');
+        // Redirect to customer profile page with success message
+        return redirect()->route('site.customers.show', $user->id)->with('status', 'password-updated');
     }
 }

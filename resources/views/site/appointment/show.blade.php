@@ -35,10 +35,17 @@
                 @endif
                 
                 <div class="appointment-header">
-                    <h1 class="appointment-title">
-                        <i class="fa fa-calendar-check-o"></i>
-                        Chi tiết lịch đặt
-                    </h1>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h1 class="appointment-title mb-0">
+                            <i class="fa fa-calendar-check-o"></i>
+                            Chi tiết lịch đặt
+                        </h1>
+                        @auth
+                            <a href="{{ route('site.customers.show', auth()->id()) }}?tab=history" class="btn btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Quay lại
+                            </a>
+                        @endauth
+                    </div>
                     <div class="appointment-id">
                         @if($appointment->booking_code)
                             Mã đơn đặt: <strong style="color: #667eea; font-size: 1.1em;">{{ $appointment->booking_code }}</strong>

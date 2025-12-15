@@ -118,15 +118,33 @@
         <!-- Cột nội dung chính với các tab -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
+                @if(session('status') === 'profile-updated')
+                    <div class="alert alert-success alert-dismissible fade show m-3" role="alert" style="color: #000 !important;">
+                        Thông tin đã được cập nhật thành công!
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                @endif
+
+                @if(session('status') === 'password-updated' || (session('status') && session('status') !== 'profile-updated'))
+                    <div class="alert alert-success alert-dismissible fade show m-3" role="alert" style="color: #000 !important;">
+                        {{ session('status') === 'password-updated' ? 'Mật khẩu đã được cập nhật thành công!' : session('status') }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                @endif
+
                 <div class="card-header bg-white border-0">
                     <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
+                            <button class="nav-link {{ request()->get('tab') !== 'history' ? 'active' : '' }}" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
                                 <i class="fas fa-user-cog me-2"></i>Thông tin cá nhân
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                            <button class="nav-link {{ request()->get('tab') === 'history' ? 'active' : '' }}" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
                                 <i class="fas fa-history me-2"></i>Lịch sử đặt lịch
                             </button>
                         </li>
@@ -141,7 +159,7 @@
                     <div class="tab-content" id="myTabContent">
                         
                         <!-- Tab Thông tin cá nhân -->
-                        <div class="tab-pane fade show active" id="profile" role="tabpanel">
+                        <div class="tab-pane fade {{ request()->get('tab') !== 'history' ? 'show active' : '' }}" id="profile" role="tabpanel">
                             <h5 class="mb-4" id="thong-tin-ca-nhan">Thông tin chi tiết</h5>
                             <div class="row mb-3">
                                 <div class="col-sm-3"><p class="text-muted mb-0">Họ và tên</p></div>
@@ -170,7 +188,7 @@
                         </div>
 
                         <!-- Tab Lịch sử đặt lịch -->
-                        <div class="tab-pane fade" id="history" role="tabpanel">
+                        <div class="tab-pane fade {{ request()->get('tab') === 'history' ? 'show active' : '' }}" id="history" role="tabpanel">
                             <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
                             
                             <!-- Filter by Status -->
@@ -998,6 +1016,47 @@
                 }
             });
         });
+    });
+
+    // Tự động mở tab "Lịch sử đặt lịch" nếu có query param tab=history trong URL
+    // Script này chạy ngay lập tức để tránh hiển thị tab profile trước
+    (function() {
+        if (window.location.search.includes('tab=history')) {
+            // Ngăn scroll tự động
+            window.scrollTo(0, 0);
+            
+            // Kích hoạt tab "Lịch sử đặt lịch" ngay lập tức
+            const historyTab = document.getElementById('history-tab');
+            const profileTab = document.getElementById('profile-tab');
+            const historyPane = document.getElementById('history');
+            const profilePane = document.getElementById('profile');
+            
+            if (historyTab && profileTab && historyPane && profilePane) {
+                // Remove active class từ profile tab
+                profileTab.classList.remove('active');
+                profilePane.classList.remove('show', 'active');
+                
+                // Add active class cho history tab
+                historyTab.classList.add('active');
+                historyPane.classList.add('show', 'active');
+            }
+            
+            // Đảm bảo không scroll sau khi tab được kích hoạt
+            setTimeout(function() {
+                window.scrollTo(0, 0);
+            }, 0);
+        }
+    })();
+    
+    // Ngăn scroll tự động khi có hash trong URL
+    window.addEventListener('load', function() {
+        if (window.location.hash) {
+            window.scrollTo(0, 0);
+            // Xóa hash khỏi URL để tránh scroll lại
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.pathname + window.location.search);
+            }
+        }
     });
 </script>
 @endpush
