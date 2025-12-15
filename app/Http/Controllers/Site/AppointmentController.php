@@ -76,35 +76,21 @@ class AppointmentController extends Controller
             ->get();
 
 
-        // Load promotion nếu có promotion_id trong URL
-        $selectedPromotion = null;
-        $promotionForJs = null;
+        // Load tất cả active promotions để áp dụng trực tiếp vào dịch vụ
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where(function($query) {
+                $now = \Carbon\Carbon::now();
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                })->where(function($q) use ($now) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                });
+            })
+            ->get();
 
-        if ($request->has('promotion_id') && $request->input('promotion_id')) {
-            $promotionId = $request->input('promotion_id');
-            $selectedPromotion = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
-                ->whereNull('deleted_at')
-                ->where('status', 'active')
-                ->find($promotionId);
-
-            if ($selectedPromotion) {
-                // Prepare promotion data for JavaScript
-                $promotionForJs = [
-                    'id' => $selectedPromotion->id,
-                    'name' => $selectedPromotion->name,
-                    'discount_type' => $selectedPromotion->discount_type,
-                    'discount_percent' => $selectedPromotion->discount_percent ?? 0,
-                    'discount_amount' => $selectedPromotion->discount_amount ?? 0,
-                    'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null,
-                    'apply_scope' => $selectedPromotion->apply_scope,
-                    'service_ids' => $selectedPromotion->services->pluck('id')->toArray(),
-                    'variant_ids' => $selectedPromotion->serviceVariants->pluck('id')->toArray(),
-                    'combo_ids' => $selectedPromotion->combos->pluck('id')->toArray()
-                ];
-            }
-        }
-
-        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory', 'selectedPromotion', 'promotionForJs'));
+        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory', 'activePromotions'));
     }
 
     /**

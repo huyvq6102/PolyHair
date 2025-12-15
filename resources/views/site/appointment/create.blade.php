@@ -428,7 +428,7 @@
                                 </label>
 
                                 <!-- Hidden input để lưu employee_id -->
-                                <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id') }}">
+                                <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id', request('employee_id')) }}">
 
                                 <!-- Container hiển thị nhân viên giống time slot -->
                                 <div class="employee-container" id="employeeContainer" style="position: relative; display: none; margin-top: 10px;">
@@ -1343,6 +1343,16 @@
                     // Enable input date nếu đã có employee
                     $('#appointment_date').prop('disabled', false);
                 }
+                
+                // ✅ Tự động chọn employee từ query parameter nếu có
+                const urlParams = new URLSearchParams(window.location.search);
+                const employeeIdFromUrl = urlParams.get('employee_id');
+                if (employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0') {
+                    $('#employee_id').val(employeeIdFromUrl);
+                    restoredEmployeeId = employeeIdFromUrl;
+                    // Enable input date nếu đã có employee
+                    $('#appointment_date').prop('disabled', false);
+                }
 
                 // ✅ Ưu tiên restore từ Session (nếu có)
                 // Session được ưu tiên vì nó persist qua redirect, còn localStorage có thể bị mất
@@ -1673,12 +1683,21 @@
                 }
             });
 
+            // ✅ Kiểm tra xem có employee_id trong URL không
+            const urlParams = new URLSearchParams(window.location.search);
+            const employeeIdFromUrl = urlParams.get('employee_id');
+            const hasEmployeeIdInUrl = employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0';
+
             // Kiểm tra xem có dịch vụ nào được chọn không
-            if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
+            // Nếu không có service nhưng có employee_id trong URL, vẫn load employees
+            if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0 && !hasEmployeeIdInUrl) {
                 const $slider = $('.employee-slider');
                 $slider.empty();
                 $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
-                $('#employee_id').val('');
+                // Không reset employee_id nếu có trong URL
+                if (!hasEmployeeIdInUrl) {
+                    $('#employee_id').val('');
+                }
                 return;
             }
 
@@ -1726,11 +1745,46 @@
 
                             // Đảm bảo container hiển thị sau khi load employees
                             $('#employeeContainer').show();
+                            $('.employee-chevron').css('transform', 'rotate(180deg)');
 
                             // Debug: Log số lượng employees đã load
                             console.log('=== DEBUG: Employees loaded ===');
                             console.log('Total employees:', response.employees.length);
                             console.log('Employee buttons in DOM:', $('.employee-item-btn').length);
+
+                            // ✅ Tự động chọn employee từ URL hoặc currentEmployeeId
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const employeeIdFromUrl = urlParams.get('employee_id');
+                            const employeeIdToSelect = employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0' 
+                                ? employeeIdFromUrl 
+                                : currentEmployeeId;
+                            
+                            if (employeeIdToSelect) {
+                                // Đợi một chút để DOM được render xong
+                                setTimeout(function() {
+                                    const selectedEmployee = $('.employee-item-btn[data-employee-id="' + employeeIdToSelect + '"]');
+                                    if (selectedEmployee.length) {
+                                        // Set hidden input
+                                        $('#employee_id').val(employeeIdToSelect);
+                                        
+                                        // Highlight employee
+                                        $('.employee-item-btn').removeClass('selected');
+                                        $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+                                        selectedEmployee.addClass('selected');
+                                        selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
+                                        
+                                        // Enable date input
+                                        $('#appointment_date').prop('disabled', false);
+                                        
+                                        // Trigger change để load time slots nếu đã có date
+                                        $('#employee_id').trigger('change');
+                                        
+                                        console.log('✅ Auto-selected employee:', employeeIdToSelect);
+                                    } else {
+                                        console.log('⚠️ Employee not found in list:', employeeIdToSelect);
+                                    }
+                                }, 100);
+                            }
 
                             // Nếu employee đã chọn không còn trong danh sách, reset
                             if (currentEmployeeId && !response.employees.find(e => e.id == currentEmployeeId)) {
@@ -1778,14 +1832,17 @@
         });
 
 
-        // Xử lý old value nếu có
-        const oldEmployeeId = $('#employee_id').val();
-        if (oldEmployeeId) {
-            const selectedEmployee = $('.employee-item-btn[data-employee-id="' + oldEmployeeId + '"]');
-            if (selectedEmployee.length) {
-                selectedEmployee.addClass('selected');
-                selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
-            }
+        // ✅ Tự động load employees nếu có employee_id trong URL (ngay cả khi chưa có service)
+        // Điều này cho phép chọn employee trước khi chọn service
+        const urlParams = new URLSearchParams(window.location.search);
+        const employeeIdFromUrl = urlParams.get('employee_id');
+        if (employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0') {
+            // Set employee_id vào hidden input
+            $('#employee_id').val(employeeIdFromUrl);
+            // Enable date input
+            $('#appointment_date').prop('disabled', false);
+            // Load employees để hiển thị và tự động chọn
+            // Note: loadEmployeesForCarousel sẽ tự động chọn employee này sau khi load xong
         }
 
         // Xử lý chọn employee - đặt priority cao để chạy trước document click

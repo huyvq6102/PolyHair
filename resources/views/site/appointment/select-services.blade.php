@@ -173,6 +173,123 @@
     $formattedTotalPrice = number_format($totalPrice, 0, ',', '.');
     $formattedDiscountAmount = number_format($discountAmount, 0, ',', '.');
     $formattedFinalPrice = number_format($finalPrice, 0, ',', '.');
+
+    // Helper function để tính discount cho một item (service/variant/combo)
+    function calculateDiscount($item, $itemType, $activePromotions) {
+        $originalPrice = 0;
+        $discount = 0;
+        $finalPrice = 0;
+        $promotion = null;
+        $discountTag = '';
+
+        if ($itemType === 'service') {
+            $originalPrice = $item->base_price ?? 0;
+        } elseif ($itemType === 'variant') {
+            $originalPrice = $item->price ?? 0;
+        } elseif ($itemType === 'combo') {
+            $originalPrice = $item->price ?? 0;
+        }
+
+        if ($originalPrice <= 0) {
+            return [
+                'originalPrice' => 0,
+                'discount' => 0,
+                'finalPrice' => 0,
+                'promotion' => null,
+                'discountTag' => ''
+            ];
+        }
+
+        $now = \Carbon\Carbon::now();
+
+        // Tìm promotion áp dụng cho item này
+        foreach ($activePromotions as $promo) {
+            // Kiểm tra promotion có active không
+            if ($promo->status !== 'active') continue;
+            if ($promo->start_date && $promo->start_date > $now) continue;
+            if ($promo->end_date && $promo->end_date < $now) continue;
+
+            $applies = false;
+
+            // Kiểm tra promotion có áp dụng cho item này không
+            if ($itemType === 'service') {
+                // Check if promotion applies to all services
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                    || ($promo->combos && $promo->combos->count() > 0)
+                    || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+
+                $applyToAll = !$hasSpecificServices ||
+                    (($promo->services ? $promo->services->count() : 0) +
+                     ($promo->combos ? $promo->combos->count() : 0) +
+                     ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+
+                if ($promo->apply_scope === 'order' || $applyToAll) {
+                    $applies = true;
+                } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
+                    $applies = true;
+                }
+            } elseif ($itemType === 'variant') {
+                // Check if promotion applies to this variant or its parent service
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                    || ($promo->combos && $promo->combos->count() > 0)
+                    || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+
+                $applyToAll = !$hasSpecificServices ||
+                    (($promo->services ? $promo->services->count() : 0) +
+                     ($promo->combos ? $promo->combos->count() : 0) +
+                     ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+
+                if ($promo->apply_scope === 'order' || $applyToAll) {
+                    $applies = true;
+                } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
+                    $applies = true;
+                } elseif ($item->service_id && $promo->services && $promo->services->contains('id', $item->service_id)) {
+                    $applies = true;
+                }
+            } elseif ($itemType === 'combo') {
+                // Check if promotion applies to this combo
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                    || ($promo->combos && $promo->combos->count() > 0)
+                    || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+
+                $applyToAll = !$hasSpecificServices ||
+                    (($promo->services ? $promo->services->count() : 0) +
+                     ($promo->combos ? $promo->combos->count() : 0) +
+                     ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+
+                if ($promo->apply_scope === 'order' || $applyToAll) {
+                    $applies = true;
+                } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
+                    $applies = true;
+                }
+            }
+
+            if ($applies) {
+                $promotion = $promo;
+                // Tính discount
+                if ($promo->discount_type === 'percent') {
+                    $discount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                    if ($promo->max_discount_amount) {
+                        $discount = min($discount, $promo->max_discount_amount);
+                    }
+                    $discountTag = '-' . ($promo->discount_percent ?? 0) . '%';
+                } else {
+                    $discount = min($promo->discount_amount ?? 0, $originalPrice);
+                    $discountTag = '-' . number_format($discount / 1000, 0) . 'k';
+                }
+                $finalPrice = max(0, $originalPrice - $discount);
+                break; // Chỉ áp dụng promotion đầu tiên tìm thấy
+            }
+        }
+
+        return [
+            'originalPrice' => $originalPrice,
+            'discount' => $discount,
+            'finalPrice' => $finalPrice > 0 ? $finalPrice : $originalPrice,
+            'promotion' => $promotion,
+            'discountTag' => $discountTag
+        ];
+    }
 @endphp
 
 @section('content')
@@ -186,8 +303,7 @@
                     <!-- Header with Back Button -->
                     <div class="header-with-back mb-4" style="display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 20px;">
                         <!-- Back Arrow Button -->
-                        <a href="#"
-                           id="backToAppointmentBtn"
+                        <a href="{{ route('site.appointment.create') }}"
                            class="back-arrow-btn"
                            style="position: absolute; left: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #000; text-decoration: none; border-radius: 50%; transition: all 0.3s ease; background: transparent;">
                             <i class="fa fa-arrow-left" style="font-size: 18px;"></i>
@@ -274,8 +390,12 @@
                                             }
 
                                             $imagePath = $service->image ? 'legacy/images/products/' . $service->image : null;
-                                            $formattedPrice = number_format($service->base_price ?? 0, 0, ',', '.');
                                             $hasVariants = $service->serviceVariants && $service->serviceVariants->count() > 0;
+
+                                            // Tính discount cho service
+                                            $serviceDiscount = calculateDiscount($service, 'service', $activePromotions ?? collect());
+                                            $formattedOriginalPrice = number_format($serviceDiscount['originalPrice'], 0, ',', '.');
+                                            $formattedFinalPrice = number_format($serviceDiscount['finalPrice'], 0, ',', '.');
 
                                             // Tính duration
                                             $serviceDuration = $service->base_duration ?? 60;
@@ -320,8 +440,14 @@
                                                         <a href="{{ route('site.services.show', $service->id) }}" style="color: inherit; text-decoration: none;">{{ $service->name }}</a>
                                                     </h4>
                                                     @if(!$hasVariants)
-                                                        <div class="svc-price" style="font-size: 15px; color: #333; font-weight: 600; text-align: left; margin-bottom: 0;">
-                                                            <span style="color: #BC9321; font-weight: 700;">{{ $formattedPrice }} VND</span>
+                                                        <div class="svc-price" style="font-size: 15px; color: #333; font-weight: 600; text-align: left; margin-bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                                            @if($serviceDiscount['discount'] > 0)
+                                                                <span style="color: #999; font-size: 13px; text-decoration: line-through;">{{ $formattedOriginalPrice }} VND</span>
+                                                                <span style="color: #BC9321; font-weight: 700; font-size: 16px;">{{ $formattedFinalPrice }} VND</span>
+                                                                <span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 600;">{{ $serviceDiscount['discountTag'] }}</span>
+                                                            @else
+                                                                <span style="color: #BC9321; font-weight: 700;">{{ $formattedOriginalPrice }} VND</span>
+                                                            @endif
                                                         </div>
                                                     @else
                                                         <!-- Button to show variants -->
@@ -339,14 +465,17 @@
                                                              style="display: none; position: fixed; z-index: 999999; flex-direction: column; gap: 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); padding: 8px; max-height: 500px; overflow-y: auto; overflow-x: hidden; width: max-content; max-width: calc(100vw - 40px);">
                                                             @foreach($service->serviceVariants as $variant)
                                                                 @php
-                                                                    $variantPrice = number_format($variant->price ?? 0, 0, ',', '.');
+                                                                    // Tính discount cho variant
+                                                                    $variantDiscount = calculateDiscount($variant, 'variant', $activePromotions ?? collect());
+                                                                    $formattedVariantOriginalPrice = number_format($variantDiscount['originalPrice'], 0, ',', '.');
+                                                                    $formattedVariantFinalPrice = number_format($variantDiscount['finalPrice'], 0, ',', '.');
                                                                     // Load variant attributes if not already loaded
                                                                     $attributes = $variant->variantAttributes ?? collect();
                                                                 @endphp
                                                                     <div class="variant-item-box variant-item-link"
                                                                          data-variant-id="{{ $variant->id }}"
                                                                          data-service-id="{{ $service->id }}"
-                                                                         data-variant-price="{{ $variant->price ?? 0 }}"
+                                                                         data-variant-price="{{ $variantDiscount['finalPrice'] }}"
                                                                          data-variant-name="{{ $service->name }} - {{ $variant->name }}"
                                                                          style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 16px; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; gap: 6px; width: max-content; min-width: max-content; box-sizing: border-box; margin: 0; flex-shrink: 0; word-wrap: break-word; overflow-wrap: break-word;">
                                                                     <!-- Dòng 1: Tên biến thể + Tag thuộc tính -->
@@ -380,9 +509,17 @@
                                                                         <span style="color: #ccc; font-size: 12px;">•</span>
 
                                                                         <!-- Price -->
-                                                                        <span style="font-size: 14px; font-weight: 700; color: #BC9321; flex-shrink: 0;">
-                                                                            {{ $variantPrice }} VNĐ
-                                                                        </span>
+                                                                        <div style="display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;">
+                                                                            @if($variantDiscount['discount'] > 0)
+                                                                                <span style="color: #999; font-size: 11px; text-decoration: line-through;">{{ $formattedVariantOriginalPrice }} VNĐ</span>
+                                                                                <div style="display: flex; align-items: center; gap: 4px;">
+                                                                                    <span style="font-size: 14px; font-weight: 700; color: #BC9321;">{{ $formattedVariantFinalPrice }} VNĐ</span>
+                                                                                    <span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600;">{{ $variantDiscount['discountTag'] }}</span>
+                                                                                </div>
+                                                                            @else
+                                                                                <span style="font-size: 14px; font-weight: 700; color: #BC9321;">{{ $formattedVariantOriginalPrice }} VNĐ</span>
+                                                                            @endif
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             @endforeach
@@ -404,7 +541,7 @@
                                                                 class="btn btn-primary w-100 select-service-btn"
                                                                 data-has-variants="false"
                                                                 data-service-id="{{ $service->id }}"
-                                                                data-service-price="{{ $service->base_price ?? 0 }}"
+                                                                data-service-price="{{ $serviceDiscount['finalPrice'] }}"
                                                                 data-service-name="{{ $service->name }}"
                                                                 style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%; display: block;">
                                                             <i class="fa fa-check"></i> Chọn
@@ -425,7 +562,12 @@
                                                 }
 
                                                 $imagePath = $combo->image ? 'legacy/images/products/' . $combo->image : null;
-                                                $formattedPrice = number_format($combo->price ?? 0, 0, ',', '.');
+                                                
+                                                // Tính discount cho combo
+                                                $comboDiscount = calculateDiscount($combo, 'combo', $activePromotions ?? collect());
+                                                $formattedComboOriginalPrice = number_format($comboDiscount['originalPrice'], 0, ',', '.');
+                                                $formattedComboFinalPrice = number_format($comboDiscount['finalPrice'], 0, ',', '.');
+                                                
                                                 // Tính duration từ combo items
                                                 $comboDuration = 60;
                                                 if ($combo->comboItems && $combo->comboItems->count() > 0) {
@@ -481,8 +623,14 @@
                                                                 </div>
                                                             @endif
                                                         @endif
-                                                        <div class="svc-price" style="font-size: 15px; color: #333; font-weight: 600; margin-bottom: 8px; text-align: left;">
-                                                            <span style="color: #BC9321; font-weight: 700;">{{ $formattedPrice }} VND</span>
+                                                        <div class="svc-price" style="font-size: 15px; color: #333; font-weight: 600; margin-bottom: 8px; text-align: left; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                                            @if($comboDiscount['discount'] > 0)
+                                                                <span style="color: #999; font-size: 13px; text-decoration: line-through;">{{ $formattedComboOriginalPrice }} VND</span>
+                                                                <span style="color: #BC9321; font-weight: 700; font-size: 16px;">{{ $formattedComboFinalPrice }} VND</span>
+                                                                <span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 600;">{{ $comboDiscount['discountTag'] }}</span>
+                                                            @else
+                                                                <span style="color: #BC9321; font-weight: 700;">{{ $formattedComboOriginalPrice }} VND</span>
+                                                            @endif
                                                         </div>
                                                     </div>
                                                     <div class="svc-actions" style="margin-top: auto; position: relative; width: 100%;">
@@ -490,7 +638,7 @@
                                                                 class="btn btn-primary w-100 select-service-btn"
                                                                 data-has-variants="false"
                                                                 data-combo-id="{{ $combo->id }}"
-                                                                data-combo-price="{{ $combo->price ?? 0 }}"
+                                                                data-combo-price="{{ $comboDiscount['finalPrice'] }}"
                                                                 data-combo-name="{{ $combo->name }}"
                                                                 style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%; display: block;">
                                                             <i class="fa fa-check"></i> Chọn
@@ -524,7 +672,12 @@
                                 @foreach($combosWithoutCategory as $combo)
                                     @php
                                         $imagePath = $combo->image ? 'legacy/images/products/' . $combo->image : null;
-                                        $formattedPrice = number_format($combo->price ?? 0, 0, ',', '.');
+                                        
+                                        // Tính discount cho combo
+                                        $comboDiscount = calculateDiscount($combo, 'combo', $activePromotions ?? collect());
+                                        $formattedComboOriginalPrice = number_format($comboDiscount['originalPrice'], 0, ',', '.');
+                                        $formattedComboFinalPrice = number_format($comboDiscount['finalPrice'], 0, ',', '.');
+                                        
                                         // Tính duration từ combo items
                                         $comboDuration = 60;
                                         if ($combo->comboItems && $combo->comboItems->count() > 0) {
@@ -580,8 +733,14 @@
                                                         </div>
                                                     @endif
                                                 @endif
-                                                <div class="svc-price" style="font-size: 13px; color: #333; font-weight: 600; margin-bottom: 4px; text-align: left;">
-                                                    <span style="color: #BC9321; font-weight: 700;">{{ $formattedPrice }} VND</span>
+                                                <div class="svc-price" style="font-size: 13px; color: #333; font-weight: 600; margin-bottom: 4px; text-align: left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                                    @if($comboDiscount['discount'] > 0)
+                                                        <span style="color: #999; font-size: 12px; text-decoration: line-through;">{{ $formattedComboOriginalPrice }} VND</span>
+                                                        <span style="color: #BC9321; font-weight: 700; font-size: 15px;">{{ $formattedComboFinalPrice }} VND</span>
+                                                        <span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 600;">{{ $comboDiscount['discountTag'] }}</span>
+                                                    @else
+                                                        <span style="color: #BC9321; font-weight: 700;">{{ $formattedComboOriginalPrice }} VND</span>
+                                                    @endif
                                                 </div>
                                             </div>
                                             <div class="svc-actions" style="margin-top: auto; position: relative;">
@@ -589,7 +748,7 @@
                                                         class="btn btn-primary w-100 select-service-btn"
                                                         data-has-variants="false"
                                                         data-combo-id="{{ $combo->id }}"
-                                                        data-combo-price="{{ $combo->price ?? 0 }}"
+                                                        data-combo-price="{{ $comboDiscount['finalPrice'] }}"
                                                         style="background: #000; border: 1px solid #000; color: #fff; padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%;">
                                                     <i class="fa fa-check"></i> Chọn
                                                 </button>
@@ -654,40 +813,6 @@
                         </div>
                     </div>
 
-                    <!-- Offers Section (Always visible when services are selected) -->
-                    <div class="offers-section" id="offersSection" style="position: absolute; bottom: 100%; left: 0; right: 0; background: #fff; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; padding: 12px 20px; border-radius: 15px 15px 0 0; transition: transform 0.3s ease-in-out; z-index: 1; display: none;">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 40px; height: 40px; background: #ffc107; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                    <span style="color: #fff; font-size: 20px; font-weight: 700;">%</span>
-                                </div>
-                                <div>
-                                    <div style="font-size: 14px; font-weight: 400; color: #0066cc; margin-bottom: 2px;">
-                                        @if(isset($selectedPromotion) && $selectedPromotion)
-                                            {{ $selectedPromotion->name ?? 'Ưu đãi' }}
-                                        @else
-                                            Ưu đãi của anh
-                                        @endif
-                                    </div>
-                                    @if(isset($selectedPromotion) && $selectedPromotion)
-                                        <div style="font-size: 12px; color: #666;">
-                                            @if($selectedPromotion->discount_type === 'percent')
-                                                Giảm {{ $selectedPromotion->discount_percent ?? 0 }}%
-                                            @else
-                                                Giảm {{ number_format($selectedPromotion->discount_amount ?? 0, 0, ',', '.') }} VNĐ
-                                            @endif
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                            <a href="#"
-                               id="selectOffersLink"
-                               style="display: flex; align-items: center; color: #0066cc; text-decoration: none; font-size: 14px; font-weight: 400; gap: 4px;">
-                                Chọn ưu đãi
-                                <i class="fa fa-chevron-right" style="font-size: 12px;"></i>
-                            </a>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1598,58 +1723,6 @@ document.addEventListener('DOMContentLoaded', function() {
     @endphp
     const promotionData = @json($promotionForJs);
 
-    // Update offers section visibility and link
-    function updateOffersSection() {
-        const offersSection = document.getElementById('offersSection');
-        const selectOffersLink = document.getElementById('selectOffersLink');
-        const totalCount = selectedServices.serviceIds.length + selectedServices.variantIds.length + selectedServices.comboIds.length;
-
-        // Check if there are any services that could be eligible for promotions
-        // This is a simple check - we'll let the server filter promotions in select-offers page
-        // For now, show offers section if there are services selected
-        // The server will filter out promotions that don't apply
-
-        if (offersSection) {
-            if (totalCount > 0) {
-                // Show offers section when services are selected
-                offersSection.style.display = 'block';
-                offersSection.classList.add('visible');
-                offersSection.classList.remove('hidden');
-            } else {
-                // Hide offers section when no services selected
-                offersSection.style.display = 'none';
-            }
-        }
-
-        // Update "Chọn ưu đãi" link with current selected services
-        if (selectOffersLink && totalCount > 0) {
-            const params = new URLSearchParams();
-
-            // Add service IDs
-            selectedServices.serviceIds.forEach(id => {
-                params.append('service_id[]', id);
-            });
-
-            // Add variant IDs
-            selectedServices.variantIds.forEach(id => {
-                params.append('service_variants[]', id);
-            });
-
-            // Add combo IDs
-            selectedServices.comboIds.forEach(id => {
-                params.append('combo_id[]', id);
-            });
-
-            // Add promotion_id if exists in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('promotion_id')) {
-                params.append('promotion_id', urlParams.get('promotion_id'));
-            }
-
-            const offersUrl = '{{ route("site.appointment.select-offers") }}' + '?' + params.toString();
-            selectOffersLink.href = offersUrl;
-        }
-    }
 
     // Update summary bar
     function updateSummaryBar() {
@@ -1920,7 +1993,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelectedServicesList();
         updateVariantBoxesDisplay();
         updateServiceButtonsDisplay(); // Update visual state của các nút
-        updateOffersSection();
     }
 
     // Remove service from selection
@@ -1945,7 +2017,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelectedServicesList();
         updateServiceButtonsDisplay(); // Update visual state của các nút
         updateVariantBoxesDisplay();
-        updateOffersSection();
     }
 
     // Update selected services list display
@@ -2026,8 +2097,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Build URL with selected services (used by both Done button and Back button)
-    function buildAppointmentUrl() {
+    // Handle done button click
+    function handleDoneClick() {
         const params = new URLSearchParams();
 
         // Add service IDs
@@ -2057,19 +2128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const queryString = params.toString();
-        return '{{ route("site.appointment.create") }}' + (queryString ? '?' + queryString : '');
-    }
-
-    // Handle done button click
-    function handleDoneClick() {
-        const createUrl = buildAppointmentUrl();
-        window.location.href = createUrl;
-    }
-
-    // Handle back button click
-    function handleBackClick(e) {
-        e.preventDefault();
-        const createUrl = buildAppointmentUrl();
+        const createUrl = '{{ route("site.appointment.create") }}' + (queryString ? '?' + queryString : '');
         window.location.href = createUrl;
     }
 
@@ -2214,7 +2273,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelectedServicesList();
         updateVariantBoxesDisplay();
         updateServiceButtonsDisplay(); // Update visual state của các nút sau khi load
-        updateOffersSection();
     }
 
     // Update ngay lập tức
@@ -2231,15 +2289,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(updateAfterLoad, 500);
     setTimeout(updateAfterLoad, 1500);
 
-    // Handle "Chọn ưu đãi" link click - save before navigating
-    const selectOffersLink = document.getElementById('selectOffersLink');
-    if (selectOffersLink) {
-        selectOffersLink.addEventListener('click', function(e) {
-            // Save selected services before navigating
-            saveSelectedServices();
-            // Let the link navigate normally (URL params are already set in href)
-        });
-    }
 
     // Handle service button clicks
     document.querySelectorAll('.select-service-btn').forEach(button => {
@@ -2403,14 +2452,6 @@ document.addEventListener('DOMContentLoaded', function() {
         doneButton.addEventListener('click', handleDoneClick);
     }
 
-    // Handle back button - preserve selected services when going back
-    const backToAppointmentBtn = document.getElementById('backToAppointmentBtn');
-    if (backToAppointmentBtn) {
-        backToAppointmentBtn.addEventListener('click', handleBackClick);
-    }
-
-    // Offers section visibility is now controlled by updateOffersSection() based on selected services
-    // No longer using scroll-based show/hide
 
     // Adjust summary container position to sit above footer
     function adjustSummaryPosition() {

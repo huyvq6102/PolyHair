@@ -28,15 +28,15 @@
 
         <form method="GET" action="{{ route('site.services.index') }}" id="filterForm">
           <!-- Search by Name -->
-          <div class="filter-group mb-4">
-            <h5 class="filter-title mb-2">Tìm kiếm</h5>
-            <input type="text" name="keyword" class="form-control filter-select" placeholder="Nhập tên dịch vụ..." value="{{ $keyword ?? '' }}" id="keywordInput">
+          <div class="filter-group mb-3">
+            <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Tìm kiếm</h5>
+            <input type="text" name="keyword" class="form-control filter-select" placeholder="Nhập tên dịch vụ..." value="{{ $keyword ?? '' }}" id="keywordInput" style="padding: 6px 10px; font-size: 13px;">
           </div>
 
           <!-- Filter by Type -->
-          <div class="filter-group mb-4">
-            <h5 class="filter-title mb-2">Loại dịch vụ</h5>
-            <select name="filter_type" class="form-control filter-select" id="filterType">
+          <div class="filter-group mb-3">
+            <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Loại dịch vụ</h5>
+            <select name="filter_type" class="form-control filter-select" id="filterType" style="padding: 6px 10px; font-size: 13px;">
               <option value="all" {{ ($filterType ?? 'all') == 'all' ? 'selected' : '' }}>Tất cả</option>
               <option value="service_single" {{ ($filterType ?? '') == 'service_single' ? 'selected' : '' }}>Dịch vụ lẻ</option>
               <option value="service_variant" {{ ($filterType ?? '') == 'service_variant' ? 'selected' : '' }}>Gói dịch vụ</option>
@@ -46,9 +46,9 @@
 
           <!-- Filter by Category -->
           @if(isset($categories) && $categories->count() > 0)
-          <div class="filter-group mb-4">
-            <h5 class="filter-title mb-2">Danh mục</h5>
-            <select name="category" class="form-control filter-select" id="categorySelect">
+          <div class="filter-group mb-3">
+            <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Danh mục</h5>
+            <select name="category" class="form-control filter-select" id="categorySelect" style="padding: 6px 10px; font-size: 13px;">
               <option value="">Tất cả danh mục</option>
               @foreach($categories as $category)
                 <option value="{{ $category->id }}" {{ (isset($categoryId) && $categoryId == $category->id) ? 'selected' : '' }}>
@@ -60,9 +60,9 @@
           @endif
 
           <!-- Filter by Price -->
-          <div class="filter-group mb-4">
-            <h5 class="filter-title mb-2">Khoảng giá</h5>
-            <select name="price_range" class="form-control filter-select mb-2" id="priceRange">
+          <div class="filter-group mb-3">
+            <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Khoảng giá</h5>
+            <select name="price_range" class="form-control filter-select mb-2" id="priceRange" style="padding: 6px 10px; font-size: 13px;">
               <option value="">Tất cả mức giá</option>
               <option value="0-50000" {{ (isset($minPrice) && $minPrice == 0 && isset($maxPrice) && $maxPrice == 50000) ? 'selected' : '' }}>Dưới 50.000 VNĐ</option>
               <option value="50000-100000" {{ (isset($minPrice) && $minPrice == 50000 && isset($maxPrice) && $maxPrice == 100000) ? 'selected' : '' }}>50.000 - 100.000 VNĐ</option>
@@ -74,8 +74,8 @@
               <option value="custom">Tùy chỉnh</option>
             </select>
             <div class="price-inputs" id="customPriceInputs" style="display: none;">
-              <input type="text" name="min_price" class="form-control filter-select mb-2" placeholder="Giá tối thiểu (vnđ)" value="{{ $minPrice ?? '' }}" id="minPrice" data-price-input>
-              <input type="text" name="max_price" class="form-control filter-select" placeholder="Giá tối đa (vnđ)" value="{{ $maxPrice ?? '' }}" id="maxPrice" data-price-input>
+              <input type="text" name="min_price" class="form-control filter-select mb-2" placeholder="Giá tối thiểu (vnđ)" value="{{ $minPrice ?? '' }}" id="minPrice" data-price-input style="padding: 6px 10px; font-size: 13px;">
+              <input type="text" name="max_price" class="form-control filter-select" placeholder="Giá tối đa (vnđ)" value="{{ $maxPrice ?? '' }}" id="maxPrice" data-price-input style="padding: 6px 10px; font-size: 13px;">
               <div id="priceError" class="text-danger mt-2" style="display: none; font-size: 12px;">
                 <i class="fa fa-exclamation-circle"></i> Vui lòng điền khoảng giá phù hợp (Giá tối thiểu phải nhỏ hơn hoặc bằng giá tối đa)
               </div>
@@ -83,9 +83,9 @@
           </div>
 
           <!-- Sort -->
-          <div class="filter-group mb-4">
-            <h5 class="filter-title mb-2">Sắp xếp</h5>
-            <select name="sort_by" class="form-control filter-select" id="sortBy">
+          <div class="filter-group mb-3">
+            <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Sắp xếp</h5>
+            <select name="sort_by" class="form-control filter-select" id="sortBy" style="padding: 6px 10px; font-size: 13px;">
               <option value="id_desc" {{ ($sortBy ?? 'id_desc') == 'id_desc' ? 'selected' : '' }}>Mới nhất</option>
               <option value="name_asc" {{ ($sortBy ?? '') == 'name_asc' ? 'selected' : '' }}>Tên A-Z</option>
               <option value="name_desc" {{ ($sortBy ?? '') == 'name_desc' ? 'selected' : '' }}>Tên Z-A</option>
@@ -96,7 +96,7 @@
 
           <!-- Filter Buttons -->
           <div class="filter-actions">
-            <button type="submit" class="btn btn-primary btn-block mb-2">Áp dụng</button>
+            <button type="submit" class="btn btn-primary btn-block mb-2" style="padding: 8px 12px; font-size: 13px;">Áp dụng</button>
             <a href="{{ route('site.services.index') }}" class="btn btn-secondary btn-block">Xóa bộ lọc</a>
           </div>
 
@@ -110,7 +110,7 @@
 
     <div class="service_right">
 
-      <div class="service-grid" id="serviceGrid">
+      <div class="service-grid" id="serviceGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
         @include('site.partials.service-list-items', ['items' => $items])
       </div>
 

@@ -41,6 +41,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::get('users', [UserController::class, 'index'])->name('users.index');
 
     // Employees Management (View Only for Staff)
+    // IMPORTANT: Specific routes must come before parameterized routes
     Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
     Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
 
