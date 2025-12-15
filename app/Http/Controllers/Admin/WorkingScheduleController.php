@@ -101,6 +101,27 @@ class WorkingScheduleController extends Controller
         $receptionists = Employee::with('user')->where('position', 'Receptionist')->orderBy('id', 'desc')->get();
 
         $shifts = WorkingShift::orderBy('start_time')->get();
+        
+        // ✅ MỚI: Tự động tạo ca "Ca cả ngày" (7h-22h) nếu chưa có
+        $fullDayShift = $shifts->firstWhere('name', 'Ca cả ngày');
+        if (!$fullDayShift) {
+            // Kiểm tra xem có ca nào từ 7h-22h không
+            $fullDayShift = $shifts->first(function($shift) {
+                return $shift->formatted_start_time === '07:00' && $shift->formatted_end_time === '22:00';
+            });
+            
+            // Nếu chưa có, tạo mới
+            if (!$fullDayShift) {
+                $fullDayShift = WorkingShift::create([
+                    'name' => 'Ca cả ngày',
+                    'start_time' => '07:00:00',
+                    'end_time' => '22:00:00',
+                    'duration' => 900, // 15 giờ
+                ]);
+                // Reload shifts để có ca mới
+                $shifts = WorkingShift::orderBy('start_time')->get();
+            }
+        }
 
         return view('admin.working-schedules.create', [
             'stylists' => $stylists,

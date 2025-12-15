@@ -513,25 +513,69 @@ class PromotionService
     }
 
     /**
-     * Tự động cập nhật trạng thái khuyến mãi dựa trên ngày bắt đầu và kết thúc.
+
+     * Tự động cập nhật trạng thái cho tất cả khuyến mãi dựa trên ngày bắt đầu và kết thúc.
+     * Chỉ cập nhật những khuyến mãi chưa bị xóa và không ở trạng thái 'inactive'.
      */
-    public function autoUpdateStatus(array &$data)
+    public function autoUpdateAllPromotionStatuses()
     {
-        // Not modifying 'inactive' status if explicitly set
-        if (isset($data['status']) && $data['status'] === 'inactive') {
-            return;
-        }
-
         $now = Carbon::now();
-        $startDate = isset($data['start_date']) ? Carbon::parse($data['start_date'])->startOfDay() : null;
-        $endDate = isset($data['end_date']) ? Carbon::parse($data['end_date'])->endOfDay() : null;
+        $updatedCount = 0;
 
-        if ($startDate && $now->lt($startDate)) {
-            $data['status'] = 'scheduled';
-        } elseif ($endDate && $now->gt($endDate)) {
-            $data['status'] = 'expired';
-        } else {
-            $data['status'] = 'active';
+        // 1. Chuyển từ 'scheduled' sang 'active' (ngày bắt đầu đã đến)
+        $promotionsToActivate = Promotion::whereNull('deleted_at')
+            ->where('status', 'scheduled')
+            ->whereNotNull('start_date')
+            ->whereDate('start_date', '<=', $now)
+            ->get();
+
+        foreach ($promotionsToActivate as $promotion) {
+            // Kiểm tra xem có hết hạn chưa
+            if ($promotion->end_date && Carbon::parse($promotion->end_date)->endOfDay()->lt($now)) {
+                $promotion->update(['status' => 'expired']);
+            } else {
+                $promotion->update(['status' => 'active']);
+            }
+            $updatedCount++;
         }
+
+        // 2. Chuyển từ 'active' sang 'expired' (ngày kết thúc đã qua)
+        $promotionsToExpire = Promotion::whereNull('deleted_at')
+            ->where('status', 'active')
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '<', $now)
+            ->get();
+
+        foreach ($promotionsToExpire as $promotion) {
+            $promotion->update(['status' => 'expired']);
+            $updatedCount++;
+        }
+
+        // 3. Chuyển từ 'scheduled' sang 'expired' nếu end_date đã qua (trường hợp đặc biệt)
+        $scheduledToExpire = Promotion::whereNull('deleted_at')
+            ->where('status', 'scheduled')
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '<', $now)
+            ->get();
+
+        foreach ($scheduledToExpire as $promotion) {
+            $promotion->update(['status' => 'expired']);
+            $updatedCount++;
+        }
+
+        // 4. Chuyển từ 'active' sang 'scheduled' nếu start_date chưa đến (trường hợp admin sửa lại ngày)
+        $promotionsToSchedule = Promotion::whereNull('deleted_at')
+            ->where('status', 'active')
+            ->whereNotNull('start_date')
+            ->whereDate('start_date', '>', $now)
+            ->get();
+
+        foreach ($promotionsToSchedule as $promotion) {
+            $promotion->update(['status' => 'scheduled']);
+            $updatedCount++;
+        }
+
+        return $updatedCount;
+
     }
 }

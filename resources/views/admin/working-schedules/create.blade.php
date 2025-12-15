@@ -89,13 +89,26 @@
 
             <div class="form-group">
                 <label for="shift_ids">Ca làm việc <span class="text-danger">*</span></label>
-                <select name="shift_ids[]" id="shift_ids" class="form-control select2-multiple @error('shift_ids') is-invalid @enderror @error('shift_ids.*') is-invalid @enderror" multiple required>
-                    @foreach($shifts as $shift)
-                        <option value="{{ $shift->id }}" {{ (old('shift_ids') && in_array($shift->id, old('shift_ids'))) ? 'selected' : '' }}>
-                            {{ $shift->name }} ({{ $shift->display_time }})
-                        </option>
-                    @endforeach
-                </select>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <select name="shift_ids[]" id="shift_ids" class="form-control select2-multiple @error('shift_ids') is-invalid @enderror @error('shift_ids.*') is-invalid @enderror" multiple required>
+                        @foreach($shifts as $shift)
+                            <option value="{{ $shift->id }}" {{ (old('shift_ids') && in_array($shift->id, old('shift_ids'))) ? 'selected' : '' }}>
+                                {{ $shift->name }} ({{ $shift->display_time }})
+                            </option>
+                        @endforeach
+                    </select>
+                    @php
+                        // Tìm ca "Ca cả ngày" (7h-22h)
+                        $fullDayShift = $shifts->firstWhere('name', 'Ca cả ngày') ?? $shifts->first(function($shift) {
+                            return $shift->formatted_start_time === '07:00' && $shift->formatted_end_time === '22:00';
+                        });
+                    @endphp
+                    @if($fullDayShift)
+                        <button type="button" class="btn btn-info btn-sm" id="btn_full_day_shift" title="Chọn ca cả ngày (7h-22h)">
+                            <i class="fas fa-calendar-day"></i> Ca cả ngày
+                        </button>
+                    @endif
+                </div>
                 @error('shift_ids')
                     <div class="invalid-feedback d-block">{{ $message }}</div>
                 @elseif($errors->has('shift_ids.*'))
@@ -231,6 +244,36 @@ $(document).ready(function() {
         closeOnSelect: false
     });
 
+    // ✅ MỚI: Nút chọn ca cả ngày (7h-22h)
+    @if($fullDayShift)
+        const fullDayShiftId = '{{ $fullDayShift->id }}';
+        
+        // Kiểm tra trạng thái ban đầu
+        const initialValues = $('#shift_ids').val() || [];
+        if (initialValues.includes(fullDayShiftId)) {
+            $('#btn_full_day_shift').html('<i class="fas fa-check"></i> Đã chọn').removeClass('btn-info').addClass('btn-success');
+        }
+        
+        $('#btn_full_day_shift').on('click', function() {
+            const currentValues = $('#shift_ids').val() || [];
+            
+            // Nếu ca cả ngày chưa được chọn, thêm vào
+            if (!currentValues.includes(fullDayShiftId)) {
+                currentValues.push(fullDayShiftId);
+                $('#shift_ids').val(currentValues).trigger('change');
+                
+                // Hiển thị thông báo
+                $(this).html('<i class="fas fa-check"></i> Đã chọn').removeClass('btn-info').addClass('btn-success');
+            } else {
+                // Nếu đã chọn, bỏ chọn
+                const newValues = currentValues.filter(id => id !== fullDayShiftId);
+                $('#shift_ids').val(newValues).trigger('change');
+                
+                $(this).html('<i class="fas fa-calendar-day"></i> Ca cả ngày').removeClass('btn-success').addClass('btn-info');
+            }
+        });
+    @endif
+
     // Cập nhật validation khi thay đổi ca làm việc
     $('#shift_ids').on('change', function() {
         const shiftCount = $('#shift_ids').val() ? $('#shift_ids').val().length : 0;
@@ -240,6 +283,18 @@ $(document).ready(function() {
         } else {
             $('#shift_ids')[0].setCustomValidity('Vui lòng chọn ít nhất một ca làm việc');
         }
+        
+        // ✅ MỚI: Cập nhật trạng thái nút "Ca cả ngày"
+        @if($fullDayShift)
+            const currentValues = $('#shift_ids').val() || [];
+            const isSelected = currentValues.includes(fullDayShiftId);
+            
+            if (isSelected) {
+                $('#btn_full_day_shift').html('<i class="fas fa-check"></i> Đã chọn').removeClass('btn-info').addClass('btn-success');
+            } else {
+                $('#btn_full_day_shift').html('<i class="fas fa-calendar-day"></i> Ca cả ngày').removeClass('btn-success').addClass('btn-info');
+            }
+        @endif
     });
 
     // Cập nhật validation khi thay đổi nhân viên
