@@ -102,6 +102,7 @@
         <select name="apply_scope" id="apply_scope" class="form-control @error('apply_scope') is-invalid @enderror" required>
             <option value="service" {{ $currentScope === 'service' ? 'selected' : '' }}>Theo dịch vụ</option>
             <option value="order" {{ $currentScope === 'order' ? 'selected' : '' }}>Theo hóa đơn</option>
+            <option value="customer_tier" {{ $currentScope === 'customer_tier' ? 'selected' : '' }}>Theo hạng khách hàng</option>
         </select>
         @error('apply_scope')
             <div class="invalid-feedback">{{ $message }}</div>
@@ -130,6 +131,47 @@
     <input type="number" name="per_user_limit" id="per_user_limit" class="form-control @error('per_user_limit') is-invalid @enderror"
            value="{{ old('per_user_limit', $promotion->per_user_limit ?? null) }}" min="1">
     @error('per_user_limit')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
+
+<div class="form-group js-customer-tier-field">
+    <label for="min_customer_tier">Áp dụng cho hạng khách hàng từ</label>
+    @php
+        $tiers = ['Khách thường', 'Silver', 'Gold', 'VIP'];
+        $currentTier = old('min_customer_tier', $promotion->min_customer_tier ?? null);
+    @endphp
+    <select
+        name="min_customer_tier"
+        id="min_customer_tier"
+        class="form-control @error('min_customer_tier') is-invalid @enderror"
+    >
+        <option value="">-- Chọn hạng tối thiểu --</option>
+        @foreach($tiers as $tier)
+            <option value="{{ $tier }}" {{ $currentTier === $tier ? 'selected' : '' }}>
+                {{ $tier }}
+            </option>
+        @endforeach
+    </select>
+    @error('min_customer_tier')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
+
+<div class="form-group">
+    <label for="usage_limit">Số lượt dùng khuyến mãi</label>
+    <input
+        type="number"
+        name="usage_limit"
+        id="usage_limit"
+        class="form-control @error('usage_limit') is-invalid @enderror"
+        value="{{ old('usage_limit', $promotion->usage_limit ?? null) }}"
+        min="1"
+        step="1"
+        inputmode="numeric"
+        pattern="\d*"
+    >
+    @error('usage_limit')
         <div class="invalid-feedback">{{ $message }}</div>
     @enderror
 </div>
@@ -287,6 +329,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const minOrderGroup = document.querySelector('.js-min-order-field');
     const minOrderInput = document.getElementById('min_order_amount');
     const serviceSelectionGroup = document.querySelector('.js-service-selection');
+    const customerTierGroup = document.querySelector('.js-customer-tier-field');
+    const customerTierSelect = document.getElementById('min_customer_tier');
 
     function toggleDiscountFields() {
         if (!typeSelect) return;
@@ -321,9 +365,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function toggleScopeFields() {
-        if (!scopeSelect || !minOrderGroup) return;
-        const isOrder = scopeSelect.value === 'order';
-        minOrderGroup.style.display = isOrder ? 'block' : 'none';
+        if (!scopeSelect) return;
+        const value = scopeSelect.value;
+        const isOrder = value === 'order';
+        const isService = value === 'service';
+        const isCustomerTier = value === 'customer_tier';
+
+        // Hóa đơn tối thiểu chỉ dùng cho "Theo hóa đơn"
+        if (minOrderGroup) {
+            minOrderGroup.style.display = isOrder ? 'block' : 'none';
+        }
         if (minOrderInput) {
             minOrderInput.disabled = !isOrder;
             if (!isOrder) {
@@ -331,14 +382,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        // Chọn dịch vụ chỉ dùng cho "Theo dịch vụ"
         if (serviceSelectionGroup) {
-            serviceSelectionGroup.style.display = isOrder ? 'none' : 'block';
+            serviceSelectionGroup.style.display = isService ? 'block' : 'none';
             serviceSelectionGroup.querySelectorAll('input[type="checkbox"]').forEach((input) => {
-                input.disabled = isOrder;
-                if (isOrder) {
+                input.disabled = !isService;
+                if (!isService) {
                     input.checked = false;
                 }
             });
+        }
+
+        // Hạng khách hàng chỉ dùng cho "Theo hạng khách hàng"
+        if (customerTierGroup) {
+            customerTierGroup.style.display = isCustomerTier ? 'block' : 'none';
+        }
+        if (customerTierSelect) {
+            customerTierSelect.disabled = !isCustomerTier;
+            if (!isCustomerTier) {
+                customerTierSelect.value = '';
+            }
         }
     }
 

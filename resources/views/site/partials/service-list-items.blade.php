@@ -2,10 +2,10 @@
   // Helper function để tính discount
   function calculateDiscountForItem($item, $itemType, $activePromotions) {
     $originalPrice = $item['price'] ?? 0;
-    $discount = 0;
-    $finalPrice = 0;
-    $promotion = null;
-    $discountTag = '';
+    $discount = 0;        // Mức giảm cao nhất tìm được
+    $finalPrice = 0;      // Giá sau khi áp dụng mức giảm cao nhất
+    $promotion = null;    // Khuyến mãi mang lại giảm giá cao nhất
+    $discountTag = '';    // Badge hiển thị trên thẻ dịch vụ
 
     if ($originalPrice <= 0) {
       return ['originalPrice' => 0, 'discount' => 0, 'finalPrice' => 0, 'promotion' => null, 'discountTag' => ''];
@@ -14,6 +14,10 @@
     $now = \Carbon\Carbon::now();
 
     foreach ($activePromotions ?? [] as $promo) {
+      // Chỉ áp dụng giảm trực tiếp vào dịch vụ khi khuyến mãi được cấu hình "Theo dịch vụ"
+      if ($promo->apply_scope !== 'service') {
+        continue;
+      }
       if ($promo->status !== 'active') continue;
       if ($promo->start_date && $promo->start_date > $now) continue;
       if ($promo->end_date && $promo->end_date < $now) continue;
@@ -62,21 +66,31 @@
       }
 
       if ($applies) {
-        $promotion = $promo;
+        // Tính mức giảm cho promo hiện tại
+        $currentDiscount = 0;
+        $currentTag = '';
+
         if ($promo->discount_type === 'percent') {
-          $discount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+          $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
           if ($promo->max_discount_amount) {
-            $discount = min($discount, $promo->max_discount_amount);
+            $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
           }
-          $discountTag = '-' . ($promo->discount_percent ?? 0) . '%';
+          $currentTag = '-' . ($promo->discount_percent ?? 0) . '%';
         } else {
-          $discount = min($promo->discount_amount ?? 0, $originalPrice);
-          $discountTag = '-' . number_format($discount / 1000, 0) . 'k';
+          $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+          $currentTag = '-' . number_format($currentDiscount / 1000, 0) . 'k';
         }
-        $finalPrice = max(0, $originalPrice - $discount);
-        break;
+
+        // Ưu tiên khuyến mãi cho mức giảm tiền nhiều nhất
+        if ($currentDiscount > $discount) {
+          $discount = $currentDiscount;
+          $promotion = $promo;
+          $discountTag = $currentTag;
+        }
       }
     }
+
+    $finalPrice = max(0, $originalPrice - $discount);
 
     return [
       'originalPrice' => $originalPrice,
