@@ -105,10 +105,10 @@
                         <label for="position">Vị trí <span class="text-danger">*</span></label>
                         <select name="position" id="position" class="form-control @error('position') is-invalid @enderror" required>
                             <option value="">-- Chọn vị trí --</option>
-                            <option value="Stylist" {{ old('position') == 'Stylist' ? 'selected' : '' }}>Stylist</option>
-                            <option value="Barber" {{ old('position') == 'Barber' ? 'selected' : '' }}>Barber</option>
-                            <option value="Shampooer" {{ old('position') == 'Shampooer' ? 'selected' : '' }}>Shampooer</option>
-                            <option value="Receptionist" {{ old('position') == 'Receptionist' ? 'selected' : '' }}>Receptionist</option>
+                            <option value="Stylist" {{ old('position') == 'Stylist' ? 'selected' : '' }}>Thợ tạo kiểu</option>
+                            <option value="Barber" {{ old('position') == 'Barber' ? 'selected' : '' }}>Thợ cắt tóc nam</option>
+                            <option value="Shampooer" {{ old('position') == 'Shampooer' ? 'selected' : '' }}>Nhân viên gội đầu</option>
+                            <option value="Receptionist" {{ old('position') == 'Receptionist' ? 'selected' : '' }}>Lễ tân</option>
                         </select>
                         @error('position')
                             <div class="invalid-feedback">{{ $message }}</div>

@@ -75,5 +75,35 @@ class Employee extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+    /**
+     * Get position name in Vietnamese.
+     */
+    public function getPositionVietnameseAttribute(): string
+    {
+        $positions = [
+            'Stylist' => 'Thợ tạo kiểu',
+            'Barber' => 'Thợ cắt tóc nam',
+            'Shampooer' => 'Nhân viên gội đầu',
+            'Receptionist' => 'Lễ tân',
+        ];
+
+        return $positions[$this->position] ?? $this->position;
+    }
+
+    /**
+     * Static method to get position name in Vietnamese.
+     */
+    public static function getPositionVietnamese(string $position): string
+    {
+        $positions = [
+            'Stylist' => 'Thợ tạo kiểu',
+            'Barber' => 'Thợ cắt tóc nam',
+            'Shampooer' => 'Nhân viên gội đầu',
+            'Receptionist' => 'Lễ tân',
+        ];
+
+        return $positions[$position] ?? $position;
+    }
 }
 

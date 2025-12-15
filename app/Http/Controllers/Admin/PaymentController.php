@@ -51,7 +51,8 @@ class PaymentController extends Controller
             }
         }
 
-        $payments = $query->latest()->paginate(10);
+        // Sử dụng withQueryString() để giữ lại query parameters khi phân trang
+        $payments = $query->latest()->paginate(10)->withQueryString();
 
         $filters = $request->only(['invoice_code', 'customer_name', 'date_from', 'date_to', 'status', 'type']);
 

@@ -132,10 +132,10 @@
                             <thead class="thead-light">
                                 <tr>
                                     <th style="width: 15%;" class="text-center">Ca làm việc</th>
-                                    <th style="width: 21.25%;" class="text-center">Stylist</th>
-                                    <th style="width: 21.25%;" class="text-center">Barber</th>
-                                    <th style="width: 21.25%;" class="text-center">Shampooer</th>
-                                    <th style="width: 21.25%;" class="text-center">Receptionist</th>
+                                    <th style="width: 21.25%;" class="text-center">Thợ tạo kiểu</th>
+                                    <th style="width: 21.25%;" class="text-center">Thợ cắt tóc nam</th>
+                                    <th style="width: 21.25%;" class="text-center">Nhân viên gội đầu</th>
+                                    <th style="width: 21.25%;" class="text-center">Lễ tân</th>
                                 </tr>
                             </thead>
                             <tbody>
