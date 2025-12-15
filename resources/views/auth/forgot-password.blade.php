@@ -10,6 +10,16 @@
         color: #f6f7fb;
         text-shadow: 0 1px 3px rgba(0,0,0,0.35);
     }
+    /* Thông báo lỗi tùy chỉnh */
+    .custom-error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    .form-control.is-invalid-custom {
+        border-color: #dc3545;
+    }
 </style>
 @endpush
 
@@ -36,27 +46,18 @@
                         </div>
                     @endif
 
-                    @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul class="mb-0">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-    <form method="POST" action="{{ route('password.email') }}">
+    <form method="POST" action="{{ route('password.email') }}" id="forgotPasswordForm" novalidate>
         @csrf
 
                         <div class="form-group">
                             <label for="login">Email hoặc Số điện thoại <span class="text-danger">*</span></label>
                             <input type="text" name="login" id="login" class="form-control @error('login') is-invalid @enderror" 
-                                   value="{{ old('login') }}" required autofocus 
+                                   value="{{ old('login') }}" autofocus 
                                    placeholder="Nhập email hoặc số điện thoại">
                             @error('login')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <span class="custom-error-message" id="login-error"></span>
                         </div>
 
                         <div class="form-group text-center mt-4">
@@ -73,4 +74,63 @@
         </div>
     </div>
 </section>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('forgotPasswordForm');
+    const loginInput = document.getElementById('login');
+
+    function showError(inputId, message) {
+        const input = document.getElementById(inputId);
+        const errorSpan = document.getElementById(inputId + '-error');
+        
+        if (input) {
+            input.classList.add('is-invalid-custom');
+        }
+        
+        if (errorSpan) {
+            errorSpan.textContent = message;
+            errorSpan.style.display = 'block';
+        }
+    }
+
+    function clearError(inputId) {
+        const input = document.getElementById(inputId);
+        const errorSpan = document.getElementById(inputId + '-error');
+        
+        if (input) {
+            input.classList.remove('is-invalid-custom');
+        }
+        
+        if (errorSpan) {
+            errorSpan.textContent = '';
+            errorSpan.style.display = 'none';
+        }
+    }
+
+    if (loginInput) {
+        loginInput.addEventListener('blur', function() {
+            if (this.validity.valueMissing) {
+                showError('login', 'Vui lòng nhập email hoặc số điện thoại.');
+            } else {
+                clearError('login');
+            }
+        });
+
+        loginInput.addEventListener('input', function() {
+            if (this.value.trim() !== '') {
+                clearError('login');
+            }
+        });
+    }
+
+    form.addEventListener('submit', function(e) {
+        if (loginInput && loginInput.validity.valueMissing) {
+            e.preventDefault();
+            showError('login', 'Vui lòng nhập email hoặc số điện thoại.');
+        }
+    });
+});
+</script>
+@endpush
 @endsection
