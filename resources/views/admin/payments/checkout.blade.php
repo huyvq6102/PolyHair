@@ -25,12 +25,7 @@
         object-fit: contain;
     }
 </style>
-    <div class="container py-5" style="margin-top: 100px;">
-        <div class="text-center mb-5">
-            <h2>Hoàn tất đặt lịch</h2>
-            <p class="lead">Chỉ còn vài bước nữa để hoàn tất lịch hẹn của bạn.</p>
-        </div>
-
+    <div class="container py-5">
         <div class="row">
             <!-- Cột thông tin và thanh toán -->
             <div class="col-lg-7 mb-4">

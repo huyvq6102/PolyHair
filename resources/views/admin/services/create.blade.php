@@ -122,13 +122,23 @@
             <h6 class="m-0 font-weight-bold text-primary">Thông tin dịch vụ đơn</h6>
         </div>
         <div class="card-body">
-            <div class="form-group">
-                <label for="base_price">Giá <span class="text-danger">*</span></label>
-                <input type="number" step="0.01" name="base_price" id="base_price" class="form-control @error('base_price') is-invalid @enderror" 
-                       value="{{ old('base_price') }}" required>
-                @error('base_price')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="base_price">Giá <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" name="base_price" id="base_price" class="form-control @error('base_price') is-invalid @enderror" 
+                           value="{{ old('base_price') }}" required>
+                    @error('base_price')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="base_duration">Thời lượng (phút)</label>
+                    <input type="number" name="base_duration" id="base_duration" class="form-control @error('base_duration') is-invalid @enderror" 
+                           value="{{ old('base_duration') }}" min="0">
+                    @error('base_duration')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
             </div>
         </div>
     </div>
@@ -248,6 +258,14 @@
                 <input type="number" step="0.01" name="combo_price" id="combo_price" class="form-control @error('combo_price') is-invalid @enderror" 
                        value="{{ old('combo_price') }}" required>
                 @error('combo_price')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="form-group">
+                <label for="combo_duration">Thời lượng (phút)</label>
+                <input type="number" name="combo_duration" id="combo_duration" class="form-control @error('combo_duration') is-invalid @enderror" 
+                       value="{{ old('combo_duration') }}" min="0">
+                @error('combo_duration')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>

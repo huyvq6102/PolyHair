@@ -138,6 +138,7 @@ class ServiceController extends Controller
             'name' => 'required|string|max:255|unique:services,name',
             'category_id' => 'required|exists:service_categories,id',
             'base_price' => 'required|numeric|min:0',
+            'base_duration' => 'nullable|integer|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'description' => 'nullable|string',
@@ -149,6 +150,7 @@ class ServiceController extends Controller
             'name',
             'category_id',
             'base_price',
+            'base_duration',
             'status',
             'description',
         ]);
@@ -278,6 +280,7 @@ class ServiceController extends Controller
             'combo_name' => 'required|string|max:255|unique:combos,name',
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
+            'combo_duration' => 'nullable|integer|min:0',
             'combo_items' => 'required|array|min:1',
             'combo_items.*.service_id' => 'required|exists:services,id',
             'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
@@ -294,6 +297,7 @@ class ServiceController extends Controller
                 'slug' => Str::slug($request->input('combo_name')) . '-' . uniqid(),
                 'category_id' => $request->input('category_id'),
                 'price' => $request->input('combo_price'),
+                'duration' => $request->input('combo_duration'),
                 'status' => $request->input('combo_status', 'Hoạt động'),
                 'description' => $request->input('combo_description'),
             ]);
@@ -435,6 +439,7 @@ class ServiceController extends Controller
             'name' => 'required|string|max:255|unique:services,name,' . $id,
             'category_id' => 'required|exists:service_categories,id',
             'base_price' => 'required|numeric|min:0',
+            'base_duration' => 'nullable|integer|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'nullable|in:Hoạt động,Vô hiệu hóa',
             'description' => 'nullable|string',
@@ -446,6 +451,7 @@ class ServiceController extends Controller
             'name',
             'category_id',
             'base_price',
+            'base_duration',
             'status',
             'description',
         ]);
@@ -641,6 +647,7 @@ class ServiceController extends Controller
             'combo_name' => 'required|string|max:255|unique:combos,name,' . $id,
             'category_id' => 'required|exists:service_categories,id',
             'combo_price' => 'required|numeric|min:0',
+            'combo_duration' => 'nullable|integer|min:0',
             'combo_items' => 'required|array|min:1',
             'combo_items.*.service_id' => 'required|exists:services,id',
             'combo_items.*.service_variant_id' => 'nullable|exists:service_variants,id',
@@ -656,6 +663,7 @@ class ServiceController extends Controller
                 'name' => $request->input('combo_name'),
                 'category_id' => $request->input('category_id'),
                 'price' => $request->input('combo_price'),
+                'duration' => $request->input('combo_duration'),
                 'status' => $request->input('combo_status', 'Hoạt động'),
                 'description' => $request->input('combo_description'),
             ]);
