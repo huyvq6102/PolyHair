@@ -122,71 +122,64 @@
         </div>
     </div>
 
-    <!-- Appointment Details -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Chi tiết dịch vụ</h6>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
+<!-- Appointment Details -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Chi tiết dịch vụ</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Dịch vụ</th>
+                        <th>Biến thể</th>
+                        <th>Giá</th>
+                        <th>Thời lượng (phút)</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($appointment->appointmentDetails as $detail)
                         <tr>
-                            <th>Dịch vụ</th>
-                            <th>Biến thể</th>
-                            <th>Giá</th>
-                            <th>Thời lượng (phút)</th>
-                            <th>Trạng thái</th>
+                            <td>
+                                @if($detail->serviceVariant && $detail->serviceVariant->service)
+                                    {{ $detail->serviceVariant->service->name }}
+                                @elseif($detail->combo_id && $detail->combo)
+                                    {{ $detail->combo->name }}
+                                @elseif($detail->notes)
+                                    {{ $detail->notes }}
+                                @else
+                                    N/A
+                                @endif
+                            </td>
+                            <td>
+                                @if($detail->serviceVariant && $detail->serviceVariant->name)
+                                    {{ $detail->serviceVariant->name }}
+                                @elseif($detail->combo_id && $detail->combo)
+                                    <span class="badge badge-secondary">Combo</span>
+                                @elseif($detail->notes)
+                                    <span class="badge badge-secondary">Dịch vụ đơn</span>
+                                @else
+                                    N/A
+                                @endif
+                            </td>
+                            <td>{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} đ</td>
+                            <td>{{ $detail->duration ?? 'N/A' }}</td>
+                            <td>
+                                <span class="badge badge-info">{{ $detail->status ?? 'N/A' }}</span>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($appointment->appointmentDetails as $detail)
-                            <tr>
-                                <td>
-                                    @if($detail->combo_id && $detail->combo)
-                                        <span class="badge badge-primary">Combo</span>
-                                        {{ $detail->combo->name ?? 'N/A' }}
-                                    @elseif($detail->serviceVariant && $detail->serviceVariant->service)
-                                        {{ $detail->serviceVariant->service->name }}
-                                    @elseif($detail->notes)
-                                        {{ $detail->notes }}
-                                    @else
-                                        N/A
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($detail->combo_id)
-                                        <span class="text-muted">-</span>
-                                    @elseif($detail->serviceVariant)
-                                        {{ $detail->serviceVariant->name }}
-                                    @else
-                                        <span class="text-muted">Dịch vụ cơ bản</span>
-                                    @endif
-                                </td>
-                                <td>{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} đ</td>
-                                <td>{{ $detail->duration ?? 'N/A' }}</td>
-                                <td>
-                                    @php
-                                        $statusClass = match ($detail->status ?? 'Chờ') {
-                                            'Hoàn thành' => 'success',
-                                            'Đang thực hiện' => 'info',
-                                            'Đã hủy' => 'danger',
-                                            default => 'warning',
-                                        };
-                                    @endphp
-                                    <span class="badge badge-{{ $statusClass }}">{{ $detail->status ?? 'Chờ' }}</span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center">Chưa có dịch vụ nào</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center">Chưa có dịch vụ nào</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 
     <!-- Action Buttons -->
     <div class="card shadow mb-4">
