@@ -42,8 +42,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
 
     // Employees Management (View Only for Staff)
+    // IMPORTANT: Specific routes must come before parameterized routes
     Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
-    Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
     Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
 
     // Promotions (Accessible by Staff)
@@ -66,9 +66,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
         Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
 
         // Employees Management (Admin Only - Full CRUD)
-        Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
+        // IMPORTANT: Specific routes (create, trash) must come before parameterized routes
         Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+        Route::get('employees/trash', [EmployeeController::class, 'trash'])->name('employees.trash');
         Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
+        Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
         Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
         Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
         Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');

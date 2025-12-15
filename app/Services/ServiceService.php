@@ -90,6 +90,30 @@ class ServiceService
     }
 
     /**
+     * Get services with limit ordered by booking count (most booked first).
+     */
+    public function getMostBooked($limit = 6, $offset = 0)
+    {
+        // Sử dụng subquery để đếm số lượng booking của mỗi service
+        $services = Service::with(['category', 'serviceVariants', 'ownedCombos'])
+            ->select('services.*')
+            ->selectRaw('(
+                SELECT COUNT(*)
+                FROM appointment_details
+                INNER JOIN service_variants ON appointment_details.service_variant_id = service_variants.id
+                WHERE service_variants.service_id = services.id
+                AND service_variants.deleted_at IS NULL
+            ) as booking_count')
+            ->orderByRaw('booking_count DESC')
+            ->orderBy('services.id', 'desc')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+            
+        return $services;
+    }
+
+    /**
      * Get minimal service list for selectors.
      */
     public function getSimpleList()
