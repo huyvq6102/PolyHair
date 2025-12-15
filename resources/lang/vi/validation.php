@@ -186,9 +186,11 @@ return [
     'attributes' => [
         'name' => 'họ và tên',
         'email' => 'email',
+        'login' => 'email hoặc số điện thoại',
         'phone' => 'số điện thoại',
         'password' => 'mật khẩu',
         'password_confirmation' => 'xác nhận mật khẩu',
+        'otp' => 'mã xác nhận',
         'gender' => 'giới tính',
         'dob' => 'ngày sinh',
         'address' => 'địa chỉ',
