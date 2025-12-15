@@ -31,10 +31,10 @@
             <div class="form-group mr-3">
                 <select name="position" class="form-control">
                     <option value="">Tất cả vị trí</option>
-                    <option value="Stylist" {{ request('position') == 'Stylist' ? 'selected' : '' }}>Stylist</option>
-                    <option value="Barber" {{ request('position') == 'Barber' ? 'selected' : '' }}>Barber</option>
-                    <option value="Shampooer" {{ request('position') == 'Shampooer' ? 'selected' : '' }}>Shampooer</option>
-                    <option value="Receptionist" {{ request('position') == 'Receptionist' ? 'selected' : '' }}>Receptionist</option>
+                    <option value="Stylist" {{ request('position') == 'Stylist' ? 'selected' : '' }}>Thợ tạo kiểu</option>
+                    <option value="Barber" {{ request('position') == 'Barber' ? 'selected' : '' }}>Thợ cắt tóc nam</option>
+                    <option value="Shampooer" {{ request('position') == 'Shampooer' ? 'selected' : '' }}>Nhân viên gội đầu</option>
+                    <option value="Receptionist" {{ request('position') == 'Receptionist' ? 'selected' : '' }}>Lễ tân</option>
                 </select>
             </div>
             <div class="form-group mr-3">
@@ -80,7 +80,7 @@
                             <td>{{ $employee->id }}</td>
                             <td>{{ $employee->user->name ?? 'N/A' }}</td>
                             <td>{{ $employee->user->email ?? 'N/A' }}</td>
-                            <td>{{ $employee->position ?? 'N/A' }}</td>
+                            <td>{{ \App\Models\Employee::getPositionVietnamese($employee->position ?? '') ?: 'N/A' }}</td>
                             <td>{{ $employee->level ?? 'N/A' }}</td>
                             <td>
                                 <span class="badge badge-{{ $employee->status == 'Đang làm việc' ? 'success' : ($employee->status == 'Nghỉ phép' ? 'warning' : 'secondary') }}">

@@ -54,7 +54,7 @@
                     </div>
                     <div class="col-md-6">
                         <strong>Vị trí:</strong>
-                        <p>{{ $employee->position ?? 'N/A' }}</p>
+                        <p>{{ \App\Models\Employee::getPositionVietnamese($employee->position ?? '') ?: 'N/A' }}</p>
                     </div>
                 </div>
                 

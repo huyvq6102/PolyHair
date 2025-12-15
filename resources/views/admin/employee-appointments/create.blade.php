@@ -109,13 +109,13 @@
 
             <!-- Chọn nhân viên thực hiện -->
             <div class="mt-4">
-                <label for="staff_id">Nhân viên thực hiện (Stylist) <span class="text-danger">*</span></label>
+                <label for="staff_id">Nhân viên thực hiện <span class="text-danger">*</span></label>
                 <select name="staff_id" id="staff_id" class="form-control @error('staff_id') is-invalid @enderror" required>
-                    <option value="">-- Chọn Stylist --</option>
+                    <option value="">-- Chọn nhân viên (Thợ tạo kiểu/Thợ cắt tóc nam) --</option>
                     @foreach($staffMembers as $staff)
-                        @if($staff->position === 'Stylist')
+                        @if($staff->position === 'Stylist' || $staff->position === 'Barber')
                             <option value="{{ $staff->id }}" {{ old('staff_id') == $staff->id ? 'selected' : '' }}>
-                                {{ $staff->user->name ?? 'N/A' }} ({{ $staff->position }})
+                                {{ $staff->user->name ?? 'N/A' }} ({{ \App\Models\Employee::getPositionVietnamese($staff->position ?? '') ?: 'N/A' }})
                             </option>
                         @endif
                     @endforeach
@@ -124,7 +124,7 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
                 <small class="form-text text-muted">
-                    Vui lòng chọn Stylist sẽ thực hiện dịch vụ.
+                    Vui lòng chọn Thợ tạo kiểu hoặc Thợ cắt tóc nam sẽ thực hiện dịch vụ.
                 </small>
             </div>
 
