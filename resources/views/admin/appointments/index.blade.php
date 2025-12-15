@@ -155,6 +155,9 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 @if($appointment->status != 'Đã hủy')
+                                <a href="{{ route('site.payments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </a>
                                 <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
                                     <i class="fas fa-edit"></i>
                                 </a>
