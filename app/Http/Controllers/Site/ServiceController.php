@@ -188,9 +188,23 @@ class ServiceController extends Controller
             ]
         );
 
+        // Load active promotions
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where(function($query) {
+                $now = \Carbon\Carbon::now();
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                })->where(function($q) use ($now) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                });
+            })
+            ->get();
+
         // If AJAX request, return JSON or HTML partial
         if ($request->ajax()) {
-            $html = view('site.partials.service-list-items', compact('items'))->render();
+            $html = view('site.partials.service-list-items', compact('items', 'activePromotions'))->render();
             $pagination = view('site.partials.service-pagination', compact('items'))->render();
             
             return response()->json([
@@ -201,7 +215,7 @@ class ServiceController extends Controller
             ]);
         }
 
-        return view('site.service-list', compact('items', 'types', 'typeId', 'categories', 'filterType', 'categoryId', 'keyword', 'minPrice', 'maxPrice', 'sortBy'));
+        return view('site.service-list', compact('items', 'types', 'typeId', 'categories', 'filterType', 'categoryId', 'keyword', 'minPrice', 'maxPrice', 'sortBy', 'activePromotions'));
     }
 
     /**

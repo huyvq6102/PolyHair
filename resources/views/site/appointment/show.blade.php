@@ -15,178 +15,174 @@
 @endpush
 
 @section('content')
-<div class="appointment-detail-section" style="padding: 150px 0 80px; background: #f8f9fa; min-height: 100vh;">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                @if(!auth()->check())
-                <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 30px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 20px 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <i class="fa fa-check-circle" style="font-size: 24px; color: #28a745;"></i>
-                            <strong style="font-size: 16px;">Đặt lịch thành công!</strong>
-                            <span style="font-size: 14px;">Vui lòng kiểm tra thông tin lịch đặt của bạn bên dưới.</span>
-                        </div>
-                        <a href="{{ route('site.home') }}" class="btn btn-primary" style="background: #000; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; white-space: nowrap;">
-                            <i class="fa fa-home"></i> Quay về trang chủ
-                        </a>
-                    </div>
+<div class="appointment-detail-section" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+    <div class="container" style="max-width: 900px; margin: 0 auto;">
+        @if(!auth()->check())
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 30px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 20px 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fa fa-check-circle" style="font-size: 24px; color: #28a745;"></i>
+                    <strong style="font-size: 16px;">Đặt lịch thành công!</strong>
+                    <span style="font-size: 14px;">Vui lòng kiểm tra thông tin lịch đặt của bạn bên dưới.</span>
                 </div>
+                <a href="{{ route('site.home') }}" class="btn btn-primary" style="background: #000; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; white-space: nowrap;">
+                    <i class="fa fa-home"></i> Quay về trang chủ
+                </a>
+            </div>
+        </div>
+        @endif
+        
+        <div class="appointment-header">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="appointment-title mb-0">
+                    <i class="fa fa-calendar-check-o"></i>
+                    Chi tiết lịch đặt
+                </h1>
+                @auth
+                    <a href="{{ route('site.customers.show', auth()->id()) }}?tab=history" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Quay lại
+                    </a>
+                @endauth
+            </div>
+            <div class="appointment-id">
+                @if($appointment->booking_code)
+                    Mã đơn đặt: <strong style="color: #667eea; font-size: 1.1em;">{{ $appointment->booking_code }}</strong>
+                @else
+                    Mã lịch đặt: #{{ str_pad($appointment->id, 6, '0', STR_PAD_LEFT) }}
                 @endif
-                
-                <div class="appointment-header">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h1 class="appointment-title mb-0">
-                            <i class="fa fa-calendar-check-o"></i>
-                            Chi tiết lịch đặt
-                        </h1>
-                        @auth
-                            <a href="{{ route('site.customers.show', auth()->id()) }}?tab=history" class="btn btn-secondary">
-                                <i class="fa fa-arrow-left"></i> Quay lại
-                            </a>
-                        @endauth
-                    </div>
-                    <div class="appointment-id">
-                        @if($appointment->booking_code)
-                            Mã đơn đặt: <strong style="color: #667eea; font-size: 1.1em;">{{ $appointment->booking_code }}</strong>
-                        @else
-                            Mã lịch đặt: #{{ str_pad($appointment->id, 6, '0', STR_PAD_LEFT) }}
-                        @endif
-                    </div>
-                </div>
-                
-                <div class="appointment-content">
-                    <!-- Thông tin lịch đặt -->
-                    <div class="appointment-card appointment-info-card">
-                        <h3 class="card-title">
-                            <i class="fa fa-info-circle"></i>
-                            Thông tin lịch đặt
-                        </h3>
-                        
-                        <div class="info-content">
-                            <div class="info-row">
-                                <span class="info-label">Trạng thái:</span>
-                                <span class="info-value">
-                                    @php
-                                        $status = $appointment->status ?? 'Chờ xử lý';
-                                        $statusClass = 'status-pending';
-                                        $statusColor = '#ffc107'; // Mặc định vàng
-                                        
-                                        if ($status === 'Đã xác nhận') {
-                                            $statusClass = 'status-confirmed';
-                                            $statusColor = '#28a745'; // Xanh lá
-                                        } elseif ($status === 'Chờ xử lý') {
-                                            $statusClass = 'status-pending';
-                                            $statusColor = '#ffc107'; // Vàng
-                                        } elseif ($status === 'Đang thực hiện') {
-                                            $statusClass = 'status-in-progress';
-                                            $statusColor = '#007bff'; // Xanh dương
-                                        } elseif ($status === 'Hoàn thành') {
-                                            $statusClass = 'status-completed';
-                                            $statusColor = '#28a745'; // Xanh lá
-                                        } elseif ($status === 'Đã thanh toán') {
-                                            $statusClass = 'status-paid';
-                                            $statusColor = '#17a2b8'; // Xanh nhạt
-                                        } elseif ($status === 'Chưa thanh toán') {
-                                            $statusClass = 'status-unpaid';
-                                            $statusColor = '#dc3545'; // Đỏ
-                                        } elseif ($status === 'Đã hủy') {
-                                            $statusClass = 'status-cancelled';
-                                            $statusColor = '#6c757d'; // Xám
-                                        }
-                                    @endphp
-                                    <span id="appointment-status-badge" class="status-badge {{ $statusClass }}" style="background-color: {{ $statusColor }}; color: #fff; padding: 6px 12px; border-radius: 20px; font-weight: 500; font-size: 13px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                                        {{ $status }}
-                                    </span>
-                                </span>
-                            </div>
-                            
-                            <div class="info-row">
-                                <span class="info-label">Ngày đặt:</span>
-                                <span class="info-value">
-                                    {{ $appointment->start_at ? $appointment->start_at->format('d/m/Y') : 'N/A' }}
-                                </span>
-                            </div>
-                            
-                            <div class="info-row">
-                                <span class="info-label">Giờ bắt đầu:</span>
-                                <span class="info-value">
-                                    {{ $appointment->start_at ? $appointment->start_at->format('H:i') : 'N/A' }}
-                                </span>
-                            </div>
-                            
-                            <div class="info-row">
-                                <span class="info-label">Giờ kết thúc:</span>
-                                <span class="info-value">
-                                    {{ $appointment->end_at ? $appointment->end_at->format('H:i') : 'N/A' }}
-                                </span>
-                            </div>
-                            
-                            <div class="info-row">
-                                <span class="info-label">Thời lượng:</span>
-                                <span class="info-value">
-                                    @if($appointment->start_at && $appointment->end_at)
-                                        {{ $appointment->start_at->diffInMinutes($appointment->end_at) }} phút
-                                    @else
-                                        N/A
-                                    @endif
-                                </span>
-                            </div>
-                            
-                            @if($appointment->employee && $appointment->employee->user)
-                            <div class="info-row">
-                                <span class="info-label">Nhân viên:</span>
-                                <span class="info-value">
-                                    {{ $appointment->employee->user->name }}
-                                </span>
-                            </div>
-                            @endif
-                            
-                            @if($appointment->user)
-                            <div class="info-row">
-                                <span class="info-label">Khách hàng:</span>
-                                <span class="info-value">
-                                    {{ $appointment->user->name }}
-                                </span>
-                            </div>
-                            
-                            <div class="info-row">
-                                <span class="info-label">Số điện thoại:</span>
-                                <span class="info-value">
-                                    {{ $appointment->user->phone ?? 'N/A' }}
-                                </span>
-                            </div>
-                            
-                            @if($appointment->user->email)
-                            <div class="info-row">
-                                <span class="info-label">Email:</span>
-                                <span class="info-value">
-                                    {{ $appointment->user->email }}
-                                </span>
-                            </div>
-                            @endif
-                            @endif
-                            
-                            @if($appointment->note)
-                            <div class="note-box">
-                                <div class="note-label">Ghi chú:</div>
-                                <div class="note-text">{{ $appointment->note }}</div>
-                            </div>
-                            @endif
-                        </div>
+            </div>
+        </div>
+        
+        <div class="appointment-content" style="display: flex; justify-content: center;">
+            <div style="width: 100%; max-width: 800px;">
+                <!-- Thông tin lịch đặt -->
+                <div class="appointment-card">
+                    <h3 class="card-title">
+                        <i class="fa fa-info-circle"></i>
+                        Thông tin lịch đặt
+                    </h3>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Trạng thái:</span>
+                        <span class="info-value">
+                            @php
+                                $status = $appointment->status ?? 'Chờ xử lý';
+                                $statusClass = 'status-pending';
+                                $statusColor = '#ffc107'; // Mặc định vàng
+                                
+                                if ($status === 'Đã xác nhận') {
+                                    $statusClass = 'status-confirmed';
+                                    $statusColor = '#28a745'; // Xanh lá
+                                } elseif ($status === 'Chờ xử lý') {
+                                    $statusClass = 'status-pending';
+                                    $statusColor = '#ffc107'; // Vàng
+                                } elseif ($status === 'Đang thực hiện') {
+                                    $statusClass = 'status-in-progress';
+                                    $statusColor = '#007bff'; // Xanh dương
+                                } elseif ($status === 'Hoàn thành') {
+                                    $statusClass = 'status-completed';
+                                    $statusColor = '#28a745'; // Xanh lá
+                                } elseif ($status === 'Đã thanh toán') {
+                                    $statusClass = 'status-paid';
+                                    $statusColor = '#17a2b8'; // Xanh nhạt
+                                } elseif ($status === 'Chưa thanh toán') {
+                                    $statusClass = 'status-unpaid';
+                                    $statusColor = '#dc3545'; // Đỏ
+                                } elseif ($status === 'Đã hủy') {
+                                    $statusClass = 'status-cancelled';
+                                    $statusColor = '#6c757d'; // Xám
+                                }
+                            @endphp
+                            <span id="appointment-status-badge" class="status-badge {{ $statusClass }}" style="background-color: {{ $statusColor }}; color: #fff; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                {{ $status }}
+                            </span>
+                        </span>
                     </div>
                     
-                    <!-- Danh sách dịch vụ -->
-                    @if($appointment->appointmentDetails->count() > 0)
-                    <div class="appointment-card appointment-services-card">
-                        <h3 class="card-title">
-                            <i class="fa fa-scissors"></i>
-                            Danh sách dịch vụ
-                        </h3>
-                        
-                        <div class="service-list-wrapper">
-                            <div class="service-list">
-                                @foreach($appointment->appointmentDetails as $detail)
+                    <div class="info-row">
+                        <span class="info-label">Ngày đặt:</span>
+                        <span class="info-value">
+                            {{ $appointment->start_at ? $appointment->start_at->format('d/m/Y') : 'N/A' }}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Giờ bắt đầu:</span>
+                        <span class="info-value">
+                            {{ $appointment->start_at ? $appointment->start_at->format('H:i') : 'N/A' }}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Giờ kết thúc:</span>
+                        <span class="info-value">
+                            {{ $appointment->end_at ? $appointment->end_at->format('H:i') : 'N/A' }}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Thời lượng:</span>
+                        <span class="info-value">
+                            @if($appointment->start_at && $appointment->end_at)
+                                {{ $appointment->start_at->diffInMinutes($appointment->end_at) }} phút
+                            @else
+                                N/A
+                            @endif
+                        </span>
+                    </div>
+                    
+                    @if($appointment->employee && $appointment->employee->user)
+                    <div class="info-row">
+                        <span class="info-label">Nhân viên:</span>
+                        <span class="info-value">
+                            {{ $appointment->employee->user->name }}
+                        </span>
+                    </div>
+                    @endif
+                    
+                    @if($appointment->user)
+                    <div class="info-row">
+                        <span class="info-label">Khách hàng:</span>
+                        <span class="info-value">
+                            {{ $appointment->user->name }}
+                        </span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Số điện thoại:</span>
+                        <span class="info-value">
+                            {{ $appointment->user->phone ?? 'N/A' }}
+                        </span>
+                    </div>
+                    
+                    @if($appointment->user->email)
+                    <div class="info-row">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">
+                            {{ $appointment->user->email }}
+                        </span>
+                    </div>
+                    @endif
+                    @endif
+                    
+                    @if($appointment->note)
+                    <div class="note-box">
+                        <div class="note-label">Ghi chú:</div>
+                        <div class="note-text">{{ $appointment->note }}</div>
+                    </div>
+                    @endif
+                </div>
+                
+                <!-- Danh sách dịch vụ -->
+                @if($appointment->appointmentDetails->count() > 0)
+                <div class="appointment-card" style="margin-top: 30px;">
+                    <h3 class="card-title">
+                        <i class="fa fa-scissors"></i>
+                        Danh sách dịch vụ
+                    </h3>
+                    
+                    <div class="service-list">
+                        @foreach($appointment->appointmentDetails as $detail)
                             @php
                                 $serviceImage = null;
                                 $serviceId = null;
@@ -242,29 +238,31 @@
                                             @if($detail->serviceVariant && $detail->serviceVariant->service)
                                                 {{ $detail->serviceVariant->service->name }} - {{ $detail->serviceVariant->name }}
                                             @elseif($detail->combo_id && $detail->combo)
-                                                {{ $detail->combo->name }}
+                                                Combo: {{ $detail->combo->name }}
                                             @elseif($detail->notes)
                                                 {{ $detail->notes }}
                                             @else
                                                 Dịch vụ không xác định
                                             @endif
                                         </div>
-                                        <div class="service-meta">
+                                        <div class="service-details">
                                             @if($detail->serviceVariant && $detail->serviceVariant->service)
-                                                <span class="service-type">Dịch vụ</span>
+                                                Danh mục: {{ $detail->serviceVariant->service->name }}
                                             @elseif($detail->combo_id && $detail->combo)
-                                                <span class="service-type">Combo</span>
+                                                Loại: Combo
                                             @elseif($detail->notes)
-                                                <span class="service-type">Dịch vụ đơn</span>
+                                                Loại: Dịch vụ đơn
                                             @endif
                                             @if($detail->duration)
-                                                <span class="service-duration">{{ $detail->duration }} phút</span>
+                                                | Thời lượng: {{ $detail->duration }} phút
+                                            @endif
+                                            @if($detail->status)
+                                                | Trạng thái: {{ $detail->status }}
                                             @endif
                                         </div>
                                     </div>
                                     <div class="service-price">
-                                        <span class="price-amount">{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}</span>
-                                        <span class="price-currency">đ</span>
+                                        {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ
                                     </div>
                                     @if($serviceImage || count($attributes) > 0)
                                     <div class="service-tooltip">
@@ -289,23 +287,18 @@
                                     @endif
                                 </div>
                             </a>
-                                @endforeach
-                            </div>
-                        </div>
-                        
-                        <div class="total-section">
-                            <div class="total-row">
-                                <span class="total-label">Tổng cộng:</span>
-                                <span class="total-value">
-                                    <span class="total-amount">{{ number_format($totalPrice, 0, ',', '.') }}</span>
-                                    <span class="total-currency">đ</span>
-                                </span>
-                            </div>
+                        @endforeach
+                    </div>
+                    
+                    <div class="total-section">
+                        <div class="total-row">
+                            <span class="total-label">Tổng cộng:</span>
+                            <span class="total-value">{{ number_format($totalPrice, 0, ',', '.') }}đ</span>
                         </div>
                     </div>
-                    @endif
-                
                 </div>
+                @endif
+                
             </div>
         </div>
     </div>

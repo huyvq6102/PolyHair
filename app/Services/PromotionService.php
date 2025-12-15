@@ -256,7 +256,66 @@ class PromotionService
             ];
         }
         
-        // 3. Check User Limit
+        // 3. Check Customer Tier (if apply_scope = customer_tier)
+        if ($promotion->apply_scope === 'customer_tier') {
+            if (!$userId) {
+                return [
+                    'valid' => false,
+                    'promotion' => $promotion,
+                    'discount_amount' => 0,
+                    'message' => 'Vui lòng đăng nhập để sử dụng mã khuyến mại áp dụng theo hạng khách hàng.'
+                ];
+            }
+
+            $user = \App\Models\User::find($userId);
+            if (!$user) {
+                return [
+                    'valid' => false,
+                    'promotion' => $promotion,
+                    'discount_amount' => 0,
+                    'message' => 'Không tìm thấy thông tin khách hàng để áp dụng mã khuyến mại.'
+                ];
+            }
+
+            // Map hạng sang mức độ (1 thấp -> 4 cao)
+            $tierOrder = [
+                'Khách thường' => 1,
+                'Silver' => 2,
+                'Gold' => 3,
+                'VIP' => 4,
+            ];
+
+            $userTier = $user->tier ?? 'Khách thường';
+            $requiredTier = $promotion->min_customer_tier ?: 'Khách thường';
+
+            $userLevel = $tierOrder[$userTier] ?? 1;
+            $requiredLevel = $tierOrder[$requiredTier] ?? 1;
+
+            if ($userLevel < $requiredLevel) {
+                return [
+                    'valid' => false,
+                    'promotion' => $promotion,
+                    'discount_amount' => 0,
+                    'message' => 'Mã khuyến mại này chỉ áp dụng cho khách hàng từ hạng ' . $requiredTier . ' trở lên.'
+                ];
+            }
+        }
+
+        // 4. Check Global Usage Limit
+        if ($promotion->usage_limit) {
+            $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promotion->id)->count();
+            
+            if ($totalUsage >= $promotion->usage_limit) {
+                return [
+                    'valid' => false,
+                    'promotion' => $promotion,
+                    'discount_amount' => 0,
+                    'message' => 'Mã khuyến mại này đã được sử dụng hết số lượt cho phép.'
+                ];
+            }
+        }
+
+        // 5. Check User Limit
         if ($promotion->per_user_limit && $userId) {
             $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promotion->id)
                 ->where('user_id', $userId)
@@ -272,7 +331,7 @@ class PromotionService
             }
         }
 
-        // 4. Check Min Order Amount
+        // 6. Check Min Order Amount
         if ($promotion->min_order_amount && $subtotal < $promotion->min_order_amount) {
             return [
                 'valid' => false,
@@ -285,7 +344,7 @@ class PromotionService
         $discountAmount = 0;
         $applicableAmount = 0;
 
-        // 5. Calculate Discount
+        // 7. Calculate Discount
         if ($promotion->apply_scope === 'service') {
             // Get IDs of applicable items (ensure integer)
             $validServiceIds = $promotion->services->pluck('id')->map(fn($id) => (int)$id)->toArray();
@@ -486,7 +545,7 @@ class PromotionService
             }
 
         } else {
-            // Apply Scope: ORDER (All items)
+            // Apply Scope: ORDER / CUSTOMER TIER (All items)
             $applicableAmount = $subtotal;
             
             if ($promotion->discount_type === 'percent') {

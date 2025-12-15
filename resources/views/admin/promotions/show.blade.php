@@ -109,9 +109,11 @@
                     <dt class="col-sm-4">Áp dụng theo</dt>
                     <dd class="col-sm-8">
                         @if($promotion->apply_scope === 'order')
-                            Theo hóa đơn
+                            <span class="badge badge-primary">Theo hóa đơn</span>
+                        @elseif($promotion->apply_scope === 'customer_tier')
+                            <span class="badge badge-warning">Theo hạng khách hàng</span>
                         @else
-                            Theo dịch vụ
+                            <span class="badge badge-info">Theo dịch vụ</span>
                         @endif
                     </dd>
 
@@ -126,10 +128,27 @@
                         </dd>
                     @endif
 
+                    @if($promotion->apply_scope === 'customer_tier')
+                        <dt class="col-sm-4">Hạng khách hàng</dt>
+                        <dd class="col-sm-8">
+                            Áp dụng cho khách từ hạng 
+                            <strong>{{ $promotion->min_customer_tier ?? 'Khách thường' }}</strong> trở lên
+                        </dd>
+                    @endif
+
                     <dt class="col-sm-4">Số lần / tài khoản</dt>
                     <dd class="col-sm-8">
                         @if($promotion->per_user_limit)
                             Tối đa {{ $promotion->per_user_limit }} lần
+                        @else
+                            Không giới hạn
+                        @endif
+                    </dd>
+
+                    <dt class="col-sm-4">Tổng lượt dùng</dt>
+                    <dd class="col-sm-8">
+                        @if($promotion->usage_limit)
+                            Tối đa {{ $promotion->usage_limit }} lượt cho toàn hệ thống
                         @else
                             Không giới hạn
                         @endif

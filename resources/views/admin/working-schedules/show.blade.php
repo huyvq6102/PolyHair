@@ -42,6 +42,12 @@
                             return $schedule->employee->position ?? 'Other';
                         });
                         $requiredPositions = ['Stylist', 'Barber', 'Shampooer', 'Receptionist'];
+                        $positionLabels = [
+                            'Stylist' => 'Thợ tạo kiểu',
+                            'Barber' => 'Thợ cắt tóc nam',
+                            'Shampooer' => 'Nhân viên gội đầu',
+                            'Receptionist' => 'Lễ tân'
+                        ];
                     @endphp
                     
                     @foreach($requiredPositions as $position)
@@ -50,7 +56,7 @@
                         @endphp
                         <div class="mb-3 pb-3 {{ !$loop->last ? 'border-bottom' : '' }}">
                             <h6 class="mb-2 font-weight-bold" style="color: #4e73df; font-size: 0.95rem;">
-                                <i class="fas fa-user-tag"></i> {{ $position }}
+                                <i class="fas fa-user-tag"></i> {{ $positionLabels[$position] ?? $position }}
                             </h6>
                             @if($positionSchedules->isNotEmpty())
                                 @foreach($positionSchedules as $schedule)

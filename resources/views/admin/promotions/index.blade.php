@@ -39,7 +39,7 @@
                         <th>Mã KM</th>
                         <th>Tên</th>
                         <th>Giảm giá</th>
-                        <th>Dịch vụ / Hóa đơn áp dụng</th>
+                        <th>Phạm vi áp dụng</th>
                         <th>Thời gian áp dụng</th>
                         <th>Trạng thái</th>
                         <th>Thao tác</th>
@@ -74,6 +74,17 @@
                                         @if($promotion->max_discount_amount && $promotion->discount_type === 'percent')
                                             <div>Giảm tối đa {{ number_format($promotion->max_discount_amount, 0, ',', '.') }} đ</div>
                                         @endif
+                                    </div>
+                                @elseif($promotion->apply_scope === 'customer_tier')
+                                    <div class="small">
+                                        <span class="badge badge-warning">Theo hạng khách hàng</span>
+                                        <div>
+                                            Áp dụng cho khách từ hạng 
+                                            <strong>{{ $promotion->min_customer_tier ?? 'Khách thường' }}</strong> trở lên
+                                        </div>
+                                        <div class="text-muted">
+                                            Giảm trực tiếp trên giá trị hóa đơn khi khách thanh toán.
+                                        </div>
                                     </div>
                                 @else
                                     @php

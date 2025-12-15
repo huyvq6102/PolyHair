@@ -20,7 +20,7 @@
                 <strong>Nhân viên:</strong> {{ $schedule->employee->user->name ?? 'N/A' }}
             </div>
             <div class="col-md-6">
-                <strong>Vị trí:</strong> {{ $schedule->employee->position ?? 'N/A' }}
+                <strong>Vị trí:</strong> {{ \App\Models\Employee::getPositionVietnamese($schedule->employee->position ?? '') ?: 'N/A' }}
             </div>
         </div>
 
@@ -34,7 +34,7 @@
                     <select name="employee_ids[]" id="employee_ids" class="form-control select2-multiple @error('employee_ids') is-invalid @enderror @error('employee_ids.*') is-invalid @enderror" multiple required>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" {{ (old('employee_ids') && in_array($employee->id, old('employee_ids'))) || $schedule->employee_id == $employee->id ? 'selected' : '' }}>
-                                {{ $employee->user->name ?? 'N/A' }} - {{ $employee->position ?? 'N/A' }}
+                                {{ $employee->user->name ?? 'N/A' }} - {{ \App\Models\Employee::getPositionVietnamese($employee->position ?? '') ?: 'N/A' }}
                             </option>
                         @endforeach
                     </select>
