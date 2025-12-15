@@ -158,6 +158,9 @@
                                 <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <a href="{{ route('site.payments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </a>
                                 <form action="{{ route('admin.appointments.cancel', $appointment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn hủy lịch không?');">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-danger" title="Hủy">
