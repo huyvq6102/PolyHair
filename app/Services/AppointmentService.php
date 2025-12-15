@@ -37,35 +37,35 @@ class AppointmentService
 
         // Search by customer name
         if (isset($filters['customer_name']) && !empty($filters['customer_name'])) {
-            $query->whereHas('user', function($q) use ($filters) {
+            $query->whereHas('user', function ($q) use ($filters) {
                 $q->where('name', 'like', '%' . $filters['customer_name'] . '%');
             });
         }
 
         // Search by phone
         if (isset($filters['phone']) && !empty($filters['phone'])) {
-            $query->whereHas('user', function($q) use ($filters) {
+            $query->whereHas('user', function ($q) use ($filters) {
                 $q->where('phone', 'like', '%' . $filters['phone'] . '%');
             });
         }
 
         // Search by email
         if (isset($filters['email']) && !empty($filters['email'])) {
-            $query->whereHas('user', function($q) use ($filters) {
+            $query->whereHas('user', function ($q) use ($filters) {
                 $q->where('email', 'like', '%' . $filters['email'] . '%');
             });
         }
 
         // Search by employee name
         if (isset($filters['employee_name']) && !empty($filters['employee_name'])) {
-            $query->whereHas('employee.user', function($q) use ($filters) {
+            $query->whereHas('employee.user', function ($q) use ($filters) {
                 $q->where('name', 'like', '%' . $filters['employee_name'] . '%');
             });
         }
 
         // Search by service
         if (isset($filters['service']) && !empty($filters['service'])) {
-            $query->whereHas('appointmentDetails.serviceVariant.service', function($q) use ($filters) {
+            $query->whereHas('appointmentDetails.serviceVariant.service', function ($q) use ($filters) {
                 $q->where('name', 'like', '%' . $filters['service'] . '%');
             });
         }
@@ -110,12 +110,12 @@ class AppointmentService
                 'promotionUsages.promotion',
             ])
             ->findOrFail($id);
-        
+
         // If appointment is soft deleted, restore it automatically
         if ($appointment->trashed()) {
             $appointment->restore();
         }
-        
+
         return $appointment;
     }
 
@@ -180,8 +180,21 @@ class AppointmentService
     {
         $appointment = Appointment::findOrFail($id);
         $oldStatus = $appointment->status;
-        
+
         $appointment->update(['status' => $status]);
+
+        // Sync appointment details status with main appointment status
+        $detailStatus = match ($status) {
+            'Hoàn thành' => 'Hoàn thành',
+            'Đang thực hiện' => 'Đang thực hiện',
+            'Đã hủy' => 'Đã hủy',
+            'Đã xác nhận' => 'Chờ',
+            default => null, // Don't update details for other statuses
+        };
+
+        if ($detailStatus !== null) {
+            $appointment->appointmentDetails()->update(['status' => $detailStatus]);
+        }
 
         // Log status change
         AppointmentLog::create([
@@ -206,7 +219,7 @@ class AppointmentService
             'old_status' => $oldStatus,
             'new_status' => $appointment->status,
         ]);
-        
+
         event(new AppointmentStatusUpdated($appointment));
 
         return $appointment;
@@ -223,7 +236,7 @@ class AppointmentService
             2 => 'Đã hủy',
             3 => 'Hoàn thành',
         ];
-        
+
         $status = $statusMap[$cancel] ?? 'Chờ xử lý';
         return $this->updateStatus($id, $status);
     }
@@ -289,13 +302,13 @@ class AppointmentService
     public function getForEmployeeWithFilters($employeeId, array $filters = [], $perPage = 10)
     {
         $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
-            ->where(function($q) use ($employeeId) {
+            ->where(function ($q) use ($employeeId) {
                 // Appointments assigned to employee directly
                 $q->where('employee_id', $employeeId)
-                  // Or appointments where employee is assigned in appointment details
-                  ->orWhereHas('appointmentDetails', function($detailQuery) use ($employeeId) {
-                      $detailQuery->where('employee_id', $employeeId);
-                  });
+                    // Or appointments where employee is assigned in appointment details
+                    ->orWhereHas('appointmentDetails', function ($detailQuery) use ($employeeId) {
+                        $detailQuery->where('employee_id', $employeeId);
+                    });
             });
 
         // Filter by status
@@ -305,14 +318,14 @@ class AppointmentService
 
         // Search by customer name
         if (isset($filters['customer_name']) && !empty($filters['customer_name'])) {
-            $query->whereHas('user', function($q) use ($filters) {
+            $query->whereHas('user', function ($q) use ($filters) {
                 $q->where('name', 'like', '%' . $filters['customer_name'] . '%');
             });
         }
 
         // Search by phone
         if (isset($filters['phone']) && !empty($filters['phone'])) {
-            $query->whereHas('user', function($q) use ($filters) {
+            $query->whereHas('user', function ($q) use ($filters) {
                 $q->where('phone', 'like', '%' . $filters['phone'] . '%');
             });
         }
@@ -343,12 +356,12 @@ class AppointmentService
             $appointment = Appointment::findOrFail($id);
             $oldStatus = $appointment->status;
             $user = $appointment->user;
-            
+
             $appointment->update([
                 'status' => 'Đã hủy',
                 'cancellation_reason' => $reason
             ]);
-            
+
             // Note: Working schedule status column has been removed.
             // The working schedule is now managed differently (if needed).
             // Free up working schedule time slot logic removed as status column no longer exists.
@@ -376,24 +389,24 @@ class AppointmentService
                 'old_status' => $oldStatus,
                 'new_status' => $appointment->status,
             ]);
-            
+
             event(new AppointmentStatusUpdated($appointment));
 
             // Gửi email thông báo hủy lịch
             $this->sendCancellationEmail($appointment);
-            
+
             // Chỉ kiểm tra và ban nếu là khách hàng tự hủy (không phải admin/employee)
             // Kiểm tra SAU KHI hủy để đếm chính xác số lần hủy bao gồm cả lịch vừa hủy
             $shouldCheckBan = !$user->isAdmin() && !$user->isEmployee();
             $wasBanned = false;
-            
+
             if ($shouldCheckBan) {
                 $wasBanned = $this->checkAndBanUserIfNeeded($user);
             }
-            
+
             // Refresh user để lấy thông tin mới nhất
             $user->refresh();
-            
+
             // Trả về thông tin về việc ban để controller có thể xử lý
             return [
                 'appointment' => $appointment,
@@ -413,28 +426,28 @@ class AppointmentService
     protected function checkAndBanUserIfNeeded($user)
     {
         $now = now();
-        
+
         // Đếm số lần hủy trong ngày (từ 00:00 hôm nay)
         $todayStart = $now->copy()->startOfDay();
         $cancellationsToday = Appointment::where('user_id', $user->id)
             ->where('status', 'Đã hủy')
             ->where('created_at', '>=', $todayStart)
             ->count();
-        
+
         // Đếm số lần hủy trong tuần (7 ngày gần nhất)
         $weekStart = $now->copy()->subDays(7);
         $cancellationsThisWeek = Appointment::where('user_id', $user->id)
             ->where('status', 'Đã hủy')
             ->where('created_at', '>=', $weekStart)
             ->count();
-        
+
         // Đếm số lần hủy trong tháng (30 ngày gần nhất)
         $monthStart = $now->copy()->subDays(30);
         $cancellationsThisMonth = Appointment::where('user_id', $user->id)
             ->where('status', 'Đã hủy')
             ->where('created_at', '>=', $monthStart)
             ->count();
-        
+
         // Log để debug
         \Log::info('Checking ban for user', [
             'user_id' => $user->id,
@@ -446,11 +459,11 @@ class AppointmentService
             'banned_until' => $user->banned_until,
             'status' => $user->status,
         ]);
-        
+
         // Kiểm tra giới hạn: 3/ngày, 7/tuần, 15/tháng
         $exceededLimit = false;
         $banReason = '';
-        
+
         if ($cancellationsToday >= 3) {
             $exceededLimit = true;
             $banReason = "Hủy lịch hẹn quá 3 lần trong ngày ({$cancellationsToday} lần)";
@@ -461,7 +474,7 @@ class AppointmentService
             $exceededLimit = true;
             $banReason = "Hủy lịch hẹn quá 15 lần trong tháng ({$cancellationsThisMonth} lần)";
         }
-        
+
         if ($exceededLimit) {
             // Kiểm tra nếu user đã bị cấm vĩnh viễn (status = "Cấm") thì không ban lại
             if ($user->status === 'Cấm') {
@@ -471,7 +484,7 @@ class AppointmentService
                 ]);
                 return;
             }
-            
+
             // Nếu đã bị ban tạm thời nhưng chưa hết thời gian, không ban lại
             if ($user->isBanned()) {
                 \Log::info('User is already banned, skipping ban', [
@@ -482,15 +495,15 @@ class AppointmentService
                 ]);
                 return;
             }
-            
+
             // Ban tài khoản: Tất cả các trường hợp vô hiệu hóa đều bị cấm 1 giờ
             $banHours = 1; // Vô hiệu hóa: khóa 1 giờ
-            
+
             $user->ban($banHours, $banReason);
-            
+
             // Refresh để lấy giá trị banned_until mới nhất
             $user->refresh();
-            
+
             \Log::warning('User banned due to excessive cancellations', [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
@@ -502,10 +515,10 @@ class AppointmentService
                 'banned_until' => $user->banned_until,
                 'status' => $user->status,
             ]);
-            
+
             return true; // User đã bị ban
         }
-        
+
         return false; // User không bị ban
     }
 
@@ -578,7 +591,7 @@ class AppointmentService
     {
         return DB::transaction(function () use ($id) {
             $appointment = Appointment::findOrFail($id);
-            
+
             if ($appointment->status !== 'Đã hủy') {
                 throw new \Exception('Chỉ có thể xóa vĩnh viễn lịch đã hủy.');
             }
@@ -586,7 +599,7 @@ class AppointmentService
             // Delete related records first
             $appointment->appointmentDetails()->delete();
             $appointment->appointmentLogs()->delete();
-            
+
             // Delete promotion usages if table exists
             if (\Illuminate\Support\Facades\Schema::hasTable('promotion_usages')) {
                 try {
@@ -600,7 +613,7 @@ class AppointmentService
                     \Log::warning('Could not delete promotion_usages for appointment ' . $id . ': ' . $e->getMessage());
                 }
             }
-            
+
             // Delete reviews if table exists
             if (\Illuminate\Support\Facades\Schema::hasTable('reviews')) {
                 try {
@@ -614,7 +627,7 @@ class AppointmentService
                     \Log::warning('Could not delete reviews for appointment ' . $id . ': ' . $e->getMessage());
                 }
             }
-            
+
             // Delete payments if table exists
             if (\Illuminate\Support\Facades\Schema::hasTable('payments')) {
                 try {
@@ -641,7 +654,7 @@ class AppointmentService
     {
         $deletedCount = 0;
         $sevenDaysAgo = now()->subDays(7);
-        
+
         // Get all cancelled appointments
         $cancelledAppointments = Appointment::where('status', 'Đã hủy')->get();
 
@@ -652,10 +665,10 @@ class AppointmentService
                     ->where('status_to', 'Đã hủy')
                     ->orderBy('created_at', 'desc')
                     ->first();
-                
+
                 // Use log date if exists, otherwise use updated_at
                 $cancelledDate = $cancelledLog ? $cancelledLog->created_at : $appointment->updated_at;
-                
+
                 // Check if cancelled more than 7 days ago
                 if ($cancelledDate->lte($sevenDaysAgo)) {
                     $this->forceDelete($appointment->id);
@@ -676,17 +689,17 @@ class AppointmentService
     {
         return DB::transaction(function () use ($id, $modifiedBy) {
             $appointment = Appointment::findOrFail($id);
-            
+
             if ($appointment->status !== 'Đã hủy') {
                 throw new \Exception('Chỉ có thể khôi phục lịch đã hủy.');
             }
 
             $oldStatus = $appointment->status;
             $newStatus = 'Chờ xử lý'; // Restore to pending status
-            
+
             // Reset created_at và updated_at để tránh auto-confirm ngay lập tức
             $now = now();
-            
+
             // Sử dụng DB::table để đảm bảo created_at được update (vì Eloquent có thể không update created_at)
             DB::table('appointments')
                 ->where('id', $appointment->id)
@@ -696,7 +709,7 @@ class AppointmentService
                     'created_at' => $now, // Reset created_at để tránh auto-confirm ngay lập tức
                     'updated_at' => $now, // Cập nhật updated_at
                 ]);
-            
+
             // Refresh appointment để lấy dữ liệu mới
             $appointment->refresh();
 
@@ -728,7 +741,7 @@ class AppointmentService
                 'new_status' => $appointment->status,
                 'booking_code' => $appointment->booking_code,
             ]);
-            
+
             try {
                 event(new AppointmentStatusUpdated($appointment));
                 \Illuminate\Support\Facades\Log::info('Appointment restore event broadcasted successfully', [
@@ -755,17 +768,17 @@ class AppointmentService
             'data_keys' => array_keys($data),
             'service_variant_data_count' => count($serviceVariantData)
         ]);
-        
+
         return DB::transaction(function () use ($id, $data, $serviceVariantData) {
             // Use withTrashed to find appointment even if soft deleted (shouldn't happen, but just in case)
             $appointment = Appointment::withTrashed()->findOrFail($id);
-            
+
             \Illuminate\Support\Facades\Log::info('Appointment found', [
                 'appointment_id' => $appointment->id,
                 'deleted_at' => $appointment->deleted_at,
                 'trashed' => $appointment->trashed()
             ]);
-            
+
             // If appointment is soft deleted, restore it first
             if ($appointment->trashed()) {
                 \Illuminate\Support\Facades\Log::warning('Appointment was trashed, restoring it', [
@@ -773,9 +786,9 @@ class AppointmentService
                 ]);
                 $appointment->restore();
             }
-            
+
             $oldStatus = $appointment->status;
-            
+
             $appointment->update([
                 'user_id' => $data['user_id'] ?? $appointment->user_id,
                 'employee_id' => $data['employee_id'] ?? $appointment->employee_id,
@@ -808,7 +821,7 @@ class AppointmentService
                         'notes' => $variantData['notes'] ?? null,
                     ]);
                 }
-                
+
                 \Illuminate\Support\Facades\Log::info('New services added to appointment', [
                     'appointment_id' => $appointment->id,
                     'new_services_count' => count($serviceVariantData)
@@ -840,20 +853,19 @@ class AppointmentService
                     'old_status' => $oldStatus,
                     'new_status' => $appointment->status,
                 ]);
-                
+
                 event(new AppointmentStatusUpdated($appointment));
             }
 
             $result = $appointment->load(['employee.user', 'user', 'appointmentDetails.serviceVariant.service']);
-            
+
             \Illuminate\Support\Facades\Log::info('AppointmentService->update completed', [
                 'appointment_id' => $result->id,
                 'deleted_at' => $result->deleted_at,
                 'trashed' => $result->trashed()
             ]);
-            
+
             return $result;
         });
     }
 }
-

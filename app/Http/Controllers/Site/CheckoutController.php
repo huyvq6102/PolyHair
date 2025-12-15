@@ -238,8 +238,9 @@ class CheckoutController extends Controller
         $taxablePrice = max(0, $subtotal - $promotionAmount);
         
         // VAT Calculation (giống như PaymentService)
-        $VAT = $taxablePrice * 0.1;
-        $total = $taxablePrice + $VAT;
+        // $VAT = $taxablePrice * 0.1;
+        $VAT = 0;
+        $total = $taxablePrice; // + $VAT;
 
         return view('site.payments.show', [
             'customer' => $customerData,
