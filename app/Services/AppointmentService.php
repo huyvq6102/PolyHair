@@ -84,6 +84,53 @@ class AppointmentService
     }
 
     /**
+     * Get all appointments with filters and pagination (excluding cancelled).
+     */
+    public function getAllWithFiltersPaginated(array $filters = [], $perPage = 10)
+    {
+        $query = Appointment::with(['employee.user', 'user', 'appointmentDetails.serviceVariant.service', 'appointmentDetails.combo'])
+            ->whereNull('deleted_at');
+
+        // Filter by status
+        if (isset($filters['status']) && !empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        } else {
+            // Default: exclude cancelled appointments
+            $query->where('status', '!=', 'Đã hủy');
+        }
+
+        // Search by customer name
+        if (isset($filters['customer_name']) && !empty($filters['customer_name'])) {
+            $query->whereHas('user', function ($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters['customer_name'] . '%');
+            });
+        }
+
+        // Search by phone
+        if (isset($filters['phone']) && !empty($filters['phone'])) {
+            $query->whereHas('user', function ($q) use ($filters) {
+                $q->where('phone', 'like', '%' . $filters['phone'] . '%');
+            });
+        }
+
+        // Filter by date
+        if (isset($filters['date']) && !empty($filters['date'])) {
+            $query->whereDate('start_at', $filters['date']);
+        }
+
+        // Filter by date range
+        if (isset($filters['date_from']) && !empty($filters['date_from'])) {
+            $query->whereDate('start_at', '>=', $filters['date_from']);
+        }
+
+        if (isset($filters['date_to']) && !empty($filters['date_to'])) {
+            $query->whereDate('start_at', '<=', $filters['date_to']);
+        }
+
+        return $query->orderBy('id', 'desc')->paginate($perPage);
+    }
+
+    /**
      * Get appointments by status.
      */
     public function getByStatus($status)
@@ -184,11 +231,15 @@ class AppointmentService
         $appointment->update(['status' => $status]);
 
         // Sync appointment details status with main appointment status
+        // Map appointment status to appointment_details status enum values
+        // appointment_details status: ['Chờ', 'Xác nhận', 'Hoàn thành', 'Hủy']
         $detailStatus = match ($status) {
             'Hoàn thành' => 'Hoàn thành',
-            'Đang thực hiện' => 'Đang thực hiện',
-            'Đã hủy' => 'Đã hủy',
-            'Đã xác nhận' => 'Chờ',
+            'Đang thực hiện' => 'Xác nhận', // Map 'Đang thực hiện' to 'Xác nhận' in details
+            'Đã hủy' => 'Hủy',
+            'Đã xác nhận' => 'Xác nhận',
+            'Chờ xử lý' => 'Chờ',
+            'Chờ xác nhận' => 'Chờ',
             default => null, // Don't update details for other statuses
         };
 
