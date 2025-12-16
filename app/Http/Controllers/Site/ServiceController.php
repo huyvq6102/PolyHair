@@ -76,9 +76,16 @@ class ServiceController extends Controller
                 $serviceQuery->where('category_id', $typeId);
             }
 
-            // Filter by keyword (name)
+            // Filter by keyword - tìm sâu vào service name và variant names
             if ($keyword) {
-                $serviceQuery->where('name', 'like', "%{$keyword}%");
+                $serviceQuery->where(function($q) use ($keyword) {
+                    // Tìm trong tên service
+                    $q->where('name', 'like', "%{$keyword}%")
+                      // Hoặc tìm trong tên các variants
+                      ->orWhereHas('serviceVariants', function($variantQuery) use ($keyword) {
+                          $variantQuery->where('name', 'like', "%{$keyword}%");
+                      });
+                });
             }
 
             $services = $serviceQuery->orderBy('id', 'desc')->get();
@@ -121,9 +128,16 @@ class ServiceController extends Controller
                 $comboQuery->where('category_id', $categoryId);
             }
 
-            // Filter by keyword (name)
+            // Filter by keyword - tìm sâu vào combo name và service names trong combo
             if ($keyword) {
-                $comboQuery->where('name', 'like', "%{$keyword}%");
+                $comboQuery->where(function($q) use ($keyword) {
+                    // Tìm trong tên combo
+                    $q->where('name', 'like', "%{$keyword}%")
+                      // Hoặc tìm trong tên các service thuộc combo
+                      ->orWhereHas('services', function($serviceQuery) use ($keyword) {
+                          $serviceQuery->where('name', 'like', "%{$keyword}%");
+                      });
+                });
             }
 
             $combos = $comboQuery->orderBy('id', 'desc')->get();
