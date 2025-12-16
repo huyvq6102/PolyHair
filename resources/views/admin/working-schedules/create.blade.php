@@ -47,7 +47,7 @@
             </div>
         @endif
 
-        <form action="{{ route('admin.working-schedules.store') }}" method="POST" class="needs-validation" novalidate onsubmit="return validateAndConfirm();">
+        <form action="{{ route('admin.working-schedules.store') }}" method="POST" class="needs-validation" novalidate onsubmit="return validateForm();">
             @csrf
 
             <div class="form-group">
@@ -68,7 +68,10 @@
 
             <div class="form-group" id="day_input_group">
                 <label for="work_date">Ngày làm việc <span class="text-danger">*</span></label>
-                <input type="date" name="work_date" id="work_date" value="{{ old('work_date') }}" class="form-control @error('work_date') is-invalid @enderror">
+                <input type="date" name="work_date" id="work_date" value="{{ old('work_date') }}" 
+                       class="form-control @error('work_date') is-invalid @enderror"
+                       min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}" 
+                       required>
                 @error('work_date')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @else
@@ -78,7 +81,10 @@
 
             <div class="form-group" id="week_input_group" style="display: none;">
                 <label for="week_start_date">Tuần bắt đầu từ <span class="text-danger">*</span></label>
-                <input type="date" name="week_start_date" id="week_start_date" value="{{ old('week_start_date') }}" class="form-control @error('week_start_date') is-invalid @enderror">
+                <input type="date" name="week_start_date" id="week_start_date" value="{{ old('week_start_date') }}" 
+                       class="form-control @error('week_start_date') is-invalid @enderror"
+                       min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}" 
+                       required>
                 @error('week_start_date')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @else
@@ -89,13 +95,26 @@
 
             <div class="form-group">
                 <label for="shift_ids">Ca làm việc <span class="text-danger">*</span></label>
-                <select name="shift_ids[]" id="shift_ids" class="form-control select2-multiple @error('shift_ids') is-invalid @enderror @error('shift_ids.*') is-invalid @enderror" multiple required>
-                    @foreach($shifts as $shift)
-                        <option value="{{ $shift->id }}" {{ (old('shift_ids') && in_array($shift->id, old('shift_ids'))) ? 'selected' : '' }}>
-                            {{ $shift->name }} ({{ $shift->display_time }})
-                        </option>
-                    @endforeach
-                </select>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <select name="shift_ids[]" id="shift_ids" class="form-control select2-multiple @error('shift_ids') is-invalid @enderror @error('shift_ids.*') is-invalid @enderror" multiple required>
+                        @foreach($shifts as $shift)
+                            <option value="{{ $shift->id }}" {{ (old('shift_ids') && in_array($shift->id, old('shift_ids'))) ? 'selected' : '' }}>
+                                {{ $shift->name }} ({{ $shift->display_time }})
+                            </option>
+                        @endforeach
+                    </select>
+                    @php
+                        // Tìm ca "Ca cả ngày" (7h-22h)
+                        $fullDayShift = $shifts->firstWhere('name', 'Ca cả ngày') ?? $shifts->first(function($shift) {
+                            return $shift->formatted_start_time === '07:00' && $shift->formatted_end_time === '22:00';
+                        });
+                    @endphp
+                    @if($fullDayShift)
+                        <button type="button" class="btn btn-info btn-sm" id="btn_full_day_shift" title="Chọn ca cả ngày (7h-22h)">
+                            <i class="fas fa-calendar-day"></i> Ca cả ngày
+                        </button>
+                    @endif
+                </div>
                 @error('shift_ids')
                     <div class="invalid-feedback d-block">{{ $message }}</div>
                 @elseif($errors->has('shift_ids.*'))
@@ -103,7 +122,7 @@
                 @else
                     <div class="invalid-feedback">Vui lòng chọn ít nhất một ca làm việc</div>
                 @enderror
-                <small class="form-text text-muted">Mỗi ca sẽ có đủ 4 vị trí: Stylist, Barber, Shampooer, Receptionist</small>
+                <small class="form-text text-muted">Mỗi ca sẽ có đủ 4 vị trí: Thợ tạo kiểu, Thợ cắt tóc nam, Nhân viên gội đầu, Lễ tân</small>
             </div>
 
             <hr class="my-4">
@@ -112,7 +131,7 @@
 
             <div class="form-row">
                 <div class="form-group col-md-6">
-                    <label for="stylist_ids">Stylist <span class="text-danger">*</span></label>
+                    <label for="stylist_ids">Thợ tạo kiểu <span class="text-danger">*</span></label>
                     <select name="stylist_ids[]" id="stylist_ids" class="form-control select2-multiple @error('stylist_ids') is-invalid @enderror @error('stylist_ids.*') is-invalid @enderror" multiple required>
                         @foreach($stylists as $stylist)
                             <option value="{{ $stylist->id }}" {{ (old('stylist_ids') && in_array($stylist->id, old('stylist_ids'))) ? 'selected' : '' }}>
@@ -125,12 +144,12 @@
                     @elseif($errors->has('stylist_ids.*'))
                         <div class="invalid-feedback d-block">{{ $errors->first('stylist_ids.*') }}</div>
                     @else
-                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Stylist</div>
+                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Thợ tạo kiểu</div>
                     @enderror
                 </div>
 
                 <div class="form-group col-md-6">
-                    <label for="barber_ids">Barber <span class="text-danger">*</span></label>
+                    <label for="barber_ids">Thợ cắt tóc nam <span class="text-danger">*</span></label>
                     <select name="barber_ids[]" id="barber_ids" class="form-control select2-multiple @error('barber_ids') is-invalid @enderror @error('barber_ids.*') is-invalid @enderror" multiple required>
                         @foreach($barbers as $barber)
                             <option value="{{ $barber->id }}" {{ (old('barber_ids') && in_array($barber->id, old('barber_ids'))) ? 'selected' : '' }}>
@@ -143,14 +162,14 @@
                     @elseif($errors->has('barber_ids.*'))
                         <div class="invalid-feedback d-block">{{ $errors->first('barber_ids.*') }}</div>
                     @else
-                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Barber</div>
+                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Thợ cắt tóc nam</div>
                     @enderror
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group col-md-6">
-                    <label for="shampooer_ids">Shampooer <span class="text-danger">*</span></label>
+                    <label for="shampooer_ids">Nhân viên gội đầu <span class="text-danger">*</span></label>
                     <select name="shampooer_ids[]" id="shampooer_ids" class="form-control select2-multiple @error('shampooer_ids') is-invalid @enderror @error('shampooer_ids.*') is-invalid @enderror" multiple required>
                         @foreach($shampooers as $shampooer)
                             <option value="{{ $shampooer->id }}" {{ (old('shampooer_ids') && in_array($shampooer->id, old('shampooer_ids'))) ? 'selected' : '' }}>
@@ -163,12 +182,12 @@
                     @elseif($errors->has('shampooer_ids.*'))
                         <div class="invalid-feedback d-block">{{ $errors->first('shampooer_ids.*') }}</div>
                     @else
-                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Shampooer</div>
+                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Nhân viên gội đầu</div>
                     @enderror
                 </div>
 
                 <div class="form-group col-md-6">
-                    <label for="receptionist_ids">Receptionist <span class="text-danger">*</span></label>
+                    <label for="receptionist_ids">Lễ tân <span class="text-danger">*</span></label>
                     <select name="receptionist_ids[]" id="receptionist_ids" class="form-control select2-multiple @error('receptionist_ids') is-invalid @enderror @error('receptionist_ids.*') is-invalid @enderror" multiple required>
                         @foreach($receptionists as $receptionist)
                             <option value="{{ $receptionist->id }}" {{ (old('receptionist_ids') && in_array($receptionist->id, old('receptionist_ids'))) ? 'selected' : '' }}>
@@ -181,7 +200,7 @@
                     @elseif($errors->has('receptionist_ids.*'))
                         <div class="invalid-feedback d-block">{{ $errors->first('receptionist_ids.*') }}</div>
                     @else
-                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Receptionist</div>
+                        <div class="invalid-feedback">Vui lòng chọn ít nhất một Lễ tân</div>
                     @enderror
                 </div>
             </div>
@@ -231,6 +250,36 @@ $(document).ready(function() {
         closeOnSelect: false
     });
 
+    // ✅ MỚI: Nút chọn ca cả ngày (7h-22h)
+    @if($fullDayShift)
+        const fullDayShiftId = '{{ $fullDayShift->id }}';
+        
+        // Kiểm tra trạng thái ban đầu
+        const initialValues = $('#shift_ids').val() || [];
+        if (initialValues.includes(fullDayShiftId)) {
+            $('#btn_full_day_shift').html('<i class="fas fa-check"></i> Đã chọn').removeClass('btn-info').addClass('btn-success');
+        }
+        
+        $('#btn_full_day_shift').on('click', function() {
+            const currentValues = $('#shift_ids').val() || [];
+            
+            // Nếu ca cả ngày chưa được chọn, thêm vào
+            if (!currentValues.includes(fullDayShiftId)) {
+                currentValues.push(fullDayShiftId);
+                $('#shift_ids').val(currentValues).trigger('change');
+                
+                // Hiển thị thông báo
+                $(this).html('<i class="fas fa-check"></i> Đã chọn').removeClass('btn-info').addClass('btn-success');
+            } else {
+                // Nếu đã chọn, bỏ chọn
+                const newValues = currentValues.filter(id => id !== fullDayShiftId);
+                $('#shift_ids').val(newValues).trigger('change');
+                
+                $(this).html('<i class="fas fa-calendar-day"></i> Ca cả ngày').removeClass('btn-success').addClass('btn-info');
+            }
+        });
+    @endif
+
     // Cập nhật validation khi thay đổi ca làm việc
     $('#shift_ids').on('change', function() {
         const shiftCount = $('#shift_ids').val() ? $('#shift_ids').val().length : 0;
@@ -240,6 +289,18 @@ $(document).ready(function() {
         } else {
             $('#shift_ids')[0].setCustomValidity('Vui lòng chọn ít nhất một ca làm việc');
         }
+        
+        // ✅ MỚI: Cập nhật trạng thái nút "Ca cả ngày"
+        @if($fullDayShift)
+            const currentValues = $('#shift_ids').val() || [];
+            const isSelected = currentValues.includes(fullDayShiftId);
+            
+            if (isSelected) {
+                $('#btn_full_day_shift').html('<i class="fas fa-check"></i> Đã chọn').removeClass('btn-info').addClass('btn-success');
+            } else {
+                $('#btn_full_day_shift').html('<i class="fas fa-calendar-day"></i> Ca cả ngày').removeClass('btn-success').addClass('btn-info');
+            }
+        @endif
     });
 
     // Cập nhật validation khi thay đổi nhân viên
@@ -275,15 +336,14 @@ $(document).ready(function() {
     toggleScheduleType();
 });
 
-// Xác nhận trước khi submit
-function validateAndConfirm() {
+// Validation trước khi submit
+function validateForm() {
     const stylistIds = $('#stylist_ids').val();
     const barberIds = $('#barber_ids').val();
     const shampooerIds = $('#shampooer_ids').val();
     const receptionistIds = $('#receptionist_ids').val();
     const shiftIds = $('#shift_ids').val();
     const shiftCount = shiftIds ? shiftIds.length : 0;
-    const scheduleType = $('input[name="schedule_type"]:checked').val();
     
     const stylistCount = stylistIds ? stylistIds.length : 0;
     const barberCount = barberIds ? barberIds.length : 0;
@@ -306,24 +366,25 @@ function validateAndConfirm() {
     
     let totalSchedules;
     let confirmMessage;
+    const scheduleType = $('input[name="schedule_type"]:checked').val();
     
     if (scheduleType === 'week') {
         // Tổng số nhân viên × số ca × 7 ngày
         totalSchedules = totalEmployees * shiftCount * 7;
         confirmMessage = `Bạn sẽ tạo ${totalSchedules} lịch làm việc cho cả tuần:\n` +
-            `- ${stylistCount} Stylist × ${shiftCount} ca × 7 ngày = ${stylistCount * shiftCount * 7} lịch\n` +
-            `- ${barberCount} Barber × ${shiftCount} ca × 7 ngày = ${barberCount * shiftCount * 7} lịch\n` +
-            `- ${shampooerCount} Shampooer × ${shiftCount} ca × 7 ngày = ${shampooerCount * shiftCount * 7} lịch\n` +
-            `- ${receptionistCount} Receptionist × ${shiftCount} ca × 7 ngày = ${receptionistCount * shiftCount * 7} lịch\n\n` +
+            `- ${stylistCount} Thợ tạo kiểu × ${shiftCount} ca × 7 ngày = ${stylistCount * shiftCount * 7} lịch\n` +
+            `- ${barberCount} Thợ cắt tóc nam × ${shiftCount} ca × 7 ngày = ${barberCount * shiftCount * 7} lịch\n` +
+            `- ${shampooerCount} Nhân viên gội đầu × ${shiftCount} ca × 7 ngày = ${shampooerCount * shiftCount * 7} lịch\n` +
+            `- ${receptionistCount} Lễ tân × ${shiftCount} ca × 7 ngày = ${receptionistCount * shiftCount * 7} lịch\n\n` +
             `Xác nhận tạo lịch?`;
     } else {
         // Tổng số nhân viên × số ca
         totalSchedules = totalEmployees * shiftCount;
         confirmMessage = `Bạn sẽ tạo ${totalSchedules} lịch làm việc:\n` +
-            `- ${stylistCount} Stylist × ${shiftCount} ca = ${stylistCount * shiftCount} lịch\n` +
-            `- ${barberCount} Barber × ${shiftCount} ca = ${barberCount * shiftCount} lịch\n` +
-            `- ${shampooerCount} Shampooer × ${shiftCount} ca = ${shampooerCount * shiftCount} lịch\n` +
-            `- ${receptionistCount} Receptionist × ${shiftCount} ca = ${receptionistCount * shiftCount} lịch\n\n` +
+            `- ${stylistCount} Thợ tạo kiểu × ${shiftCount} ca = ${stylistCount * shiftCount} lịch\n` +
+            `- ${barberCount} Thợ cắt tóc nam × ${shiftCount} ca = ${barberCount * shiftCount} lịch\n` +
+            `- ${shampooerCount} Nhân viên gội đầu × ${shiftCount} ca = ${shampooerCount * shiftCount} lịch\n` +
+            `- ${receptionistCount} Lễ tân × ${shiftCount} ca = ${receptionistCount * shiftCount} lịch\n\n` +
             `Xác nhận tạo lịch?`;
     }
     

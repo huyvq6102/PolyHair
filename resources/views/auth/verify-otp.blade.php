@@ -10,6 +10,16 @@
         color: #f6f7fb;
         text-shadow: 0 1px 3px rgba(0,0,0,0.35);
     }
+    /* Thông báo lỗi tùy chỉnh */
+    .custom-error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    .form-control.is-invalid-custom {
+        border-color: #dc3545;
+    }
 </style>
 @endpush
 
@@ -36,27 +46,18 @@
                         </div>
                     @endif
 
-                    @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul class="mb-0">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    <form method="POST" action="{{ route('password.verify-otp.store') }}">
+                    <form method="POST" action="{{ route('password.verify-otp.store') }}" id="verifyOtpForm" novalidate>
                         @csrf
 
                         <div class="form-group">
                             <label for="otp">Mã xác nhận (6 chữ số) <span class="text-danger">*</span></label>
                             <input type="text" name="otp" id="otp" class="form-control @error('otp') is-invalid @enderror text-center" 
-                                   value="{{ old('otp') }}" required autofocus maxlength="6" 
+                                   value="{{ old('otp') }}" autofocus maxlength="6" 
                                    placeholder="000000" style="font-size: 24px; letter-spacing: 8px;">
                             @error('otp')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <span class="custom-error-message" id="otp-error"></span>
                             <small class="form-text text-muted mt-2">Mã xác nhận có hiệu lực trong 10 phút</small>
                         </div>
 
@@ -77,10 +78,73 @@
 
 @push('scripts')
 <script>
-    // Auto focus and move to next input (if using multiple inputs)
-    document.getElementById('otp').addEventListener('input', function(e) {
-        this.value = this.value.replace(/[^0-9]/g, '');
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('verifyOtpForm');
+    const otpInput = document.getElementById('otp');
+
+    function showError(inputId, message) {
+        const input = document.getElementById(inputId);
+        const errorSpan = document.getElementById(inputId + '-error');
+        
+        if (input) {
+            input.classList.add('is-invalid-custom');
+        }
+        
+        if (errorSpan) {
+            errorSpan.textContent = message;
+            errorSpan.style.display = 'block';
+        }
+    }
+
+    function clearError(inputId) {
+        const input = document.getElementById(inputId);
+        const errorSpan = document.getElementById(inputId + '-error');
+        
+        if (input) {
+            input.classList.remove('is-invalid-custom');
+        }
+        
+        if (errorSpan) {
+            errorSpan.textContent = '';
+            errorSpan.style.display = 'none';
+        }
+    }
+
+    // Chỉ cho phép nhập số
+    if (otpInput) {
+        otpInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+
+        otpInput.addEventListener('blur', function() {
+            if (this.validity.valueMissing) {
+                showError('otp', 'Vui lòng nhập mã xác nhận.');
+            } else if (this.value.length !== 6) {
+                showError('otp', 'Mã xác nhận phải có đúng 6 chữ số.');
+            } else {
+                clearError('otp');
+            }
+        });
+
+        otpInput.addEventListener('input', function() {
+            if (this.value.length === 6) {
+                clearError('otp');
+            }
+        });
+    }
+
+    form.addEventListener('submit', function(e) {
+        if (otpInput) {
+            if (otpInput.validity.valueMissing) {
+                e.preventDefault();
+                showError('otp', 'Vui lòng nhập mã xác nhận.');
+            } else if (otpInput.value.length !== 6) {
+                e.preventDefault();
+                showError('otp', 'Mã xác nhận phải có đúng 6 chữ số.');
+            }
+        }
     });
+});
 </script>
 @endpush
 @endsection

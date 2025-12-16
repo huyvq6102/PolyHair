@@ -16,7 +16,7 @@ class VnpayService
         $this->vnp_TmnCode = env('VNP_TMN_CODE'); // Mã website tại VNPAY 
         $this->vnp_HashSecret = env('VNP_HASH_SECRET'); // Chuỗi bí mật
         $this->vnp_Url = env('VNP_URL');
-        $this->vnp_Returnurl = route('site.payments.vnpay.return');
+        $this->vnp_Returnurl = route('site.payments.vnpay-return');
     }
 
     public function createPayment($orderId, $amount, $orderInfo = 'Thanh toan don hang')

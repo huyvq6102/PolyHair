@@ -58,6 +58,18 @@
 .profile-section .btn-primary:hover {
     background: #b88a4a;
 }
+.password-toggle-btn {
+    border-color: #4b5563;
+    color: #e5e7eb;
+    background: #1f2937;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.password-toggle-btn:hover {
+    color: #fff;
+    background: #111827;
+}
 .profile-section .btn-danger {
     background: #dc3545;
     border: none;

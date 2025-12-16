@@ -47,7 +47,7 @@
       <div>
         <h3 class="title ba-title mb-0">DỊCH VỤ TÓC & COMBO</h3>
         <p class="desc">
-          Một số dịch vụ làm tóc bên salon chúng tôi hiện nay mà bạn quan tâm
+        Những dịch vụ được khách hàng lựa chọn nhiều nhất tại salon
         </p>
       </div>
     </div>
@@ -55,7 +55,78 @@
   <div class="container service-wrapper">
     <div class="service_right">
 
-      <div class="service-grid">
+      <div class="service-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+        @php
+          // Helper function để tính discount
+          function calculateDiscountForService($item, $itemType, $activePromotions) {
+            $originalPrice = 0;
+            $discount = 0;
+            $finalPrice = 0;
+            $promotion = null;
+            $discountTag = '';
+
+            if ($itemType === 'service') {
+              $originalPrice = $item->base_price ?? 0;
+            } elseif ($itemType === 'variant') {
+              $originalPrice = $item->price ?? 0;
+            } elseif ($itemType === 'combo') {
+              $originalPrice = $item->price ?? 0;
+            }
+
+            if ($originalPrice <= 0) {
+              return ['originalPrice' => 0, 'discount' => 0, 'finalPrice' => 0, 'promotion' => null, 'discountTag' => ''];
+            }
+
+            $now = \Carbon\Carbon::now();
+
+            foreach ($activePromotions as $promo) {
+              if ($promo->status !== 'active') continue;
+              if ($promo->start_date && $promo->start_date > $now) continue;
+              if ($promo->end_date && $promo->end_date < $now) continue;
+
+              $applies = false;
+
+              if ($itemType === 'service') {
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                  || ($promo->combos && $promo->combos->count() > 0)
+                  || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                $applyToAll = !$hasSpecificServices ||
+                  (($promo->services ? $promo->services->count() : 0) +
+                   ($promo->combos ? $promo->combos->count() : 0) +
+                   ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                if ($promo->apply_scope === 'order' || $applyToAll) {
+                  $applies = true;
+                } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
+                  $applies = true;
+                }
+              }
+
+              if ($applies) {
+                $promotion = $promo;
+                if ($promo->discount_type === 'percent') {
+                  $discount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                  if ($promo->max_discount_amount) {
+                    $discount = min($discount, $promo->max_discount_amount);
+                  }
+                  $discountTag = '-' . ($promo->discount_percent ?? 0) . '%';
+                } else {
+                  $discount = min($promo->discount_amount ?? 0, $originalPrice);
+                  $discountTag = '-' . number_format($discount / 1000, 0) . 'k';
+                }
+                $finalPrice = max(0, $originalPrice - $discount);
+                break;
+              }
+            }
+
+            return [
+              'originalPrice' => $originalPrice,
+              'discount' => $discount,
+              'finalPrice' => $finalPrice > 0 ? $finalPrice : $originalPrice,
+              'promotion' => $promotion,
+              'discountTag' => $discountTag
+            ];
+          }
+        @endphp
         @forelse($services as $service)
           @php
             // Lấy giá từ variant đầu tiên hoặc base_price
@@ -64,8 +135,13 @@
                      ?? $service->base_price
                      ?? 0;
 
+            // Tính discount
+            $serviceDiscount = calculateDiscountForService($service, 'service', $activePromotions ?? collect());
+            $displayPrice = $serviceDiscount['finalPrice'] > 0 ? $serviceDiscount['finalPrice'] : $price;
+
             // Format giá tiền
-            $formattedPrice = number_format($price, 0, ',', '.') . 'vnđ';
+            $formattedPrice = number_format($displayPrice, 0, ',', '.') . 'vnđ';
+            $formattedOriginalPrice = $serviceDiscount['discount'] > 0 ? number_format($serviceDiscount['originalPrice'], 0, ',', '.') . 'vnđ' : '';
 
             // Đường dẫn ảnh
             $imagePath = $service->image
@@ -74,19 +150,46 @@
 
             // Link đến trang chi tiết
             $serviceLink = route('site.services.show', $service->id);
+
+            // Tạo booking params cho nút đặt lịch
+            $bookingParams = [];
+            if ($service->serviceVariants && $service->serviceVariants->count() > 0) {
+                $defaultVariant = $service->serviceVariants->where('is_default', true)->first();
+                if (!$defaultVariant) {
+                    $defaultVariant = $service->serviceVariants->first();
+                }
+                if ($defaultVariant) {
+                    $bookingParams['service_variants'] = [$defaultVariant->id];
+                }
+            } else {
+                $bookingParams['service_id'] = [$service->id];
+            }
           @endphp
-          <div class="svc-card">
-            <a class="svc-img" href="{{ $serviceLink }}">
+          <div class="svc-card" style="position: relative;">
+            <a class="svc-img" href="{{ $serviceLink }}" style="position: relative;">
               <img src="{{ $imagePath }}" alt="{{ $service->name }}">
+              @if($serviceDiscount['discount'] > 0)
+                <span style="position: absolute; top: 8px; right: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ $serviceDiscount['discountTag'] }}</span>
+              @endif
             </a>
             <div class="svc-body">
               <div class="svc-left">
                 <h4 class="svc-name">{{ $service->name }}</h4>
-                <div class="svc-price">Giá từ: <span>{{ $formattedPrice }}</span></div>
+                <div class="svc-price" style="display: flex; flex-direction: column; gap: 3px;">
+                  <div style="font-size: 11px; color: #666;">Giá từ:</div>
+                  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    @if($serviceDiscount['discount'] > 0)
+                      <span style="text-decoration: line-through; color: #999; font-size: 12px;">{{ $formattedOriginalPrice }}</span>
+                      <span style="color: #BC9321; font-weight: 700; font-size: 14px;">{{ $formattedPrice }}</span>
+                    @else
+                      <span style="color: #BC9321; font-weight: 700; font-size: 14px;">{{ $formattedPrice }}</span>
+                    @endif
+                  </div>
+                </div>
               </div>
               <div class="svc-right">
                 <span class="svc-rating">5 ★ Đánh giá</span>
-                <a class="svc-book" href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
+                <a class="svc-book" href="{{ route('site.appointment.create', $bookingParams) }}">Đặt lịch ngay</a>
               </div>
             </div>
           </div>
@@ -172,15 +275,46 @@
                 @foreach($allEmployees as $index => $employee)
                     @php
                         $employeeName = $employee->user->name ?? 'Nhân viên';
-                        $employeeImage = $defaultImages[$index] ?? $defaultImages[0];
+                        // Lấy ảnh từ database nếu có, nếu không thì dùng ảnh mặc định
+                        if ($employee->avatar) {
+                            $employeeImage = asset('legacy/images/avatars/' . $employee->avatar);
+                        } else {
+                            $employeeImage = $defaultImages[$index] ?? $defaultImages[0];
+                        }
+                        
+                        // Vị trí nhân viên
+                        $position = $employee->position ?? '';
+                        
+                        // Lấy số năm kinh nghiệm
+                        $experienceYears = $employee->experience_years ?? 0;
                     @endphp
                     <div class="stylist-card">
                         <div class="stylist-img">
                             <img src="{{ $employeeImage }}" alt="{{ $employeeName }}">
                         </div>
-                        <div class="stylist-meta">
-                            <h3 class="stylist-name">{{ $employeeName }}</h3>
-                            <a href="{{ route('site.appointment.create') }}" class="stylist-book">Đặt lịch ngay</a>
+                        <div class="stylist-meta" style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; gap: 12px !important; width: 100% !important;">
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                                <h3 class="stylist-name" style="margin: 0 !important; display: block !important; width: 100% !important; font-size: 16px; font-weight: 600;">{{ $employeeName }}</h3>
+                                <div style="font-size: 13px; color: #666; display: block !important; width: 100% !important; margin: 0 !important;">
+                                    @php
+                                        $infoParts = [];
+                                        if($position) {
+                                            $infoParts[] = $position;
+                                        }
+                                        if($experienceYears > 0) {
+                                            $infoParts[] = $experienceYears . ' năm kinh nghiệm';
+                                        }
+                                    @endphp
+                                    @if(!empty($infoParts))
+                                        {!! implode(' . ', $infoParts) !!}
+                                    @endif
+                                </div>
+                            </div>
+                            <a href="{{ route('site.appointment.create', ['employee_id' => $employee->id]) }}" 
+                               class="stylist-book" 
+                               style="padding: 8px 12px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #000; font-weight: 700; border-radius: 999px; text-transform: uppercase; font-size: 12px; text-decoration: none; display: inline-block; flex-shrink: 0; white-space: nowrap;">
+                                BookStylist ngay
+                            </a>
                         </div>
                     </div>
                 @endforeach

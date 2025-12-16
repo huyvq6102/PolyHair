@@ -207,11 +207,107 @@
                             </h5>
 
                             @php
+                                // Helper function để tính discount cho từng item
+                                function calculateDiscountForItemInCreate($item, $itemType, $activePromotions) {
+                                    $originalPrice = 0;
+                                    if ($itemType === 'service') {
+                                        $originalPrice = $item->base_price ?? 0;
+                                    } elseif ($itemType === 'variant') {
+                                        $originalPrice = $item->price ?? 0;
+                                    } elseif ($itemType === 'combo') {
+                                        $originalPrice = $item->price ?? 0;
+                                    }
+
+                                    $discount = 0;
+                                    $finalPrice = $originalPrice;
+                                    $promotion = null;
+
+                                    if ($originalPrice <= 0) {
+                                        return ['originalPrice' => 0, 'discount' => 0, 'finalPrice' => 0, 'promotion' => null];
+                                    }
+
+                                    $now = \Carbon\Carbon::now();
+
+                                    foreach ($activePromotions ?? [] as $promo) {
+                                        if ($promo->status !== 'active') continue;
+                                        if ($promo->start_date && $promo->start_date > $now) continue;
+                                        if ($promo->end_date && $promo->end_date < $now) continue;
+
+                                        $applies = false;
+
+                                        if ($itemType === 'service') {
+                                            $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                                                || ($promo->combos && $promo->combos->count() > 0)
+                                                || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                                            $applyToAll = !$hasSpecificServices ||
+                                                (($promo->services ? $promo->services->count() : 0) +
+                                                 ($promo->combos ? $promo->combos->count() : 0) +
+                                                 ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                                            if ($promo->apply_scope === 'all' || $applyToAll) {
+                                                $applies = true;
+                                            } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
+                                                $applies = true;
+                                            }
+                                        } elseif ($itemType === 'variant') {
+                                            $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                                                || ($promo->combos && $promo->combos->count() > 0)
+                                                || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                                            $applyToAll = !$hasSpecificServices ||
+                                                (($promo->services ? $promo->services->count() : 0) +
+                                                 ($promo->combos ? $promo->combos->count() : 0) +
+                                                 ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                                            if ($promo->apply_scope === 'all' || $applyToAll) {
+                                                $applies = true;
+                                            } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
+                                                $applies = true;
+                                            } elseif ($item->service_id && $promo->services && $promo->services->contains('id', $item->service_id)) {
+                                                $applies = true;
+                                            }
+                                        } elseif ($itemType === 'combo') {
+                                            $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                                                || ($promo->combos && $promo->combos->count() > 0)
+                                                || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                                            $applyToAll = !$hasSpecificServices ||
+                                                (($promo->services ? $promo->services->count() : 0) +
+                                                 ($promo->combos ? $promo->combos->count() : 0) +
+                                                 ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                                            if ($promo->apply_scope === 'all' || $applyToAll) {
+                                                $applies = true;
+                                            } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
+                                                $applies = true;
+                                            }
+                                        }
+
+                                        if ($applies) {
+                                            $promotion = $promo;
+                                            if ($promo->discount_type === 'percent') {
+                                                $discount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                                                if ($promo->max_discount_amount) {
+                                                    $discount = min($discount, $promo->max_discount_amount);
+                                                }
+                                            } else {
+                                                $discount = min($promo->discount_amount ?? 0, $originalPrice);
+                                            }
+                                            $finalPrice = max(0, $originalPrice - $discount);
+                                            break; // Chỉ áp dụng promotion đầu tiên tìm thấy
+                                        }
+                                    }
+
+                                    return [
+                                        'originalPrice' => $originalPrice,
+                                        'discount' => $discount,
+                                        'finalPrice' => $finalPrice > 0 ? $finalPrice : $originalPrice,
+                                        'promotion' => $promotion
+                                    ];
+                                }
+
                                 $hasAnyService = request('service_id') || request('service_variants') || request('combo_id');
 
-                                // Collect all selected items
+                                // Collect all selected items với giá đã giảm
                                 $allSelectedItems = [];
-                                $totalPrice = 0;
+                                $totalOriginalPrice = 0;
+                                $totalPrice = 0; // Tổng giá sau khi giảm
+                                $totalDiscount = 0;
                                 $totalDuration = 0;
                                 $totalCount = 0;
 
@@ -220,14 +316,19 @@
                                     $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
                                     $selectedServices = \App\Models\Service::whereIn('id', $serviceIds)->get();
                                     foreach ($selectedServices as $service) {
+                                        $serviceDiscount = calculateDiscountForItemInCreate($service, 'service', $activePromotions ?? collect());
                                         $allSelectedItems[] = [
                                             'name' => $service->name,
-                                            'price' => $service->base_price ?? 0,
+                                            'price' => $serviceDiscount['finalPrice'],
+                                            'originalPrice' => $serviceDiscount['originalPrice'],
+                                            'discount' => $serviceDiscount['discount'],
                                             'duration' => $service->base_duration ?? 60,
                                             'type' => 'service',
                                             'id' => $service->id
                                         ];
-                                        $totalPrice += $service->base_price ?? 0;
+                                        $totalOriginalPrice += $serviceDiscount['originalPrice'];
+                                        $totalPrice += $serviceDiscount['finalPrice'];
+                                        $totalDiscount += $serviceDiscount['discount'];
                                         $totalDuration += $service->base_duration ?? 60;
                                         $totalCount++;
                                     }
@@ -239,15 +340,20 @@
                                     $selectedVariants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->with('service')->get();
                                     foreach ($selectedVariants as $variant) {
                                         $name = $variant->service ? $variant->service->name . ' - ' . $variant->name : $variant->name;
+                                        $variantDiscount = calculateDiscountForItemInCreate($variant, 'variant', $activePromotions ?? collect());
                                         $allSelectedItems[] = [
                                             'name' => $name,
-                                            'price' => $variant->price ?? 0,
+                                            'price' => $variantDiscount['finalPrice'],
+                                            'originalPrice' => $variantDiscount['originalPrice'],
+                                            'discount' => $variantDiscount['discount'],
                                             'duration' => $variant->duration ?? 60,
                                             'type' => 'variant',
                                             'id' => $variant->id,
-                                            'parent_service_id' => $variant->service_id ?? null // Store parent service ID for discount calculation
+                                            'parent_service_id' => $variant->service_id ?? null
                                         ];
-                                        $totalPrice += $variant->price ?? 0;
+                                        $totalOriginalPrice += $variantDiscount['originalPrice'];
+                                        $totalPrice += $variantDiscount['finalPrice'];
+                                        $totalDiscount += $variantDiscount['discount'];
                                         $totalDuration += $variant->duration ?? 60;
                                         $totalCount++;
                                     }
@@ -266,85 +372,27 @@
                                             });
                                         }
 
+                                        $comboDiscount = calculateDiscountForItemInCreate($combo, 'combo', $activePromotions ?? collect());
                                         $allSelectedItems[] = [
                                             'name' => $combo->name,
-                                            'price' => $combo->price ?? 0,
+                                            'price' => $comboDiscount['finalPrice'],
+                                            'originalPrice' => $comboDiscount['originalPrice'],
+                                            'discount' => $comboDiscount['discount'],
                                             'duration' => $comboDuration,
                                             'type' => 'combo',
                                             'id' => $combo->id
                                         ];
-                                        $totalPrice += $combo->price ?? 0;
+                                        $totalOriginalPrice += $comboDiscount['originalPrice'];
+                                        $totalPrice += $comboDiscount['finalPrice'];
+                                        $totalDiscount += $comboDiscount['discount'];
                                         $totalDuration += $comboDuration;
                                         $totalCount++;
                                     }
                                 }
 
-                                // Tính discount từ promotion - giống logic trong select-services.blade.php
-                                $discountAmount = 0;
-                                $finalPrice = $totalPrice;
-                                if (isset($selectedPromotion) && $selectedPromotion) {
-                                    // Check if promotion applies to all services
-                                    $hasSpecificServices = ($selectedPromotion->services && $selectedPromotion->services->count() > 0)
-                                        || ($selectedPromotion->combos && $selectedPromotion->combos->count() > 0)
-                                        || ($selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->count() > 0);
-
-                                    $applyToAll = !$hasSpecificServices ||
-                                        (($selectedPromotion->services ? $selectedPromotion->services->count() : 0) +
-                                         ($selectedPromotion->combos ? $selectedPromotion->combos->count() : 0) +
-                                         ($selectedPromotion->serviceVariants ? $selectedPromotion->serviceVariants->count() : 0)) >= 20;
-
-                                    // Calculate applicable price (only for services that match promotion)
-                                    $applicablePrice = 0;
-                                    if ($selectedPromotion->apply_scope === 'order' || $applyToAll) {
-                                        // Apply to all services
-                                        $applicablePrice = $totalPrice;
-                                    } else {
-                                        // Only apply to matching services
-                                        foreach ($allSelectedItems as $item) {
-                                            $isItemApplicable = false;
-                                            
-                                            if ($item['type'] === 'service' && $selectedPromotion->services && $selectedPromotion->services->contains('id', $item['id'])) {
-                                                $isItemApplicable = true;
-                                            } elseif ($item['type'] === 'variant') {
-                                                // Check direct variant match
-                                                if ($selectedPromotion->serviceVariants && $selectedPromotion->serviceVariants->contains('id', $item['id'])) {
-                                                    $isItemApplicable = true;
-                                                } else {
-                                                    // Check if variant's parent service is in promotion
-                                                    $parentServiceId = $item['parent_service_id'] ?? null;
-                                                    if ($parentServiceId && $selectedPromotion->services && $selectedPromotion->services->contains('id', $parentServiceId)) {
-                                                        $isItemApplicable = true;
-                                                    }
-                                                }
-                                            } elseif ($item['type'] === 'combo' && $selectedPromotion->combos && $selectedPromotion->combos->contains('id', $item['id'])) {
-                                                $isItemApplicable = true;
-                                            }
-                                            
-                                            if ($isItemApplicable) {
-                                                $applicablePrice += $item['price'];
-                                            }
-                                        }
-                                    }
-
-                                    // Calculate discount on applicable price only
-                                    if ($applicablePrice > 0) {
-                                        if ($selectedPromotion->discount_type === 'percent') {
-                                            $discountPercent = $selectedPromotion->discount_percent ?? 0;
-                                            $discountAmount = ($applicablePrice * $discountPercent) / 100;
-                                            // Apply max discount if exists
-                                            if ($selectedPromotion->max_discount_amount) {
-                                                $discountAmount = min($discountAmount, $selectedPromotion->max_discount_amount);
-                                            }
-                                        } else {
-                                            $discountAmount = min($selectedPromotion->discount_amount ?? 0, $applicablePrice);
-                                        }
-                                        $finalPrice = max(0, $totalPrice - $discountAmount);
-                                    }
-                                }
-
-                                $formattedTotalPrice = number_format($totalPrice, 0, ',', '.');
-                                $formattedDiscountAmount = number_format($discountAmount, 0, ',', '.');
-                                $formattedFinalPrice = number_format($finalPrice, 0, ',', '.');
+                                $formattedTotalPrice = number_format($totalOriginalPrice, 0, ',', '.');
+                                $formattedDiscountAmount = number_format($totalDiscount, 0, ',', '.');
+                                $formattedFinalPrice = number_format($totalPrice, 0, ',', '.');
                                 @endphp
 
                             @if($hasAnyService && count($allSelectedItems) > 0)
@@ -368,21 +416,9 @@
 
                                 <!-- Tổng số tiền -->
                                 <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
-                                    @if(isset($selectedPromotion) && $selectedPromotion && $discountAmount > 0)
-                                        <div style="margin-bottom: 8px;">
-                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                                                <span style="color: #999; font-size: 12px;">Giá gốc:</span>
-                                                <span style="color: #999; font-size: 12px; text-decoration: line-through;">{{ $formattedTotalPrice }} VNĐ</span>
-                                            </div>
-                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                                                <span style="color: #28a745; font-size: 12px;">✓ Giảm:</span>
-                                                <span style="color: #28a745; font-size: 12px; font-weight: 600;">{{ $formattedDiscountAmount }} VNĐ</span>
-                                            </div>
-                                        </div>
-                                    @endif
-                                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                                        <span style="color: #000; font-size: 14px; font-weight: 500;">Tổng số tiền anh cần thanh toán:</span>
-                                        <span style="color: #28a745; font-size: 16px; font-weight: 700;">{{ $formattedFinalPrice }} VNĐ</span>
+                                    <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                                        <div style="font-size: 11px; color: #666; line-height: 1.3; margin-bottom: 1px;">Tổng thanh toán</div>
+                                        <div style="font-size: 20px; font-weight: 700; color: #000; line-height: 1.2;">{{ $formattedFinalPrice }} VNĐ</div>
                                     </div>
                                 </div>
 
@@ -391,12 +427,25 @@
 
                                 <!-- Nút chọn thêm dịch vụ -->
                                 <a href="{{ route('site.appointment.select-services', request()->except(['remove_service_id', 'remove_variant_id', 'remove_combo_id'])) }}"
-                                   class="btn w-100"
+                                   class="btn w-100 select-services-link"
                                    style="background: #fff; border: 1px solid #0066cc; color: #0066cc; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center; margin-top: 12px;">
                                     <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn thêm dịch vụ ({{ $totalCount }})
                                 </a>
                             @else
-                                <a href="{{ route('site.appointment.select-services') }}" class="btn btn-primary w-100" style="background: #000; border: 1px solid #000; color: #fff; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
+                                @php
+                                    // Truyền lại employee_id, appointment_date, word_time_id nếu có
+                                    $selectServicesParams = [];
+                                    if (request('employee_id')) {
+                                        $selectServicesParams['employee_id'] = request('employee_id');
+                                    }
+                                    if (request('appointment_date')) {
+                                        $selectServicesParams['appointment_date'] = request('appointment_date');
+                                    }
+                                    if (request('word_time_id')) {
+                                        $selectServicesParams['word_time_id'] = request('word_time_id');
+                                    }
+                                @endphp
+                                <a href="{{ route('site.appointment.select-services', $selectServicesParams) }}" class="btn btn-primary w-100 select-services-link" style="background: #000; border: 1px solid #000; color: #fff; padding: 12px; font-size: 14px; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-block; text-align: center;">
                                     <i class="fa fa-plus-circle" style="margin-right: 8px;"></i> Chọn dịch vụ
                                 </a>
                             @endif
@@ -428,7 +477,7 @@
                                 </label>
 
                                 <!-- Hidden input để lưu employee_id -->
-                                <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id') }}">
+                                <input type="hidden" name="employee_id" id="employee_id" value="{{ old('employee_id', request('employee_id')) }}">
 
                                 <!-- Container hiển thị nhân viên giống time slot -->
                                 <div class="employee-container" id="employeeContainer" style="position: relative; display: none; margin-top: 10px;">
@@ -902,7 +951,11 @@
         color: #b0b0b0;
     }
 
-    /* Tooltip cho slot bị trùng lịch */
+    /* Tooltip cho slot bị trùng lịch - SỬA: Chỉ hiển thị khi hover, tự động ẩn khi mouse leave */
+    .time-slot-btn.unavailable {
+        position: relative;
+    }
+    
     .time-slot-btn.unavailable[title]:hover::after {
         content: attr(title);
         position: absolute;
@@ -916,6 +969,8 @@
         font-size: 12px;
         white-space: nowrap;
         border-radius: 4px;
+        z-index: 1000;
+        pointer-events: none; /* ✅ MỚI: Ngăn tooltip chặn mouse events */
         z-index: 1000;
         pointer-events: none;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -1341,7 +1396,17 @@
                     $('#employee_id').val(formData.employee_id);
                     restoredEmployeeId = formData.employee_id;
                     // Enable input date nếu đã có employee
-                    $('#appointment_date').prop('disabled', false);
+                    $('#appointment_date').datepicker('enable');
+                }
+                
+                // ✅ Tự động chọn employee từ query parameter nếu có
+                const urlParams = new URLSearchParams(window.location.search);
+                const employeeIdFromUrl = urlParams.get('employee_id');
+                if (employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0') {
+                    $('#employee_id').val(employeeIdFromUrl);
+                    restoredEmployeeId = employeeIdFromUrl;
+                    // Enable input date nếu đã có employee
+                    $('#appointment_date').datepicker('enable');
                 }
 
                 // ✅ Ưu tiên restore từ Session (nếu có)
@@ -1542,10 +1607,11 @@
         $('#appointment_date').attr('min', today);
 
         // Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
-        if (!$('#employee_id').val()) {
+        const initialEmployeeId = $('#employee_id').val();
+        if (!initialEmployeeId || initialEmployeeId === '') {
             $('#appointment_date').prop('disabled', true);
         } else {
-            // Nếu đã có employee_id (từ localStorage), enable input date
+            // Nếu đã có employee_id, enable input date
             $('#appointment_date').prop('disabled', false);
         }
 
@@ -1566,6 +1632,9 @@
             }
         }, 500);
 
+        // ✅ Đã sửa: Không tự động mở dropdown, chỉ mở khi user click
+        // Container sẽ được mở khi user click vào toggle button
+        
         // Load employees by service on page load
             loadEmployeesByService();
             loadEmployeesForCarousel();
@@ -1673,12 +1742,22 @@
                 }
             });
 
+            // ✅ Kiểm tra xem có employee_id trong URL không
+            const urlParams = new URLSearchParams(window.location.search);
+            const employeeIdFromUrl = urlParams.get('employee_id');
+            const hasEmployeeIdInUrl = employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0';
+
             // Kiểm tra xem có dịch vụ nào được chọn không
-            if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0) {
+            // Nếu không có service nhưng có employee_id trong URL, vẫn load employees
+            if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0 && !hasEmployeeIdInUrl) {
                 const $slider = $('.employee-slider');
                 $slider.empty();
                 $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
-                $('#employee_id').val('');
+                
+                // Không reset employee_id nếu có trong URL
+                if (!hasEmployeeIdInUrl) {
+                    $('#employee_id').val('');
+                }
                 return;
             }
 
@@ -1724,13 +1803,60 @@
                                 $slider.append(itemHtml);
                             });
 
-                            // Đảm bảo container hiển thị sau khi load employees
-                            $('#employeeContainer').show();
+                            // ✅ Đã sửa: Không tự động mở dropdown sau khi load employees
+                            // Container chỉ mở khi user click vào toggle button
 
                             // Debug: Log số lượng employees đã load
                             console.log('=== DEBUG: Employees loaded ===');
                             console.log('Total employees:', response.employees.length);
                             console.log('Employee buttons in DOM:', $('.employee-item-btn').length);
+
+                            // ✅ Tự động chọn employee từ URL (chỉ khi có trong URL, không tự chọn ngẫu nhiên)
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const employeeIdFromUrl = urlParams.get('employee_id');
+                            
+                            // Chỉ tự động chọn nếu có employee_id trong URL (không tự chọn ngẫu nhiên)
+                            if (employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0') {
+                                // Đợi một chút để DOM được render xong
+                                setTimeout(function() {
+                                    const selectedEmployee = $('.employee-item-btn[data-employee-id="' + employeeIdFromUrl + '"]');
+                                    if (selectedEmployee.length) {
+                                        // Set hidden input
+                                        $('#employee_id').val(employeeIdFromUrl);
+                                        
+                                        // Highlight employee
+                                        $('.employee-item-btn').removeClass('selected');
+                                        $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+                                        selectedEmployee.addClass('selected');
+                                        selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
+                                        
+                                        // Enable date input
+                                        $('#appointment_date').prop('disabled', false);
+                                        
+                                        // Trigger change để load time slots nếu đã có date
+                                        $('#employee_id').trigger('change');
+                                        
+                                        console.log('✅ Auto-selected employee from URL:', employeeIdFromUrl);
+                                    } else {
+                                        console.log('⚠️ Employee not found in list:', employeeIdFromUrl);
+                                    }
+                                }, 100);
+                            } else if (currentEmployeeId && currentEmployeeId !== '') {
+                                // Chỉ tự động chọn nếu đã có giá trị từ trước (từ localStorage hoặc old input)
+                                // Không tự động chọn giá trị rỗng
+                                setTimeout(function() {
+                                    const selectedEmployee = $('.employee-item-btn[data-employee-id="' + currentEmployeeId + '"]');
+                                    if (selectedEmployee.length) {
+                                        // Highlight employee
+                                        $('.employee-item-btn').removeClass('selected');
+                                        $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+                                        selectedEmployee.addClass('selected');
+                                        selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
+                                        
+                                        console.log('✅ Restored previous employee selection:', currentEmployeeId);
+                                    }
+                                }, 100);
+                            }
 
                             // Nếu employee đã chọn không còn trong danh sách, reset
                             if (currentEmployeeId && !response.employees.find(e => e.id == currentEmployeeId)) {
@@ -1778,14 +1904,17 @@
         });
 
 
-        // Xử lý old value nếu có
-        const oldEmployeeId = $('#employee_id').val();
-        if (oldEmployeeId) {
-            const selectedEmployee = $('.employee-item-btn[data-employee-id="' + oldEmployeeId + '"]');
-            if (selectedEmployee.length) {
-                selectedEmployee.addClass('selected');
-                selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
-            }
+        // ✅ Tự động load employees nếu có employee_id trong URL (ngay cả khi chưa có service)
+        // Điều này cho phép chọn employee trước khi chọn service
+        const urlParams = new URLSearchParams(window.location.search);
+        const employeeIdFromUrl = urlParams.get('employee_id');
+        if (employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0') {
+            // Set employee_id vào hidden input
+            $('#employee_id').val(employeeIdFromUrl);
+            // Enable date input
+            $('#appointment_date').prop('disabled', false);
+            // Load employees để hiển thị và tự động chọn
+            // Note: loadEmployeesForCarousel sẽ tự động chọn employee này sau khi load xong
         }
 
         // Xử lý chọn employee - đặt priority cao để chạy trước document click
@@ -1972,7 +2101,7 @@
             const employeeId = $(this).val();
             const $appointmentDate = $('#appointment_date');
 
-            if (employeeId) {
+            if (employeeId && employeeId !== '') {
                 // Enable input ngày khi đã chọn kỹ thuật viên
                 $('#employee-error').hide();
                 $(this).removeClass('is-invalid');
@@ -2007,8 +2136,9 @@
                 $('#appointment_date-error').hide();
                 $(this).removeClass('is-invalid');
                 // Chỉ load time slots nếu đã chọn kỹ thuật viên
-                    if ($('#employee_id').val()) {
-                        loadAvailableTimeSlots();
+                const currentEmployeeId = $('#employee_id').val();
+                if (currentEmployeeId && currentEmployeeId !== '') {
+                    loadAvailableTimeSlots();
                 }
             } else {
                 // Nếu xóa date, hiển thị error
@@ -2121,18 +2251,18 @@
             const timeSlotHidden = $('#time_slot');
             const wordTimeIdInput = $('#word_time_id');
 
+            // ✅ LƯU GIỜ ĐÃ CHỌN TRƯỚC KHI RESET
+            // Điều này đảm bảo khi thêm dịch vụ, giờ đã chọn sẽ được giữ lại
+            const savedSelectedTime = timeSlotHidden.val();
+            const savedWordTimeId = wordTimeIdInput.val();
+
             // Reset
             $('.time-slot-container').hide();
             $('.time-slot-slider').empty();
             timeSlotMessage.show();
-            timeSlotHidden.val('');
-            wordTimeIdInput.val('');
+            // KHÔNG reset các giá trị ở đây - sẽ restore sau khi load xong
 
-            // Check if employee is selected
-            if (!employeeId) {
-                timeSlotMessage.text('Vui lòng chọn kỹ thuật viên trước');
-                return;
-            }
+            // Kiểm tra employee_id trước khi load time slots
 
             // Check if date is selected
             if (!appointmentDate) {
@@ -2384,8 +2514,9 @@
                                 // CHỈ hiển thị tooltip nếu có conflict_reason rõ ràng từ backend (không phải null, empty, hoặc undefined)
                                 if (slot.conflict_reason && typeof slot.conflict_reason === 'string' && slot.conflict_reason.trim() !== '') {
                                     btn.attr('title', slot.conflict_reason);
-                                    btn.attr('data-toggle', 'tooltip');
-                                    btn.attr('data-placement', 'top');
+                                    // ✅ SỬA: Không dùng Bootstrap tooltip, chỉ dùng CSS tooltip (::after)
+                                    // btn.attr('data-toggle', 'tooltip');
+                                    // btn.attr('data-placement', 'top');
                                 }
 
                                 // Debug log cho slot 11:30
@@ -2402,20 +2533,14 @@
                                     e.preventDefault();
                                     e.stopPropagation();
 
-                                    // Ẩn tooltip trước khi hiển thị alert
-                                    $(this).tooltip('hide');
-
                                     console.log('Blocked click on unavailable slot:', slot.time);
                                     if (slot.conflict_reason) {
                                         alert(slot.conflict_reason);
                                     }
                                     return false;
                                 });
-
-                                // Ẩn tooltip khi mouse leave
-                                btn.on('mouseleave', function() {
-                                    $(this).tooltip('hide');
-                                });
+                                
+                                // ✅ SỬA: Đảm bảo tooltip tự động ẩn khi mouse leave (CSS tooltip tự động ẩn)
                             } else {
                                 availableCount++;
                                 if (isSelected) {
@@ -2436,14 +2561,8 @@
                         console.log('Rendered slots:', renderedSlotCount);
                         console.log('Completed appointment end time:', completedAppointmentEndTime || 'null');
 
-                        // Khởi tạo tooltip cho các slot unavailable có conflict_reason
-                        // Sử dụng trigger 'hover' để tooltip chỉ hiển thị khi hover, tự động ẩn khi mouse leave
-                        if (typeof $.fn.tooltip !== 'undefined') {
-                            $('.time-slot-btn.unavailable[data-toggle="tooltip"]').tooltip({
-                                trigger: 'hover',
-                                placement: 'top'
-                            });
-                        }
+                        // ✅ SỬA: Không cần khởi tạo Bootstrap tooltip nữa vì đã dùng CSS tooltip (::after)
+                        // CSS tooltip tự động hiển thị khi hover và ẩn khi mouse leave
 
                         // Thêm các empty slots ở cuối để đủ 33 slots (11 cột x 3 hàng)
                         // Lưu ý: remainingSlots phải tính dựa trên số slot đã render
@@ -2477,6 +2596,34 @@
                             timeSlotMessage.text('Nhân viên này không có ca làm việc vào ngày đã chọn. Tất cả khung giờ đều không khả dụng.').show();
                         } else {
                             timeSlotMessage.hide();
+                        }
+
+                        // ✅ Restore giờ đã chọn trước đó (khi thêm dịch vụ)
+                        if (currentlySelectedTime && currentlySelectedWordTimeId) {
+                            setTimeout(function() {
+                                const $savedBtn = $('.time-slot-btn[data-time="' + currentlySelectedTime + '"]');
+                                
+                                if ($savedBtn.length) {
+                                    // Kiểm tra xem slot có còn available không
+                                    if (!$savedBtn.hasClass('unavailable')) {
+                                        // Slot vẫn available, restore lại
+                                        $savedBtn.addClass('selected');
+                                        timeSlotHidden.val(currentlySelectedTime);
+                                        wordTimeIdInput.val(currentlySelectedWordTimeId);
+                                        console.log('✅ Đã restore giờ đã chọn:', currentlySelectedTime);
+                                    } else {
+                                        // Slot không còn available, nhưng vẫn giữ giá trị trong hidden input
+                                        timeSlotHidden.val(currentlySelectedTime);
+                                        wordTimeIdInput.val(currentlySelectedWordTimeId);
+                                        console.log('⚠️ Giờ đã chọn không còn available:', currentlySelectedTime);
+                                    }
+                                } else {
+                                    // Không tìm thấy button, nhưng vẫn giữ giá trị
+                                    timeSlotHidden.val(currentlySelectedTime);
+                                    wordTimeIdInput.val(currentlySelectedWordTimeId);
+                                    console.log('⚠️ Không tìm thấy button cho giờ:', currentlySelectedTime);
+                                }
+                            }, 100); // Delay nhỏ để đảm bảo DOM đã render
                         }
 
                         // ✅ Auto-select time slot nếu đã có trong Session
@@ -2536,13 +2683,46 @@
                     clearTimeout(loadingTimeout);
                     isLoadingTimeSlots = false;
                     console.error('Error loading time slots:', error);
+                    console.error('XHR status:', status);
+                    console.error('XHR response:', xhr.responseJSON);
                     $('.time-slot-container').hide();
 
                     let errorMessage = 'Không thể tải khung giờ. Vui lòng thử lại.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                    
+                    // Xử lý các loại lỗi khác nhau
+                    if (xhr.status === 422) {
+                        // Validation error
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            const errorMessages = [];
+                            if (errors.employee_id) {
+                                errorMessages.push(errors.employee_id[0]);
+                            }
+                            if (errors.appointment_date) {
+                                errorMessages.push(errors.appointment_date[0]);
+                            }
+                            errorMessage = errorMessages.length > 0 ? errorMessages.join('. ') : 'Dữ liệu không hợp lệ.';
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else {
+                            errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin đã nhập.';
+                        }
+                    } else if (xhr.status === 500) {
+                        // Server error
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else {
+                            errorMessage = 'Có lỗi xảy ra từ server. Vui lòng thử lại sau.';
+                        }
+                    } else if (status === 'timeout') {
+                        errorMessage = 'Yêu cầu quá thời gian chờ. Vui lòng thử lại.';
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
+                    
                     timeSlotMessage.text(errorMessage).show();
+                    timeSlotHidden.val('');
+                    wordTimeIdInput.val('');
                 }
             });
         }
@@ -2847,7 +3027,12 @@
             // Check employee - kiểm tra kỹ hơn
             const employeeId = $('#employee_id').val();
             const employeeIdTrimmed = employeeId ? String(employeeId).trim() : '';
-            const hasEmployeeId = employeeIdTrimmed && employeeIdTrimmed !== '' && employeeIdTrimmed !== '0' && employeeIdTrimmed !== 'null' && employeeIdTrimmed !== 'undefined';
+            const hasEmployeeId = employeeIdTrimmed && 
+                                 employeeIdTrimmed !== '' && 
+                                 employeeIdTrimmed !== '0' && 
+                                 employeeIdTrimmed !== 'null' && 
+                                 employeeIdTrimmed !== 'undefined' &&
+                                 !isNaN(employeeIdTrimmed); // Phải là số
 
             if (!hasEmployeeId) {
                 showFieldError('employee', 'Mời anh chọn kỹ thuật viên');
@@ -3216,6 +3401,18 @@
                                 }
                             }
                         });
+                        
+                        // ✅ SỬA: Nếu có message từ server và không có errors array, hiển thị ở time_slot-error
+                        if (xhr.responseJSON.message && (!xhr.responseJSON.errors || Object.keys(xhr.responseJSON.errors).length === 0)) {
+                            const errorMessage = xhr.responseJSON.message;
+                            if (errorMessage.includes('khung giờ') || errorMessage.includes('nhân viên rảnh')) {
+                                const $timeSlotError = $('#time_slot-error');
+                                if ($timeSlotError.length) {
+                                    $timeSlotError.find('span').text(errorMessage);
+                                    $timeSlotError.show();
+                                }
+                            }
+                        }
 
                         // Scroll to first error
                         const firstError = $('.field-error:visible').first();
@@ -3236,28 +3433,55 @@
                             }
                         }
                     } else {
-                        // Nếu không có errors từ server, có thể là lỗi khác
-                        console.error('Unexpected error:', xhr);
-                        let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
-
-                        // Kiểm tra các loại lỗi khác nhau
-                        if (xhr.responseJSON) {
-                            if (xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
-                            } else if (xhr.responseJSON.error) {
-                                errorMessage = xhr.responseJSON.error;
+                        // ✅ SỬA: Kiểm tra nếu có message từ server (không phải errors array)
+                        // Hiển thị thông báo đỏ ở dưới phần chọn khung giờ thay vì alert
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            const errorMessage = xhr.responseJSON.message;
+                            
+                            // Kiểm tra nếu message liên quan đến time slot
+                            if (errorMessage.includes('khung giờ') || errorMessage.includes('nhân viên rảnh')) {
+                                // Hiển thị thông báo đỏ ở dưới phần chọn khung giờ
+                                const $timeSlotError = $('#time_slot-error');
+                                if ($timeSlotError.length) {
+                                    $timeSlotError.find('span').text(errorMessage);
+                                    $timeSlotError.show();
+                                    
+                                    // Scroll đến phần chọn khung giờ
+                                    $('html, body').animate({
+                                        scrollTop: $timeSlotError.offset().top - 100
+                                    }, 300);
+                                } else {
+                                    // Fallback: hiển thị alert nếu không tìm thấy error div
+                                    alert(errorMessage);
+                                    $('html, body').animate({ scrollTop: 0 }, 300);
+                                }
+                            } else {
+                                // Nếu không phải lỗi time slot, hiển thị alert như cũ
+                                alert(errorMessage);
+                                $('html, body').animate({ scrollTop: 0 }, 300);
                             }
-                        } else if (xhr.status === 0) {
-                            errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối internet.';
-                        } else if (xhr.status === 500) {
-                            errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
-                        } else if (xhr.status === 404) {
-                            errorMessage = 'Không tìm thấy trang. Vui lòng thử lại.';
-                        }
+                        } else {
+                            // Nếu không có errors từ server, có thể là lỗi khác
+                            console.error('Unexpected error:', xhr);
+                            let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
 
-                        // Hiển thị alert và scroll to top
-                        alert(errorMessage);
-                        $('html, body').animate({ scrollTop: 0 }, 300);
+                            // Kiểm tra các loại lỗi khác nhau
+                            if (xhr.responseJSON) {
+                                if (xhr.responseJSON.error) {
+                                    errorMessage = xhr.responseJSON.error;
+                                }
+                            } else if (xhr.status === 0) {
+                                errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối internet.';
+                            } else if (xhr.status === 500) {
+                                errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+                            } else if (xhr.status === 404) {
+                                errorMessage = 'Không tìm thấy trang. Vui lòng thử lại.';
+                            }
+
+                            // Hiển thị alert và scroll to top
+                            alert(errorMessage);
+                            $('html, body').animate({ scrollTop: 0 }, 300);
+                        }
                     }
                 }
             });

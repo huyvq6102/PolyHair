@@ -93,7 +93,7 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+            <table class="table table-bordered" width="100%" cellspacing="0">
                 <thead>
                     <tr>
                         <th>Mã hóa đơn</th>
@@ -158,10 +158,70 @@
                     @endforeach
                 </tbody>
             </table>
-            <div class="mt-3">
-                {{ $payments->links() }}
-            </div>
+            {{-- Custom Pagination --}}
+            {{ $payments->appends(request()->query())->links('admin.partials.pagination') }}
         </div>
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    /* Custom Pagination Styles */
+    .pagination {
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 0;
+        background: #fff;
+    }
+    
+    .pagination .page-item {
+        margin: 0;
+    }
+    
+    .pagination .page-item:first-child .page-link {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .pagination .page-item:last-child .page-link {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+    }
+    
+    .pagination .page-link {
+        color: #5a5c69;
+        background-color: #fff;
+        border: none;
+        padding: 8px 16px;
+        margin: 0;
+        border-right: 1px solid #e0e0e0;
+    }
+    
+    .pagination .page-item:last-child .page-link {
+        border-right: none;
+    }
+    
+    .pagination .page-link:hover {
+        background-color: #f8f9fa;
+        color: #5a5c69;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #4e73df;
+        color: #fff;
+        border-color: #4e73df;
+    }
+    
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        background-color: #fff;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .pagination .page-item.disabled .page-link:hover {
+        background-color: #fff;
+    }
+</style>
+@endpush

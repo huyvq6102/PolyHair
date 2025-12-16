@@ -20,7 +20,7 @@
                 <strong>Nhân viên:</strong> {{ $schedule->employee->user->name ?? 'N/A' }}
             </div>
             <div class="col-md-6">
-                <strong>Vị trí:</strong> {{ $schedule->employee->position ?? 'N/A' }}
+                <strong>Vị trí:</strong> {{ \App\Models\Employee::getPositionVietnamese($schedule->employee->position ?? '') ?: 'N/A' }}
             </div>
         </div>
 
@@ -34,7 +34,7 @@
                     <select name="employee_ids[]" id="employee_ids" class="form-control select2-multiple @error('employee_ids') is-invalid @enderror @error('employee_ids.*') is-invalid @enderror" multiple required>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" {{ (old('employee_ids') && in_array($employee->id, old('employee_ids'))) || $schedule->employee_id == $employee->id ? 'selected' : '' }}>
-                                {{ $employee->user->name ?? 'N/A' }} - {{ $employee->position ?? 'N/A' }}
+                                {{ $employee->user->name ?? 'N/A' }} - {{ \App\Models\Employee::getPositionVietnamese($employee->position ?? '') ?: 'N/A' }}
                             </option>
                         @endforeach
                     </select>
@@ -49,7 +49,11 @@
                 </div>
                 <div class="form-group col-md-6">
                     <label for="work_date">Ngày làm việc <span class="text-danger">*</span></label>
-                    <input type="date" name="work_date" id="work_date" value="{{ old('work_date', optional($schedule->work_date)->format('Y-m-d')) }}" class="form-control @error('work_date') is-invalid @enderror" required>
+                    <input type="date" name="work_date" id="work_date" 
+                           value="{{ old('work_date', optional($schedule->work_date)->format('Y-m-d')) }}" 
+                           class="form-control @error('work_date') is-invalid @enderror" 
+                           min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}" 
+                           required>
                     @error('work_date')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @else

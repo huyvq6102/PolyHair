@@ -101,6 +101,27 @@ class WorkingScheduleController extends Controller
         $receptionists = Employee::with('user')->where('position', 'Receptionist')->orderBy('id', 'desc')->get();
 
         $shifts = WorkingShift::orderBy('start_time')->get();
+        
+        // ✅ MỚI: Tự động tạo ca "Ca cả ngày" (7h-22h) nếu chưa có
+        $fullDayShift = $shifts->firstWhere('name', 'Ca cả ngày');
+        if (!$fullDayShift) {
+            // Kiểm tra xem có ca nào từ 7h-22h không
+            $fullDayShift = $shifts->first(function($shift) {
+                return $shift->formatted_start_time === '07:00' && $shift->formatted_end_time === '22:00';
+            });
+            
+            // Nếu chưa có, tạo mới
+            if (!$fullDayShift) {
+                $fullDayShift = WorkingShift::create([
+                    'name' => 'Ca cả ngày',
+                    'start_time' => '07:00:00',
+                    'end_time' => '22:00:00',
+                    'duration' => 900, // 15 giờ
+                ]);
+                // Reload shifts để có ca mới
+                $shifts = WorkingShift::orderBy('start_time')->get();
+            }
+        }
 
         return view('admin.working-schedules.create', [
             'stylists' => $stylists,
@@ -126,10 +147,13 @@ class WorkingScheduleController extends Controller
             'shampooer_ids.*' => 'required|exists:employees,id',
             'receptionist_ids' => 'required|array|min:1',
             'receptionist_ids.*' => 'required|exists:employees,id',
-            'work_date' => 'required_if:schedule_type,day|nullable|date',
-            'week_start_date' => 'required_if:schedule_type,week|nullable|date',
+            'work_date' => 'required_if:schedule_type,day|nullable|date|after_or_equal:today',
+            'week_start_date' => 'required_if:schedule_type,week|nullable|date|after_or_equal:today',
             'shift_ids' => 'required|array|min:1',
             'shift_ids.*' => 'required|exists:working_shifts,id',
+        ], [
+            'work_date.after_or_equal' => 'Ngày làm việc không được là ngày trong quá khứ.',
+            'week_start_date.after_or_equal' => 'Ngày bắt đầu tuần không được là ngày trong quá khứ.',
         ]);
 
         // Kiểm tra nhân viên có đúng vị trí không
@@ -329,8 +353,10 @@ class WorkingScheduleController extends Controller
         $validated = $request->validate([
             'employee_ids' => 'required|array|min:1',
             'employee_ids.*' => 'required|exists:employees,id',
-            'work_date' => 'required|date',
+            'work_date' => 'required|date|after_or_equal:today',
             'shift_id' => 'required|exists:working_shifts,id',
+        ], [
+            'work_date.after_or_equal' => 'Ngày làm việc không được là ngày trong quá khứ.',
         ]);
 
         $employeeIds = $validated['employee_ids'];

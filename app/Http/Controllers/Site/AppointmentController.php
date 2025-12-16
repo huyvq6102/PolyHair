@@ -244,6 +244,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_id'])) {
                 unset($queryParams['service_id']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -258,6 +267,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_variants'])) {
                 unset($queryParams['service_variants']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -272,6 +290,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['combo_id'])) {
                 unset($queryParams['combo_id']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -376,6 +403,11 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Restore appointment_date và word_time_id từ Session nếu có
+        // Ưu tiên lấy từ request (query params), nếu không có thì lấy từ Session
+        $restoredAppointmentDate = $request->input('appointment_date') ?? Session::get('appointment_date');
+        $restoredWordTimeId = $request->input('word_time_id') ?? Session::get('word_time_id');
+
         // Load promotion nếu có promotion_id trong URL
         $selectedPromotion = null;
         if ($request->has('promotion_id') && $request->input('promotion_id')) {
@@ -386,41 +418,15 @@ class AppointmentController extends Controller
                 ->find($promotionId);
         }
 
-        // ✅ Restore appointment_date và word_time_id từ Session
-        // Điều này đảm bảo khi redirect (do thêm/xóa dịch vụ), giờ đã chọn vẫn được giữ lại
-        $savedDate = Session::get('appointment_selected_date');
-        $savedWordTimeId = Session::get('appointment_selected_word_time_id');
-
         return view('site.appointment.create', compact(
             'employees', 
             'wordTimes', 
             'serviceCategories', 
-            'combos', 
-            'selectedPromotion',
-            'savedDate',        // Pass vào view để restore
-            'savedWordTimeId'   // Pass vào view để restore
+            'combos',
+            'restoredAppointmentDate',
+            'restoredWordTimeId',
+            'selectedPromotion'
         ));
-    }
-
-    /**
-     * Lưu appointment_date và word_time_id vào Session khi user chọn giờ.
-     * Method này được gọi từ JavaScript khi user click vào time slot.
-     */
-    public function saveSelectedTime(Request $request)
-    {
-        $request->validate([
-            'appointment_date' => 'required|date|after_or_equal:today',
-            'word_time_id' => 'required|exists:word_time,id',
-        ]);
-
-        // Lưu vào Session để giữ lại khi redirect
-        Session::put('appointment_selected_date', $request->input('appointment_date'));
-        Session::put('appointment_selected_word_time_id', $request->input('word_time_id'));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Đã lưu thời gian đã chọn'
-        ]);
     }
 
     /**
@@ -429,7 +435,10 @@ class AppointmentController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
+            // Xử lý employee_id trước để validate đúng
+            $employeeIdInput = $request->input('employee_id');
+            // Validation rules
+            $validationRules = [
                 'name' => 'required|string|max:255',
                 'phone' => 'required|string|max:20',
                 'email' => 'nullable|email|max:255',
@@ -443,7 +452,9 @@ class AppointmentController extends Controller
                 'appointment_date' => 'required|date|after_or_equal:today',
                 'word_time_id' => 'required|exists:word_time,id',
                 'note' => 'nullable|string|max:1000',
-            ], [
+            ];
+            
+            $validated = $request->validate($validationRules, [
                 'name.required' => 'Vui lòng nhập họ và tên',
                 'phone.required' => 'Vui lòng nhập số điện thoại',
                 'employee_id.required' => 'Vui lòng chọn kỹ thuật viên',
@@ -497,14 +508,14 @@ class AppointmentController extends Controller
             }
 
             // Get word time
-                    $wordTime = $this->wordTimeService->getOne($validated['word_time_id']);
+            $wordTime = $this->wordTimeService->getOne($validated['word_time_id']);
 
             // Calculate start and end time
             $appointmentDate = Carbon::parse($validated['appointment_date']);
-                    $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
-                    $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
-
-            // Calculate total duration from selected service variants, service, or combo
+            $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
+            
+            // Calculate total duration from selected service variants, service, or combo FIRST
+            // (Cần tính trước để dùng cho việc tìm nhân viên còn trống)
             $totalDuration = 0;
             $serviceVariantData = [];
 
@@ -638,11 +649,34 @@ class AppointmentController extends Controller
                 $totalDuration = 60; // Default 60 minutes
             }
 
+            // Xử lý tự động chọn nhân viên nếu employee_id là "auto" hoặc null
+            // (Phải tính totalDuration trước)
+            $selectedEmployeeId = $validated['employee_id'] ?? null;
+            
+            // ✅ QUAN TRỌNG: Xử lý selectedEmployeeId TRƯỚC khi tạo appointment
+            // để đảm bảo serviceVariantData có employee_id đúng
+            
+            // Log để debug
+            // Validate employee exists
+            $employee = \App\Models\Employee::find($selectedEmployeeId);
+            if (!$employee) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kỹ thuật viên không tồn tại.'
+                ], 422);
+            }
+            foreach ($serviceVariantData as &$variantData) {
+                $variantData['employee_id'] = $selectedEmployeeId;
+            }
+            unset($variantData); // Unset reference để tránh side effects
+
+            $startAt = Carbon::parse($appointmentDate->format('Y-m-d') . ' ' . $timeString);
             $endAt = $startAt->copy()->addMinutes($totalDuration);
 
             // Log final serviceVariantData before creating appointment
             \Log::info('Appointment store - Final serviceVariantData', [
                 'count' => count($serviceVariantData),
+                'selected_employee_id' => $selectedEmployeeId,
                 'data' => $serviceVariantData,
             ]);
 
@@ -676,7 +710,7 @@ class AppointmentController extends Controller
             // This ensures each booking has its own appointment with only the selected services
             $appointment = $this->appointmentService->create([
                 'user_id' => $user->id,
-                'employee_id' => $validated['employee_id'] ?? null,
+                'employee_id' => $selectedEmployeeId, // Sử dụng nhân viên đã được chọn (tự động hoặc thủ công)
                 'status' => 'Chờ xử lý',
                 'start_at' => $startAt,
                 'end_at' => $endAt,
@@ -699,10 +733,6 @@ class AppointmentController extends Controller
             }
 
             DB::commit();
-
-            // ✅ Xóa Session sau khi đặt lịch thành công
-            // Để tránh giữ lại thông tin cũ cho lần đặt lịch tiếp theo
-            Session::forget(['appointment_selected_date', 'appointment_selected_word_time_id']);
 
             // CRITICAL: Remove any existing appointments from cart before adding new one
             // This ensures we don't have old appointments with wrong data in cart
@@ -925,6 +955,26 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Save appointment date and word_time_id to session.
+     * Called when user selects a time slot.
+     */
+    public function saveTimeSelection(Request $request)
+    {
+        $request->validate([
+            'appointment_date' => 'required|date',
+            'word_time_id' => 'required|exists:word_time,id',
+        ]);
+
+        Session::put('appointment_date', $request->input('appointment_date'));
+        Session::put('word_time_id', $request->input('word_time_id'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Time selection saved'
+        ]);
+    }
+
+    /**
      * Get available time slots for an employee on a specific date.
      */
     public function getAvailableTimeSlots(Request $request)
@@ -950,16 +1000,29 @@ class AppointmentController extends Controller
             }
 
             // Handle GET request for available time slots
+            // Xử lý employee_id trước để validate đúng
+            $employeeId = $request->input('employee_id');
+            // Convert empty string, '0', or 'auto' to null
+            if ($employeeId === '' || $employeeId === '0' || $employeeId === 'auto') {
+                $employeeId = null;
+            }
+            
+            // Validate các trường khác
             $request->validate([
-                'employee_id' => 'nullable|exists:employees,id',
                 'appointment_date' => 'required|date|after_or_equal:today',
                 'total_duration' => 'nullable|integer|min:1', // Tổng thời gian dịch vụ đã chọn (phút)
             ]);
-
-            $employeeId = $request->input('employee_id');
-            // Convert empty string to null
-            if ($employeeId === '' || $employeeId === '0') {
-                $employeeId = null;
+            
+            // Validate employee_id exists nếu không phải null
+            if ($employeeId !== null) {
+                $employee = \App\Models\Employee::find($employeeId);
+                if (!$employee) {
+                    return response()->json([
+                        'success' => false,
+                        'time_slots' => [],
+                        'message' => 'Kỹ thuật viên không tồn tại.'
+                    ], 422);
+                }
             }
             $appointmentDate = Carbon::parse($request->input('appointment_date'));
             $totalDuration = (int)($request->input('total_duration') ?? 0); // Tổng thời gian dịch vụ (phút)
@@ -975,26 +1038,26 @@ class AppointmentController extends Controller
                 $currentHour = $currentHour + 1;
             }
 
-            $timeSlots = [];
-            $workingTimeRanges = [];
-
-            // Bắt buộc phải có employee_id
+            // Validate employee_id is required
             if (!$employeeId) {
                 return response()->json([
-                    'success' => true,
-                    'time_slots' => [],
-                    'message' => 'Vui lòng chọn kỹ thuật viên trước'
-                ]);
+                    'success' => false,
+                    'message' => 'Vui lòng chọn kỹ thuật viên.',
+                    'time_slots' => []
+                ], 422);
             }
+
+            $timeSlots = [];
+            $workingTimeRanges = [];
 
             // Get working schedules for the employee on the selected date
             $workingSchedules = \App\Models\WorkingSchedule::with('shift')
                 ->where('employee_id', $employeeId)
                 ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
-                ->whereNull('deleted_at') // Loại bỏ các bản ghi đã bị xóa mềm
+                ->whereNull('deleted_at')
                 ->get();
 
-            // Debug log để kiểm tra
+            // Get employee
             $employee = \App\Models\Employee::find($employeeId);
             if ($employee) {
                 \Log::info('Loading time slots for employee', [
@@ -1007,7 +1070,8 @@ class AppointmentController extends Controller
             }
 
             // Lưu các khoảng thời gian làm việc
-            foreach ($workingSchedules as $schedule) {
+            $schedulesToProcess = $workingSchedules;
+            foreach ($schedulesToProcess as $schedule) {
                 if (!$schedule->shift) {
                     \Log::warning('Working schedule has no shift', [
                         'schedule_id' => $schedule->id,
@@ -1086,8 +1150,8 @@ class AppointmentController extends Controller
             // Nếu không có lịch làm việc, vẫn hiển thị tất cả slots nhưng tất cả đều unavailable
             // (workingTimeRanges sẽ rỗng, nên isInWorkingTime sẽ luôn false)
 
-            // Get booked appointments for this employee on this date
-            $bookedAppointments = \App\Models\Appointment::with('appointmentDetails')
+            // Get booked appointments
+            $appointmentsToProcess = \App\Models\Appointment::with('appointmentDetails')
                 ->where('employee_id', $employeeId)
                 ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
                 ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
@@ -1095,7 +1159,8 @@ class AppointmentController extends Controller
 
             // Lưu các khoảng thời gian đã bị đặt (start_at đến end_at)
             $bookedTimeRanges = [];
-            foreach ($bookedAppointments as $appointment) {
+            
+            foreach ($appointmentsToProcess as $appointment) {
                 if ($appointment->start_at) {
                     $appointmentStart = Carbon::parse($appointment->start_at);
 
@@ -1115,16 +1180,18 @@ class AppointmentController extends Controller
                     // Chỉ lưu nếu end > start và cùng ngày
                     if ($appointmentEnd->gt($appointmentStart) &&
                         $appointmentStart->format('Y-m-d') === $appointmentDate->format('Y-m-d')) {
-                        $bookedTimeRanges[] = [
+                        $range = [
                             'start' => $appointmentStart->format('H:i'),
                             'end' => $appointmentEnd->format('H:i'),
                             'start_carbon' => $appointmentStart,
                             'end_carbon' => $appointmentEnd
                         ];
+                        
+                        $bookedTimeRanges[] = $range;
                     }
                 }
             }
-
+            
             // Debug log
             \Log::info('Available time slots calculation', [
                 'employee_id' => $employeeId,
@@ -1137,10 +1204,30 @@ class AppointmentController extends Controller
                 'working_ranges' => array_map(function($range) {
                     return $range['start']->format('H:i') . ' - ' . $range['end']->format('H:i');
                 }, $workingTimeRanges),
-                'appointments_count' => $bookedAppointments->count(),
+                'appointments_count' => $appointmentsToProcess->count(),
                 'request_total_duration' => $request->input('total_duration'),
                 'note' => 'Nếu total_duration = 0, logic kiểm tra vượt quá ca sẽ không chạy'
             ]);
+
+            // Tìm đơn đã hoàn thành trong ngày và lấy thời gian kết thúc
+            // Nếu có đơn đã hoàn thành, đóng các slot SAU thời gian kết thúc đơn (vì thời gian thực đã qua)
+            $completedAppointmentEndTime = null;
+            
+            $completedAppointment = \App\Models\Appointment::where('employee_id', $employeeId)
+                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
+                ->where('status', 'Hoàn thành')
+                ->orderBy('end_at', 'desc')
+                ->first();
+
+            if ($completedAppointment && $completedAppointment->end_at) {
+                $completedAppointmentEndTime = $completedAppointment->end_at->format('H:i');
+                \Log::info('Found completed appointment', [
+                    'appointment_id' => $completedAppointment->id,
+                    'end_time' => $completedAppointmentEndTime,
+                    'employee_id' => $employeeId,
+                    'date' => $appointmentDate->format('Y-m-d')
+                ]);
+            }
 
             // Tạo TẤT CẢ time slots từ 7:00 đến 22:00 (mỗi 30 phút)
             // HIỂN THỊ TẤT CẢ slots, nhưng chỉ available nếu nằm trong ca làm việc
@@ -1162,6 +1249,7 @@ class AppointmentController extends Controller
                 $isInWorkingTime = false;
                 $shiftEndTime = null; // Lưu thời gian kết thúc ca làm việc
                 $slotTime = Carbon::createFromFormat('H:i', $timeString);
+                
 
                 // Debug log cho Quang Lực
                 $shouldDebug = false;
@@ -1421,11 +1509,26 @@ class AppointmentController extends Controller
                     }
                 }
 
+                // Kiểm tra xem slot có sau thời gian hoàn thành đơn không (nếu là ngày hôm nay)
+                // Nếu có đơn hoàn thành lúc 9h, thì các slot sau 9h phải đóng vì thời gian thực đã qua
+                $isAfterCompletedAppointment = false;
+                if ($isToday && $completedAppointmentEndTime) {
+                    // So sánh slot với thời gian kết thúc đơn hoàn thành
+                    // Slot > completedAppointmentEndTime → đóng (vì thời gian thực đã qua)
+                    if ($timeString > $completedAppointmentEndTime) {
+                        $isAfterCompletedAppointment = true;
+                        if (!$conflictReason) {
+                            $conflictReason = "Đã qua thời gian hoàn thành đơn ({$completedAppointmentEndTime})";
+                        }
+                    }
+                }
+                
                 // Xác định trạng thái available của slot:
-                // - available = true: Nằm trong ca làm việc VÀ chưa bị đặt VÀ không phải quá khứ
-                // - available = false: Không nằm trong ca làm việc HOẶC đã bị đặt HOẶC là quá khứ
+                // - available = true: Nằm trong ca làm việc VÀ chưa bị đặt VÀ không phải quá khứ VÀ không sau thời gian hoàn thành đơn
+                // - available = false: Không nằm trong ca làm việc HOẶC đã bị đặt HOẶC là quá khứ HOẶC sau thời gian hoàn thành đơn
                 // Các slot unavailable sẽ được hiển thị với màu tối (gray out) ở frontend
-                $isAvailable = $isInWorkingTime && !$isBooked && !$isPastTime;
+                // Xác định trạng thái available của slot
+                $isAvailable = $isInWorkingTime && !$isBooked && !$isPastTime && !$isAfterCompletedAppointment;
 
                 // QUAN TRỌNG: Kiểm tra lại nếu slot + duration vượt quá ca làm việc
                 // Logic này PHẢI chạy bất kể $isAvailable là gì, để đảm bảo slot bị chặn đúng
@@ -1678,25 +1781,6 @@ class AppointmentController extends Controller
                 'first_slot' => $timeSlots[0]['time'] ?? 'N/A',
                 'last_slot' => $timeSlots[count($timeSlots) - 1]['time'] ?? 'N/A'
             ]);
-
-            // Tìm đơn đã hoàn thành trong ngày và lấy thời gian kết thúc
-            // Nếu có đơn đã hoàn thành, chỉ hiển thị các slot <= thời gian kết thúc đơn
-            $completedAppointmentEndTime = null;
-            $completedAppointment = \App\Models\Appointment::where('employee_id', $employeeId)
-                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-                ->where('status', 'Hoàn thành')
-                ->orderBy('end_at', 'desc')
-                ->first();
-
-            if ($completedAppointment && $completedAppointment->end_at) {
-                $completedAppointmentEndTime = $completedAppointment->end_at->format('H:i');
-                \Log::info('Found completed appointment', [
-                    'appointment_id' => $completedAppointment->id,
-                    'end_time' => $completedAppointmentEndTime,
-                    'employee_id' => $employeeId,
-                    'date' => $appointmentDate->format('Y-m-d')
-                ]);
-            }
 
             // Debug log: Kiểm tra slot 11:30 trong response cuối cùng
             $slot1130 = collect($timeSlots)->firstWhere('time', '11:30');

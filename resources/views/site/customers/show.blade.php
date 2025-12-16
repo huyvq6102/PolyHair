@@ -28,7 +28,69 @@
                         @endif
                     </div>
                     
-                    <h4 class="mb-4 fw-bold text-dark">{{ $user->name }}</h4>
+                    <h4 class="mb-2 fw-bold text-dark">{{ $user->name }}</h4>
+                    {{-- Hạng thành viên --}}
+                    <div class="mb-3">
+                        @php
+                            $tier = $user->tier;
+                            // Màu sắc nổi bật cho từng hạng
+                            $tierBadgeClass = 'bg-secondary text-white'; // Khách thường
+                            if ($tier === 'Silver') {
+                                $tierBadgeClass = 'bg-primary text-white';
+                            } elseif ($tier === 'Gold') {
+                                $tierBadgeClass = 'bg-warning text-dark';
+                            } elseif ($tier === 'VIP') {
+                                $tierBadgeClass = 'bg-danger text-white';
+                            }
+
+                            // Ngưỡng chi tiêu cho từng hạng
+                            $thresholds = [
+                                'Khách thường' => 0,
+                                'Silver' => 2_000_000,
+                                'Gold' => 5_000_000,
+                                'VIP' => 10_000_000,
+                            ];
+
+                            // Xác định hạng tiếp theo và số tiền cần thêm
+                            $nextTierName = null;
+                            $nextTierThreshold = null;
+                            if ($tier === 'Khách thường') {
+                                $nextTierName = 'Silver';
+                                $nextTierThreshold = $thresholds['Silver'];
+                            } elseif ($tier === 'Silver') {
+                                $nextTierName = 'Gold';
+                                $nextTierThreshold = $thresholds['Gold'];
+                            } elseif ($tier === 'Gold') {
+                                $nextTierName = 'VIP';
+                                $nextTierThreshold = $thresholds['VIP'];
+                            }
+
+                            $amountToNext = $nextTierThreshold
+                                ? max(0, $nextTierThreshold - $user->total_spent)
+                                : 0;
+                        @endphp
+                        <span class="badge {{ $tierBadgeClass }} px-3 py-2" style="font-size: 0.85rem; text-transform: uppercase;">
+                            Hạng: {{ $tier }}
+                        </span>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Tổng chi tiêu: <strong>{{ number_format($user->total_spent) }}đ</strong>
+                            </small>
+                            @if($nextTierName && $amountToNext > 0)
+                                <div class="mt-1">
+                                    <small class="text-muted">
+                                        ➡️ Còn <strong>{{ number_format($amountToNext) }}đ</strong> nữa để lên hạng <strong>{{ strtoupper($nextTierName) }}</strong>
+                                    </small>
+                                </div>
+                            @elseif($tier === 'VIP')
+                                <div class="mt-1">
+                                    <small class="text-muted">
+                                        🎉 Bạn đang ở hạng cao nhất (VIP).
+                                    </small>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
 
                     <!-- Thống kê -->
                     <div class="mb-4 p-4 bg-light rounded-3">
@@ -118,15 +180,33 @@
         <!-- Cột nội dung chính với các tab -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
+                @if(session('status') === 'profile-updated')
+                    <div class="alert alert-success alert-dismissible fade show m-3" role="alert" style="color: #000 !important;">
+                        Thông tin đã được cập nhật thành công!
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                @endif
+
+                @if(session('status') === 'password-updated' || (session('status') && session('status') !== 'profile-updated'))
+                    <div class="alert alert-success alert-dismissible fade show m-3" role="alert" style="color: #000 !important;">
+                        {{ session('status') === 'password-updated' ? 'Mật khẩu đã được cập nhật thành công!' : session('status') }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                @endif
+
                 <div class="card-header bg-white border-0">
                     <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
+                            <button class="nav-link {{ request()->get('tab') !== 'history' ? 'active' : '' }}" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
                                 <i class="fas fa-user-cog me-2"></i>Thông tin cá nhân
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                            <button class="nav-link {{ request()->get('tab') === 'history' ? 'active' : '' }}" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
                                 <i class="fas fa-history me-2"></i>Lịch sử đặt lịch
                             </button>
                         </li>
@@ -141,36 +221,61 @@
                     <div class="tab-content" id="myTabContent">
                         
                         <!-- Tab Thông tin cá nhân -->
-                        <div class="tab-pane fade show active" id="profile" role="tabpanel">
+                        <div class="tab-pane fade {{ request()->get('tab') !== 'history' ? 'show active' : '' }}" id="profile" role="tabpanel">
                             <h5 class="mb-4" id="thong-tin-ca-nhan">Thông tin chi tiết</h5>
                             <div class="row mb-3">
                                 <div class="col-sm-3"><p class="text-muted mb-0">Họ và tên</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->name }}</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">{{ $user->name }}</p></div>
+                            </div>
+                            <hr>
+                            <div class="row mb-3">
+                                <div class="col-sm-3"><p class="text-muted mb-0">Hạng thành viên</p></div>
+                                <div class="col-sm-9">
+                                    <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
+                                        {{ $user->tier }}
+                                        <span class="text-muted" style="font-size: 0.85rem;">
+                                            (Tổng chi tiêu: {{ number_format($user->total_spent) }}đ)
+                                        </span>
+                                    </p>
+                                </div>
                             </div>
                             <hr>
                             <div class="row mb-3">
                                 <div class="col-sm-3"><p class="text-muted mb-0">Email</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->email }}</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">{{ $user->email }}</p></div>
                             </div>
                             <hr>
                             <div class="row mb-3">
                                 <div class="col-sm-3"><p class="text-muted mb-0">Số điện thoại</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->phone }}</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">{{ $user->phone }}</p></div>
                             </div>
                             <hr>
                             <div class="row mb-3">
                                 <div class="col-sm-3"><p class="text-muted mb-0">Ngày sinh</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0">{{ $user->dob ? $user->dob->format('d/m/Y') : 'Chưa cập nhật' }}</p></div>
+                                <div class="col-sm-9"><p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">{{ $user->dob ? $user->dob->format('d/m/Y') : 'Chưa cập nhật' }}</p></div>
                             </div>
                             <hr>
-                            <div class="row">
-                                <div class="col-sm-3"><p class="text-muted mb-0">Địa chỉ</p></div>
-                                <div class="col-sm-9"><p class="fw-bold mb-0"></p></div>
+                            
+                            {{-- Thông tin chương trình khách hàng thân thiết --}}
+                            <div class="mt-4">
+                                <h6 class="fw-bold mb-2">🎖️ Chương trình khách hàng thân thiết</h6>
+                                <p class="mb-2" style="font-size: 0.9rem;">
+                                    Hệ thống phân hạng khách hàng dựa trên tổng chi tiêu sau khi thanh toán tại cửa hàng.
+                                </p>
+                                <ul class="mb-2" style="font-size: 0.9rem; padding-left: 1.2rem;">
+                                    <li>Khách thường: <strong>&lt; 2.000.000đ</strong></li>
+                                    <li>Silver: <strong>&ge; 2.000.000đ</strong></li>
+                                    <li>Gold: <strong>&ge; 5.000.000đ</strong></li>
+                                    <li>VIP: <strong>&ge; 10.000.000đ</strong></li>
+                                </ul>
+                                <p class="mb-0 fw-bold" style="font-size: 0.9rem; font-weight: 700 !important; color: #c89c5c;">
+                                    Ưu đãi sẽ được áp dụng khi thanh toán tại cửa hàng.
+                                </p>
                             </div>
                         </div>
 
                         <!-- Tab Lịch sử đặt lịch -->
-                        <div class="tab-pane fade" id="history" role="tabpanel">
+                        <div class="tab-pane fade {{ request()->get('tab') === 'history' ? 'show active' : '' }}" id="history" role="tabpanel">
                             <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
                             
                             <!-- Filter by Status -->
@@ -998,6 +1103,47 @@
                 }
             });
         });
+    });
+
+    // Tự động mở tab "Lịch sử đặt lịch" nếu có query param tab=history trong URL
+    // Script này chạy ngay lập tức để tránh hiển thị tab profile trước
+    (function() {
+        if (window.location.search.includes('tab=history')) {
+            // Ngăn scroll tự động
+            window.scrollTo(0, 0);
+            
+            // Kích hoạt tab "Lịch sử đặt lịch" ngay lập tức
+            const historyTab = document.getElementById('history-tab');
+            const profileTab = document.getElementById('profile-tab');
+            const historyPane = document.getElementById('history');
+            const profilePane = document.getElementById('profile');
+            
+            if (historyTab && profileTab && historyPane && profilePane) {
+                // Remove active class từ profile tab
+                profileTab.classList.remove('active');
+                profilePane.classList.remove('show', 'active');
+                
+                // Add active class cho history tab
+                historyTab.classList.add('active');
+                historyPane.classList.add('show', 'active');
+            }
+            
+            // Đảm bảo không scroll sau khi tab được kích hoạt
+            setTimeout(function() {
+                window.scrollTo(0, 0);
+            }, 0);
+        }
+    })();
+    
+    // Ngăn scroll tự động khi có hash trong URL
+    window.addEventListener('load', function() {
+        if (window.location.hash) {
+            window.scrollTo(0, 0);
+            // Xóa hash khỏi URL để tránh scroll lại
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.pathname + window.location.search);
+            }
+        }
     });
 </script>
 @endpush

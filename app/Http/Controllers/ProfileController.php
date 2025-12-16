@@ -49,7 +49,9 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        // Sau khi cập nhật hồ sơ, chuyển về trang thông tin cá nhân của khách hàng
+        return Redirect::route('site.customers.show', $user->id)
+            ->with('status', 'profile-updated');
     }
 
 }

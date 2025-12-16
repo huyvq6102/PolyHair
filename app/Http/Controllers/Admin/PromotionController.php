@@ -34,6 +34,9 @@ class PromotionController extends Controller
      */
     public function index()
     {
+        // Tự động cập nhật trạng thái khuyến mãi trước khi hiển thị
+        $this->promotionService->autoUpdateAllPromotionStatuses();
+        
         $promotions = $this->promotionService->getAll();
         $statuses = $this->statuses;
         $isTrash = false;
@@ -196,10 +199,12 @@ class PromotionController extends Controller
             'discount_type' => ['required', Rule::in(['percent', 'amount'])],
             'discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
-            'apply_scope' => ['required', Rule::in(['service', 'order'])],
+            'apply_scope' => ['required', Rule::in(['service', 'order', 'customer_tier'])],
             'min_order_amount' => ['nullable', 'numeric', 'min:0'],
             'max_discount_amount' => ['nullable', 'numeric', 'min:0'],
             'per_user_limit' => ['nullable', 'integer', 'min:1'],
+            'usage_limit' => ['nullable', 'integer', 'min:1'],
+            'min_customer_tier' => ['nullable', Rule::in(['Khách thường', 'Silver', 'Gold', 'VIP'])],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'status' => ['required', Rule::in(array_keys($this->statuses))],
@@ -232,6 +237,13 @@ class PromotionController extends Controller
         if ($data['apply_scope'] === 'order' && ($data['min_order_amount'] === null || $data['min_order_amount'] <= 0)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'min_order_amount' => 'Vui lòng nhập số tiền hóa đơn tối thiểu lớn hơn 0 khi áp dụng theo hóa đơn.',
+            ]);
+        }
+
+        // Nếu áp dụng theo hạng khách hàng thì yêu cầu chọn hạng tối thiểu
+        if ($data['apply_scope'] === 'customer_tier' && empty($data['min_customer_tier'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'min_customer_tier' => 'Vui lòng chọn hạng khách hàng tối thiểu khi áp dụng theo hạng khách hàng.',
             ]);
         }
 

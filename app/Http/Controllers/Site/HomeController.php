@@ -37,9 +37,23 @@ class HomeController extends Controller
         $types = $this->typeService->getAll();
         $products = $this->productService->getWithLimit(8, 0);
         $productsOnSale = $this->productService->getOnSale(8, 0);
-        $services = $this->serviceService->getWithLimit(3, 0);
+        $services = $this->serviceService->getMostBooked(6, 0); // 6 services = 2 hàng x 3 cột
         $news = $this->newsService->getWithLimit(3, 0);
 
-        return view('site.home', compact('settings', 'types', 'products', 'productsOnSale', 'services', 'news'));
+        // Load active promotions
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where(function($query) {
+                $now = \Carbon\Carbon::now();
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                })->where(function($q) use ($now) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                });
+            })
+            ->get();
+
+        return view('site.home', compact('settings', 'types', 'products', 'productsOnSale', 'services', 'news', 'activePromotions'));
     }
 }
