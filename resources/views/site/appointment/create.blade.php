@@ -486,18 +486,6 @@
                                     </button>
                                     <div id="employee_grid" class="employee-grid" style="overflow: hidden; padding: 5px 0;">
                                         <div class="employee-slider" style="transition: transform 0.3s ease; display: flex; gap: 15px;">
-                                            {{-- Option "PoLyHair - Quán tự chọn nhân viên" --}}
-                                            <div class="employee-item-btn{{ old('employee_id') == 'auto' || old('employee_id') == '' ? ' selected' : '' }}" 
-                                                 data-employee-id="auto" 
-                                                 data-employee-name="PoLyHair - Quán tự chọn nhân viên" 
-                                                 data-employee-position="auto" 
-                                                 style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
-                                                <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ (old('employee_id') == 'auto' || old('employee_id') == '') ? '#007bff' : '#ddd' }}; background: #fff; display: flex; align-items: center; justify-content: center; padding: 5px;">
-                                                    <img src="{{ asset('legacy/images/logox.png') }}" alt="PoLyHair" style="width: 100%; height: 100%; object-fit: contain;">
-                                                </div>
-                                                <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">PoLyHair</div>
-                                            </div>
-                                            
                                             @if(count($employees) > 0)
                                                 @foreach($employees as $employee)
                                                     <div class="employee-item-btn{{ old('employee_id') == $employee->id ? ' selected' : '' }}" data-employee-id="{{ $employee->id }}" data-employee-name="{{ $employee->user->name }}" data-employee-position="{{ $employee->position ?? '' }}" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
@@ -1408,7 +1396,7 @@
                     $('#employee_id').val(formData.employee_id);
                     restoredEmployeeId = formData.employee_id;
                     // Enable input date nếu đã có employee
-                    $('#appointment_date').prop('disabled', false);
+                    $('#appointment_date').datepicker('enable');
                 }
                 
                 // ✅ Tự động chọn employee từ query parameter nếu có
@@ -1418,7 +1406,7 @@
                     $('#employee_id').val(employeeIdFromUrl);
                     restoredEmployeeId = employeeIdFromUrl;
                     // Enable input date nếu đã có employee
-                    $('#appointment_date').prop('disabled', false);
+                    $('#appointment_date').datepicker('enable');
                 }
 
                 // ✅ Ưu tiên restore từ Session (nếu có)
@@ -1618,13 +1606,12 @@
         const today = vietnamTime.toISOString().split('T')[0];
         $('#appointment_date').attr('min', today);
 
-        // ✅ MỚI: Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
-        // Cho phép "auto" (Quán tự chọn nhân viên)
+        // Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
         const initialEmployeeId = $('#employee_id').val();
-        if (!initialEmployeeId || (initialEmployeeId !== 'auto' && initialEmployeeId === '')) {
+        if (!initialEmployeeId || initialEmployeeId === '') {
             $('#appointment_date').prop('disabled', true);
         } else {
-            // Nếu đã có employee_id hoặc "auto" (từ localStorage), enable input date
+            // Nếu đã có employee_id, enable input date
             $('#appointment_date').prop('disabled', false);
         }
 
@@ -1645,12 +1632,8 @@
             }
         }, 500);
 
-        // ✅ MỚI: Hiển thị container employee ngay từ đầu để option "Quán tự chọn nhân viên" luôn hiển thị
-        // Kiểm tra xem có option "Quán tự chọn nhân viên" trong HTML không
-        if ($('.employee-item-btn[data-employee-id="auto"]').length > 0) {
-            $('#employeeContainer').show();
-            $('.employee-chevron').css('transform', 'rotate(180deg)');
-        }
+        // ✅ Đã sửa: Không tự động mở dropdown, chỉ mở khi user click
+        // Container sẽ được mở khi user click vào toggle button
         
         // Load employees by service on page load
             loadEmployeesByService();
@@ -1768,42 +1751,12 @@
             // Nếu không có service nhưng có employee_id trong URL, vẫn load employees
             if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0 && !hasEmployeeIdInUrl) {
                 const $slider = $('.employee-slider');
-                
-                // ✅ MỚI: Lưu lại option "Quán tự chọn nhân viên" nếu có
-                const autoSelectOption = $slider.find('.employee-item-btn[data-employee-id="auto"]').first();
                 $slider.empty();
-                
-                // ✅ MỚI: Thêm lại option "Quán tự chọn nhân viên" vào đầu slider
-                if (autoSelectOption.length === 0) {
-                    // Nếu không có trong DOM, tạo mới
-                    const currentEmployeeId = $('#employee_id').val();
-                    const isAutoSelected = currentEmployeeId === 'auto' || currentEmployeeId === '';
-                    const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="PoLyHair - Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
-                        '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: #fff; display: flex; align-items: center; justify-content: center; padding: 5px;">' +
-                        '<img src="{{ asset("legacy/images/logox.png") }}" alt="PoLyHair" style="width: 100%; height: 100%; object-fit: contain;">' +
-                        '</div>' +
-                        '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">PoLyHair</div>' +
-                        '</div>';
-                    $slider.append(autoSelectHtml);
-                } else {
-                    // Nếu có trong DOM, thêm lại
-                    $slider.append(autoSelectOption);
-                }
-                
-                // Hiển thị message nhưng vẫn giữ option "Quán tự chọn nhân viên"
                 $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
-                
-                // ✅ MỚI: Hiển thị container để user có thể chọn "Quán tự chọn nhân viên"
-                $('#employeeContainer').show();
-                $('.employee-chevron').css('transform', 'rotate(180deg)');
                 
                 // Không reset employee_id nếu có trong URL
                 if (!hasEmployeeIdInUrl) {
-                    // Không reset nếu đã chọn "auto"
-                    const currentEmployeeId = $('#employee_id').val();
-                    if (currentEmployeeId !== 'auto') {
-                        $('#employee_id').val('');
-                    }
+                    $('#employee_id').val('');
                 }
                 return;
             }
@@ -1824,27 +1777,7 @@
                 success: function(response) {
                     if (response.success && response.employees) {
                         const $slider = $('.employee-slider');
-                        
-                        // ✅ MỚI: Lưu lại option "Quán tự chọn nhân viên" nếu có
-                        const autoSelectOption = $slider.find('.employee-item-btn[data-employee-id="auto"]').first();
                         $slider.empty();
-                        
-                        // ✅ MỚI: Thêm lại option "Quán tự chọn nhân viên" vào đầu slider
-                        if (autoSelectOption.length === 0) {
-                            // Nếu không có trong DOM, tạo mới
-                            const currentEmployeeId = $('#employee_id').val();
-                            const isAutoSelected = currentEmployeeId === 'auto' || currentEmployeeId === '';
-                            const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="PoLyHair - Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
-                                '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: #fff; display: flex; align-items: center; justify-content: center; padding: 5px;">' +
-                                '<img src="{{ asset("legacy/images/logox.png") }}" alt="PoLyHair" style="width: 100%; height: 100%; object-fit: contain;">' +
-                                '</div>' +
-                                '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">PoLyHair</div>' +
-                                '</div>';
-                            $slider.append(autoSelectHtml);
-                        } else {
-                            // Nếu có trong DOM, thêm lại
-                            $slider.append(autoSelectOption);
-                        }
 
                         // Thêm employees vào slider
                         if (response.employees.length > 0) {
@@ -1870,29 +1803,26 @@
                                 $slider.append(itemHtml);
                             });
 
-                            // Đảm bảo container hiển thị sau khi load employees
-                            $('#employeeContainer').show();
-                            $('.employee-chevron').css('transform', 'rotate(180deg)');
+                            // ✅ Đã sửa: Không tự động mở dropdown sau khi load employees
+                            // Container chỉ mở khi user click vào toggle button
 
                             // Debug: Log số lượng employees đã load
                             console.log('=== DEBUG: Employees loaded ===');
                             console.log('Total employees:', response.employees.length);
                             console.log('Employee buttons in DOM:', $('.employee-item-btn').length);
 
-                            // ✅ Tự động chọn employee từ URL hoặc currentEmployeeId
+                            // ✅ Tự động chọn employee từ URL (chỉ khi có trong URL, không tự chọn ngẫu nhiên)
                             const urlParams = new URLSearchParams(window.location.search);
                             const employeeIdFromUrl = urlParams.get('employee_id');
-                            const employeeIdToSelect = employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0' 
-                                ? employeeIdFromUrl 
-                                : currentEmployeeId;
                             
-                            if (employeeIdToSelect) {
+                            // Chỉ tự động chọn nếu có employee_id trong URL (không tự chọn ngẫu nhiên)
+                            if (employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0') {
                                 // Đợi một chút để DOM được render xong
                                 setTimeout(function() {
-                                    const selectedEmployee = $('.employee-item-btn[data-employee-id="' + employeeIdToSelect + '"]');
+                                    const selectedEmployee = $('.employee-item-btn[data-employee-id="' + employeeIdFromUrl + '"]');
                                     if (selectedEmployee.length) {
                                         // Set hidden input
-                                        $('#employee_id').val(employeeIdToSelect);
+                                        $('#employee_id').val(employeeIdFromUrl);
                                         
                                         // Highlight employee
                                         $('.employee-item-btn').removeClass('selected');
@@ -1906,9 +1836,24 @@
                                         // Trigger change để load time slots nếu đã có date
                                         $('#employee_id').trigger('change');
                                         
-                                        console.log('✅ Auto-selected employee:', employeeIdToSelect);
+                                        console.log('✅ Auto-selected employee from URL:', employeeIdFromUrl);
                                     } else {
-                                        console.log('⚠️ Employee not found in list:', employeeIdToSelect);
+                                        console.log('⚠️ Employee not found in list:', employeeIdFromUrl);
+                                    }
+                                }, 100);
+                            } else if (currentEmployeeId && currentEmployeeId !== '') {
+                                // Chỉ tự động chọn nếu đã có giá trị từ trước (từ localStorage hoặc old input)
+                                // Không tự động chọn giá trị rỗng
+                                setTimeout(function() {
+                                    const selectedEmployee = $('.employee-item-btn[data-employee-id="' + currentEmployeeId + '"]');
+                                    if (selectedEmployee.length) {
+                                        // Highlight employee
+                                        $('.employee-item-btn').removeClass('selected');
+                                        $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
+                                        selectedEmployee.addClass('selected');
+                                        selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
+                                        
+                                        console.log('✅ Restored previous employee selection:', currentEmployeeId);
                                     }
                                 }, 100);
                             }
@@ -2156,9 +2101,8 @@
             const employeeId = $(this).val();
             const $appointmentDate = $('#appointment_date');
 
-            // ✅ MỚI: Cho phép "auto" (Quán tự chọn nhân viên) hoặc employee_id hợp lệ
-            if (employeeId && (employeeId === 'auto' || employeeId !== '')) {
-                // Enable input ngày khi đã chọn kỹ thuật viên hoặc "auto"
+            if (employeeId && employeeId !== '') {
+                // Enable input ngày khi đã chọn kỹ thuật viên
                 $('#employee-error').hide();
                 $(this).removeClass('is-invalid');
                 $appointmentDate.prop('disabled', false);
@@ -2191,9 +2135,9 @@
             if (dateValue && dateValue.trim() !== '') {
                 $('#appointment_date-error').hide();
                 $(this).removeClass('is-invalid');
-                // ✅ MỚI: Chỉ load time slots nếu đã chọn kỹ thuật viên hoặc "auto"
+                // Chỉ load time slots nếu đã chọn kỹ thuật viên
                 const currentEmployeeId = $('#employee_id').val();
-                if (currentEmployeeId && (currentEmployeeId === 'auto' || currentEmployeeId !== '')) {
+                if (currentEmployeeId && currentEmployeeId !== '') {
                     loadAvailableTimeSlots();
                 }
             } else {
@@ -2318,8 +2262,7 @@
             timeSlotMessage.show();
             // KHÔNG reset các giá trị ở đây - sẽ restore sau khi load xong
 
-            // Cho phép "auto" để hiển thị các giờ còn trống từ tất cả nhân viên
-            // Không cần kiểm tra employee_id nữa vì backend đã xử lý
+            // Kiểm tra employee_id trước khi load time slots
 
             // Check if date is selected
             if (!appointmentDate) {
@@ -3082,7 +3025,6 @@
             }
 
             // Check employee - kiểm tra kỹ hơn
-            // ✅ MỚI: Cho phép "auto" (Quán tự chọn nhân viên)
             const employeeId = $('#employee_id').val();
             const employeeIdTrimmed = employeeId ? String(employeeId).trim() : '';
             const hasEmployeeId = employeeIdTrimmed && 
@@ -3090,7 +3032,7 @@
                                  employeeIdTrimmed !== '0' && 
                                  employeeIdTrimmed !== 'null' && 
                                  employeeIdTrimmed !== 'undefined' &&
-                                 (employeeIdTrimmed === 'auto' || !isNaN(employeeIdTrimmed)); // Cho phép "auto" hoặc số
+                                 !isNaN(employeeIdTrimmed); // Phải là số
 
             if (!hasEmployeeId) {
                 showFieldError('employee', 'Mời anh chọn kỹ thuật viên');
@@ -3459,6 +3401,18 @@
                                 }
                             }
                         });
+                        
+                        // ✅ SỬA: Nếu có message từ server và không có errors array, hiển thị ở time_slot-error
+                        if (xhr.responseJSON.message && (!xhr.responseJSON.errors || Object.keys(xhr.responseJSON.errors).length === 0)) {
+                            const errorMessage = xhr.responseJSON.message;
+                            if (errorMessage.includes('khung giờ') || errorMessage.includes('nhân viên rảnh')) {
+                                const $timeSlotError = $('#time_slot-error');
+                                if ($timeSlotError.length) {
+                                    $timeSlotError.find('span').text(errorMessage);
+                                    $timeSlotError.show();
+                                }
+                            }
+                        }
 
                         // Scroll to first error
                         const firstError = $('.field-error:visible').first();
@@ -3479,28 +3433,55 @@
                             }
                         }
                     } else {
-                        // Nếu không có errors từ server, có thể là lỗi khác
-                        console.error('Unexpected error:', xhr);
-                        let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
-
-                        // Kiểm tra các loại lỗi khác nhau
-                        if (xhr.responseJSON) {
-                            if (xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
-                            } else if (xhr.responseJSON.error) {
-                                errorMessage = xhr.responseJSON.error;
+                        // ✅ SỬA: Kiểm tra nếu có message từ server (không phải errors array)
+                        // Hiển thị thông báo đỏ ở dưới phần chọn khung giờ thay vì alert
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            const errorMessage = xhr.responseJSON.message;
+                            
+                            // Kiểm tra nếu message liên quan đến time slot
+                            if (errorMessage.includes('khung giờ') || errorMessage.includes('nhân viên rảnh')) {
+                                // Hiển thị thông báo đỏ ở dưới phần chọn khung giờ
+                                const $timeSlotError = $('#time_slot-error');
+                                if ($timeSlotError.length) {
+                                    $timeSlotError.find('span').text(errorMessage);
+                                    $timeSlotError.show();
+                                    
+                                    // Scroll đến phần chọn khung giờ
+                                    $('html, body').animate({
+                                        scrollTop: $timeSlotError.offset().top - 100
+                                    }, 300);
+                                } else {
+                                    // Fallback: hiển thị alert nếu không tìm thấy error div
+                                    alert(errorMessage);
+                                    $('html, body').animate({ scrollTop: 0 }, 300);
+                                }
+                            } else {
+                                // Nếu không phải lỗi time slot, hiển thị alert như cũ
+                                alert(errorMessage);
+                                $('html, body').animate({ scrollTop: 0 }, 300);
                             }
-                        } else if (xhr.status === 0) {
-                            errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối internet.';
-                        } else if (xhr.status === 500) {
-                            errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
-                        } else if (xhr.status === 404) {
-                            errorMessage = 'Không tìm thấy trang. Vui lòng thử lại.';
-                        }
+                        } else {
+                            // Nếu không có errors từ server, có thể là lỗi khác
+                            console.error('Unexpected error:', xhr);
+                            let errorMessage = 'Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại.';
 
-                        // Hiển thị alert và scroll to top
-                        alert(errorMessage);
-                        $('html, body').animate({ scrollTop: 0 }, 300);
+                            // Kiểm tra các loại lỗi khác nhau
+                            if (xhr.responseJSON) {
+                                if (xhr.responseJSON.error) {
+                                    errorMessage = xhr.responseJSON.error;
+                                }
+                            } else if (xhr.status === 0) {
+                                errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối internet.';
+                            } else if (xhr.status === 500) {
+                                errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+                            } else if (xhr.status === 404) {
+                                errorMessage = 'Không tìm thấy trang. Vui lòng thử lại.';
+                            }
+
+                            // Hiển thị alert và scroll to top
+                            alert(errorMessage);
+                            $('html, body').animate({ scrollTop: 0 }, 300);
+                        }
                     }
                 }
             });
