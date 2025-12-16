@@ -34,6 +34,9 @@ class PromotionController extends Controller
      */
     public function index()
     {
+        // Tự động cập nhật trạng thái khuyến mãi trước khi hiển thị
+        $this->promotionService->autoUpdateAllPromotionStatuses();
+        
         $promotions = $this->promotionService->getAll();
         $statuses = $this->statuses;
         $isTrash = false;

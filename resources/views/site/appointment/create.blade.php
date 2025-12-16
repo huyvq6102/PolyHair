@@ -486,6 +486,18 @@
                                     </button>
                                     <div id="employee_grid" class="employee-grid" style="overflow: hidden; padding: 5px 0;">
                                         <div class="employee-slider" style="transition: transform 0.3s ease; display: flex; gap: 15px;">
+                                            {{-- Option "Quán tự chọn nhân viên" --}}
+                                            <div class="employee-item-btn{{ old('employee_id') == 'auto' || old('employee_id') == '' ? ' selected' : '' }}" 
+                                                 data-employee-id="auto" 
+                                                 data-employee-name="Quán tự chọn nhân viên" 
+                                                 data-employee-position="auto" 
+                                                 style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
+                                                <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ (old('employee_id') == 'auto' || old('employee_id') == '') ? '#007bff' : '#ddd' }}; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                                                    <i class="fa fa-random" style="font-size: 40px; color: #fff;"></i>
+                                                </div>
+                                                <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">Quán tự chọn</div>
+                                            </div>
+                                            
                                             @if(count($employees) > 0)
                                                 @foreach($employees as $employee)
                                                     <div class="employee-item-btn{{ old('employee_id') == $employee->id ? ' selected' : '' }}" data-employee-id="{{ $employee->id }}" data-employee-name="{{ $employee->user->name }}" data-employee-position="{{ $employee->position ?? '' }}" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
@@ -951,7 +963,11 @@
         color: #b0b0b0;
     }
 
-    /* Tooltip cho slot bị trùng lịch */
+    /* Tooltip cho slot bị trùng lịch - SỬA: Chỉ hiển thị khi hover, tự động ẩn khi mouse leave */
+    .time-slot-btn.unavailable {
+        position: relative;
+    }
+    
     .time-slot-btn.unavailable[title]:hover::after {
         content: attr(title);
         position: absolute;
@@ -965,6 +981,8 @@
         font-size: 12px;
         white-space: nowrap;
         border-radius: 4px;
+        z-index: 1000;
+        pointer-events: none; /* ✅ MỚI: Ngăn tooltip chặn mouse events */
         z-index: 1000;
         pointer-events: none;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -1600,11 +1618,13 @@
         const today = vietnamTime.toISOString().split('T')[0];
         $('#appointment_date').attr('min', today);
 
-        // Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
-        if (!$('#employee_id').val()) {
+        // ✅ MỚI: Kiểm tra và disable input ngày nếu chưa chọn kỹ thuật viên khi trang load
+        // Cho phép "auto" (Quán tự chọn nhân viên)
+        const initialEmployeeId = $('#employee_id').val();
+        if (!initialEmployeeId || (initialEmployeeId !== 'auto' && initialEmployeeId === '')) {
             $('#appointment_date').prop('disabled', true);
         } else {
-            // Nếu đã có employee_id (từ localStorage), enable input date
+            // Nếu đã có employee_id hoặc "auto" (từ localStorage), enable input date
             $('#appointment_date').prop('disabled', false);
         }
 
@@ -1625,6 +1645,13 @@
             }
         }, 500);
 
+        // ✅ MỚI: Hiển thị container employee ngay từ đầu để option "Quán tự chọn nhân viên" luôn hiển thị
+        // Kiểm tra xem có option "Quán tự chọn nhân viên" trong HTML không
+        if ($('.employee-item-btn[data-employee-id="auto"]').length > 0) {
+            $('#employeeContainer').show();
+            $('.employee-chevron').css('transform', 'rotate(180deg)');
+        }
+        
         // Load employees by service on page load
             loadEmployeesByService();
             loadEmployeesForCarousel();
@@ -1741,11 +1768,42 @@
             // Nếu không có service nhưng có employee_id trong URL, vẫn load employees
             if (serviceIds.length === 0 && serviceVariants.length === 0 && comboIds.length === 0 && !hasEmployeeIdInUrl) {
                 const $slider = $('.employee-slider');
+                
+                // ✅ MỚI: Lưu lại option "Quán tự chọn nhân viên" nếu có
+                const autoSelectOption = $slider.find('.employee-item-btn[data-employee-id="auto"]').first();
                 $slider.empty();
+                
+                // ✅ MỚI: Thêm lại option "Quán tự chọn nhân viên" vào đầu slider
+                if (autoSelectOption.length === 0) {
+                    // Nếu không có trong DOM, tạo mới
+                    const currentEmployeeId = $('#employee_id').val();
+                    const isAutoSelected = currentEmployeeId === 'auto' || currentEmployeeId === '';
+                    const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
+                        '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">' +
+                        '<i class="fa fa-random" style="font-size: 40px; color: #fff;"></i>' +
+                        '</div>' +
+                        '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">Quán tự chọn</div>' +
+                        '</div>';
+                    $slider.append(autoSelectHtml);
+                } else {
+                    // Nếu có trong DOM, thêm lại
+                    $slider.append(autoSelectOption);
+                }
+                
+                // Hiển thị message nhưng vẫn giữ option "Quán tự chọn nhân viên"
                 $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
+                
+                // ✅ MỚI: Hiển thị container để user có thể chọn "Quán tự chọn nhân viên"
+                $('#employeeContainer').show();
+                $('.employee-chevron').css('transform', 'rotate(180deg)');
+                
                 // Không reset employee_id nếu có trong URL
                 if (!hasEmployeeIdInUrl) {
-                    $('#employee_id').val('');
+                    // Không reset nếu đã chọn "auto"
+                    const currentEmployeeId = $('#employee_id').val();
+                    if (currentEmployeeId !== 'auto') {
+                        $('#employee_id').val('');
+                    }
                 }
                 return;
             }
@@ -1766,7 +1824,27 @@
                 success: function(response) {
                     if (response.success && response.employees) {
                         const $slider = $('.employee-slider');
+                        
+                        // ✅ MỚI: Lưu lại option "Quán tự chọn nhân viên" nếu có
+                        const autoSelectOption = $slider.find('.employee-item-btn[data-employee-id="auto"]').first();
                         $slider.empty();
+                        
+                        // ✅ MỚI: Thêm lại option "Quán tự chọn nhân viên" vào đầu slider
+                        if (autoSelectOption.length === 0) {
+                            // Nếu không có trong DOM, tạo mới
+                            const currentEmployeeId = $('#employee_id').val();
+                            const isAutoSelected = currentEmployeeId === 'auto' || currentEmployeeId === '';
+                            const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
+                                '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">' +
+                                '<i class="fa fa-random" style="font-size: 40px; color: #fff;"></i>' +
+                                '</div>' +
+                                '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">Quán tự chọn</div>' +
+                                '</div>';
+                            $slider.append(autoSelectHtml);
+                        } else {
+                            // Nếu có trong DOM, thêm lại
+                            $slider.append(autoSelectOption);
+                        }
 
                         // Thêm employees vào slider
                         if (response.employees.length > 0) {
@@ -2078,8 +2156,9 @@
             const employeeId = $(this).val();
             const $appointmentDate = $('#appointment_date');
 
-            if (employeeId) {
-                // Enable input ngày khi đã chọn kỹ thuật viên
+            // ✅ MỚI: Cho phép "auto" (Quán tự chọn nhân viên) hoặc employee_id hợp lệ
+            if (employeeId && (employeeId === 'auto' || employeeId !== '')) {
+                // Enable input ngày khi đã chọn kỹ thuật viên hoặc "auto"
                 $('#employee-error').hide();
                 $(this).removeClass('is-invalid');
                 $appointmentDate.prop('disabled', false);
@@ -2112,9 +2191,10 @@
             if (dateValue && dateValue.trim() !== '') {
                 $('#appointment_date-error').hide();
                 $(this).removeClass('is-invalid');
-                // Chỉ load time slots nếu đã chọn kỹ thuật viên
-                    if ($('#employee_id').val()) {
-                        loadAvailableTimeSlots();
+                // ✅ MỚI: Chỉ load time slots nếu đã chọn kỹ thuật viên hoặc "auto"
+                const currentEmployeeId = $('#employee_id').val();
+                if (currentEmployeeId && (currentEmployeeId === 'auto' || currentEmployeeId !== '')) {
+                    loadAvailableTimeSlots();
                 }
             } else {
                 // Nếu xóa date, hiển thị error
@@ -2234,9 +2314,12 @@
             timeSlotHidden.val('');
             wordTimeIdInput.val('');
 
-            // Check if employee is selected
-            if (!employeeId) {
-                timeSlotMessage.text('Vui lòng chọn kỹ thuật viên trước');
+            // Kiểm tra employee_id - không cho phép "auto" khi load time slots
+            if (!employeeId || employeeId === '' || employeeId === 'auto') {
+                timeSlotMessage.text('Vui lòng chọn kỹ thuật viên cụ thể. "Quán tự chọn nhân viên" chưa được hỗ trợ cho tính năng chọn giờ.');
+                $('.time-slot-container').hide();
+                timeSlotHidden.val('');
+                wordTimeIdInput.val('');
                 return;
             }
 
@@ -2490,8 +2573,9 @@
                                 // CHỈ hiển thị tooltip nếu có conflict_reason rõ ràng từ backend (không phải null, empty, hoặc undefined)
                                 if (slot.conflict_reason && typeof slot.conflict_reason === 'string' && slot.conflict_reason.trim() !== '') {
                                     btn.attr('title', slot.conflict_reason);
-                                    btn.attr('data-toggle', 'tooltip');
-                                    btn.attr('data-placement', 'top');
+                                    // ✅ SỬA: Không dùng Bootstrap tooltip, chỉ dùng CSS tooltip (::after)
+                                    // btn.attr('data-toggle', 'tooltip');
+                                    // btn.attr('data-placement', 'top');
                                 }
 
                                 // Debug log cho slot 11:30
@@ -2508,20 +2592,14 @@
                                     e.preventDefault();
                                     e.stopPropagation();
 
-                                    // Ẩn tooltip trước khi hiển thị alert
-                                    $(this).tooltip('hide');
-
                                     console.log('Blocked click on unavailable slot:', slot.time);
                                     if (slot.conflict_reason) {
                                         alert(slot.conflict_reason);
                                     }
                                     return false;
                                 });
-
-                                // Ẩn tooltip khi mouse leave
-                                btn.on('mouseleave', function() {
-                                    $(this).tooltip('hide');
-                                });
+                                
+                                // ✅ SỬA: Đảm bảo tooltip tự động ẩn khi mouse leave (CSS tooltip tự động ẩn)
                             } else {
                                 availableCount++;
                                 if (isSelected) {
@@ -2542,14 +2620,8 @@
                         console.log('Rendered slots:', renderedSlotCount);
                         console.log('Completed appointment end time:', completedAppointmentEndTime || 'null');
 
-                        // Khởi tạo tooltip cho các slot unavailable có conflict_reason
-                        // Sử dụng trigger 'hover' để tooltip chỉ hiển thị khi hover, tự động ẩn khi mouse leave
-                        if (typeof $.fn.tooltip !== 'undefined') {
-                            $('.time-slot-btn.unavailable[data-toggle="tooltip"]').tooltip({
-                                trigger: 'hover',
-                                placement: 'top'
-                            });
-                        }
+                        // ✅ SỬA: Không cần khởi tạo Bootstrap tooltip nữa vì đã dùng CSS tooltip (::after)
+                        // CSS tooltip tự động hiển thị khi hover và ẩn khi mouse leave
 
                         // Thêm các empty slots ở cuối để đủ 33 slots (11 cột x 3 hàng)
                         // Lưu ý: remainingSlots phải tính dựa trên số slot đã render
@@ -2642,13 +2714,46 @@
                     clearTimeout(loadingTimeout);
                     isLoadingTimeSlots = false;
                     console.error('Error loading time slots:', error);
+                    console.error('XHR status:', status);
+                    console.error('XHR response:', xhr.responseJSON);
                     $('.time-slot-container').hide();
 
                     let errorMessage = 'Không thể tải khung giờ. Vui lòng thử lại.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                    
+                    // Xử lý các loại lỗi khác nhau
+                    if (xhr.status === 422) {
+                        // Validation error
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            const errorMessages = [];
+                            if (errors.employee_id) {
+                                errorMessages.push(errors.employee_id[0]);
+                            }
+                            if (errors.appointment_date) {
+                                errorMessages.push(errors.appointment_date[0]);
+                            }
+                            errorMessage = errorMessages.length > 0 ? errorMessages.join('. ') : 'Dữ liệu không hợp lệ.';
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else {
+                            errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin đã nhập.';
+                        }
+                    } else if (xhr.status === 500) {
+                        // Server error
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else {
+                            errorMessage = 'Có lỗi xảy ra từ server. Vui lòng thử lại sau.';
+                        }
+                    } else if (status === 'timeout') {
+                        errorMessage = 'Yêu cầu quá thời gian chờ. Vui lòng thử lại.';
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
+                    
                     timeSlotMessage.text(errorMessage).show();
+                    timeSlotHidden.val('');
+                    wordTimeIdInput.val('');
                 }
             });
         }
@@ -2951,9 +3056,15 @@
             }
 
             // Check employee - kiểm tra kỹ hơn
+            // ✅ MỚI: Cho phép "auto" (Quán tự chọn nhân viên)
             const employeeId = $('#employee_id').val();
             const employeeIdTrimmed = employeeId ? String(employeeId).trim() : '';
-            const hasEmployeeId = employeeIdTrimmed && employeeIdTrimmed !== '' && employeeIdTrimmed !== '0' && employeeIdTrimmed !== 'null' && employeeIdTrimmed !== 'undefined';
+            const hasEmployeeId = employeeIdTrimmed && 
+                                 employeeIdTrimmed !== '' && 
+                                 employeeIdTrimmed !== '0' && 
+                                 employeeIdTrimmed !== 'null' && 
+                                 employeeIdTrimmed !== 'undefined' &&
+                                 (employeeIdTrimmed === 'auto' || !isNaN(employeeIdTrimmed)); // Cho phép "auto" hoặc số
 
             if (!hasEmployeeId) {
                 showFieldError('employee', 'Mời anh chọn kỹ thuật viên');

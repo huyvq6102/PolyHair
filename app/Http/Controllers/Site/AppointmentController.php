@@ -76,21 +76,35 @@ class AppointmentController extends Controller
             ->get();
 
 
-        // Load tất cả active promotions để áp dụng trực tiếp vào dịch vụ
-        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
-            ->whereNull('deleted_at')
-            ->where('status', 'active')
-            ->where(function($query) {
-                $now = \Carbon\Carbon::now();
-                $query->where(function($q) use ($now) {
-                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
-                })->where(function($q) use ($now) {
-                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
-                });
-            })
-            ->get();
+        // Load promotion nếu có promotion_id trong URL
+        $selectedPromotion = null;
+        $promotionForJs = null;
 
-        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory', 'activePromotions'));
+        if ($request->has('promotion_id') && $request->input('promotion_id')) {
+            $promotionId = $request->input('promotion_id');
+            $selectedPromotion = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+                ->whereNull('deleted_at')
+                ->where('status', 'active')
+                ->find($promotionId);
+
+            if ($selectedPromotion) {
+                // Prepare promotion data for JavaScript
+                $promotionForJs = [
+                    'id' => $selectedPromotion->id,
+                    'name' => $selectedPromotion->name,
+                    'discount_type' => $selectedPromotion->discount_type,
+                    'discount_percent' => $selectedPromotion->discount_percent ?? 0,
+                    'discount_amount' => $selectedPromotion->discount_amount ?? 0,
+                    'max_discount_amount' => $selectedPromotion->max_discount_amount ?? null,
+                    'apply_scope' => $selectedPromotion->apply_scope,
+                    'service_ids' => $selectedPromotion->services->pluck('id')->toArray(),
+                    'variant_ids' => $selectedPromotion->serviceVariants->pluck('id')->toArray(),
+                    'combo_ids' => $selectedPromotion->combos->pluck('id')->toArray()
+                ];
+            }
+        }
+
+        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory', 'selectedPromotion', 'promotionForJs'));
     }
 
     /**
@@ -230,6 +244,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_id'])) {
                 unset($queryParams['service_id']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -244,6 +267,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_variants'])) {
                 unset($queryParams['service_variants']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -258,6 +290,15 @@ class AppointmentController extends Controller
             if (empty($queryParams['combo_id'])) {
                 unset($queryParams['combo_id']);
             }
+            
+            // Giữ lại appointment_date và word_time_id từ Session hoặc request
+            if (Session::has('appointment_date')) {
+                $queryParams['appointment_date'] = Session::get('appointment_date');
+            }
+            if (Session::has('word_time_id')) {
+                $queryParams['word_time_id'] = Session::get('word_time_id');
+            }
+            
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -362,55 +403,30 @@ class AppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Load all active promotions (không cần promotion_id trong URL nữa)
-        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
-            ->whereNull('deleted_at')
-            ->where('status', 'active')
-            ->where(function($query) {
-                $now = \Carbon\Carbon::now();
-                $query->where(function($q) use ($now) {
-                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
-                })->where(function($q) use ($now) {
-                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
-                });
-            })
-            ->get();
+        // Restore appointment_date và word_time_id từ Session nếu có
+        // Ưu tiên lấy từ request (query params), nếu không có thì lấy từ Session
+        $restoredAppointmentDate = $request->input('appointment_date') ?? Session::get('appointment_date');
+        $restoredWordTimeId = $request->input('word_time_id') ?? Session::get('word_time_id');
 
-        // ✅ Restore appointment_date và word_time_id từ Session
-        // Điều này đảm bảo khi redirect (do thêm/xóa dịch vụ), giờ đã chọn vẫn được giữ lại
-        $savedDate = Session::get('appointment_selected_date');
-        $savedWordTimeId = Session::get('appointment_selected_word_time_id');
+        // Load promotion nếu có promotion_id trong URL
+        $selectedPromotion = null;
+        if ($request->has('promotion_id') && $request->input('promotion_id')) {
+            $promotionId = $request->input('promotion_id');
+            $selectedPromotion = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+                ->whereNull('deleted_at')
+                ->where('status', 'active')
+                ->find($promotionId);
+        }
 
         return view('site.appointment.create', compact(
             'employees', 
             'wordTimes', 
             'serviceCategories', 
-            'combos', 
-            'activePromotions',
-            'savedDate',        // Pass vào view để restore
-            'savedWordTimeId'   // Pass vào view để restore
+            'combos',
+            'restoredAppointmentDate',
+            'restoredWordTimeId',
+            'selectedPromotion'
         ));
-    }
-
-    /**
-     * Lưu appointment_date và word_time_id vào Session khi user chọn giờ.
-     * Method này được gọi từ JavaScript khi user click vào time slot.
-     */
-    public function saveSelectedTime(Request $request)
-    {
-        $request->validate([
-            'appointment_date' => 'required|date|after_or_equal:today',
-            'word_time_id' => 'required|exists:word_time,id',
-        ]);
-
-        // Lưu vào Session để giữ lại khi redirect
-        Session::put('appointment_selected_date', $request->input('appointment_date'));
-        Session::put('appointment_selected_word_time_id', $request->input('word_time_id'));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Đã lưu thời gian đã chọn'
-        ]);
     }
 
     /**
@@ -690,10 +706,6 @@ class AppointmentController extends Controller
 
             DB::commit();
 
-            // ✅ Xóa Session sau khi đặt lịch thành công
-            // Để tránh giữ lại thông tin cũ cho lần đặt lịch tiếp theo
-            Session::forget(['appointment_selected_date', 'appointment_selected_word_time_id']);
-
             // CRITICAL: Remove any existing appointments from cart before adding new one
             // This ensures we don't have old appointments with wrong data in cart
             // Update Session AFTER commit to ensure no race condition with database transaction
@@ -915,6 +927,26 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Save appointment date and word_time_id to session.
+     * Called when user selects a time slot.
+     */
+    public function saveTimeSelection(Request $request)
+    {
+        $request->validate([
+            'appointment_date' => 'required|date',
+            'word_time_id' => 'required|exists:word_time,id',
+        ]);
+
+        Session::put('appointment_date', $request->input('appointment_date'));
+        Session::put('word_time_id', $request->input('word_time_id'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Time selection saved'
+        ]);
+    }
+
+    /**
      * Get available time slots for an employee on a specific date.
      */
     public function getAvailableTimeSlots(Request $request)
@@ -940,16 +972,29 @@ class AppointmentController extends Controller
             }
 
             // Handle GET request for available time slots
+            // Xử lý employee_id trước để validate đúng
+            $employeeId = $request->input('employee_id');
+            // Convert empty string, '0', or 'auto' to null
+            if ($employeeId === '' || $employeeId === '0' || $employeeId === 'auto') {
+                $employeeId = null;
+            }
+            
+            // Validate các trường khác
             $request->validate([
-                'employee_id' => 'nullable|exists:employees,id',
                 'appointment_date' => 'required|date|after_or_equal:today',
                 'total_duration' => 'nullable|integer|min:1', // Tổng thời gian dịch vụ đã chọn (phút)
             ]);
-
-            $employeeId = $request->input('employee_id');
-            // Convert empty string to null
-            if ($employeeId === '' || $employeeId === '0') {
-                $employeeId = null;
+            
+            // Validate employee_id exists nếu không phải null
+            if ($employeeId !== null) {
+                $employee = \App\Models\Employee::find($employeeId);
+                if (!$employee) {
+                    return response()->json([
+                        'success' => false,
+                        'time_slots' => [],
+                        'message' => 'Kỹ thuật viên không tồn tại.'
+                    ], 422);
+                }
             }
             $appointmentDate = Carbon::parse($request->input('appointment_date'));
             $totalDuration = (int)($request->input('total_duration') ?? 0); // Tổng thời gian dịch vụ (phút)
@@ -968,12 +1013,12 @@ class AppointmentController extends Controller
             $timeSlots = [];
             $workingTimeRanges = [];
 
-            // Bắt buộc phải có employee_id
+            // Bắt buộc phải có employee_id (không phải "auto")
             if (!$employeeId) {
                 return response()->json([
-                    'success' => true,
+                    'success' => false,
                     'time_slots' => [],
-                    'message' => 'Vui lòng chọn kỹ thuật viên trước'
+                    'message' => 'Vui lòng chọn kỹ thuật viên cụ thể. "Quán tự chọn nhân viên" chưa được hỗ trợ cho tính năng này.'
                 ]);
             }
 
