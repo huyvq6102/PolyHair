@@ -437,9 +437,6 @@ class AppointmentController extends Controller
         try {
             // Xử lý employee_id trước để validate đúng
             $employeeIdInput = $request->input('employee_id');
-            // Cho phép "auto" hoặc empty string
-            $isAutoSelect = !$employeeIdInput || $employeeIdInput === 'auto' || $employeeIdInput === '';
-            
             // Validation rules
             $validationRules = [
                 'name' => 'required|string|max:255',
@@ -451,18 +448,11 @@ class AppointmentController extends Controller
                 'service_id.*' => 'exists:services,id',
                 'combo_id' => 'nullable|array',
                 'combo_id.*' => 'exists:combos,id',
+                'employee_id' => 'required|exists:employees,id',
                 'appointment_date' => 'required|date|after_or_equal:today',
                 'word_time_id' => 'required|exists:word_time,id',
                 'note' => 'nullable|string|max:1000',
             ];
-            
-            // Chỉ validate exists nếu không phải auto-select
-            if (!$isAutoSelect) {
-                $validationRules['employee_id'] = 'required|exists:employees,id';
-            } else {
-                // Cho phép "auto" hoặc empty
-                $validationRules['employee_id'] = 'nullable|string';
-            }
             
             $validated = $request->validate($validationRules, [
                 'name.required' => 'Vui lòng nhập họ và tên',
@@ -667,57 +657,14 @@ class AppointmentController extends Controller
             // để đảm bảo serviceVariantData có employee_id đúng
             
             // Log để debug
-            \Log::info('Processing employee selection', [
-                'employee_id_from_request' => $request->input('employee_id'),
-                'employee_id_from_validated' => $selectedEmployeeId,
-                'is_auto_select' => $isAutoSelect,
-                'appointment_date' => $appointmentDate->format('Y-m-d'),
-                'time_slot' => $timeString,
-                'total_duration' => $totalDuration
-            ]);
-            
-            if (!$selectedEmployeeId || $selectedEmployeeId === 'auto' || $selectedEmployeeId === '') {
-                // Tìm nhân viên còn trống cho time slot này
-                \Log::info('Finding available employee for auto-select mode', [
-                    'appointment_date' => $appointmentDate->format('Y-m-d'),
-                    'time_slot' => $timeString,
-                    'total_duration' => $totalDuration
-                ]);
-                
-                $selectedEmployeeId = $this->findAvailableEmployeeForTimeSlot($appointmentDate, $timeString, $totalDuration);
-                
-                if (!$selectedEmployeeId) {
-                    \Log::warning('No available employee found for auto-select', [
-                        'appointment_date' => $appointmentDate->format('Y-m-d'),
-                        'time_slot' => $timeString,
-                        'total_duration' => $totalDuration
-                    ]);
-                    
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Không tìm thấy nhân viên còn trống cho khung giờ đã chọn. Vui lòng chọn khung giờ khác.'
-                    ], 422);
-                }
-                
-                \Log::info('Auto-selected employee for appointment', [
-                    'selected_employee_id' => $selectedEmployeeId,
-                    'appointment_date' => $appointmentDate->format('Y-m-d'),
-                    'time_slot' => $timeString,
-                    'total_duration' => $totalDuration
-                ]);
-            } else {
-                // Validate employee exists nếu không phải auto
-                $employee = \App\Models\Employee::find($selectedEmployeeId);
-                if (!$employee) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Kỹ thuật viên không tồn tại.'
-                    ], 422);
-                }
+            // Validate employee exists
+            $employee = \App\Models\Employee::find($selectedEmployeeId);
+            if (!$employee) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kỹ thuật viên không tồn tại.'
+                ], 422);
             }
-
-            // ✅ QUAN TRỌNG: Cập nhật employee_id trong serviceVariantData sau khi đã xử lý
-            // Đảm bảo tất cả serviceVariantData có employee_id đúng (không phải 'auto')
             foreach ($serviceVariantData as &$variantData) {
                 $variantData['employee_id'] = $selectedEmployeeId;
             }
@@ -1091,69 +1038,39 @@ class AppointmentController extends Controller
                 $currentHour = $currentHour + 1;
             }
 
-            $timeSlots = [];
-            $workingTimeRanges = [];
-            $isAutoSelect = !$employeeId; // Đánh dấu là chế độ tự chọn
-
-            if ($isAutoSelect) {
-                // Chế độ tự chọn: Lấy tất cả nhân viên có lịch làm việc trong ngày
-                $allEmployees = \App\Models\Employee::with('user')
-                    ->whereNotNull('user_id')
-                    ->where('status', '!=', 'Vô hiệu hóa')
-                    ->whereHas('user', function($query) {
-                        $query->where('role_id', '!=', 1); // Loại trừ admin
-                    })
-                    ->get();
-
-                // Lấy tất cả working schedules của tất cả nhân viên trong ngày
-                $allWorkingSchedules = \App\Models\WorkingSchedule::with(['shift', 'employee'])
-                    ->whereIn('employee_id', $allEmployees->pluck('id'))
-                    ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
-                    ->whereNull('deleted_at')
-                    ->get();
-
-                // Lấy tất cả appointments đã đặt trong ngày (của tất cả nhân viên)
-                $allBookedAppointments = \App\Models\Appointment::with('appointmentDetails')
-                    ->whereIn('employee_id', $allEmployees->pluck('id'))
-                    ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-                    ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
-                    ->get();
-            } else {
-                // Chế độ chọn nhân viên cụ thể
-                // Get working schedules for the employee on the selected date
-                $workingSchedules = \App\Models\WorkingSchedule::with('shift')
-                    ->where('employee_id', $employeeId)
-                    ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
-                    ->whereNull('deleted_at')
-                    ->get();
+            // Validate employee_id is required
+            if (!$employeeId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vui lòng chọn kỹ thuật viên.',
+                    'time_slots' => []
+                ], 422);
             }
 
-            // Khởi tạo $employee (null nếu auto-select mode)
-            $employee = null;
-            
-            // Debug log để kiểm tra
-            if (!$isAutoSelect) {
-                $employee = \App\Models\Employee::find($employeeId);
-                if ($employee) {
-                    \Log::info('Loading time slots for employee', [
-                        'employee_id' => $employeeId,
-                        'employee_name' => $employee->user->name ?? 'N/A',
-                        'employee_position' => $employee->position ?? 'N/A',
-                        'date' => $appointmentDate->format('Y-m-d'),
-                        'working_schedules_count' => $workingSchedules->count()
-                    ]);
-                }
-            } else {
-                \Log::info('Loading time slots for auto-select mode', [
+            $timeSlots = [];
+            $workingTimeRanges = [];
+
+            // Get working schedules for the employee on the selected date
+            $workingSchedules = \App\Models\WorkingSchedule::with('shift')
+                ->where('employee_id', $employeeId)
+                ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
+                ->whereNull('deleted_at')
+                ->get();
+
+            // Get employee
+            $employee = \App\Models\Employee::find($employeeId);
+            if ($employee) {
+                \Log::info('Loading time slots for employee', [
+                    'employee_id' => $employeeId,
+                    'employee_name' => $employee->user->name ?? 'N/A',
+                    'employee_position' => $employee->position ?? 'N/A',
                     'date' => $appointmentDate->format('Y-m-d'),
-                    'total_employees' => $allEmployees->count(),
-                    'total_working_schedules' => $allWorkingSchedules->count(),
-                    'total_booked_appointments' => $allBookedAppointments->count()
+                    'working_schedules_count' => $workingSchedules->count()
                 ]);
             }
 
             // Lưu các khoảng thời gian làm việc
-            $schedulesToProcess = $isAutoSelect ? $allWorkingSchedules : $workingSchedules;
+            $schedulesToProcess = $workingSchedules;
             foreach ($schedulesToProcess as $schedule) {
                 if (!$schedule->shift) {
                     \Log::warning('Working schedule has no shift', [
@@ -1234,16 +1151,14 @@ class AppointmentController extends Controller
             // (workingTimeRanges sẽ rỗng, nên isInWorkingTime sẽ luôn false)
 
             // Get booked appointments
-            $appointmentsToProcess = $isAutoSelect ? $allBookedAppointments : 
-                \App\Models\Appointment::with('appointmentDetails')
-                    ->where('employee_id', $employeeId)
-                    ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-                    ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
-                    ->get();
+            $appointmentsToProcess = \App\Models\Appointment::with('appointmentDetails')
+                ->where('employee_id', $employeeId)
+                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
+                ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
+                ->get();
 
-            // Lưu các khoảng thời gian đã bị đặt (start_at đến end_at) theo từng nhân viên
+            // Lưu các khoảng thời gian đã bị đặt (start_at đến end_at)
             $bookedTimeRanges = [];
-            $bookedRangesByEmployee = []; // Dùng cho auto-select mode
             
             foreach ($appointmentsToProcess as $appointment) {
                 if ($appointment->start_at) {
@@ -1273,52 +1188,13 @@ class AppointmentController extends Controller
                         ];
                         
                         $bookedTimeRanges[] = $range;
-                        
-                        // Lưu theo từng nhân viên cho auto-select mode
-                        if ($isAutoSelect && $appointment->employee_id) {
-                            if (!isset($bookedRangesByEmployee[$appointment->employee_id])) {
-                                $bookedRangesByEmployee[$appointment->employee_id] = [];
-                            }
-                            $bookedRangesByEmployee[$appointment->employee_id][] = $range;
-                        }
                     }
                 }
             }
             
-            // Tạo map working time ranges theo từng nhân viên cho auto-select mode
-            $workingRangesByEmployee = [];
-            if ($isAutoSelect) {
-                foreach ($allWorkingSchedules as $schedule) {
-                    if (!$schedule->shift || !$schedule->employee_id) continue;
-                    
-                    $startTimeString = $schedule->shift->formatted_start_time;
-                    $endTimeString = $schedule->shift->formatted_end_time;
-                    
-                    if (!$startTimeString || !$endTimeString) continue;
-                    
-                    try {
-                        $shiftStart = Carbon::createFromFormat('H:i', $startTimeString);
-                        $shiftEnd = Carbon::createFromFormat('H:i', $endTimeString);
-                    } catch (\Exception $e) {
-                        $shiftStart = Carbon::parse($startTimeString);
-                        $shiftEnd = Carbon::parse($endTimeString);
-                    }
-                    
-                    if (!isset($workingRangesByEmployee[$schedule->employee_id])) {
-                        $workingRangesByEmployee[$schedule->employee_id] = [];
-                    }
-                    
-                    $workingRangesByEmployee[$schedule->employee_id][] = [
-                        'start' => $shiftStart,
-                        'end' => $shiftEnd
-                    ];
-                }
-            }
-
-            // Debug log (sử dụng $appointmentsToProcess đã được định nghĩa ở trên)
+            // Debug log
             \Log::info('Available time slots calculation', [
                 'employee_id' => $employeeId,
-                'is_auto_select' => $isAutoSelect,
                 'date' => $appointmentDate->format('Y-m-d'),
                 'total_duration' => $totalDuration,
                 'total_duration_from_request' => $request->input('total_duration'),
@@ -1332,6 +1208,26 @@ class AppointmentController extends Controller
                 'request_total_duration' => $request->input('total_duration'),
                 'note' => 'Nếu total_duration = 0, logic kiểm tra vượt quá ca sẽ không chạy'
             ]);
+
+            // Tìm đơn đã hoàn thành trong ngày và lấy thời gian kết thúc
+            // Nếu có đơn đã hoàn thành, đóng các slot SAU thời gian kết thúc đơn (vì thời gian thực đã qua)
+            $completedAppointmentEndTime = null;
+            
+            $completedAppointment = \App\Models\Appointment::where('employee_id', $employeeId)
+                ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
+                ->where('status', 'Hoàn thành')
+                ->orderBy('end_at', 'desc')
+                ->first();
+
+            if ($completedAppointment && $completedAppointment->end_at) {
+                $completedAppointmentEndTime = $completedAppointment->end_at->format('H:i');
+                \Log::info('Found completed appointment', [
+                    'appointment_id' => $completedAppointment->id,
+                    'end_time' => $completedAppointmentEndTime,
+                    'employee_id' => $employeeId,
+                    'date' => $appointmentDate->format('Y-m-d')
+                ]);
+            }
 
             // Tạo TẤT CẢ time slots từ 7:00 đến 22:00 (mỗi 30 phút)
             // HIỂN THỊ TẤT CẢ slots, nhưng chỉ available nếu nằm trong ca làm việc
@@ -1354,105 +1250,6 @@ class AppointmentController extends Controller
                 $shiftEndTime = null; // Lưu thời gian kết thúc ca làm việc
                 $slotTime = Carbon::createFromFormat('H:i', $timeString);
                 
-                // Hàm helper để kiểm tra nhân viên có còn trống cho time slot này không (cho auto-select mode)
-                $checkEmployeeAvailable = function($empId, $slotTimeStr, $duration) use (
-                    $workingRangesByEmployee, 
-                    $bookedRangesByEmployee, 
-                    $appointmentDate,
-                    $isToday,
-                    $now
-                ) {
-                    // Kiểm tra nhân viên có ca làm việc không
-                    if (!isset($workingRangesByEmployee[$empId]) || empty($workingRangesByEmployee[$empId])) {
-                        return false;
-                    }
-                    
-                    $slotTime = Carbon::createFromFormat('H:i', $slotTimeStr);
-                    $isInWorkingTime = false;
-                    $shiftEndTime = null;
-                    
-                    // Kiểm tra slot có nằm trong ca làm việc không
-                    foreach ($workingRangesByEmployee[$empId] as $range) {
-                        if ($slotTime->gte($range['start']) && $slotTime->lt($range['end'])) {
-                            $isInWorkingTime = true;
-                            $shiftEndTime = $range['end'];
-                            break;
-                        }
-                    }
-                    
-                    if (!$isInWorkingTime) {
-                        return false;
-                    }
-                    
-                    // Kiểm tra slot có bị đặt chưa
-                    if (isset($bookedRangesByEmployee[$empId])) {
-                        foreach ($bookedRangesByEmployee[$empId] as $range) {
-                            if ($slotTimeStr >= $range['start'] && $slotTimeStr < $range['end']) {
-                                return false; // Slot đã bị đặt
-                            }
-                            
-                            // Kiểm tra overlap nếu có duration
-                            if ($duration > 0) {
-                                $proposedEndTime = $slotTime->copy()->addMinutes($duration);
-                                $proposedEndTimeString = $proposedEndTime->format('H:i');
-                                $rangeStart = $range['start'];
-                                $rangeEnd = $range['end'];
-                                
-                                if ($slotTimeStr < $rangeEnd && $proposedEndTimeString > $rangeStart) {
-                                    return false; // Overlap với appointment đã có
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Kiểm tra vượt quá ca làm việc
-                    if ($duration > 0 && $shiftEndTime) {
-                        $endTime = $slotTime->copy()->addMinutes($duration);
-                        if ($endTime->gt($shiftEndTime)) {
-                            return false; // Vượt quá ca làm việc
-                        }
-                    }
-                    
-                    // Kiểm tra quá khứ (nếu là ngày hôm nay)
-                    if ($isToday) {
-                        $slotDateTime = Carbon::create(
-                            $now->year,
-                            $now->month,
-                            $now->day,
-                            $slotTime->hour,
-                            $slotTime->minute,
-                            0,
-                            'Asia/Ho_Chi_Minh'
-                        );
-                        if ($slotDateTime->lte($now)) {
-                            return false; // Đã qua
-                        }
-                    }
-                    
-                    return true; // Nhân viên còn trống
-                };
-                
-                // Cho auto-select mode: kiểm tra xem có nhân viên nào còn trống không
-                if ($isAutoSelect) {
-                    $hasAvailableEmployee = false;
-                    foreach ($allEmployees->pluck('id') as $empId) {
-                        if ($checkEmployeeAvailable($empId, $timeString, $totalDuration)) {
-                            $hasAvailableEmployee = true;
-                            break;
-                        }
-                    }
-                    
-                    // Chỉ hiển thị slot nếu có ít nhất 1 nhân viên còn trống
-                    // Ẩn slot nếu tất cả nhân viên đều đã có lịch
-                    if (!$hasAvailableEmployee) {
-                        // Bỏ qua slot này (không thêm vào timeSlots)
-                        $currentTime->addMinutes(30);
-                        continue;
-                    }
-                    
-                    // Nếu có nhân viên còn trống, đánh dấu là available
-                    $isInWorkingTime = true;
-                }
 
                 // Debug log cho Quang Lực
                 $shouldDebug = false;
@@ -1730,6 +1527,7 @@ class AppointmentController extends Controller
                 // - available = true: Nằm trong ca làm việc VÀ chưa bị đặt VÀ không phải quá khứ VÀ không sau thời gian hoàn thành đơn
                 // - available = false: Không nằm trong ca làm việc HOẶC đã bị đặt HOẶC là quá khứ HOẶC sau thời gian hoàn thành đơn
                 // Các slot unavailable sẽ được hiển thị với màu tối (gray out) ở frontend
+                // Xác định trạng thái available của slot
                 $isAvailable = $isInWorkingTime && !$isBooked && !$isPastTime && !$isAfterCompletedAppointment;
 
                 // QUAN TRỌNG: Kiểm tra lại nếu slot + duration vượt quá ca làm việc
@@ -1984,49 +1782,6 @@ class AppointmentController extends Controller
                 'last_slot' => $timeSlots[count($timeSlots) - 1]['time'] ?? 'N/A'
             ]);
 
-            // Tìm đơn đã hoàn thành trong ngày và lấy thời gian kết thúc
-            // Nếu có đơn đã hoàn thành, đóng các slot SAU thời gian kết thúc đơn (vì thời gian thực đã qua)
-            $completedAppointmentEndTime = null;
-            
-            if ($isAutoSelect) {
-                // Auto-select mode: Tìm đơn hoàn thành từ tất cả nhân viên, lấy thời gian kết thúc muộn nhất
-                $completedAppointments = \App\Models\Appointment::whereIn('employee_id', $allEmployees->pluck('id'))
-                    ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-                    ->where('status', 'Hoàn thành')
-                    ->whereNotNull('end_at')
-                    ->orderBy('end_at', 'desc')
-                    ->get();
-                
-                if ($completedAppointments->isNotEmpty()) {
-                    // Lấy thời gian kết thúc muộn nhất
-                    $latestCompleted = $completedAppointments->first();
-                    $completedAppointmentEndTime = $latestCompleted->end_at->format('H:i');
-                    
-                    \Log::info('Found completed appointments (auto-select mode)', [
-                        'total_completed' => $completedAppointments->count(),
-                        'latest_end_time' => $completedAppointmentEndTime,
-                        'date' => $appointmentDate->format('Y-m-d')
-                    ]);
-                }
-            } else {
-                // Chế độ chọn nhân viên cụ thể
-                $completedAppointment = \App\Models\Appointment::where('employee_id', $employeeId)
-                    ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-                    ->where('status', 'Hoàn thành')
-                    ->orderBy('end_at', 'desc')
-                    ->first();
-
-                if ($completedAppointment && $completedAppointment->end_at) {
-                    $completedAppointmentEndTime = $completedAppointment->end_at->format('H:i');
-                    \Log::info('Found completed appointment', [
-                        'appointment_id' => $completedAppointment->id,
-                        'end_time' => $completedAppointmentEndTime,
-                        'employee_id' => $employeeId,
-                        'date' => $appointmentDate->format('Y-m-d')
-                    ]);
-                }
-            }
-
             // Debug log: Kiểm tra slot 11:30 trong response cuối cùng
             $slot1130 = collect($timeSlots)->firstWhere('time', '11:30');
             if ($slot1130) {
@@ -2214,189 +1969,6 @@ class AppointmentController extends Controller
             \Log::error('Error canceling appointment: ' . $e->getMessage());
             return back()->with('error', 'Có lỗi xảy ra khi hủy lịch hẹn. Vui lòng thử lại.');
         }
-    }
-
-    /**
-     * Tìm nhân viên còn trống cho một time slot cụ thể.
-     * 
-     * @param Carbon $appointmentDate Ngày đặt lịch
-     * @param string $timeString Thời gian (format: "H:i")
-     * @param int $totalDuration Tổng thời gian dịch vụ (phút)
-     * @return int|null ID của nhân viên còn trống, hoặc null nếu không tìm thấy
-     */
-    protected function findAvailableEmployeeForTimeSlot($appointmentDate, $timeString, $totalDuration)
-    {
-        // Lấy tất cả nhân viên
-        $allEmployees = \App\Models\Employee::with('user')
-            ->whereNotNull('user_id')
-            ->where('status', '!=', 'Vô hiệu hóa')
-            ->whereHas('user', function($query) {
-                $query->where('role_id', '!=', 1); // Loại trừ admin
-            })
-            ->get();
-
-        // Lấy tất cả working schedules trong ngày
-        $allWorkingSchedules = \App\Models\WorkingSchedule::with(['shift', 'employee'])
-            ->whereIn('employee_id', $allEmployees->pluck('id'))
-            ->whereDate('work_date', $appointmentDate->format('Y-m-d'))
-            ->whereNull('deleted_at')
-            ->get();
-
-        // Lấy tất cả appointments đã đặt trong ngày
-        $allBookedAppointments = \App\Models\Appointment::with('appointmentDetails')
-            ->whereIn('employee_id', $allEmployees->pluck('id'))
-            ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
-            ->whereIn('status', ['Chờ xử lý', 'Đã xác nhận', 'Đang thực hiện'])
-            ->get();
-
-        // Tạo map working ranges và booked ranges theo từng nhân viên
-        $workingRangesByEmployee = [];
-        $bookedRangesByEmployee = [];
-
-        foreach ($allWorkingSchedules as $schedule) {
-            if (!$schedule->shift || !$schedule->employee_id) continue;
-            
-            $startTimeString = $schedule->shift->formatted_start_time;
-            $endTimeString = $schedule->shift->formatted_end_time;
-            
-            if (!$startTimeString || !$endTimeString) continue;
-            
-            try {
-                $shiftStart = Carbon::createFromFormat('H:i', $startTimeString);
-                $shiftEnd = Carbon::createFromFormat('H:i', $endTimeString);
-            } catch (\Exception $e) {
-                $shiftStart = Carbon::parse($startTimeString);
-                $shiftEnd = Carbon::parse($endTimeString);
-            }
-            
-            if (!isset($workingRangesByEmployee[$schedule->employee_id])) {
-                $workingRangesByEmployee[$schedule->employee_id] = [];
-            }
-            
-            $workingRangesByEmployee[$schedule->employee_id][] = [
-                'start' => $shiftStart,
-                'end' => $shiftEnd
-            ];
-        }
-
-        foreach ($allBookedAppointments as $appointment) {
-            if (!$appointment->start_at || !$appointment->employee_id) continue;
-            
-            $appointmentStart = Carbon::parse($appointment->start_at);
-            $appointmentEnd = $appointment->end_at 
-                ? Carbon::parse($appointment->end_at)
-                : $appointmentStart->copy()->addMinutes(
-                    $appointment->appointmentDetails->sum('duration') ?: 60
-                );
-            
-            if ($appointmentEnd->gt($appointmentStart) &&
-                $appointmentStart->format('Y-m-d') === $appointmentDate->format('Y-m-d')) {
-                
-                if (!isset($bookedRangesByEmployee[$appointment->employee_id])) {
-                    $bookedRangesByEmployee[$appointment->employee_id] = [];
-                }
-                
-                $bookedRangesByEmployee[$appointment->employee_id][] = [
-                    'start' => $appointmentStart->format('H:i'),
-                    'end' => $appointmentEnd->format('H:i'),
-                    'start_carbon' => $appointmentStart,
-                    'end_carbon' => $appointmentEnd
-                ];
-            }
-        }
-
-        // Tìm nhân viên còn trống
-        $availableEmployees = [];
-        $slotTime = Carbon::createFromFormat('H:i', $timeString);
-        $now = Carbon::now('Asia/Ho_Chi_Minh');
-        $isToday = $appointmentDate->format('Y-m-d') === $now->format('Y-m-d');
-
-        foreach ($allEmployees as $employee) {
-            $empId = $employee->id;
-            
-            // Kiểm tra nhân viên có ca làm việc không
-            if (!isset($workingRangesByEmployee[$empId]) || empty($workingRangesByEmployee[$empId])) {
-                continue;
-            }
-            
-            $isInWorkingTime = false;
-            $shiftEndTime = null;
-            
-            // Kiểm tra slot có nằm trong ca làm việc không
-            foreach ($workingRangesByEmployee[$empId] as $range) {
-                if ($slotTime->gte($range['start']) && $slotTime->lt($range['end'])) {
-                    $isInWorkingTime = true;
-                    $shiftEndTime = $range['end'];
-                    break;
-                }
-            }
-            
-            if (!$isInWorkingTime) {
-                continue;
-            }
-            
-            // Kiểm tra slot có bị đặt chưa
-            if (isset($bookedRangesByEmployee[$empId])) {
-                $isBooked = false;
-                foreach ($bookedRangesByEmployee[$empId] as $range) {
-                    if ($timeString >= $range['start'] && $timeString < $range['end']) {
-                        $isBooked = true;
-                        break;
-                    }
-                    
-                    // Kiểm tra overlap nếu có duration
-                    if ($totalDuration > 0) {
-                        $proposedEndTime = $slotTime->copy()->addMinutes($totalDuration);
-                        $proposedEndTimeString = $proposedEndTime->format('H:i');
-                        $rangeStart = $range['start'];
-                        $rangeEnd = $range['end'];
-                        
-                        if ($timeString < $rangeEnd && $proposedEndTimeString > $rangeStart) {
-                            $isBooked = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if ($isBooked) {
-                    continue;
-                }
-            }
-            
-            // Kiểm tra vượt quá ca làm việc
-            if ($totalDuration > 0 && $shiftEndTime) {
-                $endTime = $slotTime->copy()->addMinutes($totalDuration);
-                if ($endTime->gt($shiftEndTime)) {
-                    continue;
-                }
-            }
-            
-            // Kiểm tra quá khứ (nếu là ngày hôm nay)
-            if ($isToday) {
-                $slotDateTime = Carbon::create(
-                    $now->year,
-                    $now->month,
-                    $now->day,
-                    $slotTime->hour,
-                    $slotTime->minute,
-                    0,
-                    'Asia/Ho_Chi_Minh'
-                );
-                if ($slotDateTime->lte($now)) {
-                    continue;
-                }
-            }
-            
-            // Nhân viên còn trống
-            $availableEmployees[] = $empId;
-        }
-
-        // Random chọn 1 nhân viên từ danh sách còn trống
-        if (empty($availableEmployees)) {
-            return null;
-        }
-
-        return $availableEmployees[array_rand($availableEmployees)];
     }
 
     /**
