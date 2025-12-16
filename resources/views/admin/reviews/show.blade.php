@@ -170,7 +170,29 @@
                     <div class="form-group">
                         <label class="font-weight-bold">Dịch vụ đã dùng:</label>
                         <p class="form-control-plaintext">
-                            {{ $review->service->name ?? 'N/A' }}
+                            @if($review->service)
+                                {{ $review->service->name }}
+                            @elseif($review->appointment && $review->appointment->appointmentDetails->count() > 0)
+                                @php
+                                    $serviceNames = [];
+                                    foreach ($review->appointment->appointmentDetails as $detail) {
+                                        if ($detail->serviceVariant && $detail->serviceVariant->service) {
+                                            $serviceNames[] = $detail->serviceVariant->service->name;
+                                        } elseif ($detail->combo) {
+                                            $serviceNames[] = $detail->combo->name . ' (Combo)';
+                                        } elseif ($detail->notes) {
+                                            $serviceNames[] = $detail->notes;
+                                        }
+                                    }
+                                @endphp
+                                @if(!empty($serviceNames))
+                                    {{ implode(', ', array_unique($serviceNames)) }}
+                                @else
+                                    N/A
+                                @endif
+                            @else
+                                N/A
+                            @endif
                         </p>
                     </div>
                 </div>
