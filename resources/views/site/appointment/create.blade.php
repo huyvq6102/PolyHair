@@ -486,16 +486,16 @@
                                     </button>
                                     <div id="employee_grid" class="employee-grid" style="overflow: hidden; padding: 5px 0;">
                                         <div class="employee-slider" style="transition: transform 0.3s ease; display: flex; gap: 15px;">
-                                            {{-- Option "Quán tự chọn nhân viên" --}}
+                                            {{-- Option "PoLyHair - Quán tự chọn nhân viên" --}}
                                             <div class="employee-item-btn{{ old('employee_id') == 'auto' || old('employee_id') == '' ? ' selected' : '' }}" 
                                                  data-employee-id="auto" 
-                                                 data-employee-name="Quán tự chọn nhân viên" 
+                                                 data-employee-name="PoLyHair - Quán tự chọn nhân viên" 
                                                  data-employee-position="auto" 
                                                  style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">
-                                                <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ (old('employee_id') == 'auto' || old('employee_id') == '') ? '#007bff' : '#ddd' }}; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
-                                                    <i class="fa fa-random" style="font-size: 40px; color: #fff;"></i>
+                                                <div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid {{ (old('employee_id') == 'auto' || old('employee_id') == '') ? '#007bff' : '#ddd' }}; background: #fff; display: flex; align-items: center; justify-content: center; padding: 5px;">
+                                                    <img src="{{ asset('legacy/images/logox.png') }}" alt="PoLyHair" style="width: 100%; height: 100%; object-fit: contain;">
                                                 </div>
-                                                <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">Quán tự chọn</div>
+                                                <div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">PoLyHair</div>
                                             </div>
                                             
                                             @if(count($employees) > 0)
@@ -1778,11 +1778,11 @@
                     // Nếu không có trong DOM, tạo mới
                     const currentEmployeeId = $('#employee_id').val();
                     const isAutoSelected = currentEmployeeId === 'auto' || currentEmployeeId === '';
-                    const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
-                        '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">' +
-                        '<i class="fa fa-random" style="font-size: 40px; color: #fff;"></i>' +
+                    const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="PoLyHair - Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
+                        '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: #fff; display: flex; align-items: center; justify-content: center; padding: 5px;">' +
+                        '<img src="{{ asset("legacy/images/logox.png") }}" alt="PoLyHair" style="width: 100%; height: 100%; object-fit: contain;">' +
                         '</div>' +
-                        '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">Quán tự chọn</div>' +
+                        '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">PoLyHair</div>' +
                         '</div>';
                     $slider.append(autoSelectHtml);
                 } else {
@@ -1834,11 +1834,11 @@
                             // Nếu không có trong DOM, tạo mới
                             const currentEmployeeId = $('#employee_id').val();
                             const isAutoSelected = currentEmployeeId === 'auto' || currentEmployeeId === '';
-                            const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
-                                '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">' +
-                                '<i class="fa fa-random" style="font-size: 40px; color: #fff;"></i>' +
+                            const autoSelectHtml = '<div class="employee-item-btn' + (isAutoSelected ? ' selected' : '') + '" data-employee-id="auto" data-employee-name="PoLyHair - Quán tự chọn nhân viên" data-employee-position="auto" style="text-align: center; cursor: pointer; padding: 10px; min-width: 120px; flex-shrink: 0;">' +
+                                '<div class="employee-avatar-wrapper" style="width: 100px; height: 100px; margin: 0 auto 8px; border-radius: 50%; overflow: hidden; border: 2px solid ' + (isAutoSelected ? '#007bff' : '#ddd') + '; background: #fff; display: flex; align-items: center; justify-content: center; padding: 5px;">' +
+                                '<img src="{{ asset("legacy/images/logox.png") }}" alt="PoLyHair" style="width: 100%; height: 100%; object-fit: contain;">' +
                                 '</div>' +
-                                '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">Quán tự chọn</div>' +
+                                '<div class="employee-name" style="font-size: 13px; font-weight: 600; color: #000; margin-bottom: 3px;">PoLyHair</div>' +
                                 '</div>';
                             $slider.append(autoSelectHtml);
                         } else {
@@ -2307,21 +2307,19 @@
             const timeSlotHidden = $('#time_slot');
             const wordTimeIdInput = $('#word_time_id');
 
+            // ✅ LƯU GIỜ ĐÃ CHỌN TRƯỚC KHI RESET
+            // Điều này đảm bảo khi thêm dịch vụ, giờ đã chọn sẽ được giữ lại
+            const savedSelectedTime = timeSlotHidden.val();
+            const savedWordTimeId = wordTimeIdInput.val();
+
             // Reset
             $('.time-slot-container').hide();
             $('.time-slot-slider').empty();
             timeSlotMessage.show();
-            timeSlotHidden.val('');
-            wordTimeIdInput.val('');
+            // KHÔNG reset các giá trị ở đây - sẽ restore sau khi load xong
 
-            // Kiểm tra employee_id - không cho phép "auto" khi load time slots
-            if (!employeeId || employeeId === '' || employeeId === 'auto') {
-                timeSlotMessage.text('Vui lòng chọn kỹ thuật viên cụ thể. "Quán tự chọn nhân viên" chưa được hỗ trợ cho tính năng chọn giờ.');
-                $('.time-slot-container').hide();
-                timeSlotHidden.val('');
-                wordTimeIdInput.val('');
-                return;
-            }
+            // Cho phép "auto" để hiển thị các giờ còn trống từ tất cả nhân viên
+            // Không cần kiểm tra employee_id nữa vì backend đã xử lý
 
             // Check if date is selected
             if (!appointmentDate) {
@@ -2655,6 +2653,34 @@
                             timeSlotMessage.text('Nhân viên này không có ca làm việc vào ngày đã chọn. Tất cả khung giờ đều không khả dụng.').show();
                         } else {
                             timeSlotMessage.hide();
+                        }
+
+                        // ✅ Restore giờ đã chọn trước đó (khi thêm dịch vụ)
+                        if (currentlySelectedTime && currentlySelectedWordTimeId) {
+                            setTimeout(function() {
+                                const $savedBtn = $('.time-slot-btn[data-time="' + currentlySelectedTime + '"]');
+                                
+                                if ($savedBtn.length) {
+                                    // Kiểm tra xem slot có còn available không
+                                    if (!$savedBtn.hasClass('unavailable')) {
+                                        // Slot vẫn available, restore lại
+                                        $savedBtn.addClass('selected');
+                                        timeSlotHidden.val(currentlySelectedTime);
+                                        wordTimeIdInput.val(currentlySelectedWordTimeId);
+                                        console.log('✅ Đã restore giờ đã chọn:', currentlySelectedTime);
+                                    } else {
+                                        // Slot không còn available, nhưng vẫn giữ giá trị trong hidden input
+                                        timeSlotHidden.val(currentlySelectedTime);
+                                        wordTimeIdInput.val(currentlySelectedWordTimeId);
+                                        console.log('⚠️ Giờ đã chọn không còn available:', currentlySelectedTime);
+                                    }
+                                } else {
+                                    // Không tìm thấy button, nhưng vẫn giữ giá trị
+                                    timeSlotHidden.val(currentlySelectedTime);
+                                    wordTimeIdInput.val(currentlySelectedWordTimeId);
+                                    console.log('⚠️ Không tìm thấy button cho giờ:', currentlySelectedTime);
+                                }
+                            }, 100); // Delay nhỏ để đảm bảo DOM đã render
                         }
 
                         // ✅ Auto-select time slot nếu đã có trong Session
