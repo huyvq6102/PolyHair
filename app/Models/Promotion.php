@@ -22,6 +22,8 @@ class Promotion extends Model
         'min_order_amount',
         'max_discount_amount',
         'per_user_limit',
+        'usage_limit',
+        'min_customer_tier',
         'start_date',
         'end_date',
         'status',
@@ -33,6 +35,8 @@ class Promotion extends Model
         'min_order_amount' => 'decimal:2',
         'max_discount_amount' => 'decimal:2',
         'per_user_limit' => 'integer',
+        'usage_limit' => 'integer',
+        'min_customer_tier' => 'string',
         'start_date' => 'date',
         'end_date' => 'date',
     ];

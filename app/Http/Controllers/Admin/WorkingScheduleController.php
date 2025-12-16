@@ -147,10 +147,13 @@ class WorkingScheduleController extends Controller
             'shampooer_ids.*' => 'required|exists:employees,id',
             'receptionist_ids' => 'required|array|min:1',
             'receptionist_ids.*' => 'required|exists:employees,id',
-            'work_date' => 'required_if:schedule_type,day|nullable|date',
-            'week_start_date' => 'required_if:schedule_type,week|nullable|date',
+            'work_date' => 'required_if:schedule_type,day|nullable|date|after_or_equal:today',
+            'week_start_date' => 'required_if:schedule_type,week|nullable|date|after_or_equal:today',
             'shift_ids' => 'required|array|min:1',
             'shift_ids.*' => 'required|exists:working_shifts,id',
+        ], [
+            'work_date.after_or_equal' => 'Ngày làm việc không được là ngày trong quá khứ.',
+            'week_start_date.after_or_equal' => 'Ngày bắt đầu tuần không được là ngày trong quá khứ.',
         ]);
 
         // Kiểm tra nhân viên có đúng vị trí không
@@ -350,8 +353,10 @@ class WorkingScheduleController extends Controller
         $validated = $request->validate([
             'employee_ids' => 'required|array|min:1',
             'employee_ids.*' => 'required|exists:employees,id',
-            'work_date' => 'required|date',
+            'work_date' => 'required|date|after_or_equal:today',
             'shift_id' => 'required|exists:working_shifts,id',
+        ], [
+            'work_date.after_or_equal' => 'Ngày làm việc không được là ngày trong quá khứ.',
         ]);
 
         $employeeIds = $validated['employee_ids'];

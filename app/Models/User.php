@@ -121,6 +121,47 @@ class User extends Authenticatable
     }
 
     /**
+     * Get total completed spending of the user (in VND).
+     */
+    public function getTotalSpentAttribute(): float
+    {
+        // Chỉ tính những thanh toán đã hoàn tất (status = completed)
+        // và có tổng tiền hợp lệ
+        return (float) $this->payments()
+            ->where('status', 'completed')
+            ->whereNotNull('total')
+            ->sum('total');
+    }
+
+    /**
+     * Get customer tier name based on total spending.
+     *
+     * Tiers:
+     * - Khách thường: < 2,000,000
+     * - Silver:      >= 2,000,000
+     * - Gold:        >= 5,000,000
+     * - VIP:         >= 10,000,000
+     */
+    public function getTierAttribute(): string
+    {
+        $total = $this->total_spent;
+
+        if ($total >= 10_000_000) {
+            return 'VIP';
+        }
+
+        if ($total >= 5_000_000) {
+            return 'Gold';
+        }
+
+        if ($total >= 2_000_000) {
+            return 'Silver';
+        }
+
+        return 'Khách thường';
+    }
+
+    /**
      * Check if user is admin.
      */
     public function isAdmin(): bool

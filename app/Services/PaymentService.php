@@ -249,6 +249,12 @@ class PaymentService
                     'appointment_id' => $appointmentId, // Link to the last created/processed appointment
                     'used_at'        => now(),
                 ]);
+
+                // Giảm số lượt dùng còn lại (usage_limit) nếu đang được giới hạn
+                if (!is_null($appliedPromotion->usage_limit) && $appliedPromotion->usage_limit > 0) {
+                    $appliedPromotion->decrement('usage_limit', 1);
+                    $appliedPromotion->refresh();
+                }
             }
 
             DB::commit();

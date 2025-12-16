@@ -41,6 +41,22 @@ class LoginRequest extends FormRequest
     {
         return [
             'login' => 'email hoặc số điện thoại',
+            'password' => 'mật khẩu',
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'login.required' => 'Vui lòng nhập email hoặc số điện thoại.',
+            'login.string' => 'Email hoặc số điện thoại phải là chuỗi ký tự.',
+            'password.required' => 'Vui lòng nhập mật khẩu.',
+            'password.string' => 'Mật khẩu phải là chuỗi ký tự.',
         ];
     }
 
@@ -65,7 +81,7 @@ class LoginRequest extends FormRequest
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'login' => trans('auth.failed'),
+                'login' => 'Thông tin đăng nhập không chính xác.',
             ]);
         }
 
@@ -104,10 +120,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'login' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'login' => 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau ' . ceil($seconds / 60) . ' phút.',
         ]);
     }
 

@@ -42,6 +42,10 @@ class NewPasswordController extends Controller
 
         $request->validate([
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'password.required' => 'Vui lòng nhập mật khẩu.',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
+            'password.min' => 'Mật khẩu phải có ít nhất :min ký tự.',
         ]);
 
         $login = session('password_reset_login');

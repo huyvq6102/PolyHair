@@ -29,6 +29,9 @@ class PasswordResetLinkController extends Controller
     {
         $request->validate([
             'login' => ['required', 'string'],
+        ], [
+            'login.required' => 'Vui lòng nhập email hoặc số điện thoại.',
+            'login.string' => 'Email hoặc số điện thoại phải là chuỗi ký tự.',
         ]);
 
         $login = $request->input('login');
