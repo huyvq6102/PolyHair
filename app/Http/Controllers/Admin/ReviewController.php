@@ -58,7 +58,14 @@ class ReviewController extends Controller
      */
     public function show(string $id)
     {
-        $review = Review::with(['user', 'service', 'appointment', 'employee'])
+        $review = Review::with([
+            'user',
+            'service',
+            'employee.user',
+            'appointment.employee.user',
+            'appointment.appointmentDetails.serviceVariant.service',
+            'appointment.appointmentDetails.combo'
+        ])
             ->findOrFail($id);
 
         return view('admin.reviews.show', compact('review'));
@@ -115,12 +122,11 @@ class ReviewController extends Controller
             'is_hidden' => !$review->is_hidden,
         ]);
 
-        $message = $review->is_hidden 
-            ? 'Bình luận đã được ẩn thành công!' 
+        $message = $review->is_hidden
+            ? 'Bình luận đã được ẩn thành công!'
             : 'Bình luận đã được hiển thị lại thành công!';
 
         return redirect()->route('admin.reviews.index')
             ->with('success', $message);
     }
 }
-
