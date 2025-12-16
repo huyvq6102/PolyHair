@@ -2314,9 +2314,12 @@
             timeSlotHidden.val('');
             wordTimeIdInput.val('');
 
-            // ✅ MỚI: Cho phép "auto" (Quán tự chọn nhân viên) hoặc employee_id hợp lệ
-            if (!employeeId || (employeeId !== 'auto' && employeeId === '')) {
-                timeSlotMessage.text('Vui lòng chọn kỹ thuật viên trước');
+            // Kiểm tra employee_id - không cho phép "auto" khi load time slots
+            if (!employeeId || employeeId === '' || employeeId === 'auto') {
+                timeSlotMessage.text('Vui lòng chọn kỹ thuật viên cụ thể. "Quán tự chọn nhân viên" chưa được hỗ trợ cho tính năng chọn giờ.');
+                $('.time-slot-container').hide();
+                timeSlotHidden.val('');
+                wordTimeIdInput.val('');
                 return;
             }
 
@@ -2711,13 +2714,46 @@
                     clearTimeout(loadingTimeout);
                     isLoadingTimeSlots = false;
                     console.error('Error loading time slots:', error);
+                    console.error('XHR status:', status);
+                    console.error('XHR response:', xhr.responseJSON);
                     $('.time-slot-container').hide();
 
                     let errorMessage = 'Không thể tải khung giờ. Vui lòng thử lại.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                    
+                    // Xử lý các loại lỗi khác nhau
+                    if (xhr.status === 422) {
+                        // Validation error
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            const errorMessages = [];
+                            if (errors.employee_id) {
+                                errorMessages.push(errors.employee_id[0]);
+                            }
+                            if (errors.appointment_date) {
+                                errorMessages.push(errors.appointment_date[0]);
+                            }
+                            errorMessage = errorMessages.length > 0 ? errorMessages.join('. ') : 'Dữ liệu không hợp lệ.';
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else {
+                            errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin đã nhập.';
+                        }
+                    } else if (xhr.status === 500) {
+                        // Server error
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else {
+                            errorMessage = 'Có lỗi xảy ra từ server. Vui lòng thử lại sau.';
+                        }
+                    } else if (status === 'timeout') {
+                        errorMessage = 'Yêu cầu quá thời gian chờ. Vui lòng thử lại.';
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
+                    
                     timeSlotMessage.text(errorMessage).show();
+                    timeSlotHidden.val('');
+                    wordTimeIdInput.val('');
                 }
             });
         }
