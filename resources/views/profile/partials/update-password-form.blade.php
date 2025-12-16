@@ -1,8 +1,8 @@
 <section>
-    <h3>Cập nhật mật khẩu</h3>
-    <p>Đảm bảo tài khoản của bạn sử dụng mật khẩu dài và ngẫu nhiên để bảo mật.</p>
+    <h3 style="color: #333; margin-bottom: 15px;">Cập nhật mật khẩu</h3>
+    <p style="color: #666; margin-bottom: 25px;">Đảm bảo tài khoản của bạn sử dụng mật khẩu dài và ngẫu nhiên để bảo mật.</p>
 
-    <form method="post" action="{{ route('password.update') }}">
+    <form method="post" action="{{ route('password.update') }}" id="passwordForm" novalidate>
         @csrf
         @method('put')
 
@@ -41,7 +41,7 @@
             <div class="input-group">
                 <input type="password" id="update_password_password" name="password" 
                        class="form-control @error('password', 'updatePassword') is-invalid @enderror" 
-                       autocomplete="new-password">
+                       autocomplete="new-password" minlength="8">
                 <div class="input-group-append">
                     <button type="button" class="btn btn-outline-secondary password-toggle-btn"
                             data-target="update_password_password" aria-label="Hiển thị hoặc ẩn mật khẩu">

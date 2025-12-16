@@ -47,7 +47,7 @@
             </div>
         @endif
 
-        <form action="{{ route('admin.working-schedules.store') }}" method="POST" class="needs-validation" novalidate onsubmit="return validateAndConfirm();">
+        <form action="{{ route('admin.working-schedules.store') }}" method="POST" class="needs-validation" novalidate onsubmit="return validateForm();">
             @csrf
 
             <div class="form-group">
@@ -68,7 +68,10 @@
 
             <div class="form-group" id="day_input_group">
                 <label for="work_date">Ngày làm việc <span class="text-danger">*</span></label>
-                <input type="date" name="work_date" id="work_date" value="{{ old('work_date') }}" class="form-control @error('work_date') is-invalid @enderror">
+                <input type="date" name="work_date" id="work_date" value="{{ old('work_date') }}" 
+                       class="form-control @error('work_date') is-invalid @enderror"
+                       min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}" 
+                       required>
                 @error('work_date')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @else
@@ -78,7 +81,10 @@
 
             <div class="form-group" id="week_input_group" style="display: none;">
                 <label for="week_start_date">Tuần bắt đầu từ <span class="text-danger">*</span></label>
-                <input type="date" name="week_start_date" id="week_start_date" value="{{ old('week_start_date') }}" class="form-control @error('week_start_date') is-invalid @enderror">
+                <input type="date" name="week_start_date" id="week_start_date" value="{{ old('week_start_date') }}" 
+                       class="form-control @error('week_start_date') is-invalid @enderror"
+                       min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}" 
+                       required>
                 @error('week_start_date')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @else
@@ -275,15 +281,14 @@ $(document).ready(function() {
     toggleScheduleType();
 });
 
-// Xác nhận trước khi submit
-function validateAndConfirm() {
+// Validation trước khi submit
+function validateForm() {
     const stylistIds = $('#stylist_ids').val();
     const barberIds = $('#barber_ids').val();
     const shampooerIds = $('#shampooer_ids').val();
     const receptionistIds = $('#receptionist_ids').val();
     const shiftIds = $('#shift_ids').val();
     const shiftCount = shiftIds ? shiftIds.length : 0;
-    const scheduleType = $('input[name="schedule_type"]:checked').val();
     
     const stylistCount = stylistIds ? stylistIds.length : 0;
     const barberCount = barberIds ? barberIds.length : 0;
@@ -306,6 +311,7 @@ function validateAndConfirm() {
     
     let totalSchedules;
     let confirmMessage;
+    const scheduleType = $('input[name="schedule_type"]:checked').val();
     
     if (scheduleType === 'week') {
         // Tổng số nhân viên × số ca × 7 ngày

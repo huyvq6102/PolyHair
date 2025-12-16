@@ -51,6 +51,16 @@
         color: #fff;
         background: #111827;
     }
+    /* Thông báo lỗi tùy chỉnh */
+    .custom-error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    .form-control.is-invalid-custom {
+        border-color: #dc3545;
+    }
 </style>
 @endpush
 
@@ -96,34 +106,25 @@
                             </div>
                         @endif
 
-                        @if ($errors->any())
-                            <div class="alert alert-danger">
-                                <ul class="mb-0">
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
-
-                        <form method="POST" action="{{ route('login') }}">
+                        <form method="POST" action="{{ route('login') }}" id="loginForm" novalidate>
                             @csrf
 
                             <div class="form-group">
                                 <label for="login">Email hoặc Số điện thoại <span class="text-danger">*</span></label>
                                 <input type="text" name="login" id="login" class="form-control @error('login') is-invalid @enderror" 
-                                       value="{{ old('login', session('login')) }}" required autofocus 
+                                       value="{{ old('login', session('login')) }}" autofocus 
                                        placeholder="Nhập email hoặc số điện thoại">
                                 @error('login')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                                <span class="custom-error-message" id="login-error"></span>
                             </div>
 
                             <div class="form-group">
                                 <label for="password">Mật khẩu <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" 
-                                           value="" required autocomplete="current-password" placeholder="Nhập mật khẩu mới">
+                                           value="" autocomplete="current-password" placeholder="Nhập mật khẩu">
                                     <div class="input-group-append">
                                         <button type="button" class="btn btn-outline-secondary password-toggle-btn" id="toggle-password" aria-label="Hiển thị hoặc ẩn mật khẩu" onclick="togglePasswordVisibility()">
                                             <span class="toggle-icon icon-eye" aria-hidden="true">
@@ -144,6 +145,7 @@
                                     @error('password')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
+                                    <span class="custom-error-message" id="password-error"></span>
                                 </div>
                             </div>
 
@@ -209,6 +211,94 @@
             eyeOff.style.display = isHidden ? 'inline-flex' : 'none';
         }
     }
+
+    // Validation tùy chỉnh cho form đăng nhập
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('loginForm');
+        const errorMessages = {
+            login: {
+                valueMissing: 'Vui lòng nhập email hoặc số điện thoại.'
+            },
+            password: {
+                valueMissing: 'Vui lòng nhập mật khẩu.'
+            }
+        };
+
+        function showError(inputId, message) {
+            const input = document.getElementById(inputId);
+            const errorSpan = document.getElementById(inputId + '-error');
+            
+            if (input) {
+                input.classList.add('is-invalid-custom');
+            }
+            
+            if (errorSpan) {
+                errorSpan.textContent = message;
+                errorSpan.style.display = 'block';
+            }
+        }
+
+        function clearError(inputId) {
+            const input = document.getElementById(inputId);
+            const errorSpan = document.getElementById(inputId + '-error');
+            
+            if (input) {
+                input.classList.remove('is-invalid-custom');
+            }
+            
+            if (errorSpan) {
+                errorSpan.textContent = '';
+                errorSpan.style.display = 'none';
+            }
+        }
+
+        function validateField(input) {
+            const inputId = input.id;
+            clearError(inputId);
+
+            if (input.validity.valueMissing) {
+                const message = errorMessages[inputId]?.valueMissing || 'Vui lòng điền thông tin này.';
+                showError(inputId, message);
+                return false;
+            }
+
+            return true;
+        }
+
+        // Validate khi blur
+        const requiredInputs = ['login', 'password'];
+        requiredInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('blur', function() {
+                    validateField(this);
+                });
+
+                input.addEventListener('input', function() {
+                    if (this.value.trim() !== '') {
+                        clearError(inputId);
+                    }
+                });
+            }
+        });
+
+        // Validate khi submit
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+
+            requiredInputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input && !validateField(input)) {
+                    isValid = false;
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    });
 </script>
 @endpush
 @endsection

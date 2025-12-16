@@ -30,6 +30,10 @@ class VerifyOtpController extends Controller
     {
         $request->validate([
             'otp' => ['required', 'string', 'size:6'],
+        ], [
+            'otp.required' => 'Vui lòng nhập mã xác nhận.',
+            'otp.string' => 'Mã xác nhận phải là chuỗi ký tự.',
+            'otp.size' => 'Mã xác nhận phải có đúng 6 ký tự.',
         ]);
 
         $login = session('password_reset_login');
