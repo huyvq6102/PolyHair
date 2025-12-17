@@ -1250,7 +1250,7 @@
                 }
             });
 
-            // Removed console.log
+            console.log('Removed duplicate inputs:', removedCount, 'for', inputName);
         }
 
         // CRITICAL: Get valid variants from URL and remove any inputs that don't match
@@ -1274,7 +1274,7 @@
             // Combine both formats and remove duplicates
             const validVariants = [...new Set([...urlVariants, ...urlVariantsAlt])].filter(v => v && v !== '0' && v !== '');
 
-            // Removed console.log
+            console.log('Valid variants from URL:', validVariants);
 
             // CRITICAL: Remove ALL existing hidden inputs first, then recreate only valid ones
             // This ensures we don't have any stray inputs from previous renders or JavaScript
@@ -1301,12 +1301,12 @@
                 });
             }
 
-            // Removed console.log
+            console.log('Recreated', validVariants.length, 'valid variant inputs');
 
             return validVariants;
         }
 
-        // Removed console.log
+        console.log('=== Initializing appointment form ===');
 
         // CRITICAL: First validate inputs against URL, then remove duplicates
         const validUrlVariants = validateHiddenInputsFromUrl();
@@ -1316,7 +1316,7 @@
         removeDuplicateHiddenInputs('service_id[]');
         removeDuplicateHiddenInputs('combo_id[]');
 
-        // Removed console.log
+        console.log('Form initialization complete. Valid URL variants:', validUrlVariants);
 
         // Khôi phục thông tin từ localStorage khi quay lại từ trang chọn dịch vụ
         const savedFormData = localStorage.getItem('appointmentFormData');
@@ -1424,7 +1424,7 @@
                     }
                 }
             } catch (e) {
-                // Removed console.error
+                console.error('Error restoring form data from localStorage:', e);
             }
         }
 
@@ -1767,7 +1767,7 @@
                             // ✅ Đã sửa: Không tự động mở dropdown sau khi load employees
                             // Container chỉ mở khi user click vào toggle button
 
-                            // Removed console.log
+                            console.log('Employees loaded for carousel:', response.employees.length);
 
                             // ✅ Tự động chọn employee từ URL (chỉ khi có trong URL, không tự chọn ngẫu nhiên)
                             const urlParams = new URLSearchParams(window.location.search);
@@ -1829,28 +1829,52 @@
         }
 
         // Employee Selector - Toggle container
-        $('#employeeToggleBtn').on('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
+        // Đảm bảo event handler được gắn đúng cách và hoạt động
+        function toggleEmployeeContainer() {
             const container = $('#employeeContainer');
             const chevron = $('.employee-chevron');
-
-            // Chỉ toggle khi click vào toggle button, không toggle khi click vào container
-            if (container.is(':visible')) {
+            
+            // Kiểm tra trạng thái hiện tại của container
+            const isVisible = container.is(':visible') && container.css('display') !== 'none';
+            
+            console.log('Toggling employee container. Current state:', isVisible);
+            
+            if (isVisible) {
+                // Đóng container
                 container.slideUp(300, function() {
                     chevron.css('transform', 'rotate(0deg)');
                 });
             } else {
+                // Mở container
+                // Luôn load employees khi mở container (để đảm bảo có dữ liệu mới nhất)
+                console.log('Opening employee container, loading employees...');
+                loadEmployeesForCarousel();
+                
+                // Mở container ngay lập tức
                 container.slideDown(300, function() {
                     chevron.css('transform', 'rotate(180deg)');
-                    // Load employees nếu chưa có
-                    if ($('.employee-item-btn').length === 0) {
-                        loadEmployeesForCarousel();
-                    }
+                    console.log('Employee container opened');
                 });
             }
-
+        }
+        
+        // Gắn event handler với nhiều cách để đảm bảo hoạt động
+        $(document).ready(function() {
+            // Cách 1: Gắn trực tiếp vào element
+            $('#employeeToggleBtn').off('click.employeeToggle').on('click.employeeToggle', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                toggleEmployeeContainer();
+                return false;
+            });
+        });
+        
+        // Cách 2: Gắn với document.on (backup)
+        $(document).off('click', '#employeeToggleBtn').on('click', '#employeeToggleBtn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleEmployeeContainer();
             return false;
         });
 
@@ -1887,7 +1911,10 @@
             // Cập nhật hidden input
             $('#employee_id').val(employeeId);
 
-            // Removed console.log
+            console.log('Employee selected:', {
+                id: employeeId,
+                name: employeeName
+            });
 
             // Xóa selected của tất cả items
             $('.employee-item-btn').removeClass('selected');
@@ -2255,7 +2282,11 @@
             }
 
             // Debug log để kiểm tra total_duration
-            // Removed console.log
+            console.log('Loading time slots:', {
+                employeeId: employeeId,
+                appointmentDate: appointmentDate,
+                totalDuration: totalDuration
+            });
 
             // Đánh dấu đang load và set timeout để reset nếu request bị treo
             isLoadingTimeSlots = true;
@@ -2283,7 +2314,11 @@
                     clearTimeout(loadingTimeout);
                     isLoadingTimeSlots = false;
 
-                    // Removed console.log
+                    console.log('Time slots loaded:', {
+                        success: response.success,
+                        slotsCount: response.time_slots ? response.time_slots.length : 0,
+                        completedAppointmentEndTime: response.completed_appointment_end_time
+                    });
 
                     // LUÔN hiển thị tất cả slots từ 7h-22h (30 slots), kể cả khi không có lịch làm việc
                     if (response.success && response.time_slots && response.time_slots.length > 0) {
@@ -2738,6 +2773,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
+                            console.log('✅ [Session] Đã lưu thời gian vào Session:', {
                                 appointment_date: appointmentDate,
                                 word_time_id: wordTimeId,
                                 time: time
@@ -2956,11 +2992,13 @@
 
             // Prevent multiple submissions - kiểm tra ngay từ đầu
             if (isSubmitting) {
+                console.log('Form is already submitting, ignoring duplicate submission');
                 return false;
             }
 
             // Kiểm tra xem đã có thông báo thành công chưa (tránh submit lại)
             if ($('.alert-success').length > 0) {
+                console.log('Success message already shown, ignoring submission');
                 return false;
             }
 
@@ -2971,9 +3009,12 @@
             const $form = $(this);
 
             // Validate form - validation will get values directly from DOM
+            console.log('Starting validation...');
             const isValid = validateForm();
+            console.log('Validation result:', isValid);
 
             if (!isValid) {
+                console.log('Validation failed, showing errors');
                 // Scroll to first error
                 const firstError = $('.field-error:visible').first();
                 if (firstError.length) {
@@ -2987,6 +3028,7 @@
                 return false;
             }
 
+            console.log('Validation passed, submitting form...');
 
             // If validation passes, continue with submission
 
@@ -3078,6 +3120,11 @@
                 formDataObj.service_variants = serviceVariants;
             }
 
+            console.log('Service variants collected:', {
+                total_inputs: $('input[name="service_variants[]"]').length,
+                unique_variants: serviceVariants.length,
+                variants: serviceVariants
+            });
 
             // Collect combo IDs and remove duplicates
             const comboIds = [];
@@ -3108,6 +3155,19 @@
             // Lấy URL từ route để đảm bảo đúng - sử dụng absolute URL
             const submitUrl = '{{ url(route("site.appointment.store")) }}';
 
+            console.log('=== APPOINTMENT SUBMIT DEBUG ===');
+            console.log('Submitting to URL:', submitUrl);
+            console.log('Form data object:', formDataObj);
+            console.log('Form data keys:', Object.keys(formDataObj));
+            console.log('Employee ID:', formDataObj.employee_id);
+            console.log('Appointment Date:', formDataObj.appointment_date);
+            console.log('Word Time ID:', formDataObj.word_time_id);
+            console.log('Service IDs:', formDataObj.service_id);
+            console.log('Service Variants:', formDataObj.service_variants);
+            console.log('Combo IDs:', formDataObj.combo_id);
+            console.log('Name:', formDataObj.name);
+            console.log('Phone:', formDataObj.phone);
+            console.log('===============================');
 
             $.ajax({
                 url: submitUrl,
@@ -3170,14 +3230,24 @@
                     $submitBtn.prop('disabled', false).html(originalBtnText);
                     $form.find('input, button, select, textarea').prop('disabled', false);
 
+                    console.log('AJAX Error:', xhr);
+                    console.log('Request URL:', submitUrl);
+                    console.log('Request Data:', formDataObj);
+                    console.log('Response:', xhr.responseJSON);
+                    console.log('Status:', xhr.status);
+                    console.log('Status Text:', xhr.statusText);
+                    console.log('Response Text:', xhr.responseText);
 
                     // Handle validation errors - display inline errors
                     if (xhr.responseJSON && xhr.responseJSON.errors) {
                         // Clear all errors trước
                         clearFieldErrors();
 
+                        console.log('Server validation errors:', xhr.responseJSON.errors);
+
                         $.each(xhr.responseJSON.errors, function(key, value) {
                             if (value && value.length > 0) {
+                                console.log('Error for field:', key, 'Message:', value[0]);
 
                                     // Map backend field names to frontend field IDs
                                     let fieldId = key;
