@@ -154,8 +154,8 @@
                                 <a href="{{ route('admin.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                @if($appointment->status != 'Đã hủy' && $appointment->status != 'Đã thanh toán')
-                                    <a href="{{ route('site.payments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
+                                @if($appointment->status == 'Hoàn thành')
+                                    <a href="{{ route('admin.appointments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
                                         <i class="fas fa-money-bill-wave"></i>
                                     </a>
                                 @endif

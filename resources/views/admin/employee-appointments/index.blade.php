@@ -134,6 +134,12 @@
                                                         <i class="fas fa-eye"></i>
                                                     </a>
 
+                                                    @if($appointment->status == 'Hoàn thành')
+                                                        <a href="{{ route('employee.appointments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
+                                                            <i class="fas fa-money-bill-wave"></i>
+                                                        </a>
+                                                    @endif
+
                                                     @if(isset($employee) && $employee && $employee->position === 'Receptionist')
                                                         <a href="{{ route('employee.appointments.edit', $appointment->id) }}"
                                                             class="btn btn-sm btn-warning" title="Sửa lịch hẹn">
