@@ -361,34 +361,8 @@ function validateForm() {
         return false;
     }
     
-    // Tính tổng số nhân viên
-    const totalEmployees = stylistCount + barberCount + shampooerCount + receptionistCount;
-    
-    let totalSchedules;
-    let confirmMessage;
-    const scheduleType = $('input[name="schedule_type"]:checked').val();
-    
-    if (scheduleType === 'week') {
-        // Tổng số nhân viên × số ca × 7 ngày
-        totalSchedules = totalEmployees * shiftCount * 7;
-        confirmMessage = `Bạn sẽ tạo ${totalSchedules} lịch làm việc cho cả tuần:\n` +
-            `- ${stylistCount} Thợ tạo kiểu × ${shiftCount} ca × 7 ngày = ${stylistCount * shiftCount * 7} lịch\n` +
-            `- ${barberCount} Thợ cắt tóc nam × ${shiftCount} ca × 7 ngày = ${barberCount * shiftCount * 7} lịch\n` +
-            `- ${shampooerCount} Nhân viên gội đầu × ${shiftCount} ca × 7 ngày = ${shampooerCount * shiftCount * 7} lịch\n` +
-            `- ${receptionistCount} Lễ tân × ${shiftCount} ca × 7 ngày = ${receptionistCount * shiftCount * 7} lịch\n\n` +
-            `Xác nhận tạo lịch?`;
-    } else {
-        // Tổng số nhân viên × số ca
-        totalSchedules = totalEmployees * shiftCount;
-        confirmMessage = `Bạn sẽ tạo ${totalSchedules} lịch làm việc:\n` +
-            `- ${stylistCount} Thợ tạo kiểu × ${shiftCount} ca = ${stylistCount * shiftCount} lịch\n` +
-            `- ${barberCount} Thợ cắt tóc nam × ${shiftCount} ca = ${barberCount * shiftCount} lịch\n` +
-            `- ${shampooerCount} Nhân viên gội đầu × ${shiftCount} ca = ${shampooerCount * shiftCount} lịch\n` +
-            `- ${receptionistCount} Lễ tân × ${shiftCount} ca = ${receptionistCount * shiftCount} lịch\n\n` +
-            `Xác nhận tạo lịch?`;
-    }
-    
-    return confirm(confirmMessage);
+    // Cho phép submit form mà không cần xác nhận
+    return true;
 }
 </script>
 @endpush
