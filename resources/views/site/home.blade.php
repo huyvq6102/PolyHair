@@ -23,8 +23,8 @@
     <div class="album-grid">
       @foreach([
         ['name'=>'UỐN SIDE PART','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/13448_5/1.jpeg'],
-        ['name'=>'MÀU HOT TREND','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/13016_13/1.jpeg'],
-        ['name'=>'XOĂN HÀN QUỐC','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/12822_1/1.png'],
+        ['name'=>'NÂU HOT TREND','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/14187_3/2.jpeg'],
+        ['name'=>'XOĂN HÀN QUỐC','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/12822_1/2.jpeg'],
         ['name'=>'KIỂU SHORT QUIFF','link'=>'#','img'=>'https://storage.30shine.com/stylist-vote/10110_2/2.jpeg'],
 
       ] as $item)
@@ -210,23 +210,29 @@
     <div class="d-flex align-items-start mb-3">
       <span class="fb-bar mr-2"></span>
       <div>
-        <h3 class="fb-title mb-1 ba-title mb-0">FEEDBACK KHÁCH HÀNG</h3>
-        <p class="fb-desc mb-0">Dưới đây là những chia sẻ và cảm nhận của khách hàng khi sử dụng dịch vụ của POLY HAIR.</p>
+        <h3 class="fb-title mb-1 ba-title mb-0">CÙNG SAO TỎA SÁNG</h3>
+        <p class="fb-desc mb-0">Đồng hành cùng Sao - Sẵn sàng tỏa sáng</p>
       </div>
     </div>
 
     <div class="fb-grid">
       @foreach([
-        'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/2.png',
-        'https://storage.30shine.com/web/v4/images/sao-toa-sang/8.jpg',
-        'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/8.png',
-        'https://storage.30shine.com/web/v4/images/sao-toa-sang/7.jpg',
-        'https://storage.30shine.com/web/v4/images/sao-toa-sang/5.jpg',
-        'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/15.png',
-      ] as $img)
-        <a class="fb-card" ">
-          <div class="fb-img"><img src="{{ $img }}" alt="Feedback"></div>
-        </a>
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/2.png', 'name' => 'Dương Gió Tai', 'info' => 'Hot tiktoker Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/8.jpg', 'name' => 'Diễn viên Bình An', 'info' => 'Diễn viên điện ảnh Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/2.jpg', 'name' => 'Đỗ Kim Phúc', 'info' => 'Nhà Vô Địch tâng bóng nghệ thuật'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/7.jpg', 'name' => 'Văn Thanh - Hồng Duy', 'info' => 'Đội tuyển Quốc gia Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/5.jpg', 'name' => 'Hồ Tấn Tài', 'info' => 'Đội tuyển Quốc gia Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/15.png', 'name' => 'Sơn Đú', 'info' => 'Hot tiktoker Việt Nam'],
+      ] as $item)
+        <div class="fb-card">
+          <div class="fb-img"><img src="{{ $item['img'] }}" alt="Feedback"></div>
+          <div class="fb-meta" style="padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+            <h3 class="fb-name" style="margin: 0 !important; display: block !important; width: 100% !important; font-size: 16px; font-weight: 600; color: #000;">{{ $item['name'] }}</h3>
+            <div style="font-size: 13px; color: #666; display: block !important; width: 100% !important; margin: 0 !important;">
+              {{ $item['info'] }}
+            </div>
+          </div>
+        </div>
       @endforeach
     </div>
 
@@ -252,7 +258,7 @@
         <div class="stylist-right">
             <div class="stylist-grid">
                 @php
-                    // Lấy danh sách nhân viên từ database
+                    // Lấy danh sách nhân viên từ database, sắp xếp theo số năm kinh nghiệm giảm dần
                     $allEmployees = \App\Models\Employee::with(['user.role'])
                         ->whereNotNull('user_id')
                         ->where('position', 'Stylist')
@@ -260,7 +266,8 @@
                         ->whereHas('user', function($query) {
                             $query->where('role_id', '!=', 1); // Loại trừ admin
                         })
-                        ->orderBy('id', 'desc')
+                        ->orderBy('experience_years', 'desc')
+                        ->orderBy('id', 'desc') // Nếu cùng số năm kinh nghiệm thì sắp xếp theo id
                         ->limit(4)
                         ->get();
 

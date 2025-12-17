@@ -30,7 +30,8 @@
           <!-- Search by Name -->
           <div class="filter-group mb-3">
             <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Tìm kiếm</h5>
-            <input type="text" name="keyword" class="form-control filter-select" placeholder="Nhập tên dịch vụ..." value="{{ $keyword ?? '' }}" id="keywordInput" style="padding: 6px 10px; font-size: 13px;">
+            <input type="text" name="keyword" class="form-control filter-select" placeholder="Tìm dịch vụ ..." value="{{ $keyword ?? '' }}" id="keywordInput" style="padding: 6px 10px; font-size: 13px;">
+            
           </div>
 
           <!-- Filter by Type -->
@@ -136,9 +137,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isLoading) return;
         isLoading = true;
 
-        // Hiển thị loading indicator
-        serviceGrid.innerHTML = '<div class="col-12 text-center py-5"><p>Đang tải...</p></div>';
-        servicePagination.innerHTML = '';
+        // Chỉ hiển thị loading khi pagination, không hiển thị khi lọc realtime để mượt hơn
+        if (isPagination) {
+            serviceGrid.innerHTML = '<div class="col-12 text-center py-5" style="min-height: 200px; display: flex; align-items: center; justify-content: center;"><div><i class="fa fa-spinner fa-spin" style="font-size: 24px; color: #007bff; margin-bottom: 10px;"></i><p style="color: #666; margin: 0;">Đang tải...</p></div></div>';
+            servicePagination.innerHTML = '';
+        } else {
+            // Khi lọc realtime: thêm hiệu ứng opacity mượt (không dịch chuyển)
+            serviceGrid.style.transition = 'opacity 0.2s ease';
+            serviceGrid.style.opacity = '0.8';
+        }
 
         // Lưu vị trí scroll hiện tại (chỉ khi không phải pagination)
         const currentScrollPosition = !isPagination ? (window.pageYOffset || document.documentElement.scrollTop) : null;
@@ -154,7 +161,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Cập nhật grid và pagination
+                // Cập nhật grid và pagination với hiệu ứng mượt
+                if (!isPagination) {
+                    // Reset opacity trước khi cập nhật
+                    serviceGrid.style.opacity = '1';
+                }
+                
+                // Cập nhật nội dung
                 serviceGrid.innerHTML = data.html;
                 servicePagination.innerHTML = data.pagination || '';
 
@@ -248,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadServices(buildUrl(1));
     });
 
-    // Xử lý thay đổi select (auto submit)
+    // Xử lý thay đổi select (auto submit - lọc realtime)
     const autoSubmitSelects = ['filterType', 'categorySelect', 'sortBy', 'priceRange'];
     autoSubmitSelects.forEach(selectId => {
         const select = document.getElementById(selectId);
@@ -284,9 +297,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             minPriceInput.value = '';
                             maxPriceInput.value = '';
                         }
+                        // Lọc realtime khi chọn khoảng giá
                         loadServices(buildUrl(1));
                     }
                 } else {
+                    // Lọc realtime khi thay đổi select
                     loadServices(buildUrl(1));
                 }
             });
@@ -344,9 +359,24 @@ document.addEventListener('DOMContentLoaded', function() {
             formatPriceInput(this);
         });
 
+        // Lọc realtime khi nhập giá (với debounce)
+        let priceTimeout;
+        input.addEventListener('input', function() {
+            const priceRange = document.getElementById('priceRange').value;
+            if (priceRange === 'custom') {
+                clearTimeout(priceTimeout);
+                priceTimeout = setTimeout(function() {
+                    if (validatePriceRange()) {
+                        loadServices(buildUrl(1));
+                    }
+                }, 800); // Đợi 800ms sau khi user ngừng nhập giá
+            }
+        });
+
         // Lấy số thực khi submit (loại bỏ dấu chấm)
         input.addEventListener('keyup', function(e) {
             if (e.key === 'Enter') {
+                clearTimeout(priceTimeout);
                 if (validatePriceRange()) {
                     this.value = this.value.replace(/[^\d]/g, '');
                     loadServices(buildUrl(1));
@@ -361,11 +391,22 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('customPriceInputs').style.display = 'block';
     }
 
-    // Xử lý Enter trong input keyword
+    // Xử lý lọc realtime cho input keyword với debounce
     const keywordInput = document.getElementById('keywordInput');
+    let keywordTimeout;
     if (keywordInput) {
+        // Lọc realtime khi nhập (với debounce 500ms)
+        keywordInput.addEventListener('input', function() {
+            clearTimeout(keywordTimeout);
+            keywordTimeout = setTimeout(function() {
+                loadServices(buildUrl(1));
+            }, 500); // Đợi 500ms sau khi user ngừng gõ
+        });
+
+        // Xử lý Enter (lọc ngay lập tức)
         keywordInput.addEventListener('keyup', function(e) {
             if (e.key === 'Enter') {
+                clearTimeout(keywordTimeout);
                 loadServices(buildUrl(1));
             }
         });

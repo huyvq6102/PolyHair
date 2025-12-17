@@ -18,12 +18,13 @@ class ReviewController extends Controller
     public function index(Request $request)
     {
         $query = Review::with([
-                'user', 
-                'service', 
-                'employee',
-                'appointment.appointmentDetails.serviceVariant.service',
-                'appointment.appointmentDetails.combo'
-            ])
+            'user',
+            'service',
+            'employee.user',
+            'appointment.employee.user',
+            'appointment.appointmentDetails.serviceVariant.service',
+            'appointment.appointmentDetails.combo'
+        ])
             ->where('is_hidden', false)
             ->orderBy('created_at', 'desc');
 
@@ -52,7 +53,7 @@ class ReviewController extends Controller
     public function create(Request $request)
     {
         $appointmentId = $request->get('appointment_id');
-        
+
         if (!$appointmentId) {
             return redirect()->back()->with('error', 'Vui lòng chọn lịch hẹn để đánh giá.');
         }
@@ -163,8 +164,9 @@ class ReviewController extends Controller
             'is_hidden' => false,
         ]);
 
-        return redirect()->route('site.appointment.show', $appointment->id)
-            ->with('success', 'Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được ghi nhận.');
+        // Redirect đến trang reviews với thông báo thành công và highlight review mới
+        return redirect()->route('site.reviews.index', ['highlight_review' => $review->id])
+            ->with('success', 'Cảm ơn bạn đã đánh giá! Đánh giá của bạn đã được hiển thị bên dưới.');
     }
 
     /**
@@ -218,7 +220,7 @@ class ReviewController extends Controller
 
         $appointment = $review->appointment;
         $services = [];
-        
+
         if ($appointment && $appointment->appointmentDetails) {
             foreach ($appointment->appointmentDetails as $detail) {
                 if ($detail->serviceVariant && $detail->serviceVariant->service) {
@@ -256,7 +258,7 @@ class ReviewController extends Controller
 
         // Handle image uploads
         $images = $review->images ?? [];
-        
+
         // Remove images if requested
         if ($request->has('remove_images')) {
             foreach ($request->remove_images as $imageToRemove) {
@@ -288,4 +290,3 @@ class ReviewController extends Controller
             ->with('success', 'Đánh giá của bạn đã được cập nhật thành công!');
     }
 }
-

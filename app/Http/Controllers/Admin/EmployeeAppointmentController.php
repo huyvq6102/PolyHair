@@ -250,7 +250,8 @@ class EmployeeAppointmentController extends Controller
     }
 
     /**
-     * Display a listing of appointments for the current employee.
+     * Display a listing of appointments for all employees.
+     * All employees can see all appointments.
      */
     public function index(Request $request)
     {
@@ -272,9 +273,8 @@ class EmployeeAppointmentController extends Controller
             'date_to' => $request->get('date_to'),
         ];
 
-        // Get appointments with filters and pagination
-        $appointments = $this->appointmentService->getForEmployeeWithFilters(
-            $employee->id,
+        // Get all appointments with filters and pagination (not filtered by employee)
+        $appointments = $this->appointmentService->getAllWithFiltersPaginated(
             $filters,
             10
         );
@@ -297,15 +297,7 @@ class EmployeeAppointmentController extends Controller
 
         $appointment = $this->appointmentService->getOne($id);
 
-        // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id ||
-            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-
-        if (!$hasAccess) {
-            return redirect()->route('employee.appointments.index')
-                ->with('error', 'Bạn không có quyền xem đơn đặt này.');
-        }
-
+        // All employees can view all appointments
         return view('admin.employee-appointments.show', compact('appointment'));
     }
 
@@ -324,15 +316,7 @@ class EmployeeAppointmentController extends Controller
 
         $appointment = $this->appointmentService->getOne($id);
 
-        // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id ||
-            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-
-        if (!$hasAccess) {
-            return redirect()->route('employee.appointments.index')
-                ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
-        }
-
+        // All employees can change appointment status
         if ($appointment->status !== 'Chờ xác nhận' && $appointment->status !== 'Chờ xử lý') {
             return redirect()->route('employee.appointments.show', $id)
                 ->with('error', 'Chỉ có thể xác nhận đơn ở trạng thái "Chờ xác nhận" hoặc "Chờ xử lý".');
@@ -359,15 +343,7 @@ class EmployeeAppointmentController extends Controller
 
         $appointment = $this->appointmentService->getOne($id);
 
-        // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id ||
-            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-
-        if (!$hasAccess) {
-            return redirect()->route('employee.appointments.index')
-                ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
-        }
-
+        // All employees can change appointment status
         if ($appointment->status !== 'Đã xác nhận') {
             return redirect()->route('employee.appointments.show', $id)
                 ->with('error', 'Chỉ có thể bắt đầu đơn ở trạng thái "Đã xác nhận".');
@@ -394,15 +370,7 @@ class EmployeeAppointmentController extends Controller
 
         $appointment = $this->appointmentService->getOne($id);
 
-        // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id ||
-            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-
-        if (!$hasAccess) {
-            return redirect()->route('employee.appointments.index')
-                ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
-        }
-
+        // All employees can change appointment status
         if ($appointment->status !== 'Đang thực hiện') {
             return redirect()->route('employee.appointments.show', $id)
                 ->with('error', 'Chỉ có thể hoàn thành đơn ở trạng thái "Đang thực hiện".');
@@ -429,15 +397,7 @@ class EmployeeAppointmentController extends Controller
 
         $appointment = $this->appointmentService->getOne($id);
 
-        // Check if appointment belongs to this employee (directly or via appointment details)
-        $hasAccess = $appointment->employee_id == $employee->id ||
-            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-
-        if (!$hasAccess) {
-            return redirect()->route('employee.appointments.index')
-                ->with('error', 'Bạn không có quyền thay đổi đơn đặt này.');
-        }
-
+        // All employees can change appointment status
         // Check if appointment can be cancelled (only Chờ xác nhận or Chờ xử lý)
         if ($appointment->status !== 'Chờ xác nhận' && $appointment->status !== 'Chờ xử lý') {
             return redirect()->route('employee.appointments.show', $id)
@@ -468,15 +428,7 @@ class EmployeeAppointmentController extends Controller
 
         $appointment = $this->appointmentService->getOne($id);
 
-        // Check if appointment belongs to this employee
-        $hasAccess = $appointment->employee_id == $employee->id ||
-            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
-
-        if (!$hasAccess) {
-            return redirect()->route('employee.appointments.index')
-                ->with('error', 'Bạn không có quyền xóa đơn đặt này.');
-        }
-
+        // All employees can delete appointments
         // Check if appointment can be deleted (only Chờ xác nhận or Chờ xử lý)
         if ($appointment->status !== 'Chờ xác nhận' && $appointment->status !== 'Chờ xử lý') {
             return redirect()->route('employee.appointments.show', $id)
