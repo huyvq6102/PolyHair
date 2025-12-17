@@ -31,6 +31,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::post('appointments/{id}/restore', [AppointmentController::class, 'restore'])->name('appointments.restore');
     Route::delete('appointments/{id}/force-delete', [AppointmentController::class, 'forceDelete'])->name('appointments.force-delete');
     Route::delete('appointments/{appointmentId}/remove-service/{detailId}', [AppointmentController::class, 'removeService'])->name('appointments.remove-service');
+    // Admin Checkout Routes
+    Route::get('appointments/checkout', [AppointmentController::class, 'checkout'])->name('appointments.checkout');
+    Route::post('appointments/checkout/process', [AppointmentController::class, 'processCheckout'])->name('appointments.process-checkout');
+    Route::post('appointments/apply-coupon', [AppointmentController::class, 'applyCoupon'])->name('appointments.apply-coupon');
+    Route::get('appointments/remove-coupon', [AppointmentController::class, 'removeCoupon'])->name('appointments.remove-coupon');
     Route::resource('appointments', AppointmentController::class);
 
     // Working Schedule (View Only for Staff)
@@ -132,6 +137,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
 Route::prefix('admin/employee')->name('employee.')->middleware(['auth', 'employee'])->group(function () {
     Route::get('appointments', [EmployeeAppointmentController::class, 'index'])->name('appointments.index');
     Route::get('appointments/create', [EmployeeAppointmentController::class, 'create'])->name('appointments.create');
+    // Employee Checkout Routes
+    Route::get('appointments/checkout', [EmployeeAppointmentController::class, 'checkout'])->name('appointments.checkout');
+    Route::post('appointments/checkout/process', [EmployeeAppointmentController::class, 'processCheckout'])->name('appointments.process-checkout');
+    Route::post('appointments/apply-coupon', [EmployeeAppointmentController::class, 'applyCoupon'])->name('appointments.apply-coupon');
+    Route::get('appointments/remove-coupon', [EmployeeAppointmentController::class, 'removeCoupon'])->name('appointments.remove-coupon');
+
     Route::post('appointments', [EmployeeAppointmentController::class, 'store'])->name('appointments.store');
     Route::get('appointments/{id}', [EmployeeAppointmentController::class, 'show'])->name('appointments.show');
     Route::post('appointments/{id}/confirm', [EmployeeAppointmentController::class, 'confirm'])->name('appointments.confirm');
@@ -139,6 +150,7 @@ Route::prefix('admin/employee')->name('employee.')->middleware(['auth', 'employe
     Route::post('appointments/{id}/complete', [EmployeeAppointmentController::class, 'complete'])->name('appointments.complete');
     Route::post('appointments/{id}/cancel', [EmployeeAppointmentController::class, 'cancel'])->name('appointments.cancel');
     Route::delete('appointments/{id}', [EmployeeAppointmentController::class, 'destroy'])->name('appointments.destroy');
+    
     Route::get('appointments/{id}/edit', [EmployeeAppointmentController::class, 'edit'])->name('appointments.edit');
     Route::put('appointments/{id}', [EmployeeAppointmentController::class, 'update'])->name('appointments.update');
 });

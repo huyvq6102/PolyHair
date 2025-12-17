@@ -656,4 +656,294 @@ class AppointmentController extends Controller
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Show Checkout Page for Admin.
+     */
+    public function checkout(Request $request)
+    {
+        $appointmentId = $request->input('appointment_id');
+        if (!$appointmentId) {
+            return redirect()->route('admin.appointments.index')->with('error', 'Thiếu thông tin lịch hẹn.');
+        }
+
+        $appointment = \App\Models\Appointment::with([
+            'appointmentDetails.serviceVariant.service',
+            'appointmentDetails.combo',
+            'user'
+        ])->find($appointmentId);
+
+        if (!$appointment) {
+            return redirect()->route('admin.appointments.index')->with('error', 'Không tìm thấy lịch hẹn.');
+        }
+        
+        if ($appointment->status === 'Đã thanh toán') {
+            return redirect()->route('admin.appointments.show', $appointment->id)
+                             ->with('info', 'Lịch hẹn này đã được thanh toán.');
+        }
+
+        // Construct "Cart" data from Appointment
+        $services = [];
+        $subtotal = 0;
+        
+        // Also build a cart array compatible with PaymentService/PromotionService
+        $cart = [
+            'appointment_' . $appointment->id => [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1
+            ]
+        ];
+        // We might want to put this in session so PromotionService can use it via Session if it relies on that,
+        // OR we just pass it explicitly. The checkout view might rely on Session for coupon.
+        // Let's set the session cart to be safe and consistent with Site checkout.
+        \Illuminate\Support\Facades\Session::put('cart', $cart);
+
+        foreach ($appointment->appointmentDetails as $detail) {
+            if ($detail->serviceVariant && $detail->serviceVariant->service) {
+                $price = $detail->price_snapshot ?? ($detail->serviceVariant->price ?? 0);
+                $subtotal += $price;
+                $services[] = [
+                    'name' => '[Lịch hẹn] ' . $detail->serviceVariant->service->name . ' - ' . $detail->serviceVariant->name,
+                    'price' => $price,
+                ];
+            } elseif (!$detail->serviceVariant && !$detail->combo_id && $detail->notes) {
+                $price = $detail->price_snapshot ?? 0;
+                $subtotal += $price;
+                $services[] = [
+                    'name' => '[Lịch hẹn] ' . $detail->notes,
+                    'price' => $price,
+                ];
+            } elseif ($detail->combo_id && $detail->combo) {
+                $price = $detail->price_snapshot ?? ($detail->combo->price ?? 0);
+                $subtotal += $price;
+                $services[] = [
+                    'name' => '[Lịch hẹn] Combo: ' . $detail->combo->name,
+                    'price' => $price,
+                ];
+            }
+        }
+
+        // Customer Info
+        $customerData = [
+            'name' => $appointment->user->name ?? 'Khách vãng lai',
+            'phone' => $appointment->user->phone ?? '',
+            'email' => $appointment->user->email ?? '',
+        ];
+
+        // Promotion Logic
+        $promotionAmount = 0; 
+        $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
+        $appliedCoupon = null;
+        $promotionMessage = null;
+
+        if ($couponCode) {
+            $promotionService = app(\App\Services\PromotionService::class);
+            $userIdForPromo = $appointment->user_id ?? (auth()->check() ? auth()->id() : null);
+            
+            $result = $promotionService->validateAndCalculateDiscount(
+                $couponCode,
+                $cart,
+                $subtotal,
+                $userIdForPromo
+            );
+
+            if ($result['valid']) {
+                $promotionAmount = $result['discount_amount'];
+                $appliedCoupon = $result['promotion'];
+                $promotionMessage = $result['message'];
+            } else {
+                \Illuminate\Support\Facades\Session::forget('coupon_code');
+                $promotionMessage = $result['message'];
+            }
+        }
+
+        $taxablePrice = max(0, $subtotal - $promotionAmount);
+        $VAT = 0;
+        $total = $taxablePrice;
+
+        // Use the same view as Site Checkout but we might need to adjust form action
+        // OR we can pass a route override variable to the view?
+        // Actually the view hardcodes route('site.payments.process').
+        // We should duplicate the view or make it dynamic.
+        // For now, let's duplicate the view to 'admin.appointments.checkout' to be safe and customizable.
+        
+        return view('admin.appointments.checkout', [
+            'customer' => $customerData,
+            'services' => $services,
+            'promotion' => $promotionAmount,
+            'appliedCoupon' => $appliedCoupon,
+            'promotionMessage' => $promotionMessage,
+            'subtotal' => $subtotal,
+            'taxablePrice' => $taxablePrice,
+            'vat' => $VAT,
+            'total' => $total,
+            'payment_methods' => [
+                ['id' => 'cash', 'name' => 'Thanh toán tại quầy'],
+                ['id' => 'card', 'name' => 'Thẻ tín dụng'],
+                ['id' => 'vnpay', 'name' => 'VNPAY'],
+                ['id' => 'zalopay', 'name' => 'ZaloPay'],
+            ],
+            // Pass appointment ID for context
+            'appointment' => $appointment
+        ]);
+    }
+
+    /**
+     * Process Checkout for Admin.
+     */
+    public function processCheckout(Request $request, \App\Services\PaymentService $paymentService)
+    {
+        // Similar to Site\CheckoutController@processPayment but simplified for Admin
+        try {
+            $cart = \Illuminate\Support\Facades\Session::get('cart', []);
+            $user = auth()->user(); // The Admin executing the payment
+            
+            // Determine the "Payer" user (Customer) from appointment in cart
+            $payer = null;
+            $appointmentId = null;
+
+            foreach ($cart as $item) {
+                if (isset($item['type']) && $item['type'] === 'appointment') {
+                    $appointmentId = $item['id'];
+                    $appt = \App\Models\Appointment::find($item['id']);
+                    if ($appt) {
+                        $payer = $appt->user; // The customer
+                    }
+                    break; 
+                }
+            }
+
+            if (!$payer) {
+                // If no payer found (e.g. deleted user), maybe use a dummy or fail?
+                // Let's try to get payer from appointment ID if passed in request, though cart is safer
+                 return redirect()->back()->with('error', 'Không tìm thấy thông tin khách hàng trong đơn hàng.');
+            }
+
+            $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
+            $paymentMethod = $request->input('payment_method', 'cash');
+
+            // Process Payment
+            // Note: processPayment uses the passed user ($payer) as the owner of the payment record
+            $payment = $paymentService->processPayment($payer, $cart, $paymentMethod, $couponCode);
+
+            // If Admin/Staff, mark as completed immediately for Cash
+            if ($paymentMethod === 'cash') {
+                 $payment->status = 'completed';
+                 $payment->save();
+                 
+                 if ($payment->appointment_id) {
+                     $appt = \App\Models\Appointment::find($payment->appointment_id);
+                     if ($appt) {
+                         $appt->status = 'Đã thanh toán';
+                         $appt->save();
+                         foreach ($appt->appointmentDetails as $detail) {
+                            $detail->status = 'Hoàn thành';
+                            $detail->save();
+                         }
+                     }
+                 }
+                 
+                 if ($payment->order_id) {
+                     $order = \App\Models\Order::find($payment->order_id);
+                     if ($order) {
+                         $order->status = 'Đã thanh toán';
+                         $order->save();
+                     }
+                 }
+            }
+            
+            \Illuminate\Support\Facades\Session::forget('cart');
+            \Illuminate\Support\Facades\Session::forget('coupon_code');
+
+            // Handle VNPAY redirect if needed (though usually Admin takes Cash)
+            if ($paymentMethod === 'vnpay') {
+                $vnpayService = app(\App\Services\VnpayService::class);
+                $vnpUrl = $vnpayService->createPayment($payment->invoice_code, $payment->total);
+                return redirect($vnpUrl);
+            }
+
+            return redirect()->route('admin.appointments.index')
+                ->with('success', 'Thanh toán thành công cho lịch hẹn #' . $payment->appointment_id);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error($e);
+            return back()->with('error', 'Thanh toán thất bại: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Apply a coupon code from the admin checkout page.
+     */
+    public function applyCoupon(Request $request, \App\Services\PromotionService $promotionService)
+    {
+        $request->validate([
+            'coupon_code' => 'required|string|max:50'
+        ]);
+
+        $code = $request->input('coupon_code');
+        $appointmentId = $request->input('appointment_id'); // Hidden field in form
+
+        if (!$appointmentId) {
+            return back()->with('error', 'Thiếu thông tin lịch hẹn để áp dụng mã khuyến mãi.');
+        }
+
+        $appointment = \App\Models\Appointment::with('user')->find($appointmentId);
+        if (!$appointment) {
+            return back()->with('error', 'Không tìm thấy lịch hẹn.');
+        }
+        // Assuming the appointment has a method or a way to get its current price
+        // For simplicity, let's recalculate subtotal from appointment details for promotion validation
+        $subtotal = 0;
+        foreach ($appointment->appointmentDetails as $detail) {
+            if ($detail->price_snapshot) {
+                $subtotal += $detail->price_snapshot;
+            } elseif ($detail->serviceVariant) {
+                $subtotal += $detail->serviceVariant->price;
+            } elseif ($detail->combo) {
+                $subtotal += $detail->combo->price;
+            }
+        }
+
+        // Construct cart data for validation, just this appointment
+        $cart = [
+            'appointment_' . $appointment->id => [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1
+            ]
+        ];
+        // Use the cart variable directly in promotionService, no need to put in Session temporarily here
+        // as the controller's checkout method handles setting the session cart for the view.
+
+        $result = $promotionService->validateAndCalculateDiscount(
+            $code,
+            $cart,
+            $subtotal, // Use the dynamically calculated subtotal
+            $appointment->user_id
+        );
+        
+        if (!$result['valid']) {
+            return back()->with('error', $result['message']);
+        }
+        
+        \Illuminate\Support\Facades\Session::put('coupon_code', $code);
+        
+        return back()->with('success', 'Áp dụng mã khuyến mại thành công!');
+    }
+
+    /**
+     * Remove applied coupon code from the admin checkout page.
+     */
+    public function removeCoupon(Request $request)
+    {
+        \Illuminate\Support\Facades\Session::forget('coupon_code');
+        // Redirect back to the checkout page, potentially with the appointment_id if present
+        $appointmentId = $request->input('appointment_id');
+        if ($appointmentId) {
+            return redirect()->route('admin.appointments.checkout', ['appointment_id' => $appointmentId])
+                             ->with('success', 'Đã gỡ bỏ mã khuyến mại.');
+        }
+        return back()->with('success', 'Đã gỡ bỏ mã khuyến mại.');
+    }
 }

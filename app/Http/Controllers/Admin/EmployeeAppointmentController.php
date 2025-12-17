@@ -10,6 +10,8 @@ use App\Services\EmployeeService;
 use App\Services\ServiceService;
 use App\Services\ServiceCategoryService;
 use App\Services\WordTimeService;
+use App\Services\PaymentService;
+use App\Services\PromotionService;
 use App\Models\Promotion;
 use App\Models\PromotionUsage;
 use App\Models\Service;
@@ -744,5 +746,309 @@ class EmployeeAppointmentController extends Controller
                 ->withInput()
                 ->with('error', 'Có lỗi xảy ra khi cập nhật lịch hẹn: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Show Checkout Page for Employee.
+     */
+    public function checkout(Request $request)
+    {
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('admin.dashboard')->with('error', 'Bạn không phải là nhân viên.');
+        }
+
+        $appointmentId = $request->input('appointment_id');
+        if (!$appointmentId) {
+            return redirect()->route('employee.appointments.index')->with('error', 'Thiếu thông tin lịch hẹn.');
+        }
+
+        $appointment = $this->appointmentService->getOne($appointmentId);
+
+        // Check Access
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
+        if (!$hasAccess) {
+            return redirect()->route('employee.appointments.index')->with('error', 'Bạn không có quyền thanh toán đơn đặt này.');
+        }
+        
+        if ($appointment->status === 'Đã thanh toán') {
+            return redirect()->route('employee.appointments.show', $appointment->id)
+                             ->with('info', 'Lịch hẹn này đã được thanh toán.');
+        }
+
+        // Construct Cart
+        $services = [];
+        $subtotal = 0;
+        
+        $cart = [
+            'appointment_' . $appointment->id => [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1
+            ]
+        ];
+        \Illuminate\Support\Facades\Session::put('cart', $cart);
+
+        foreach ($appointment->appointmentDetails as $detail) {
+            if ($detail->serviceVariant && $detail->serviceVariant->service) {
+                $price = $detail->price_snapshot ?? ($detail->serviceVariant->price ?? 0);
+                $subtotal += $price;
+                $services[] = [
+                    'name' => '[Lịch hẹn] ' . $detail->serviceVariant->service->name . ' - ' . $detail->serviceVariant->name,
+                    'price' => $price,
+                ];
+            } elseif (!$detail->serviceVariant && !$detail->combo_id && $detail->notes) {
+                $price = $detail->price_snapshot ?? 0;
+                $subtotal += $price;
+                $services[] = [
+                    'name' => '[Lịch hẹn] ' . $detail->notes,
+                    'price' => $price,
+                ];
+            } elseif ($detail->combo_id && $detail->combo) {
+                $price = $detail->price_snapshot ?? ($detail->combo->price ?? 0);
+                $subtotal += $price;
+                $services[] = [
+                    'name' => '[Lịch hẹn] Combo: ' . $detail->combo->name,
+                    'price' => $price,
+                ];
+            }
+        }
+
+        // Customer Info
+        $customerData = [
+            'name' => $appointment->user->name ?? 'Khách vãng lai',
+            'phone' => $appointment->user->phone ?? '',
+            'email' => $appointment->user->email ?? '',
+        ];
+
+        // Promotion Logic
+        $promotionAmount = 0; 
+        $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
+        $appliedCoupon = null;
+        $promotionMessage = null;
+
+        if ($couponCode) {
+            $promotionService = app(PromotionService::class);
+            $userIdForPromo = $appointment->user_id ?? $user->id;
+            
+            $result = $promotionService->validateAndCalculateDiscount(
+                $couponCode,
+                $cart,
+                $subtotal,
+                $userIdForPromo
+            );
+
+            if ($result['valid']) {
+                $promotionAmount = $result['discount_amount'];
+                $appliedCoupon = $result['promotion'];
+                $promotionMessage = $result['message'];
+            } else {
+                \Illuminate\Support\Facades\Session::forget('coupon_code');
+                $promotionMessage = $result['message'];
+            }
+        }
+
+        $taxablePrice = max(0, $subtotal - $promotionAmount);
+        $VAT = 0;
+        $total = $taxablePrice;
+        
+        return view('admin.employee-appointments.checkout', [
+            'customer' => $customerData,
+            'services' => $services,
+            'promotion' => $promotionAmount,
+            'appliedCoupon' => $appliedCoupon,
+            'promotionMessage' => $promotionMessage,
+            'subtotal' => $subtotal,
+            'taxablePrice' => $taxablePrice,
+            'vat' => $VAT,
+            'total' => $total,
+            'payment_methods' => [
+                ['id' => 'cash', 'name' => 'Thanh toán tại quầy'],
+                ['id' => 'card', 'name' => 'Thẻ tín dụng'],
+                ['id' => 'vnpay', 'name' => 'VNPAY'],
+                ['id' => 'zalopay', 'name' => 'ZaloPay'],
+            ],
+            'appointment' => $appointment
+        ]);
+    }
+
+    /**
+     * Process Checkout for Employee.
+     */
+    public function processCheckout(Request $request, PaymentService $paymentService)
+    {
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('admin.dashboard')->with('error', 'Bạn không phải là nhân viên.');
+        }
+
+        try {
+            $cart = \Illuminate\Support\Facades\Session::get('cart', []);
+            
+            // Determine Payer
+            $payer = null;
+            $appointmentId = null;
+
+            foreach ($cart as $item) {
+                if (isset($item['type']) && $item['type'] === 'appointment') {
+                    $appointmentId = $item['id'];
+                    $appt = \App\Models\Appointment::find($item['id']);
+                    if ($appt) {
+                        $payer = $appt->user;
+                        
+                        // Check Access again for safety
+                        $hasAccess = $appt->employee_id == $employee->id ||
+                            $appt->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+                        if (!$hasAccess) {
+                             return redirect()->route('employee.appointments.index')->with('error', 'Bạn không có quyền thanh toán đơn đặt này.');
+                        }
+                    }
+                    break; 
+                }
+            }
+
+            if (!$payer) {
+                 return redirect()->back()->with('error', 'Không tìm thấy thông tin khách hàng trong đơn hàng.');
+            }
+
+            $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
+            $paymentMethod = $request->input('payment_method', 'cash');
+
+            // Process Payment
+            $payment = $paymentService->processPayment($payer, $cart, $paymentMethod, $couponCode);
+
+            // Auto-complete Cash Payment
+            if ($paymentMethod === 'cash') {
+                 $payment->status = 'completed';
+                 $payment->save();
+                 
+                 if ($payment->appointment_id) {
+                     $appt = \App\Models\Appointment::find($payment->appointment_id);
+                     if ($appt) {
+                         $appt->status = 'Đã thanh toán';
+                         $appt->save();
+                         foreach ($appt->appointmentDetails as $detail) {
+                            $detail->status = 'Hoàn thành';
+                            $detail->save();
+                         }
+                     }
+                 }
+                 
+                 if ($payment->order_id) {
+                     $order = \App\Models\Order::find($payment->order_id);
+                     if ($order) {
+                         $order->status = 'Đã thanh toán';
+                         $order->save();
+                     }
+                 }
+            }
+            
+            \Illuminate\Support\Facades\Session::forget('cart');
+            \Illuminate\Support\Facades\Session::forget('coupon_code');
+
+            if ($paymentMethod === 'vnpay') {
+                $vnpayService = app(\App\Services\VnpayService::class);
+                $vnpUrl = $vnpayService->createPayment($payment->invoice_code, $payment->total);
+                return redirect($vnpUrl);
+            }
+
+            return redirect()->route('employee.appointments.index')
+                ->with('success', 'Thanh toán thành công cho lịch hẹn #' . $payment->appointment_id);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error($e);
+            return back()->with('error', 'Thanh toán thất bại: ' . $e->getMessage());
+        }
+    /**
+     * Apply a coupon code from the employee checkout page.
+     */
+    public function applyCoupon(Request $request, PromotionService $promotionService)
+    {
+        $request->validate([
+            'coupon_code' => 'required|string|max:50'
+        ]);
+
+        $code = $request->input('coupon_code');
+        $appointmentId = $request->input('appointment_id'); // Hidden field in form
+
+        if (!$appointmentId) {
+            return back()->with('error', 'Thiếu thông tin lịch hẹn để áp dụng mã khuyến mãi.');
+        }
+
+        $appointment = \App\Models\Appointment::with('user')->find($appointmentId);
+        if (!$appointment) {
+            return back()->with('error', 'Không tìm thấy lịch hẹn.');
+        }
+
+        $user = auth()->user();
+        $employee = $this->employeeService->getByUserId($user->id);
+
+        if (!$employee) {
+            return redirect()->route('admin.dashboard')->with('error', 'Bạn không phải là nhân viên.');
+        }
+        // Check Access
+        $hasAccess = $appointment->employee_id == $employee->id ||
+            $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
+
+        if (!$hasAccess) {
+            return back()->with('error', 'Bạn không có quyền áp dụng khuyến mãi cho đơn đặt này.');
+        }
+
+        // Calculate subtotal for promotion validation
+        $subtotal = 0;
+        foreach ($appointment->appointmentDetails as $detail) {
+            if ($detail->price_snapshot) {
+                $subtotal += $detail->price_snapshot;
+            } elseif ($detail->serviceVariant) {
+                $subtotal += $detail->serviceVariant->price;
+            } elseif ($detail->combo) {
+                $subtotal += $detail->combo->price;
+            }
+        }
+
+        // Construct cart data for validation, just this appointment
+        $cart = [
+            'appointment_' . $appointment->id => [
+                'type' => 'appointment',
+                'id' => $appointment->id,
+                'quantity' => 1
+            ]
+        ];
+        
+        $result = $promotionService->validateAndCalculateDiscount(
+            $code,
+            $cart,
+            $subtotal,
+            $appointment->user_id
+        );
+        
+        if (!$result['valid']) {
+            return back()->with('error', $result['message']);
+        }
+        
+        \Illuminate\Support\Facades\Session::put('coupon_code', $code);
+        
+        return back()->with('success', 'Áp dụng mã khuyến mại thành công!');
+    }
+
+    /**
+     * Remove applied coupon code from the employee checkout page.
+     */
+    public function removeCoupon(Request $request)
+    {
+        \Illuminate\Support\Facades\Session::forget('coupon_code');
+        // Redirect back to the checkout page, potentially with the appointment_id if present
+        $appointmentId = $request->input('appointment_id');
+        if ($appointmentId) {
+            return redirect()->route('employee.appointments.checkout', ['appointment_id' => $appointmentId])
+                             ->with('success', 'Đã gỡ bỏ mã khuyến mại.');
+        }
+        return back()->with('success', 'Đã gỡ bỏ mã khuyến mại.');
     }
 }
