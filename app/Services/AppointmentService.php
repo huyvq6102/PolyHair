@@ -183,6 +183,9 @@ class AppointmentService
     {
         $appointment = Appointment::create([
             'user_id' => $data['user_id'],
+            'guest_name' => $data['guest_name'] ?? null,
+            'guest_phone' => $data['guest_phone'] ?? null,
+            'guest_email' => $data['guest_email'] ?? null,
             'employee_id' => $data['employee_id'] ?? null,
             'status' => $data['status'] ?? 'Chờ xử lý',
             'start_at' => $data['start_at'] ?? null,
@@ -448,15 +451,19 @@ class AppointmentService
 
             // Chỉ kiểm tra và ban nếu là khách hàng tự hủy (không phải admin/employee)
             // Kiểm tra SAU KHI hủy để đếm chính xác số lần hủy bao gồm cả lịch vừa hủy
-            $shouldCheckBan = !$user->isAdmin() && !$user->isEmployee();
             $wasBanned = false;
+            
+            // Chỉ kiểm tra ban nếu user tồn tại (không phải guest)
+            if ($user) {
+                $shouldCheckBan = !$user->isAdmin() && !$user->isEmployee();
 
-            if ($shouldCheckBan) {
-                $wasBanned = $this->checkAndBanUserIfNeeded($user);
+                if ($shouldCheckBan) {
+                    $wasBanned = $this->checkAndBanUserIfNeeded($user);
+                }
+
+                // Refresh user để lấy thông tin mới nhất
+                $user->refresh();
             }
-
-            // Refresh user để lấy thông tin mới nhất
-            $user->refresh();
 
             // Trả về thông tin về việc ban để controller có thể xử lý
             return [
@@ -464,8 +471,6 @@ class AppointmentService
                 'was_banned' => $wasBanned,
                 'user' => $user,
             ];
-
-            return $appointment;
         });
     }
 

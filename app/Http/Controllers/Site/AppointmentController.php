@@ -481,30 +481,18 @@ class AppointmentController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get or create user
+            // Get user if logged in, otherwise store guest info in appointment
             $user = null;
+            $guestInfo = [];
             if (Auth::check()) {
                 $user = Auth::user();
             } else {
-                // Create guest user or find existing by phone/email
-                $user = \App\Models\User::where('phone', $validated['phone'])
-                    ->orWhere('email', $validated['email'])
-                    ->first();
-
-                if (!$user) {
-                    $user = \App\Models\User::create([
-                        'name' => $validated['name'],
-                        'phone' => $validated['phone'],
-                        'email' => $validated['email'] ?? null,
-                        'password' => bcrypt('guest123'), // Temporary password
-                    ]);
-                } else {
-                    // Update user info if needed
-                    $user->update([
-                        'name' => $validated['name'],
-                        'email' => $validated['email'] ?? $user->email,
-                    ]);
-                }
+                // Store guest info to save directly in appointment (not create User)
+                $guestInfo = [
+                    'guest_name' => $validated['name'],
+                    'guest_phone' => $validated['phone'],
+                    'guest_email' => $validated['email'] ?? null,
+                ];
             }
 
             // Get word time
@@ -708,14 +696,21 @@ class AppointmentController extends Controller
 
             // Always create a new appointment for each booking
             // This ensures each booking has its own appointment with only the selected services
-            $appointment = $this->appointmentService->create([
-                'user_id' => $user->id,
+            $appointmentData = [
+                'user_id' => $user ? $user->id : null,
                 'employee_id' => $selectedEmployeeId, // Sử dụng nhân viên đã được chọn (tự động hoặc thủ công)
                 'status' => 'Chờ xử lý',
                 'start_at' => $startAt,
                 'end_at' => $endAt,
                 'note' => $validated['note'] ?? null,
-            ], $serviceVariantData);
+            ];
+            
+            // Add guest info if not logged in
+            if (!empty($guestInfo)) {
+                $appointmentData = array_merge($appointmentData, $guestInfo);
+            }
+            
+            $appointment = $this->appointmentService->create($appointmentData, $serviceVariantData);
 
             \Log::info('Appointment store - Created appointment', [
                 'appointment_id' => $appointment->id,

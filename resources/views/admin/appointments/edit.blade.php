@@ -25,7 +25,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="name">Tên khách hàng <span class="text-danger">*</span></label>
-                        <input type="text" name="name" id="name" value="{{ old('name', $appointment->user->name ?? '') }}" 
+                        <input type="text" name="name" id="name" value="{{ old('name', $appointment->user->name ?? $appointment->guest_name ?? '') }}" 
                                class="form-control @error('name') is-invalid @enderror" 
                                placeholder="Nhập tên khách hàng" required>
                         @error('name')

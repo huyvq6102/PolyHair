@@ -36,7 +36,7 @@
                     @forelse($appointments as $appointment)
                         <tr>
                             <td>{{ $appointment->booking_code ?? 'N/A' }}</td>
-                            <td>{{ $appointment->user->name ?? 'N/A' }}</td>
+                            <td>{{ $appointment->user->name ?? $appointment->guest_name ?? 'N/A' }}</td>
                             <td>{{ $appointment->user->phone ?? 'N/A' }}</td>
                             <td>{{ $appointment->user->email ?? 'N/A' }}</td>
                             <td>{{ $appointment->employee->user->name ?? 'Chưa phân công' }}</td>

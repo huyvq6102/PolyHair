@@ -1888,7 +1888,6 @@
             $('#employee_id').val(employeeIdFromUrl);
             // Enable date input
             $('#appointment_date').prop('disabled', false);
-            $('#appointment_date').datepicker('enable');
             // Load employees để hiển thị và tự động chọn
             // Note: loadEmployeesForCarousel sẽ tự động chọn employee này sau khi load xong
         }
