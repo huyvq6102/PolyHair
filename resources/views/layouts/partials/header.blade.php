@@ -77,12 +77,6 @@
                                                             <span class="bag">{{ $cartCount ?? 0 }}</span>
                                                         </a>
                                                     </li> --}}
-                                                <li class="d-lg-none">
-                                                        <a href="{{ route('login') }}">Đăng nhập</a>
-                                                    </li>
-                                                    <li class="d-lg-none book-btn-mobile">
-                                                        <a href="{{ route('site.appointment.create') }}">Đặt lịch ngay</a>
-                                                    </li>
                                             </ul>
                                         </nav>
                                     </div>
@@ -212,6 +206,88 @@
     #navigation > li > ul.submenu li a {
         padding: 6px 15px !important;
         line-height: 1.4 !important;
+    }
+
+    /* Căn chỉnh menu với nút đăng nhập và đặt lịch */
+    .menu_wrap_inner {
+        align-items: center !important;
+        display: flex !important;
+    }
+
+    .main-menu {
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 !important;
+    }
+
+    #navigation {
+        display: flex !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        list-style: none !important;
+    }
+
+    #navigation > li {
+        display: inline-flex !important;
+        align-items: center !important;
+        vertical-align: middle !important;
+    }
+
+    #navigation > li > a {
+        display: inline-flex !important;
+        align-items: center !important;
+        line-height: 1.5 !important;
+        padding: 0 10px !important;
+        padding-bottom: 0 !important;
+        padding-top: 0 !important;
+        margin: 0 !important;
+        vertical-align: middle !important;
+    }
+    
+    #navigation > li:first-child > a {
+        padding-left: 0 !important;
+    }
+
+    /* Căn chỉnh dropdown đăng nhập */
+    .dropdown.ml-3 {
+        display: flex !important;
+        align-items: center !important;
+        line-height: 1.5 !important;
+    }
+
+    #userDropdown {
+        display: flex !important;
+        align-items: center !important;
+        line-height: 1.5 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Căn chỉnh link đăng nhập */
+    a.text-white.text-uppercase.ml-3[href*="login"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Căn chỉnh nút đặt lịch */
+    .book_room {
+        display: flex !important;
+        align-items: center !important;
+        line-height: 1.5 !important;
+    }
+
+    .book_btn {
+        display: flex !important;
+        align-items: center !important;
+        line-height: 1.5 !important;
+    }
+
+    .book_btn a {
+        display: inline-flex !important;
+        align-items: center !important;
+        line-height: 1.5 !important;
     }
 
 </style>

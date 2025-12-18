@@ -114,7 +114,13 @@
                                                 <span class="badge badge-info">{{ $detail->status ?? 'N/A' }}</span>
                                             </td>
                                             <td>
-                                                <span class="text-muted">Không thể xóa dịch vụ đã có</span>
+                                                <form action="{{ route('employee.appointments.remove-service', [$appointment->id, $detail->id]) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa dịch vụ này?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> Xóa
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     @empty

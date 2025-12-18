@@ -154,4 +154,5 @@ Route::prefix('admin/employee')->name('employee.')->middleware(['auth', 'employe
     
     Route::get('appointments/{id}/edit', [EmployeeAppointmentController::class, 'edit'])->name('appointments.edit');
     Route::put('appointments/{id}', [EmployeeAppointmentController::class, 'update'])->name('appointments.update');
+    Route::delete('appointments/{appointmentId}/remove-service/{detailId}', [EmployeeAppointmentController::class, 'removeService'])->name('appointments.remove-service');
 });
