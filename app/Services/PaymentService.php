@@ -224,22 +224,45 @@ class PaymentService
             $VAT = 0;
             $grandTotal = $taxablePrice; // + $VAT;
 
-            // Create Payment Record
-            // Nếu thanh toán tại quầy, vẫn tạo payment record nhưng có thể đánh dấu là chưa thanh toán
-            // Hoặc có thể không tạo payment record cho đến khi thanh toán thực sự
-            // Ở đây tôi sẽ tạo payment record để theo dõi, nhưng status của appointment sẽ là "Chờ xử lý"
-            $payment = Payment::create([
-                'user_id'        => $user->id,
-                'appointment_id' => $appointmentId,
-                'order_id'       => $orderId,
-                'invoice_code'   => $this->generateInvoiceCode(),
-                'price'          => $taxablePrice, // Storing the Net Price after discount
-                // 'VAT'            => $VAT,
-                'total'          => $grandTotal,
-                'created_by'     => $user->name,
-                'payment_type'   => $paymentMethod,
-                'status'         => 'pending',
-            ]);
+            // Check for existing pending payment for this appointment
+            $existingPayment = null;
+            if ($appointmentId) {
+                $existingPayment = Payment::where('appointment_id', $appointmentId)
+                    ->where('status', 'pending')
+                    ->first();
+            }
+
+            if ($existingPayment) {
+                // Update existing pending payment
+                $existingPayment->update([
+                    'user_id'        => $user->id,
+                    'order_id'       => $orderId,
+                    'invoice_code'   => $this->generateInvoiceCode(), // Regenerate for fresh gateway ref
+                    'price'          => $taxablePrice,
+                    'total'          => $grandTotal,
+                    'created_by'     => $user->name,
+                    'payment_type'   => $paymentMethod,
+                    'status'         => 'pending',
+                ]);
+                $payment = $existingPayment;
+            } else {
+                // Create Payment Record
+                // Nếu thanh toán tại quầy, vẫn tạo payment record nhưng có thể đánh dấu là chưa thanh toán
+                // Hoặc có thể không tạo payment record cho đến khi thanh toán thực sự
+                // Ở đây tôi sẽ tạo payment record để theo dõi, nhưng status của appointment sẽ là "Chờ xử lý"
+                $payment = Payment::create([
+                    'user_id'        => $user->id,
+                    'appointment_id' => $appointmentId,
+                    'order_id'       => $orderId,
+                    'invoice_code'   => $this->generateInvoiceCode(),
+                    'price'          => $taxablePrice, // Storing the Net Price after discount
+                    // 'VAT'            => $VAT,
+                    'total'          => $grandTotal,
+                    'created_by'     => $user->name,
+                    'payment_type'   => $paymentMethod,
+                    'status'         => 'pending',
+                ]);
+            }
 
             // Save Promotion Usage (chỉ lưu nếu có promotion được áp dụng)
             if ($appliedPromotion && $appointmentId) {

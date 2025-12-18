@@ -858,6 +858,10 @@ class AppointmentController extends Controller
 
             // Handle VNPAY redirect if needed (though usually Admin takes Cash)
             if ($paymentMethod === 'vnpay') {
+                // Save context for return URL handling
+                \Illuminate\Support\Facades\Session::put('payment_source', 'admin');
+                \Illuminate\Support\Facades\Session::put('payment_appointment_id', $payment->appointment_id);
+
                 $vnpayService = app(\App\Services\VnpayService::class);
                 $vnpUrl = $vnpayService->createPayment($payment->invoice_code, $payment->total);
                 return redirect($vnpUrl);

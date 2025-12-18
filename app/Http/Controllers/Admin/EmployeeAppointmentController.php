@@ -720,7 +720,8 @@ class EmployeeAppointmentController extends Controller
         $appointment = $this->appointmentService->getOne($appointmentId);
 
         // Check Access
-        $hasAccess = $appointment->employee_id == $employee->id ||
+        $hasAccess = $employee->position === 'Receptionist' ||
+            $appointment->employee_id == $employee->id ||
             $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
 
         if (!$hasAccess) {
@@ -855,7 +856,8 @@ class EmployeeAppointmentController extends Controller
                         $payer = $appt->user;
                         
                         // Check Access again for safety
-                        $hasAccess = $appt->employee_id == $employee->id ||
+                        $hasAccess = $employee->position === 'Receptionist' ||
+                            $appt->employee_id == $employee->id ||
                             $appt->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
                         if (!$hasAccess) {
                              return redirect()->route('employee.appointments.index')->with('error', 'Bạn không có quyền thanh toán đơn đặt này.');
@@ -905,6 +907,10 @@ class EmployeeAppointmentController extends Controller
             \Illuminate\Support\Facades\Session::forget('coupon_code');
 
             if ($paymentMethod === 'vnpay') {
+                // Save context for return URL handling
+                \Illuminate\Support\Facades\Session::put('payment_source', 'employee');
+                \Illuminate\Support\Facades\Session::put('payment_appointment_id', $payment->appointment_id);
+
                 $vnpayService = app(\App\Services\VnpayService::class);
                 $vnpUrl = $vnpayService->createPayment($payment->invoice_code, $payment->total);
                 return redirect($vnpUrl);
@@ -947,7 +953,8 @@ class EmployeeAppointmentController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Bạn không phải là nhân viên.');
         }
         // Check Access
-        $hasAccess = $appointment->employee_id == $employee->id ||
+        $hasAccess = $employee->position === 'Receptionist' ||
+            $appointment->employee_id == $employee->id ||
             $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
 
         if (!$hasAccess) {

@@ -88,7 +88,7 @@
                 <i class="fas fa-edit"></i> Chỉnh sửa lịch hẹn
             </a>
             @if($appointment->status !== 'Đã thanh toán' && $appointment->status !== 'Đã hủy')
-            <a href="{{ route('checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-success">
+            <a href="{{ route('admin.appointments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-success">
                 <i class="fas fa-money-bill-wave"></i> Thanh toán
             </a>
             @endif

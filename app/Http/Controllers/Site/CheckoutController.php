@@ -445,6 +445,20 @@ class CheckoutController extends Controller
                         }
                     }
                     
+                    // CHECK SOURCE FOR REDIRECT
+                    $source = Session::get('payment_source');
+                    if ($source === 'employee') {
+                        Session::forget('payment_source');
+                        Session::forget('payment_appointment_id');
+                        return redirect()->route('employee.appointments.index')
+                            ->with('success', 'Thanh toán thành công (VNPAY)!');
+                    } elseif ($source === 'admin') {
+                        Session::forget('payment_source');
+                        Session::forget('payment_appointment_id');
+                        return redirect()->route('admin.appointments.index')
+                            ->with('success', 'Thanh toán thành công (VNPAY)!');
+                    }
+                    
                     return view('admin.payments.success', [
                         'appointmentId' => $payment->appointment_id,
                         'invoiceCode'   => $payment->invoice_code,
@@ -467,7 +481,7 @@ class CheckoutController extends Controller
                         if ($payment->appointment_id) {
                             $appointment = \App\Models\Appointment::find($payment->appointment_id);
                             if ($appointment) {
-                                $appointment->status = 'Chưa thanh toán';
+                                $appointment->status = 'Chưa thanh toán'; // Revert status
                                 $appointment->save();
                             }
                         }
@@ -477,6 +491,32 @@ class CheckoutController extends Controller
                 // Restore cart
                 if (Session::has('cart_backup')) {
                     Session::put('cart', Session::get('cart_backup'));
+                }
+
+                // CHECK SOURCE FOR REDIRECT
+                $source = Session::get('payment_source');
+                if ($source === 'employee') {
+                    $apptId = Session::get('payment_appointment_id');
+                    Session::forget('payment_source');
+                    Session::forget('payment_appointment_id');
+                    
+                    if ($apptId) {
+                        return redirect()->route('employee.appointments.checkout', ['appointment_id' => $apptId])
+                           ->with('error', 'Giao dịch VNPAY không thành công hoặc bị hủy.');
+                    }
+                    return redirect()->route('employee.appointments.index')
+                        ->with('error', 'Giao dịch VNPAY không thành công.');
+                } elseif ($source === 'admin') {
+                    $apptId = Session::get('payment_appointment_id');
+                    Session::forget('payment_source');
+                    Session::forget('payment_appointment_id');
+                    
+                    if ($apptId) {
+                        return redirect()->route('admin.appointments.checkout', ['appointment_id' => $apptId])
+                           ->with('error', 'Giao dịch VNPAY không thành công hoặc bị hủy.');
+                    }
+                    return redirect()->route('admin.appointments.index')
+                        ->with('error', 'Giao dịch VNPAY không thành công.');
                 }
 
                 return redirect()->route('site.payments.checkout')
