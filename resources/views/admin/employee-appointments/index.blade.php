@@ -134,7 +134,7 @@
                                                         <i class="fas fa-eye"></i>
                                                     </a>
 
-                                                    @if($appointment->status == 'Hoàn thành')
+                                                    @if($appointment->status == 'Hoàn thành' || $appointment->status == 'Chưa thanh toán')
                                                         <a href="{{ route('employee.appointments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-success" title="Thanh toán">
                                                             <i class="fas fa-money-bill-wave"></i>
                                                         </a>

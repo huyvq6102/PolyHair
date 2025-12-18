@@ -189,7 +189,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-12">
-                    @if($appointment->status !== 'Đã thanh toán' && $appointment->status !== 'Đã hủy')
+                    @if($appointment->status == 'Hoàn thành' || $appointment->status == 'Chưa thanh toán')
                         <a href="{{ route('employee.appointments.checkout', ['appointment_id' => $appointment->id]) }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-money-bill-wave"></i> Thanh toán
                         </a>
