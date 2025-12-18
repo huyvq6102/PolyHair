@@ -29,6 +29,58 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Kiểm tra xem việc chuyển đổi trạng thái có được phép không.
+     * Không cho phép rollback về trạng thái trước đó.
+     * 
+     * @param string $oldStatus Trạng thái hiện tại
+     * @param string $newStatus Trạng thái mới
+     * @return bool
+     */
+    private function isStatusTransitionAllowed(string $oldStatus, string $newStatus): bool
+    {
+        // Nếu trạng thái không đổi, cho phép
+        if ($oldStatus === $newStatus) {
+            return true;
+        }
+
+        // Định nghĩa thứ tự trạng thái (từ thấp đến cao)
+        $statusOrder = [
+            'Chờ xử lý' => 0,
+            'Chờ xác nhận' => 1,
+            'Đã xác nhận' => 2,
+            'Đang thực hiện' => 3,
+            'Hoàn thành' => 4,
+            'Đã hủy' => -1, // Đặc biệt: có thể ở bất kỳ thời điểm nào
+        ];
+
+        // Nếu trạng thái cũ hoặc mới không có trong danh sách, cho phép (để tránh lỗi)
+        if (!isset($statusOrder[$oldStatus]) || !isset($statusOrder[$newStatus])) {
+            return true;
+        }
+
+        $oldOrder = $statusOrder[$oldStatus];
+        $newOrder = $statusOrder[$newStatus];
+
+        // Nếu chuyển sang "Đã hủy", luôn cho phép (trừ khi đã "Hoàn thành")
+        if ($newStatus === 'Đã hủy') {
+            return $oldStatus !== 'Hoàn thành';
+        }
+
+        // Nếu đang ở "Đã hủy", không cho phép chuyển sang trạng thái khác
+        if ($oldStatus === 'Đã hủy') {
+            return false;
+        }
+
+        // Nếu đã "Hoàn thành", không cho phép chuyển sang trạng thái khác
+        if ($oldStatus === 'Hoàn thành') {
+            return false;
+        }
+
+        // Chỉ cho phép chuyển sang trạng thái có thứ tự cao hơn (tiến về phía trước)
+        return $newOrder > $oldOrder;
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -356,6 +408,15 @@ class AppointmentController extends Controller
                 ]);
             }
 
+            // Kiểm tra không cho rollback trạng thái
+            $oldStatus = $appointment->status;
+            $newStatus = $validated['status'];
+            if (!$this->isStatusTransitionAllowed($oldStatus, $newStatus)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Không thể chuyển trạng thái từ '{$oldStatus}' về '{$newStatus}'. Trạng thái chỉ có thể tiến về phía trước theo trình tự.");
+            }
+
             // Prepare appointment data
             $appointmentData = [
                 'user_id' => $user->id,
@@ -508,7 +569,21 @@ class AppointmentController extends Controller
                 return redirect()->back()->with('error', 'Dịch vụ không thuộc lịch hẹn này!');
             }
             
+            // Kiểm tra số lượng dịch vụ - không cho xóa nếu chỉ còn 1 dịch vụ
+            $serviceCount = $appointment->appointmentDetails->count();
+            if ($serviceCount <= 1) {
+                return redirect()->back()->with('error', 'Không thể xóa dịch vụ cuối cùng! Đơn đặt phải có ít nhất 1 dịch vụ.');
+            }
+            
             $detail->delete();
+            
+            // Update appointment end_at if needed (recalculate based on remaining services)
+            $appointment->refresh();
+            $remainingDuration = $appointment->appointmentDetails->sum('duration');
+            if ($appointment->start_at && $remainingDuration > 0) {
+                $appointment->end_at = \Carbon\Carbon::parse($appointment->start_at)->addMinutes($remainingDuration);
+                $appointment->save();
+            }
             
             return redirect()->route('admin.appointments.edit', $appointmentId)
                 ->with('success', 'Dịch vụ đã được xóa thành công!');
