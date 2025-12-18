@@ -917,6 +917,8 @@ class EmployeeAppointmentController extends Controller
             \Illuminate\Support\Facades\Log::error($e);
             return back()->with('error', 'Thanh toán thất bại: ' . $e->getMessage());
         }
+    }
+
     /**
      * Apply a coupon code from the employee checkout page.
      */
