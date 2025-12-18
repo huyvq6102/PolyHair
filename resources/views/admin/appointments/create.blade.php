@@ -201,6 +201,7 @@
                         <label for="appointment_date">Ngày đặt</label>
                         <input type="date" name="appointment_date" id="appointment_date" 
                                value="{{ old('appointment_date') }}" 
+                               min="{{ \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->format('Y-m-d') }}"
                                class="form-control @error('appointment_date') is-invalid @enderror">
                         @error('appointment_date')
                             <div class="invalid-feedback">{{ $message }}</div>

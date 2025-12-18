@@ -21,7 +21,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label>Khách hàng:</label>
-                    <p class="form-control-plaintext">{{ $appointment->user->name ?? 'N/A' }}</p>
+                    <p class="form-control-plaintext">{{ $appointment->user->name ?? $appointment->guest_name ?? 'N/A' }}</p>
                 </div>
             </div>
             <div class="col-md-6">

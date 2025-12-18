@@ -81,7 +81,7 @@
                         @forelse($appointments as $appointment)
                                         <tr>
                                             <td>{{ $appointment->booking_code ?? 'N/A' }}</td>
-                                            <td>{{ $appointment->user->name ?? 'N/A' }}</td>
+                                            <td>{{ $appointment->user->name ?? $appointment->guest_name ?? 'N/A' }}</td>
                                             <td>{{ $appointment->user->phone ?? 'N/A' }}</td>
                                             <td>
                                                 @if($appointment->appointmentDetails->count() > 0)
