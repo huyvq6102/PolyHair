@@ -174,7 +174,7 @@
                             @forelse($recentAppointments as $appointment)
                                 <tr>
                                     <td>{{ $appointment->booking_code ?? '#' . $appointment->id }}</td>
-                                    <td>{{ $appointment->user->name ?? 'N/A' }}</td>
+                                    <td>{{ $appointment->user->name ?? $appointment->guest_name ?? 'N/A' }}</td>
                                     <td>{{ $appointment->employee->user->name ?? 'Chưa phân công' }}</td>
                                     <td>
                                         <span class="badge badge-{{ $appointment->status == 'Hoàn thành' ? 'success' : ($appointment->status == 'Đã hủy' ? 'danger' : ($appointment->status == 'Đã xác nhận' ? 'info' : 'warning')) }}">
