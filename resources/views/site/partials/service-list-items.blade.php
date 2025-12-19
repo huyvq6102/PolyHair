@@ -130,15 +130,46 @@
 
     // Tạo booking params cho nút đặt lịch
     $bookingParams = [];
+    $hasVariants = false;
+    $variantsData = [];
+    
     if ($item['type'] == 'combo') {
       $bookingParams['combo_id'] = [$item['id']];
     } elseif ($item['type'] == 'service_variant' && isset($item['serviceVariants']) && $item['serviceVariants']->count() > 0) {
-      $defaultVariant = $item['serviceVariants']->where('is_default', true)->first();
-      if (!$defaultVariant) {
-        $defaultVariant = $item['serviceVariants']->first();
+      $hasVariants = true;
+      // Lấy danh sách variants active để hiển thị trong modal
+      $activeVariants = $item['serviceVariants']->where('is_active', true);
+      if ($activeVariants->count() == 0) {
+        $activeVariants = $item['serviceVariants'];
       }
-      if ($defaultVariant) {
-        $bookingParams['service_variants'] = [$defaultVariant->id];
+      foreach ($activeVariants as $variant) {
+        // Load variant attributes if not already loaded
+        if (!$variant->relationLoaded('variantAttributes')) {
+          $variant->load('variantAttributes');
+        }
+        
+        $attributes = [];
+        foreach ($variant->variantAttributes as $attr) {
+          $attributes[] = [
+            'name' => $attr->attribute_name,
+            'value' => $attr->attribute_value,
+          ];
+        }
+        
+        $variantsData[] = [
+          'id' => $variant->id,
+          'name' => $variant->name,
+          'price' => $variant->price,
+          'duration' => $variant->duration,
+          'is_default' => $variant->is_default ?? false,
+          'attributes' => $attributes,
+          'notes' => $variant->notes ?? null,
+        ];
+      }
+      // Nếu chỉ có 1 variant, không cần modal, redirect trực tiếp
+      if ($activeVariants->count() == 1) {
+        $hasVariants = false;
+        $bookingParams['service_variants'] = [$activeVariants->first()->id];
       }
     } elseif ($item['type'] == 'service_single') {
       $bookingParams['service_id'] = [$item['id']];
@@ -169,7 +200,17 @@
       </div>
       <div class="svc-right">
         <span class="svc-rating">5 ★ Đánh giá</span>
-        <a class="svc-book" href="{{ route('site.appointment.create', $bookingParams) }}">Đặt lịch ngay</a>
+        @if($hasVariants)
+          <a class="svc-book select-variant-btn" 
+             href="#" 
+             data-service-name="{{ $item['name'] }}"
+             data-variants="{{ json_encode($variantsData) }}"
+             onclick="event.preventDefault(); openVariantModal(this);">
+            Đặt lịch ngay
+          </a>
+        @else
+          <a class="svc-book" href="{{ route('site.appointment.create', $bookingParams) }}">Đặt lịch ngay</a>
+        @endif
       </div>
     </div>
   </div>

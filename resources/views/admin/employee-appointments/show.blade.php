@@ -50,7 +50,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="font-weight-bold">Số điện thoại:</label>
-                        <p class="form-control-plaintext">{{ $appointment->user->phone ?? 'N/A' }}</p>
+                        <p class="form-control-plaintext">{{ $appointment->user->phone ?? $appointment->guest_phone ?? 'N/A' }}</p>
                     </div>
                 </div>
             </div>
@@ -136,7 +136,6 @@
                         <th>Biến thể</th>
                         <th>Giá</th>
                         <th>Thời lượng (phút)</th>
-                        <th>Trạng thái</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,13 +165,10 @@
                             </td>
                             <td>{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} đ</td>
                             <td>{{ $detail->duration ?? 'N/A' }}</td>
-                            <td>
-                                <span class="badge badge-info">{{ $detail->status ?? 'N/A' }}</span>
-                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center">Chưa có dịch vụ nào</td>
+                            <td colspan="4" class="text-center">Chưa có dịch vụ nào</td>
                         </tr>
                     @endforelse
                 </tbody>

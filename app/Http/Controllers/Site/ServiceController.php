@@ -59,7 +59,7 @@ class ServiceController extends Controller
 
         // Get Services (single or variant)
         if ($filterType === 'all' || $filterType === 'service_single' || $filterType === 'service_variant') {
-            $serviceQuery = Service::with(['category', 'serviceVariants', 'ownedCombos']);
+            $serviceQuery = Service::with(['category', 'serviceVariants.variantAttributes', 'ownedCombos']);
 
             // Filter by service type (single or variant)
             if ($filterType === 'service_single') {
