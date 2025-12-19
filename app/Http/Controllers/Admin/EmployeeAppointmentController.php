@@ -127,9 +127,9 @@ class EmployeeAppointmentController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Get Stylists and Barbers for selection
+        // Chỉ lấy nhân viên có position là Stylist (giống logic admin)
         $staffMembers = \App\Models\Employee::whereHas('user')
-            ->whereIn('position', ['Stylist', 'Barber'])
+            ->where('position', 'Stylist')
             ->with('user')
             ->get()
             ->sortBy('user.name');
@@ -170,7 +170,18 @@ class EmployeeAppointmentController extends Controller
         }
 
         $request->validate([
-            'staff_id' => 'required|exists:employees,id',
+            'staff_id' => [
+                'required',
+                'exists:employees,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $employee = \App\Models\Employee::find($value);
+                        if (!$employee || $employee->position !== 'Stylist') {
+                            $fail('Chỉ có thể chọn nhân viên có vị trí là Stylist.');
+                        }
+                    }
+                },
+            ],
         ]);
 
         try {
@@ -528,8 +539,8 @@ class EmployeeAppointmentController extends Controller
 
         // Receptionist can edit all appointments, no need to check ownership
 
-        // Get all employees (for assignment)
-        $employees = \App\Models\Employee::whereIn('position', ['Stylist', 'Barber'])
+        // Chỉ lấy nhân viên có position là Stylist (giống logic admin)
+        $employees = \App\Models\Employee::where('position', 'Stylist')
             ->with('user')
             ->get();
 
@@ -620,6 +631,14 @@ class EmployeeAppointmentController extends Controller
                 'employee_id' => [
                     'nullable',
                     'exists:employees,id',
+                    function ($attribute, $value, $fail) {
+                        if ($value) {
+                            $employee = \App\Models\Employee::find($value);
+                            if (!$employee || $employee->position !== 'Stylist') {
+                                $fail('Chỉ có thể chọn nhân viên có vị trí là Stylist.');
+                            }
+                        }
+                    },
                 ],
                 'new_services' => 'nullable|array',
                 'new_services.*' => 'nullable|string',
