@@ -92,7 +92,6 @@
                                         <th>Dịch vụ</th>
                                         <th>Giá</th>
                                         <th>Thời lượng (phút)</th>
-                                        <th>Trạng thái</th>
                                         <th>Thao tác</th>
                                     </tr>
                                 </thead>
@@ -111,9 +110,6 @@
                                             <td>{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} đ</td>
                                             <td>{{ $detail->duration ?? 0 }}</td>
                                             <td>
-                                                <span class="badge badge-info">{{ $detail->status ?? 'N/A' }}</span>
-                                            </td>
-                                            <td>
                                                 <form action="{{ route('employee.appointments.remove-service', [$appointment->id, $detail->id]) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa dịch vụ này?');">
                                                     @csrf
                                                     @method('DELETE')
@@ -125,7 +121,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="text-center">Chưa có dịch vụ nào</td>
+                                            <td colspan="4" class="text-center">Chưa có dịch vụ nào</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
