@@ -143,12 +143,27 @@
         $activeVariants = $item['serviceVariants'];
       }
       foreach ($activeVariants as $variant) {
+        // Load variant attributes if not already loaded
+        if (!$variant->relationLoaded('variantAttributes')) {
+          $variant->load('variantAttributes');
+        }
+        
+        $attributes = [];
+        foreach ($variant->variantAttributes as $attr) {
+          $attributes[] = [
+            'name' => $attr->attribute_name,
+            'value' => $attr->attribute_value,
+          ];
+        }
+        
         $variantsData[] = [
           'id' => $variant->id,
           'name' => $variant->name,
           'price' => $variant->price,
           'duration' => $variant->duration,
           'is_default' => $variant->is_default ?? false,
+          'attributes' => $attributes,
+          'notes' => $variant->notes ?? null,
         ];
       }
       // Nếu chỉ có 1 variant, không cần modal, redirect trực tiếp
