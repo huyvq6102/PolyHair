@@ -581,6 +581,17 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #333;
     margin-bottom: 20px;
 }
+
+.variant-option.selected .variant-attr-badge {
+    background: #fff !important;
+    border-color: #d8b26a !important;
+    color: #333 !important;
+}
+
+.variant-option.selected .variant-notes {
+    background: #fff !important;
+    border-left-color: #d8b26a !important;
+}
 </style>
 
 <script>
@@ -605,6 +616,26 @@ function openVariantModal(button) {
         const formattedPrice = new Intl.NumberFormat('vi-VN').format(variant.price) + 'vnđ';
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
         
+        // Build attributes HTML
+        let attributesHTML = '';
+        if (variant.attributes && variant.attributes.length > 0) {
+            attributesHTML = '<div class="variant-attributes" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">';
+            variant.attributes.forEach(attr => {
+                attributesHTML += `<span class="variant-attr-badge" style="display: inline-block; background: #f5f5f5; color: #666; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e5e5;">
+                    <strong style="color: #333;">${attr.name}:</strong> ${attr.value}
+                </span>`;
+            });
+            attributesHTML += '</div>';
+        }
+        
+        // Build notes HTML
+        let notesHTML = '';
+        if (variant.notes) {
+            notesHTML = `<div class="variant-notes" style="margin-top: 8px; font-size: 13px; color: #666; font-style: italic; padding: 8px; background: #f9f9f9; border-radius: 6px; border-left: 3px solid #d8b26a;">
+                ${variant.notes}
+            </div>`;
+        }
+        
         variantOption.innerHTML = `
             <div class="variant-header">
                 <div style="flex: 1;">
@@ -617,6 +648,8 @@ function openVariantModal(button) {
                 </div>
             </div>
             ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
+            ${attributesHTML}
+            ${notesHTML}
         `;
         
         // Click handler
