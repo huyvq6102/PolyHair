@@ -814,11 +814,8 @@ class AppointmentController extends Controller
                 }
             }
 
-            if (!$payer) {
-                // If no payer found (e.g. deleted user), maybe use a dummy or fail?
-                // Let's try to get payer from appointment ID if passed in request, though cart is safer
-                 return redirect()->back()->with('error', 'Không tìm thấy thông tin khách hàng trong đơn hàng.');
-            }
+            // If payer is null, it's a guest or product-only order
+
 
             $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
             $paymentMethod = $request->input('payment_method', 'cash');

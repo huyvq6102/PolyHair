@@ -23,14 +23,14 @@ class PaymentService
     /**
      * Process payment for the given cart and user.
      *
-     * @param \App\Models\User $user
+     * @param \App\Models\User|null $user
      * @param array $cart
      * @param string $paymentMethod
      * @param string|null $couponCode
      * @return \App\Models\Payment
      * @throws Exception
      */
-    public function processPayment($user, $cart, $paymentMethod = 'cash', $couponCode = null)
+    public function processPayment($user = null, $cart, $paymentMethod = 'cash', $couponCode = null)
     {
         DB::beginTransaction();
 
@@ -39,6 +39,10 @@ class PaymentService
             $appointmentId = null;
             $orderId = null;
             $orderItems = [];
+            $userId = $user ? $user->id : null;
+            $userName = $user ? $user->name : 'Khách vãng lai';
+            $userPhone = $user ? $user->phone : '';
+            $userAddress = $user ? ($user->address ?? 'Tại cửa hàng') : 'Tại cửa hàng';
 
             // Note: Currently logic only supports linking payment to the LAST processed appointment.
             // If cart has multiple independent items, this might need review in the future.
@@ -61,7 +65,7 @@ class PaymentService
                     // Nếu thanh toán tại quầy hoặc Online, status = 'Chờ xử lý'
                     $appointmentStatus = in_array($paymentMethod, ['cash', 'momo', 'vnpay']) ? 'Chờ xử lý' : 'Đã thanh toán';
                     $appointment = Appointment::create([
-                        'user_id'    => $user->id,
+                        'user_id'    => $userId,
                         'status'     => $appointmentStatus,
                         'start_at'   => now(),
                         'end_at'     => now()->addMinutes($variant->duration),
@@ -97,7 +101,7 @@ class PaymentService
                         // Nếu thanh toán tại quầy hoặc Online, status = 'Chờ xử lý'
                         $appointmentStatus = in_array($paymentMethod, ['cash', 'momo', 'vnpay']) ? 'Chờ xử lý' : 'Đã thanh toán';
                         $appointment = Appointment::create([
-                            'user_id'    => $user->id,
+                            'user_id'    => $userId,
                             'status'     => $appointmentStatus,
                             'start_at'   => now(),
                             'end_at'     => now()->addMinutes(60), 
@@ -177,10 +181,10 @@ class PaymentService
             // Create Order if there are products
             if (!empty($orderItems)) {
                 $order = Order::create([
-                    'id_user' => $user->id,
+                    'id_user' => $userId, // Can be null now
                     'status' => 'Đã thanh toán',
-                    'address' => $user->address ?? 'Tại cửa hàng', 
-                    'phone' => $user->phone ?? '',
+                    'address' => $userAddress, 
+                    'phone' => $userPhone,
                 ]);
 
                 $orderId = $order->id;
@@ -207,7 +211,7 @@ class PaymentService
                     $couponCode,
                     $cart,
                     $total,
-                    $user->id
+                    $userId
                 );
 
                 if ($result['valid']) {
@@ -235,12 +239,12 @@ class PaymentService
             if ($existingPayment) {
                 // Update existing pending payment
                 $existingPayment->update([
-                    'user_id'        => $user->id,
+                    'user_id'        => $userId,
                     'order_id'       => $orderId,
                     'invoice_code'   => $this->generateInvoiceCode(), // Regenerate for fresh gateway ref
                     'price'          => $taxablePrice,
                     'total'          => $grandTotal,
-                    'created_by'     => $user->name,
+                    'created_by'     => $userName,
                     'payment_type'   => $paymentMethod,
                     'status'         => 'pending',
                 ]);
@@ -251,24 +255,24 @@ class PaymentService
                 // Hoặc có thể không tạo payment record cho đến khi thanh toán thực sự
                 // Ở đây tôi sẽ tạo payment record để theo dõi, nhưng status của appointment sẽ là "Chờ xử lý"
                 $payment = Payment::create([
-                    'user_id'        => $user->id,
+                    'user_id'        => $userId,
                     'appointment_id' => $appointmentId,
                     'order_id'       => $orderId,
                     'invoice_code'   => $this->generateInvoiceCode(),
                     'price'          => $taxablePrice, // Storing the Net Price after discount
                     // 'VAT'            => $VAT,
                     'total'          => $grandTotal,
-                    'created_by'     => $user->name,
+                    'created_by'     => $userName,
                     'payment_type'   => $paymentMethod,
                     'status'         => 'pending',
                 ]);
             }
 
-            // Save Promotion Usage (chỉ lưu nếu có promotion được áp dụng)
-            if ($appliedPromotion && $appointmentId) {
+            // Save Promotion Usage (chỉ lưu nếu có promotion được áp dụng và có user)
+            if ($appliedPromotion && $appointmentId && $userId) {
                 PromotionUsage::create([
                     'promotion_id'   => $appliedPromotion->id,
-                    'user_id'        => $user->id,
+                    'user_id'        => $userId,
                     'appointment_id' => $appointmentId, // Link to the last created/processed appointment
                     'used_at'        => now(),
                 ]);

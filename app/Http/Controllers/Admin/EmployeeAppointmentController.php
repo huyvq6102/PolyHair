@@ -867,9 +867,8 @@ class EmployeeAppointmentController extends Controller
                 }
             }
 
-            if (!$payer) {
-                 return redirect()->back()->with('error', 'Không tìm thấy thông tin khách hàng trong đơn hàng.');
-            }
+            // If payer is null, it's a guest or product-only order
+
 
             $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
             $paymentMethod = $request->input('payment_method', 'cash');
