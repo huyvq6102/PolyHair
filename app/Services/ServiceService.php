@@ -95,7 +95,7 @@ class ServiceService
     public function getMostBooked($limit = 6, $offset = 0)
     {
         // Sử dụng subquery để đếm số lượng booking của mỗi service
-        $services = Service::with(['category', 'serviceVariants', 'ownedCombos'])
+        $services = Service::with(['category', 'serviceVariants.variantAttributes', 'ownedCombos'])
             ->select('services.*')
             ->selectRaw('(
                 SELECT COUNT(*)

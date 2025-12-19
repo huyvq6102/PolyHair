@@ -448,5 +448,319 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- Modal chọn variant -->
+<div class="modal fade" id="variantSelectionModal" tabindex="-1" role="dialog" aria-labelledby="variantSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 600px;">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="border-bottom: 1px solid #e5e5e5; padding: 20px 24px; border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title" id="variantSelectionModalLabel" style="font-size: 20px; font-weight: 700; color: #333; margin: 0;">
+                    Chọn gói dịch vụ
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeVariantModal()" style="border: none; background: none; font-size: 28px; color: #999; opacity: 0.7; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <p class="service-name-display" style="font-size: 18px; color: #333; margin-bottom: 20px; font-weight: 700;"></p>
+                <div class="variants-list" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Variants will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.variant-option {
+    border: 2px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+    position: relative;
+}
+
+.variant-option:hover {
+    border-color: #d8b26a;
+    background: #fefbf5;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(216, 178, 106, 0.12);
+}
+
+.variant-option.selected {
+    border-color: #d8b26a;
+    border-width: 2px;
+    background: #fef9f0;
+    box-shadow: 0 2px 12px rgba(216, 178, 106, 0.2);
+}
+
+.variant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.variant-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    flex: 1;
+    margin-right: 12px;
+    line-height: 1.4;
+}
+
+.variant-price-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.variant-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #BC9321;
+    white-space: nowrap;
+}
+
+.variant-checkmark {
+    display: none;
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+    color: #fff;
+    border-radius: 50%;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.variant-option.selected .variant-checkmark {
+    display: flex;
+}
+
+.variant-duration {
+    font-size: 13px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.variant-default-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+#variantSelectionModal .modal-content {
+    overflow: hidden;
+}
+
+#variantSelectionModal .close:hover {
+    opacity: 1;
+    color: #333;
+}
+
+#variantSelectionModal .modal-header {
+    border-bottom: 1px solid #e5e5e5;
+}
+
+#variantSelectionModal .service-name-display {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.variant-option.selected .variant-attr-badge {
+    background: #fff !important;
+    border-color: #d8b26a !important;
+    color: #333 !important;
+}
+
+.variant-option.selected .variant-notes {
+    background: #fff !important;
+    border-left-color: #d8b26a !important;
+}
+</style>
+
+<script>
+function openVariantModal(button) {
+    const serviceName = button.getAttribute('data-service-name');
+    const variantsJson = button.getAttribute('data-variants');
+    const variants = JSON.parse(variantsJson);
+    
+    // Set service name
+    document.querySelector('.service-name-display').textContent = serviceName;
+    
+    // Clear previous variants
+    const variantsList = document.querySelector('.variants-list');
+    variantsList.innerHTML = '';
+    
+    // Add variants
+    variants.forEach((variant, index) => {
+        const variantOption = document.createElement('div');
+        variantOption.className = 'variant-option';
+        variantOption.dataset.variantId = variant.id;
+        
+        const formattedPrice = new Intl.NumberFormat('vi-VN').format(variant.price) + 'vnđ';
+        const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
+        
+        // Build attributes HTML
+        let attributesHTML = '';
+        if (variant.attributes && variant.attributes.length > 0) {
+            attributesHTML = '<div class="variant-attributes" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">';
+            variant.attributes.forEach(attr => {
+                attributesHTML += `<span class="variant-attr-badge" style="display: inline-block; background: #f5f5f5; color: #666; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e5e5;">
+                    <strong style="color: #333;">${attr.name}:</strong> ${attr.value}
+                </span>`;
+            });
+            attributesHTML += '</div>';
+        }
+        
+        // Build notes HTML
+        let notesHTML = '';
+        if (variant.notes) {
+            notesHTML = `<div class="variant-notes" style="margin-top: 8px; font-size: 13px; color: #666; font-style: italic; padding: 8px; background: #f9f9f9; border-radius: 6px; border-left: 3px solid #d8b26a;">
+                ${variant.notes}
+            </div>`;
+        }
+        
+        variantOption.innerHTML = `
+            <div class="variant-header">
+                <div style="flex: 1;">
+                    <span class="variant-name">${variant.name}</span>
+                    ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
+                </div>
+                <div class="variant-price-wrapper">
+                    <span class="variant-price">${formattedPrice}</span>
+                    <span class="variant-checkmark">✓</span>
+                </div>
+            </div>
+            ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
+            ${attributesHTML}
+            ${notesHTML}
+        `;
+        
+        // Click handler
+        variantOption.addEventListener('click', function() {
+            // Remove selected class from all
+            document.querySelectorAll('.variant-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked
+            this.classList.add('selected');
+            
+            // Enable continue button
+            const continueBtn = document.getElementById('continueBookingBtn');
+            if (continueBtn) {
+                continueBtn.disabled = false;
+                continueBtn.style.opacity = '1';
+                continueBtn.style.cursor = 'pointer';
+            }
+        });
+        
+        variantsList.appendChild(variantOption);
+        
+        // Select first variant by default
+        if (index === 0) {
+            variantOption.click();
+        }
+    });
+    
+    // Show modal
+    $('#variantSelectionModal').modal('show');
+}
+
+// Function to close modal
+function closeVariantModal() {
+    // Try Bootstrap modal first
+    if (typeof jQuery !== 'undefined' && jQuery.fn.modal) {
+        jQuery('#variantSelectionModal').modal('hide');
+    } else {
+        // Fallback: manually hide modal
+        const modal = document.getElementById('variantSelectionModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.classList.remove('modal-open');
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+        }
+    }
+}
+
+// Handle continue button
+document.addEventListener('DOMContentLoaded', function() {
+    // Create continue button if not exists
+    let continueBtn = document.getElementById('continueBookingBtn');
+    if (!continueBtn) {
+        const modalBody = document.querySelector('#variantSelectionModal .modal-body');
+        continueBtn = document.createElement('button');
+        continueBtn.id = 'continueBookingBtn';
+        continueBtn.className = 'btn btn-primary btn-block';
+        continueBtn.style.cssText = 'margin-top: 20px; padding: 12px 24px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); border: none; color: #fff; transition: all 0.3s ease;';
+        continueBtn.textContent = 'Tiếp tục đặt lịch';
+        continueBtn.disabled = true;
+        continueBtn.style.opacity = '0.5';
+        continueBtn.style.cursor = 'not-allowed';
+        
+        continueBtn.addEventListener('click', function() {
+            const selectedVariant = document.querySelector('.variant-option.selected');
+            if (selectedVariant) {
+                const variantId = selectedVariant.dataset.variantId;
+                const bookingUrl = '{{ route("site.appointment.create") }}?service_variants[]=' + variantId;
+                window.location.href = bookingUrl;
+            }
+        });
+        
+        modalBody.appendChild(continueBtn);
+    }
+    
+    // Reset modal when closed
+    $('#variantSelectionModal').on('hidden.bs.modal', function() {
+        document.querySelectorAll('.variant-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        if (continueBtn) {
+            continueBtn.disabled = true;
+            continueBtn.style.opacity = '0.5';
+            continueBtn.style.cursor = 'not-allowed';
+        }
+    });
+    
+    // Add click handler for close button (backup)
+    const closeBtn = document.querySelector('#variantSelectionModal .close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeVariantModal();
+        });
+    }
+    
+    // Close modal when clicking outside (on backdrop)
+    const modal = document.getElementById('variantSelectionModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeVariantModal();
+            }
+        });
+    }
+});
+</script>
 @endsection
 
