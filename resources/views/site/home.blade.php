@@ -153,13 +153,29 @@
 
             // Tạo booking params cho nút đặt lịch
             $bookingParams = [];
+            $hasVariants = false;
+            $variantsData = [];
+            
             if ($service->serviceVariants && $service->serviceVariants->count() > 0) {
-                $defaultVariant = $service->serviceVariants->where('is_default', true)->first();
-                if (!$defaultVariant) {
-                    $defaultVariant = $service->serviceVariants->first();
+                $hasVariants = true;
+                // Lấy danh sách variants active để hiển thị trong modal
+                $activeVariants = $service->serviceVariants->where('is_active', true);
+                if ($activeVariants->count() == 0) {
+                    $activeVariants = $service->serviceVariants;
                 }
-                if ($defaultVariant) {
-                    $bookingParams['service_variants'] = [$defaultVariant->id];
+                foreach ($activeVariants as $variant) {
+                    $variantsData[] = [
+                        'id' => $variant->id,
+                        'name' => $variant->name,
+                        'price' => $variant->price,
+                        'duration' => $variant->duration,
+                        'is_default' => $variant->is_default ?? false,
+                    ];
+                }
+                // Nếu chỉ có 1 variant, không cần modal, redirect trực tiếp
+                if ($activeVariants->count() == 1) {
+                    $hasVariants = false;
+                    $bookingParams['service_variants'] = [$activeVariants->first()->id];
                 }
             } else {
                 $bookingParams['service_id'] = [$service->id];
@@ -189,7 +205,17 @@
               </div>
               <div class="svc-right">
                 <span class="svc-rating">5 ★ Đánh giá</span>
-                <a class="svc-book" href="{{ route('site.appointment.create', $bookingParams) }}">Đặt lịch ngay</a>
+                @if($hasVariants)
+                  <a class="svc-book select-variant-btn" 
+                     href="#" 
+                     data-service-name="{{ $service->name }}"
+                     data-variants="{{ json_encode($variantsData) }}"
+                     onclick="event.preventDefault(); openVariantModal(this);">
+                    Đặt lịch ngay
+                  </a>
+                @else
+                  <a class="svc-book" href="{{ route('site.appointment.create', $bookingParams) }}">Đặt lịch ngay</a>
+                @endif
               </div>
             </div>
           </div>
@@ -204,42 +230,8 @@
   </div>
 </section>
 
-    <!-- 4 FEEDBACK KHÁCH HÀNG -->
-<section class="feedback-section py-5">
-  <div class="container">
-    <div class="d-flex align-items-start mb-3">
-      <span class="fb-bar mr-2"></span>
-      <div>
-        <h3 class="fb-title mb-1 ba-title mb-0">CÙNG SAO TỎA SÁNG</h3>
-        <p class="fb-desc mb-0">Đồng hành cùng Sao - Sẵn sàng tỏa sáng</p>
-      </div>
-    </div>
-
-    <div class="fb-grid">
-      @foreach([
-        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/2.png', 'name' => 'Dương Gió Tai', 'info' => 'Hot tiktoker Việt Nam'],
-        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/8.jpg', 'name' => 'Diễn viên Bình An', 'info' => 'Diễn viên điện ảnh Việt Nam'],
-        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/2.jpg', 'name' => 'Đỗ Kim Phúc', 'info' => 'Nhà Vô Địch tâng bóng nghệ thuật'],
-        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/7.jpg', 'name' => 'Văn Thanh - Hồng Duy', 'info' => 'Đội tuyển Quốc gia Việt Nam'],
-        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/5.jpg', 'name' => 'Hồ Tấn Tài', 'info' => 'Đội tuyển Quốc gia Việt Nam'],
-        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/15.png', 'name' => 'Sơn Đú', 'info' => 'Hot tiktoker Việt Nam'],
-      ] as $item)
-        <div class="fb-card">
-          <div class="fb-img"><img src="{{ $item['img'] }}" alt="Feedback"></div>
-          <div class="fb-meta" style="padding: 12px; display: flex; flex-direction: column; gap: 4px;">
-            <h3 class="fb-name" style="margin: 0 !important; display: block !important; width: 100% !important; font-size: 16px; font-weight: 600; color: #000;">{{ $item['name'] }}</h3>
-            <div style="font-size: 13px; color: #666; display: block !important; width: 100% !important; margin: 0 !important;">
-              {{ $item['info'] }}
-            </div>
-          </div>
-        </div>
-      @endforeach
-    </div>
-
-
-</section>
 <!-- ETRAKY’S STYLIST -->
- <section class="stylist-section py-5">
+<section class="stylist-section py-5">
     <div class="container stylist-wrapper">
         <div class="stylist-left-wrapper">
             <div class="stylist-left">
@@ -288,10 +280,10 @@
                         } else {
                             $employeeImage = $defaultImages[$index] ?? $defaultImages[0];
                         }
-                        
+
                         // Vị trí nhân viên
                         $position = $employee->position ?? '';
-                        
+
                         // Lấy số năm kinh nghiệm
                         $experienceYears = $employee->experience_years ?? 0;
                     @endphp
@@ -317,8 +309,8 @@
                                     @endif
                                 </div>
                             </div>
-                            <a href="{{ route('site.appointment.create', ['employee_id' => $employee->id]) }}" 
-                               class="stylist-book" 
+                            <a href="{{ route('site.appointment.create', ['employee_id' => $employee->id]) }}"
+                               class="stylist-book"
                                style="padding: 8px 12px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #000; font-weight: 700; border-radius: 999px; text-transform: uppercase; font-size: 12px; text-decoration: none; display: inline-block; flex-shrink: 0; white-space: nowrap;">
                                 BookStylist ngay
                             </a>
@@ -332,92 +324,89 @@
 
 <!-- END TRAKY’S STYLIST -->
 
-<!-- BEFORE & AFTER -->
- <section class="before-after-section py-5">
-    <div class="container">
-        <div class="d-flex align-items-center mb-3">
-            <span class="ba-bar mr-2"></span>
-            <h3 class="ba-title mb-0">BEFORE & AFTER</h3>
-        </div>
-        <p class="text-muted mb-4">
-            Chúng ta thường xuyên nghe về sức mạnh của một kiểu tóc đẹp... trải nghiệm sự thay đổi tại đây.
-        </p>
-
-        <div class="ba-slider">
-            <div class="ba-viewport">
-                <div class="ba-track">
-                   @foreach([
-    [
-        'title' => 'Kiểu Tóc UnderCut ngắn',
-        'img'   => 'https://achau.vn/wp-content/uploads/2012/05/988273_406758706091200_754796503_n-390x520.jpg',
-        'video' => 'https://www.youtube.com/watch?v=5VOz__vyEhs',
-    ],
-    [
-        'title' => 'Nhuộm Line + Vuốt ngược',
-        'img'   => 'https://achau.vn/wp-content/uploads/2014/09/11143342_1606728432899767_4218537422100364876_n-390x520.jpg',
-        'video' => 'https://www.youtube.com/watch?v=p87x50eGm8E',
-    ],
-    [
-        'title' => 'Kiểu tóc Top Knot Man',
-        'img'   => 'https://achau.vn/wp-content/uploads/2019/05/29594958_1211960602240074_5705512853582689225_n-390x520.jpg',
-        'video' => 'https://www.youtube.com/watch?v=woF99xC4qkM',
-    ],
-    [
-        'title' => 'Kiểu UnderCut vuốt ngược',
-        'img'   => 'https://achau.vn/wp-content/uploads/2016/03/11193417_135477886790117_6187735647423674751_n-464x618.jpg',
-        'video' => 'https://www.youtube.com/watch?v=nqgvBN-PBwM',
-    ],
-] as $item)
-
-                  <div class="ba-card" data-video="{{ $item['video'] }}">
-    <div class="ba-img">
-        <img src="{{ $item['img'] }}" alt="{{ $item['title'] }}">
+    <!-- 4 FEEDBACK KHÁCH HÀNG -->
+<section class="feedback-section py-5">
+  <div class="container">
+    <div class="d-flex align-items-start mb-3">
+      <span class="fb-bar mr-2"></span>
+      <div>
+        <h3 class="fb-title mb-1 ba-title mb-0">CÙNG SAO TỎA SÁNG</h3>
+        <p class="fb-desc mb-0">Đồng hành cùng Sao - Sẵn sàng tỏa sáng</p>
+      </div>
     </div>
-    <div class="ba-name">{{ $item['title'] }}</div>
-</div>
-@endforeach
 
-                </div>
+    <div class="fb-grid">
+      @foreach([
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/2.png', 'name' => 'Dương Gió Tai', 'info' => 'Hot tiktoker Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/8.jpg', 'name' => 'Diễn viên Bình An', 'info' => 'Diễn viên điện ảnh Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/2.jpg', 'name' => 'Đỗ Kim Phúc', 'info' => 'Nhà Vô Địch tâng bóng nghệ thuật'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/7.jpg', 'name' => 'Văn Thanh - Hồng Duy', 'info' => 'Đội tuyển Quốc gia Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/5.jpg', 'name' => 'Hồ Tấn Tài', 'info' => 'Đội tuyển Quốc gia Việt Nam'],
+        ['img' => 'https://storage.30shine.com/web/v4/images/sao-toa-sang/240422/15.png', 'name' => 'Sơn Đú', 'info' => 'Hot tiktoker Việt Nam'],
+      ] as $item)
+        <div class="fb-card">
+          <div class="fb-img"><img src="{{ $item['img'] }}" alt="Feedback"></div>
+          <div class="fb-meta" style="padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+            <h3 class="fb-name" style="margin: 0 !important; display: block !important; width: 100% !important; font-size: 16px; font-weight: 600; color: #000;">{{ $item['name'] }}</h3>
+            <div style="font-size: 13px; color: #666; display: block !important; width: 100% !important; margin: 0 !important;">
+              {{ $item['info'] }}
+            </div>
+          </div>
+        </div>
+      @endforeach
+    </div>
+
+
+</section>
+
+
+<!-- SHINE COLLECTION -->
+<section class="shine-collection-section py-5">
+    <div class="container">
+        <div class="d-flex align-items-start mb-4">
+            <span class="shine-bar mr-2"></span>
+            <div>
+                <h3 class="shine-title ba-title mb-0">POLY COLLECTION - 'VIBE' NÀO CŨNG TOẢ SÁNG</h3>
             </div>
         </div>
 
-        <!-- <div class="text-center mt-4">
-            <a href="#" class="btn-view-all">Xem tất cả</a>
-        </div> -->
-    </div>
-</section>
-
-
-<!-- San phảm chăm sóc tóc -->
-<section class="product-section py-5">
-  <div class="container">
-    <div class="d-flex align-items-start mb-3">
-      <span class="prod-bar mr-2"></span>
-      <div>
-        <h3 class="prod-title mb-1 ba-title mb-0">SẢN PHẨM CHĂM SÓC TÓC</h3>
-        <p class="prod-desc mb-0">Chúng tôi cam kết đảm bảo sức khỏe và vẻ đẹp tự nhiên của tóc bạn thông qua những sản phẩm chăm sóc tóc chất lượng cao và tiên tiến.</p>
-      </div>
-    </div>
-
-    <div class="prod-criteria mb-3">
-      @foreach([
-        ['name'=>'Giao Hàng Hỏa Tốc','desc'=>'Nhận hàng nhanh chóng trong thời gian ngắn nhất.','img'=>'https://trakyhairsalon.com/thumbs/60x60x2/upload/photo/tc1-42290.png'],
-        ['name'=>'Hoàn Tiền 100%','desc'=>'Cam kết hoàn tiền nếu sản phẩm không đạt yêu cầu.','img'=>'https://trakyhairsalon.com/thumbs/60x60x2/upload/photo/tc2-14340.png'],
-        ['name'=>'Chính Sách Đổi Trả','desc'=>'Đổi trả dễ dàng và nhanh chóng.','img'=>'https://trakyhairsalon.com/thumbs/60x60x2/upload/photo/tc3-80241.png'],
-        ['name'=>'Cam Kết Chính Hãng','desc'=>'Sản phẩm 100% chính hãng, xuất xứ rõ ràng.','img'=>'https://trakyhairsalon.com/thumbs/60x60x2/upload/photo/tc4-60532.png'],
-      ] as $tc)
-      <div class="tc-card">
-        <div class="tc-img"><img src="{{ $tc['img'] }}" alt="{{ $tc['name'] }}"></div>
-        <div class="tc-text">
-          <div class="tc-name">{{ $tc['name'] }}</div>
-          <div class="tc-desc">{{ $tc['desc'] }}</div>
+        <!-- Hero Banner -->
+        <div class="shine-hero-banner">
+            <div class="shine-hero-bg">
+                <img src="https://storage.30shine.com/web/v4/images/shine-bright/shine-bright_mobile.png" alt="SHINE BRIGHT">
+            </div>
+            <div class="shine-cloud cloud-left"></div>
+            <div class="shine-cloud cloud-right"></div>
         </div>
-      </div>
-      @endforeach
+
+        <!-- Collection Cards Grid -->
+        <div class="shine-collections-grid">
+            <div class="shine-collection-card">
+                <div class="shine-card-img">
+                    <img src="https://storage.30shine.com/web/v4/images/shine-collection/mobile/pc_04.jpg" alt="ANH TRAI SAY HAIR">
+                </div>
+        
+            </div>
+
+            <div class="shine-collection-card">
+                <div class="shine-card-img">
+                    <img src="https://storage.30shine.com/web/v4/images/shine-collection/mobile/pc_03.jpg" alt="BTS K-PERM">
+                </div>
+
+            </div>
+
+            <div class="shine-collection-card">
+                <div class="shine-card-img">
+                    <img src="https://storage.30shine.com/web/v4/images/shine-collection/mobile/pc_02.jpg" alt="BAD BOY">
+                </div>
+
+            </div>
+        </div>
     </div>
-  </div>
 </section>
-<!-- End San phảm chăm sóc tóc -->
+
+
+
     <!-- cộng đồng -->
      <section class="community-section py-4">
   <div class="container">
@@ -442,6 +431,287 @@
   </div>
 </section>
     <!-- end cộng đồng -->
+
+<!-- Modal chọn variant -->
+<div class="modal fade" id="variantSelectionModal" tabindex="-1" role="dialog" aria-labelledby="variantSelectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 600px;">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="border-bottom: 1px solid #e5e5e5; padding: 20px 24px; border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title" id="variantSelectionModalLabel" style="font-size: 20px; font-weight: 700; color: #333; margin: 0;">
+                    Chọn gói dịch vụ
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeVariantModal()" style="border: none; background: none; font-size: 28px; color: #999; opacity: 0.7; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <p class="service-name-display" style="font-size: 16px; color: #666; margin-bottom: 20px; font-weight: 600;"></p>
+                <div class="variants-list" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Variants will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.variant-option {
+    border: 2px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+    position: relative;
+}
+
+.variant-option:hover {
+    border-color: #d8b26a;
+    background: #fefbf5;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(216, 178, 106, 0.12);
+}
+
+.variant-option.selected {
+    border-color: #d8b26a;
+    border-width: 2px;
+    background: #fef9f0;
+    box-shadow: 0 2px 12px rgba(216, 178, 106, 0.2);
+}
+
+.variant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.variant-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    flex: 1;
+    margin-right: 12px;
+    line-height: 1.4;
+}
+
+.variant-price-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.variant-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #BC9321;
+    white-space: nowrap;
+}
+
+.variant-checkmark {
+    display: none;
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+    color: #fff;
+    border-radius: 50%;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.variant-option.selected .variant-checkmark {
+    display: flex;
+}
+
+.variant-duration {
+    font-size: 13px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.variant-default-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+#variantSelectionModal .modal-content {
+    overflow: hidden;
+}
+
+#variantSelectionModal .close:hover {
+    opacity: 1;
+    color: #333;
+}
+
+#variantSelectionModal .modal-header {
+    border-bottom: 1px solid #e5e5e5;
+}
+
+#variantSelectionModal .service-name-display {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 20px;
+}
+</style>
+
+<script>
+function openVariantModal(button) {
+    const serviceName = button.getAttribute('data-service-name');
+    const variantsJson = button.getAttribute('data-variants');
+    const variants = JSON.parse(variantsJson);
+    
+    // Set service name
+    document.querySelector('.service-name-display').textContent = serviceName;
+    
+    // Clear previous variants
+    const variantsList = document.querySelector('.variants-list');
+    variantsList.innerHTML = '';
+    
+    // Add variants
+    variants.forEach((variant, index) => {
+        const variantOption = document.createElement('div');
+        variantOption.className = 'variant-option';
+        variantOption.dataset.variantId = variant.id;
+        
+        const formattedPrice = new Intl.NumberFormat('vi-VN').format(variant.price) + 'vnđ';
+        const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
+        
+        variantOption.innerHTML = `
+            <div class="variant-header">
+                <div style="flex: 1;">
+                    <span class="variant-name">${variant.name}</span>
+                    ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
+                </div>
+                <div class="variant-price-wrapper">
+                    <span class="variant-price">${formattedPrice}</span>
+                    <span class="variant-checkmark">✓</span>
+                </div>
+            </div>
+            ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
+        `;
+        
+        // Click handler
+        variantOption.addEventListener('click', function() {
+            // Remove selected class from all
+            document.querySelectorAll('.variant-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked
+            this.classList.add('selected');
+            
+            // Enable continue button
+            const continueBtn = document.getElementById('continueBookingBtn');
+            if (continueBtn) {
+                continueBtn.disabled = false;
+                continueBtn.style.opacity = '1';
+                continueBtn.style.cursor = 'pointer';
+            }
+        });
+        
+        variantsList.appendChild(variantOption);
+        
+        // Select first variant by default
+        if (index === 0) {
+            variantOption.click();
+        }
+    });
+    
+    // Show modal
+    $('#variantSelectionModal').modal('show');
+}
+
+// Function to close modal
+function closeVariantModal() {
+    // Try Bootstrap modal first
+    if (typeof jQuery !== 'undefined' && jQuery.fn.modal) {
+        jQuery('#variantSelectionModal').modal('hide');
+    } else {
+        // Fallback: manually hide modal
+        const modal = document.getElementById('variantSelectionModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.classList.remove('modal-open');
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+        }
+    }
+}
+
+// Handle continue button
+document.addEventListener('DOMContentLoaded', function() {
+    // Create continue button if not exists
+    let continueBtn = document.getElementById('continueBookingBtn');
+    if (!continueBtn) {
+        const modalBody = document.querySelector('#variantSelectionModal .modal-body');
+        continueBtn = document.createElement('button');
+        continueBtn.id = 'continueBookingBtn';
+        continueBtn.className = 'btn btn-primary btn-block';
+        continueBtn.style.cssText = 'margin-top: 20px; padding: 12px 24px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); border: none; color: #fff; transition: all 0.3s ease;';
+        continueBtn.textContent = 'Tiếp tục đặt lịch';
+        continueBtn.disabled = true;
+        continueBtn.style.opacity = '0.5';
+        continueBtn.style.cursor = 'not-allowed';
+        
+        continueBtn.addEventListener('click', function() {
+            const selectedVariant = document.querySelector('.variant-option.selected');
+            if (selectedVariant) {
+                const variantId = selectedVariant.dataset.variantId;
+                const bookingUrl = '{{ route("site.appointment.create") }}?service_variants[]=' + variantId;
+                window.location.href = bookingUrl;
+            }
+        });
+        
+        modalBody.appendChild(continueBtn);
+    }
+    
+    // Reset modal when closed
+    $('#variantSelectionModal').on('hidden.bs.modal', function() {
+        document.querySelectorAll('.variant-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        if (continueBtn) {
+            continueBtn.disabled = true;
+            continueBtn.style.opacity = '0.5';
+            continueBtn.style.cursor = 'not-allowed';
+        }
+    });
+    
+    // Add click handler for close button (backup)
+    const closeBtn = document.querySelector('#variantSelectionModal .close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeVariantModal();
+        });
+    }
+    
+    // Close modal when clicking outside (on backdrop)
+    const modal = document.getElementById('variantSelectionModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeVariantModal();
+            }
+        });
+    }
+});
+</script>
 
 @endsection
 
@@ -485,71 +755,254 @@
 .service-section .container:first-child * {
     border-bottom: none !important;
 }
+
+/* ==================================== SHINE COLLECTION ================================ */
+.shine-collection-section {
+    background: #fff;
+}
+
+.shine-bar {
+    display: inline-block;
+    width: 10px;
+    height: 28px;
+    background: linear-gradient(135deg, #f6d17a 0%, #d8b26a 50%, #8b5a2b 100%);
+    border-radius: 2px;
+}
+
+.shine-title {
+    font-size: 24px;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-left: 8px;
+}
+
+/* Hero Banner */
+.shine-hero-banner {
+    position: relative;
+    width: 100%;
+    border-radius: 24px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shine-hero-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.shine-hero-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.shine-hero-overlay {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    text-align: center;
+}
+
+.shine-hero-top {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 0 20px;
+}
+
+.shine-hero-label {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.shine-hero-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shine-hero-title {
+    font-size: 72px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 30%, #d97706 60%, #b45309 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    margin: 0;
+}
+
+/* Decorative Clouds */
+.shine-cloud {
+    position: absolute;
+    z-index: 3;
+    width: 200px;
+    height: 150px;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.cloud-left {
+    left: -50px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(20px);
+}
+
+.cloud-right {
+    right: -50px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(20px);
+}
+
+/* Collections Grid */
+.shine-collections-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.shine-collection-card {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    aspect-ratio: 1;
+}
+
+.shine-collection-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.shine-card-img {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.shine-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.shine-collection-card:hover .shine-card-img img {
+    transform: scale(1.1);
+}
+
+.shine-card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+    color: #fff;
+}
+
+.shine-card-label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    opacity: 0.9;
+}
+
+.shine-card-title {
+    font-size: 24px;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.shine-card-subtitle {
+    font-size: 16px;
+    font-weight: 400;
+    font-style: italic;
+    margin-top: 4px;
+    opacity: 0.95;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .shine-hero-title {
+        font-size: 48px;
+    }
+
+    .shine-collections-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .shine-hero-top {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+    }
+}
+
+@media (max-width: 767px) {
+    .shine-hero-title {
+        font-size: 36px;
+        letter-spacing: 2px;
+    }
+
+    .shine-collections-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .shine-hero-banner {
+        min-height: 300px;
+    }
+
+    .shine-cloud {
+        width: 120px;
+        height: 90px;
+    }
+
+    .cloud-left {
+        left: -30px;
+    }
+
+    .cloud-right {
+        right: -30px;
+    }
+}
+/* ==================================== End SHINE COLLECTION ================================ */
 </style>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const viewport = document.querySelector('.ba-viewport');
-  const track = document.querySelector('.ba-track');
-  const cards = Array.from(track.children);
-  if (!cards.length) return;
-  const gap = parseFloat(getComputedStyle(track).gap || 0);
-  const step = () => cards[0].getBoundingClientRect().width + gap;
-
-  let autoPlayInterval;
-  let isPaused = false;
-
-  const nextSlide = () => {
-    const maxScroll = track.scrollWidth - viewport.clientWidth;
-    const currentScroll = viewport.scrollLeft;
-
-    if (currentScroll >= maxScroll - 10) {
-      // Nếu đã đến cuối, quay về đầu
-      viewport.scrollTo({ left: 0, behavior: 'smooth' });
-    } else {
-      // Chạy slide tiếp theo
-      viewport.scrollBy({ left: step(), behavior: 'smooth' });
-    }
-  };
-
-  const startAutoPlay = () => {
-    if (autoPlayInterval) clearInterval(autoPlayInterval);
-    autoPlayInterval = setInterval(() => {
-      if (!isPaused) {
-        nextSlide();
-      }
-    }, 4000); // Tự động chạy sau mỗi 4 giây
-  };
-
-  const stopAutoPlay = () => {
-    if (autoPlayInterval) {
-      clearInterval(autoPlayInterval);
-      autoPlayInterval = null;
-    }
-  };
-
-
-  // Tạm dừng khi hover vào slider
-  const slider = document.querySelector('.ba-slider');
-  if (slider) {
-    slider.addEventListener('mouseenter', () => {
-      isPaused = true;
-    });
-    slider.addEventListener('mouseleave', () => {
-      isPaused = false;
-    });
-  }
-
-  // click card mở video
-  cards.forEach(c => c.addEventListener('click', () => {
-    const url = c.dataset.video;
-    if (url) window.open(url, '_blank');
-  }));
-
-  // Bắt đầu auto play
-  startAutoPlay();
-});
-</script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const viewport = document.querySelector('.salon-viewport');
