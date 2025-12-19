@@ -50,7 +50,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="font-weight-bold">Số điện thoại:</label>
-                        <p class="form-control-plaintext">{{ $appointment->user->phone ?? 'N/A' }}</p>
+                        <p class="form-control-plaintext">{{ $appointment->user->phone ?? $appointment->guest_phone ?? 'N/A' }}</p>
                     </div>
                 </div>
             </div>
