@@ -38,7 +38,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="phone">Số điện thoại <span class="text-danger">*</span></label>
-                        <input type="text" name="phone" id="phone" value="{{ old('phone', $appointment->user->phone ?? $appointment->guest_phone ?? '') }}" 
+                        <input type="text" name="phone" id="phone" value="{{ old('phone', $appointment->user->phone ?? '') }}" 
                                class="form-control @error('phone') is-invalid @enderror" 
                                placeholder="Nhập số điện thoại" required>
                         @error('phone')
@@ -54,7 +54,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" name="email" id="email" value="{{ old('email', $appointment->user->email ?? $appointment->guest_email ?? '') }}" 
+                        <input type="email" name="email" id="email" value="{{ old('email', $appointment->user->email ?? '') }}" 
                                class="form-control @error('email') is-invalid @enderror" 
                                placeholder="Nhập email">
                         @error('email')

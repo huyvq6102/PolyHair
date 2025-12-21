@@ -1129,7 +1129,6 @@ class AppointmentController extends Controller
             'user',
             'employee.user',
             'appointmentDetails.serviceVariant.service',
-            'appointmentDetails.serviceVariant.variantAttributes',
             'appointmentDetails.combo',
             'promotionUsages.promotion'
         ])->findOrFail($id);
@@ -2119,22 +2118,44 @@ class AppointmentController extends Controller
             }
 
             // Kiểm tra xem có thể hủy không
-            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 giây
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 10 giây
             if ($appointment->status !== 'Chờ xử lý') {
                 if ($appointment->status === 'Đã xác nhận') {
-                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 30 giây kể từ khi đặt.');
+                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 10 giây kể từ khi đặt.');
                 }
                 return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
             }
 
-            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 giây kể từ khi đặt
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 10 giây kể từ khi đặt
             $createdAt = \Carbon\Carbon::parse($appointment->created_at);
             $now = now();
             $secondsSinceCreated = $createdAt->diffInSeconds($now);
 
-            if ($secondsSinceCreated > 30) {
-                // Không tự động xác nhận trong hàm hủy - chỉ trả về lỗi
-                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 giây kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+            if ($secondsSinceCreated > 10) {
+                // Tự động chuyển trạng thái nếu đã quá 10 giây nhưng vẫn còn "Chờ xử lý"
+                if ($appointment->status === 'Chờ xử lý') {
+                    $appointment->update(['status' => 'Đã xác nhận']);
+                    
+                    // Log status change
+                    \App\Models\AppointmentLog::create([
+                        'appointment_id' => $appointment->id,
+                        'status_from' => 'Chờ xử lý',
+                        'status_to' => 'Đã xác nhận',
+                        'modified_by' => null, // Tự động xác nhận
+                    ]);
+                    
+                    // Broadcast status update
+                    $appointment->refresh();
+                    $appointment->load([
+                        'user',
+                        'employee.user',
+                        'appointmentDetails.serviceVariant.service',
+                        'appointmentDetails.combo'
+                    ]);
+                    event(new \App\Events\AppointmentStatusUpdated($appointment));
+                }
+                
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 10 giây kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
             }
 
             // Lấy lý do hủy từ form hoặc dùng mặc định

@@ -189,6 +189,12 @@
             @endif
         </div>
         
+        <p>Nếu bạn muốn đặt lịch mới, vui lòng truy cập website của chúng tôi để đặt lịch lại.</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ route('site.appointment.create') }}" class="button">Đặt lịch mới</a>
+        </div>
+        
         <p>Nếu bạn có bất kỳ câu hỏi nào hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi qua số điện thoại: <strong>+10 367 267 2678</strong></p>
     </div>
     

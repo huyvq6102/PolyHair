@@ -22,7 +22,7 @@
         .reviews-title {
             font-size: 32px;
             font-weight: 600;
-            color: #d8b26a;
+            color: #4A3600;
             margin-bottom: 10px;
         }
 
@@ -176,17 +176,6 @@
             100% {
                 box-shadow: 0 4px 20px rgba(188, 147, 33, 0.3);
             }
-        }
-        
-        /* Custom style for search button */
-        .filter-section .btn-primary {
-            background-color: #d8b26a;
-            border-color: #d8b26a;
-        }
-        
-        .filter-section .btn-primary:hover {
-            background-color: #c9a055;
-            border-color: #c9a055;
         }
     </style>
 @endpush

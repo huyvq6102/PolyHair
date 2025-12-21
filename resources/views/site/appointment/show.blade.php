@@ -11,238 +11,12 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(139, 90, 43, 0.3);
     }
-    
-    .appointment-header-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 25px 30px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        margin-bottom: 25px;
-    }
-    
-    .appointment-title {
-        color: #d8b26a !important;
-        font-size: 1.8rem;
-        font-weight: 700;
-        margin-bottom: 0;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    
-    .appointment-title-icon {
-        width: 40px;
-        height: 40px;
-        background: #ffc107;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 20px;
-    }
-    
-    .appointment-id {
-        margin-top: 15px;
-        font-size: 1rem;
-        color: #6c757d;
-    }
-    
-    .appointment-id strong {
-        color: #667eea;
-        font-size: 1.1em;
-        font-weight: 600;
-    }
-    
-    .two-column-layout {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 25px;
-        margin-top: 0;
-    }
-    
-    .info-card, .services-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    .card-title {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #212529;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .card-title-icon {
-        width: 32px;
-        height: 32px;
-        background: #ff9800;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 16px;
-    }
-    
-    .info-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .info-row:last-child {
-        border-bottom: none;
-    }
-    
-    .info-label {
-        font-weight: 500;
-        color: #495057;
-        font-size: 0.95rem;
-    }
-    
-    .info-value {
-        color: #212529;
-        font-size: 0.95rem;
-        font-weight: 500;
-        text-align: right;
-    }
-    
-    .status-badge {
-        background-color: #ffc107;
-        color: #fff;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 13px;
-        display: inline-block;
-    }
-    
-    .service-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 15px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        border: 1px solid #e9ecef;
-    }
-    
-    .service-item:last-child {
-        margin-bottom: 0;
-    }
-    
-    .service-info {
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .service-name {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 8px;
-        line-height: 1.4;
-        word-wrap: break-word;
-    }
-    
-    .service-tags {
-        display: flex;
-        gap: 12px;
-        font-size: 12px;
-        color: #999;
-    }
-    
-    .service-tag {
-        font-size: 11px;
-        color: #666;
-        background: #e9ecef;
-        padding: 3px 8px;
-        border-radius: 12px;
-        font-weight: 500;
-    }
-    
-    .service-price-row {
-        display: flex;
-        align-items: baseline;
-        margin-left: 12px;
-        flex-shrink: 0;
-    }
-    
-    .service-price {
-        font-size: 18px;
-        font-weight: 700;
-        color: #333;
-    }
-    
-    .pricing-summary {
-        margin-top: 25px;
-        padding: 20px;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        background: #ffffff;
-    }
-    
-    .pricing-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        color: #212529;
-        font-size: 0.95rem;
-    }
-    
-    .pricing-row.discount {
-        color: #212529;
-    }
-    
-    .pricing-row.discount .pricing-value {
-        color: #dc3545;
-    }
-    
-    .pricing-row.total {
-        border-top: 1px solid #e0e0e0;
-        margin-top: 10px;
-        padding-top: 15px;
-        font-weight: 700;
-        font-size: 1rem;
-    }
-    
-    .pricing-label {
-        font-weight: 500;
-    }
-    
-    .pricing-value {
-        font-weight: 600;
-    }
-    
-    .appointment-detail-section {
-        padding-top: 120px;
-    }
-    
-    @media (max-width: 992px) {
-        .two-column-layout {
-            grid-template-columns: 1fr;
-        }
-        
-        .appointment-detail-section {
-            padding-top: 100px;
-        }
-    }
 </style>
 @endpush
 
 @section('content')
-<div class="appointment-detail-section" style="min-height: 80vh;">
-    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 30px 15px;">
+<div class="appointment-detail-section" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+    <div class="container" style="max-width: 900px; margin: 0 auto;">
         @if(!auth()->check())
         <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 30px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 20px 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
@@ -258,40 +32,35 @@
         </div>
         @endif
         
-        <div class="appointment-header-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="appointment-title">
-                        <span class="appointment-title-icon">
-                            <i class="fa fa-check"></i>
-                        </span>
-                        Chi tiết lịch đặt
-                    </h1>
-                    <div class="appointment-id">
-                        @if($appointment->booking_code)
-                            Mã đơn đặt: <strong>{{ $appointment->booking_code }}</strong>
-                        @else
-                            Mã lịch đặt: #{{ str_pad($appointment->id, 6, '0', STR_PAD_LEFT) }}
-                        @endif
-                    </div>
-                </div>
+        <div class="appointment-header">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="appointment-title mb-0">
+                    <i class="fa fa-calendar-check-o"></i>
+                    Chi tiết lịch đặt
+                </h1>
                 @auth
                     <a href="{{ route('site.customers.show', auth()->id()) }}?tab=history" class="btn btn-secondary">
                         <i class="fa fa-arrow-left"></i> Quay lại
                     </a>
                 @endauth
             </div>
+            <div class="appointment-id">
+                @if($appointment->booking_code)
+                    Mã đơn đặt: <strong style="color: #667eea; font-size: 1.1em;">{{ $appointment->booking_code }}</strong>
+                @else
+                    Mã lịch đặt: #{{ str_pad($appointment->id, 6, '0', STR_PAD_LEFT) }}
+                @endif
+            </div>
         </div>
         
-        <div class="two-column-layout">
-            <!-- Cột trái: Thông tin lịch đặt -->
-            <div class="info-card">
-                <h3 class="card-title">
-                    <span class="card-title-icon">
-                        <i class="fa fa-info"></i>
-                    </span>
-                    Thông tin lịch đặt
-                </h3>
+        <div class="appointment-content" style="display: flex; justify-content: center;">
+            <div style="width: 100%; max-width: 800px;">
+                <!-- Thông tin lịch đặt -->
+                <div class="appointment-card">
+                    <h3 class="card-title">
+                        <i class="fa fa-info-circle"></i>
+                        Thông tin lịch đặt
+                    </h3>
                     
                     <div class="info-row">
                         <span class="info-label">Trạng thái:</span>
@@ -371,101 +140,163 @@
                     </div>
                     @endif
                     
+                    @if($appointment->user)
                     <div class="info-row">
                         <span class="info-label">Khách hàng:</span>
                         <span class="info-value">
-                            {{ $appointment->user ? $appointment->user->name : ($appointment->guest_name ?? 'N/A') }}
+                            {{ $appointment->user->name }}
                         </span>
                     </div>
                     
                     <div class="info-row">
                         <span class="info-label">Số điện thoại:</span>
                         <span class="info-value">
-                            {{ $appointment->user ? ($appointment->user->phone ?? 'N/A') : ($appointment->guest_phone ?? 'N/A') }}
+                            {{ $appointment->user->phone ?? 'N/A' }}
                         </span>
                     </div>
                     
+                    @if($appointment->user->email)
                     <div class="info-row">
                         <span class="info-label">Email:</span>
                         <span class="info-value">
-                            {{ $appointment->user ? ($appointment->user->email ?? 'N/A') : ($appointment->guest_email ?? 'N/A') }}
+                            {{ $appointment->user->email }}
                         </span>
                     </div>
+                    @endif
+                    @endif
                     
                     @if($appointment->note)
-                    <div class="info-row">
-                        <span class="info-label">Ghi chú:</span>
-                        <span class="info-value" style="text-align: left;">{{ $appointment->note }}</span>
+                    <div class="note-box">
+                        <div class="note-label">Ghi chú:</div>
+                        <div class="note-text">{{ $appointment->note }}</div>
                     </div>
                     @endif
-            </div>
-            
-            <!-- Cột phải: Danh sách dịch vụ -->
-            @if($appointment->appointmentDetails->count() > 0)
-            <div class="services-card">
-                <h3 class="card-title">
-                    <span class="card-title-icon">
+                </div>
+                
+                <!-- Danh sách dịch vụ -->
+                @if($appointment->appointmentDetails->count() > 0)
+                <div class="appointment-card" style="margin-top: 30px;">
+                    <h3 class="card-title">
                         <i class="fa fa-scissors"></i>
-                    </span>
-                    Danh sách dịch vụ
-                </h3>
-                
-                <div class="service-list">
-                    @foreach($appointment->appointmentDetails as $detail)
-                        <div class="service-item">
-                            <div class="service-info">
-                                <div class="service-name">
-                                    @if($detail->serviceVariant)
-                                        {{ $detail->serviceVariant->name }}
-                                    @elseif($detail->combo_id && $detail->combo)
-                                        {{ $detail->combo->name }}
-                                    @elseif($detail->notes)
-                                        {{ $detail->notes }}
-                                    @else
-                                        Dịch vụ không xác định
+                        Danh sách dịch vụ
+                    </h3>
+                    
+                    <div class="service-list">
+                        @foreach($appointment->appointmentDetails as $detail)
+                            @php
+                                $serviceImage = null;
+                                $serviceId = null;
+                                $serviceName = '';
+                                $serviceUrl = '#';
+                                
+                                if ($detail->serviceVariant && $detail->serviceVariant->service) {
+                                    $serviceImage = $detail->serviceVariant->service->image;
+                                    $serviceId = $detail->serviceVariant->service->id;
+                                    $serviceName = $detail->serviceVariant->service->name . ' - ' . $detail->serviceVariant->name;
+                                    $serviceUrl = route('site.services.show', $serviceId);
+                                } elseif ($detail->combo_id && $detail->combo) {
+                                    $serviceImage = $detail->combo->image;
+                                    $serviceId = $detail->combo->id;
+                                    $serviceName = $detail->combo->name;
+                                    // Combo có thể không có route riêng, dùng service route nếu có
+                                    $serviceUrl = route('site.services.show', $serviceId);
+                                } elseif ($detail->notes) {
+                                    // Tìm service đơn theo tên
+                                    $singleService = \App\Models\Service::where('name', $detail->notes)
+                                        ->whereDoesntHave('serviceVariants')
+                                        ->first();
+                                    if ($singleService) {
+                                        $serviceImage = $singleService->image;
+                                        $serviceId = $singleService->id;
+                                        $serviceName = $singleService->name;
+                                        $serviceUrl = route('site.services.show', $serviceId);
+                                    }
+                                }
+                                
+                                // Ảnh được lưu ở legacy/images/products/
+                                $imageUrl = $serviceImage 
+                                    ? asset('legacy/images/products/' . $serviceImage) 
+                                    : asset('legacy/images/products/default.jpg');
+                                
+                                // Lấy thuộc tính của service variant
+                                $attributes = [];
+                                if ($detail->serviceVariant && $detail->serviceVariant->variantAttributes) {
+                                    foreach ($detail->serviceVariant->variantAttributes as $attr) {
+                                        $attributes[] = [
+                                            'name' => $attr->attribute_name,
+                                            'value' => $attr->attribute_value
+                                        ];
+                                    }
+                                }
+                            @endphp
+                            <a href="{{ $serviceUrl }}" class="service-item-link" style="text-decoration: none; color: inherit;">
+                                <div class="service-item" 
+                                     data-service-id="{{ $serviceId }}"
+                                     data-service-type="{{ $detail->serviceVariant ? 'variant' : ($detail->combo_id ? 'combo' : 'single') }}">
+                                    <div class="service-info">
+                                        <div class="service-name">
+                                            @if($detail->serviceVariant && $detail->serviceVariant->service)
+                                                {{ $detail->serviceVariant->service->name }} - {{ $detail->serviceVariant->name }}
+                                            @elseif($detail->combo_id && $detail->combo)
+                                                Combo: {{ $detail->combo->name }}
+                                            @elseif($detail->notes)
+                                                {{ $detail->notes }}
+                                            @else
+                                                Dịch vụ không xác định
+                                            @endif
+                                        </div>
+                                        <div class="service-details">
+                                            @if($detail->serviceVariant && $detail->serviceVariant->service)
+                                                Danh mục: {{ $detail->serviceVariant->service->name }}
+                                            @elseif($detail->combo_id && $detail->combo)
+                                                Loại: Combo
+                                            @elseif($detail->notes)
+                                                Loại: Dịch vụ đơn
+                                            @endif
+                                            @if($detail->duration)
+                                                | Thời lượng: {{ $detail->duration }} phút
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="service-price">
+                                        {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ
+                                    </div>
+                                    @if($serviceImage || count($attributes) > 0)
+                                    <div class="service-tooltip">
+                                        @if($serviceImage)
+                                        <div class="tooltip-image">
+                                            <img src="{{ $imageUrl }}" alt="{{ $serviceName }}" onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}'">
+                                        </div>
+                                        @endif
+                                        @if(count($attributes) > 0)
+                                        <div class="tooltip-attributes">
+                                            <div class="tooltip-attributes-title">Thuộc tính:</div>
+                                            <div class="tooltip-attributes-list">
+                                                @foreach($attributes as $attr)
+                                                <span class="attribute-badge">
+                                                    {{ $attr['name'] }}: {{ $attr['value'] }}
+                                                </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                        @endif
+                                    </div>
                                     @endif
                                 </div>
-                                <div class="service-tags">
-                                    @if($detail->serviceVariant && $detail->serviceVariant->variantAttributes)
-                                        @foreach($detail->serviceVariant->variantAttributes as $attr)
-                                            <span class="service-tag">{{ $attr->attribute_name }}: {{ $attr->attribute_value }}</span>
-                                        @endforeach
-                                    @endif
-                                    @if($detail->duration)
-                                        <span class="service-tag">{{ $detail->duration }} phút</span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="service-price-row">
-                                <span class="service-price">{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} ₫</span>
-                            </div>
+                            </a>
+                        @endforeach
+                    </div>
+                    
+                    <div class="total-section">
+                        <div class="total-row">
+                            <span class="total-label">Tổng cộng:</span>
+                            <span class="total-value">{{ number_format($totalPrice, 0, ',', '.') }}đ</span>
                         </div>
-                    @endforeach
+                    </div>
                 </div>
+                @endif
                 
-                <!-- Phần tổng tiền -->
-                <div class="pricing-summary">
-                    <div class="pricing-row">
-                        <span class="pricing-label">Tổng giá gốc:</span>
-                        <span class="pricing-value">{{ number_format($totalOriginalPrice, 0, ',', '.') }} ₫</span>
-                    </div>
-                    @if($totalDiscount > 0)
-                    <div class="pricing-row discount">
-                        <span class="pricing-label">Giảm giá tự động (từng dịch vụ):</span>
-                        <span class="pricing-value">-{{ number_format($totalDiscount, 0, ',', '.') }} ₫</span>
-                    </div>
-                    <div class="pricing-row discount">
-                        <span class="pricing-label">Tổng giảm giá:</span>
-                        <span class="pricing-value">-{{ number_format($totalDiscount, 0, ',', '.') }} ₫</span>
-                    </div>
-                    @endif
-                    <div class="pricing-row total">
-                        <span class="pricing-label">Tổng cộng:</span>
-                        <span class="pricing-value">{{ number_format($totalPrice, 0, ',', '.') }} ₫</span>
-                    </div>
-                </div>
             </div>
-            @endif
         </div>
     </div>
 </div>

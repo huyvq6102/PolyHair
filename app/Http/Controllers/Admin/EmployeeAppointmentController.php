@@ -669,18 +669,11 @@ class EmployeeAppointmentController extends Controller
 
             // Prepare appointment data
             $appointmentData = [
-                'user_id' => $customer ? $customer->id : $appointment->user_id,
+                'user_id' => $customer->id,
                 'employee_id' => $validated['employee_id'] ?? $appointment->employee_id,
                 'status' => $validated['status'],
                 'note' => $validated['note'] ?? null,
             ];
-            
-            // Nếu là guest appointment (không có user), cập nhật guest info
-            if (!$customer) {
-                $appointmentData['guest_name'] = $validated['name'];
-                $appointmentData['guest_phone'] = $validated['phone'];
-                $appointmentData['guest_email'] = $validated['email'] ?? null;
-            }
 
             // Prepare new services data if any
             $newServiceVariantData = [];
