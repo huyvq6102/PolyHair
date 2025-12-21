@@ -129,6 +129,12 @@ class PaymentController extends Controller
      */
     public function destroy($id)
     {
+        // Prevent employees from deleting payments
+        if (auth()->user()->isEmployee()) {
+            return redirect()->route('admin.payments.index')
+                ->with('error', 'Bạn không có quyền xóa hóa đơn.');
+        }
+
         try {
             $payment = Payment::findOrFail($id);
             $payment->delete();

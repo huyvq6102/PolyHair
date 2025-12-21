@@ -13,6 +13,7 @@
             <button onclick="window.print()" class="btn btn-primary btn-sm">
                 <i class="fas fa-print"></i> In hóa đơn
             </button>
+            @if(!auth()->user()->isEmployee())
             <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa hóa đơn này? Hành động này không thể hoàn tác!');">
                 @csrf
                 @method('DELETE')
@@ -20,6 +21,7 @@
                     <i class="fas fa-trash"></i> Xóa hóa đơn
                 </button>
             </form>
+            @endif
         </div>
     </div>
     <div class="card-body" id="printableArea">

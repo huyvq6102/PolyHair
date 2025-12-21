@@ -146,6 +146,7 @@
                             <a href="{{ route('admin.payments.show', $payment->id) }}" class="btn btn-info btn-sm" title="Xem chi tiết">
                                 <i class="fas fa-eye"></i> Xem
                             </a>
+                            @if(!auth()->user()->isEmployee())
                             <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa hóa đơn này? Hành động này không thể hoàn tác!');">
                                 @csrf
                                 @method('DELETE')
@@ -153,6 +154,7 @@
                                     <i class="fas fa-trash"></i> Xóa
                                 </button>
                             </form>
+                            @endif
                         </td>
                     </tr>
                     @endforeach

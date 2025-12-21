@@ -56,6 +56,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
     Route::resource('promotions', PromotionController::class);
 
+    // Payments (Accessible by Staff)
+    Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
+    Route::resource('payments', PaymentController::class);
+
     // Protected Admin Routes
     Route::middleware(['admin'])->group(function () {
 
@@ -103,10 +107,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
         Route::delete('services/{id}/force-delete', [ServiceController::class, 'forceDelete'])->name('services.force-delete');
         Route::resource('services', ServiceController::class);
         Route::resource('service-categories', ServiceCategoryController::class);
-
-        // Payments
-        Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
-        Route::resource('payments', PaymentController::class);
 
         Route::resource('orders', OrderController::class);
 

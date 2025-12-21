@@ -264,22 +264,82 @@
         border-radius: 8px;
         padding: 20px;
         margin-top: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         box-shadow: 0 4px 12px rgba(74, 54, 0, 0.2);
     }
     
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: background-color 0.2s;
+    }
+    
+    .total-row.total-row-original {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .total-row.total-row-service-discount {
+        background-color: rgba(33, 150, 243, 0.3); /* Light blue */
+    }
+    
+    .total-row.total-row-order-discount {
+        background-color: rgba(255, 193, 7, 0.3); /* Light yellow */
+    }
+    
+    .total-row.total-row-total-discount {
+        background-color: rgba(13, 110, 253, 0.3); /* Light blue */
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        margin-top: 8px;
+        padding-top: 12px;
+    }
+    
+    .total-row.total-row-final {
+        background-color: rgba(40, 167, 69, 0.3); /* Light green */
+        border-top: 2px solid rgba(255, 255, 255, 0.3);
+        margin-top: 8px;
+        padding-top: 12px;
+    }
+    
+    .total-row:last-child {
+        margin-bottom: 0;
+    }
+    
     .total-label {
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 500;
         color: white;
     }
     
     .total-amount {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 700;
         color: white;
+    }
+    
+    .total-row.total-row-final .total-label {
+        font-size: 18px;
+        font-weight: 600;
+    }
+    
+    .total-row.total-row-final .total-amount {
+        font-size: 22px;
+        font-weight: 700;
+    }
+    
+    .discount-amount {
+        color: #ffc107;
+        font-weight: 600;
+    }
+    
+    .promotion-name {
+        font-size: 11px;
+        color: rgba(255,255,255,0.8);
+        margin-top: 4px;
+        text-transform: uppercase;
+        font-weight: 500;
     }
     
     /* Cancel Button */
@@ -494,8 +554,78 @@
                         
                         <!-- Total Section -->
                         <div class="total-section">
-                            <span class="total-label">Tổng cộng:</span>
-                            <span class="total-amount">{{ number_format($totalAfterDiscount, 0, ',', '.') }} ₫</span>
+                            @php
+                                // Tính toán các giá trị để hiển thị
+                                // Tổng tiền = giá gốc của tất cả dịch vụ
+                                $displayTotalPrice = $totalOriginalPrice ?? $subtotal ?? 0;
+                                
+                                // Số tiền đã giảm = tổng tất cả các khoản giảm giá
+                                $displayDiscount = $totalDiscount ?? 0;
+                                
+                                // Số tiền cần thanh toán = tổng sau khi giảm giá
+                                $displayTotalAfterDiscount = $totalAfterDiscount ?? $subtotal ?? 0;
+                                
+                                // Nếu có payment, sử dụng giá từ payment để đảm bảo chính xác
+                                if (isset($payment) && $payment) {
+                                    $displayTotalAfterDiscount = $payment->total ?? $displayTotalAfterDiscount;
+                                }
+                            @endphp
+                            
+                            <!-- Hiển thị tổng giá gốc -->
+                            <div class="total-row total-row-original">
+                                <span class="total-label">Tổng giá gốc:</span>
+                                <span class="total-amount">{{ number_format($displayTotalPrice, 0, ',', '.') }} ₫</span>
+                            </div>
+                            
+                            @if($serviceLevelDiscount > 0)
+                            <!-- Giảm giá tự động từ service-level -->
+                            <div class="total-row total-row-service-discount">
+                                <div style="flex: 1;">
+                                    <span class="total-label">Giảm giá tự động (từng dịch vụ):</span>
+                                </div>
+                                <span class="total-amount discount-amount">-{{ number_format($serviceLevelDiscount, 0, ',', '.') }} ₫</span>
+                            </div>
+                            @endif
+                            
+                            @if($orderLevelPromotionAmount > 0)
+                                @php
+                                    // Lấy promotion từ appointment nếu chưa có
+                                    if (!isset($appliedPromotion) || !$appliedPromotion) {
+                                        $appliedPromotion = $appointment->promotionUsages->first()->promotion ?? null;
+                                    }
+                                @endphp
+                                @if($appliedPromotion)
+                                <!-- Giảm giá từ mã khuyến mãi -->
+                                <div class="total-row total-row-order-discount">
+                                    <div style="flex: 1;">
+                                        <span class="total-label">Giảm giá ({{ $appliedPromotion->code ?? 'Mã KM' }}):</span>
+                                        @if($appliedPromotion->name)
+                                            <div class="promotion-name">{{ strtoupper($appliedPromotion->name) }}</div>
+                                        @endif
+                                    </div>
+                                    <span class="total-amount discount-amount">-{{ number_format($orderLevelPromotionAmount, 0, ',', '.') }} ₫</span>
+                                </div>
+                                @elseif($orderLevelPromotionAmount > 0)
+                                <div class="total-row total-row-order-discount">
+                                    <span class="total-label">Giảm giá (Mã KM):</span>
+                                    <span class="total-amount discount-amount">-{{ number_format($orderLevelPromotionAmount, 0, ',', '.') }} ₫</span>
+                                </div>
+                                @endif
+                            @endif
+                            
+                            @if($displayDiscount > 0)
+                            <!-- Tổng giảm giá -->
+                            <div class="total-row total-row-total-discount">
+                                <span class="total-label">Tổng giảm giá:</span>
+                                <span class="total-amount discount-amount">-{{ number_format($displayDiscount, 0, ',', '.') }} ₫</span>
+                            </div>
+                            @endif
+                            
+                            <!-- Số tiền cần thanh toán -->
+                            <div class="total-row total-row-final">
+                                <span class="total-label">Tổng cộng:</span>
+                                <span class="total-amount">{{ number_format($displayTotalAfterDiscount, 0, ',', '.') }} ₫</span>
+                            </div>
                         </div>
                     @else
                         <p style="color: #999; text-align: center; padding: 20px;">Chưa có dịch vụ nào</p>

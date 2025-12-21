@@ -307,154 +307,162 @@
                                     </p>
                                 </div>
                             </div>
+<div class="tab-pane fade {{ request()->get('tab') === 'history' ? 'show active' : '' }}" id="history" role="tabpanel">
+    <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
 
-                            <!-- Tab Lịch sử đặt lịch -->
-                            <div class="tab-pane fade {{ request()->get('tab') === 'history' ? 'show active' : '' }}"
-                                id="history" role="tabpanel">
-                                <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
+    @php
+        // Danh sách các trạng thái theo thứ tự: Chờ xử lý -> Đã xác nhận -> Đang thực hiện -> Hoàn thành -> Đã thanh toán -> Đã hủy [cite: 44]
+        // Luôn hiển thị tất cả các trạng thái này, không phụ thuộc vào dữ liệu [cite: 44]
+        $allStatuses = collect([
+            'Chờ xử lý',
+            'Đã xác nhận',
+            'Đang thực hiện',
+            'Hoàn thành',
+            'Đã thanh toán',
+            'Đã hủy'
+        ]); [cite: 45, 46, 47]
 
-                                <!-- Filter by Status -->
-                                @php
-                                    // Danh sách các trạng thái theo thứ tự: Chờ xử lý -> Đã xác nhận -> Đang thực hiện -> Hoàn thành -> Đã hủy
-                                    // Luôn hiển thị tất cả các trạng thái này, không phụ thuộc vào dữ liệu
-                                    $allStatuses = collect([
-                                        'Chờ xử lý',
-                                        'Đã xác nhận',
-                                        'Đang thực hiện',
-                                        'Hoàn thành',
-                                        'Đã hủy',
-                                    ]);
+        // Lấy tất cả appointments để filter (bao gồm cả đã hủy) [cite: 48]
+        $allAppointmentsForFilter = $user->appointments->filter(function($appointment) {
+            return !$appointment->trashed(); [cite: 48]
+        })->sortByDesc('start_at'); [cite: 49]
+    @endphp
 
-                                    // Lấy tất cả appointments để filter (bao gồm cả đã hủy)
-                                    $allAppointmentsForFilter = $user->appointments
-                                        ->filter(function ($appointment) {
-                                            return !$appointment->trashed();
-                                        })
-                                        ->sortByDesc('start_at');
-                                @endphp
+    @if($allStatuses->count() > 0)
+        <div class="mb-4">
+            <div class="d-flex flex-wrap status-filter-buttons" style="gap: 1.5rem;">
+                <button type="button" class="btn btn-sm btn-outline-primary status-filter-btn active" data-status="all" style="margin-right: 0.5rem;">
+                    <i class="fas fa-list me-1"></i>Tất cả [cite: 52]
+                </button>
+                @foreach($allStatuses as $status)
+                    @php
+                        $statusClass = 'btn-outline-secondary'; [cite: 53]
+                        $customStyle = ''; [cite: 54]
+                        if ($status === 'Đã xác nhận') {
+                            $statusClass = 'btn-outline-success'; [cite: 54]
+                        } elseif ($status === 'Chờ xử lý') {
+                            $statusClass = 'btn-outline-warning'; [cite: 55]
+                        } elseif ($status === 'Đang thực hiện') {
+                            $statusClass = 'btn-outline-info'; [cite: 56]
+                        } elseif ($status === 'Hoàn thành') {
+                            $statusClass = 'btn-outline-success'; [cite: 58]
+                        } elseif ($status === 'Đã thanh toán') {
+                            // Màu teal/xanh lá cây đậm để rõ ràng [cite: 58]
+                            $statusClass = 'btn-outline-secondary'; [cite: 59]
+                            $customStyle = 'border-color: #20c997 !important; color: #20c997 !important; font-weight: 600; background-color: transparent !important;';
+                        } elseif ($status === 'Đã hủy') {
+                            $statusClass = 'btn-outline-danger'; [cite: 61]
+                        }
+                    @endphp
+                    <button type="button" class="btn btn-sm {{ $statusClass }} status-filter-btn" data-status="{{ $status }}" style="margin-right: 0.5rem; {{ $customStyle }}">
+                        {{ $status }} [cite: 63]
+                    </button>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
-                                @if ($allStatuses->count() > 0)
-                                    <div class="mb-4">
-                                        <div class="d-flex flex-wrap status-filter-buttons" style="gap: 1.5rem;">
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-primary status-filter-btn active"
-                                                data-status="all" style="margin-right: 0.5rem;">
-                                                <i class="fas fa-list me-1"></i>Tất cả
-                                            </button>
-                                            @foreach ($allStatuses as $status)
-                                                @php
-                                                    $statusClass = 'btn-outline-secondary';
-                                                    if ($status === 'Đã xác nhận') {
-                                                        $statusClass = 'btn-outline-success';
-                                                    } elseif ($status === 'Chờ xử lý') {
-                                                        $statusClass = 'btn-outline-warning';
-                                                    } elseif ($status === 'Đang thực hiện') {
-                                                        $statusClass = 'btn-outline-info';
-                                                    } elseif ($status === 'Hoàn thành') {
-                                                        $statusClass = 'btn-outline-success';
-                                                    } elseif ($status === 'Đã hủy') {
-                                                        $statusClass = 'btn-outline-danger';
-                                                    }
-                                                @endphp
-                                                <button type="button"
-                                                    class="btn btn-sm {{ $statusClass }} status-filter-btn"
-                                                    data-status="{{ $status }}" style="margin-right: 0.5rem;">
-                                                    {{ $status }}
-                                                </button>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
+    <div class="row g-3" id="appointments-list">
+        @forelse($allAppointmentsForFilter as $appointment)
+            <div class="col-12 appointment-item" data-appointment-id="{{ $appointment->id }}" data-appointment-status="{{ $appointment->status ?? 'Chờ xử lý' }}">
+                <div class="card border shadow-sm h-100">
+                    <div class="card-body p-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-2 fw-bold">
+                                    @if($appointment->appointmentDetails->count() > 0)
+                                        @foreach($appointment->appointmentDetails as $detail)
+                                            @if($detail->serviceVariant)
+                                                {{ $detail->serviceVariant->name }} [cite: 71]
+                                            @elseif($detail->combo)
+                                                {{ $detail->combo->name }} [cite: 73]
+                                            @else
+                                                Dịch vụ [cite: 74]
+                                            @endif
+                                            @if (!$loop->last) , @endif
+                                        @endforeach
+                                    @endif
+                                </h6>
 
-                                <div class="row g-3" id="appointments-list">
-                                    @forelse($allAppointmentsForFilter as $appointment)
-                                        <div class="col-12 appointment-item" data-appointment-id="{{ $appointment->id }}"
-                                            data-appointment-status="{{ $appointment->status ?? 'Chờ xử lý' }}">
-                                            <div class="card border shadow-sm h-100">
-                                                <div class="card-body p-3">
-                                                    <div class="row align-items-center">
-                                                        <div class="col-md-8">
-                                                            <!-- Dòng đầu: Tên dịch vụ -->
-                                                            <h6 class="mb-2 fw-bold">
-                                                                @if ($appointment->appointmentDetails->count() > 0)
-                                                                    @foreach ($appointment->appointmentDetails as $detail)
-                                                                        @if ($detail->serviceVariant)
-                                                                            {{ $detail->serviceVariant->name }}
-                                                                        @elseif($detail->combo)
-                                                                            {{ $detail->combo->name }}
-                                                                        @else
-                                                                            {{ $detail->notes ?? 'Dịch vụ' }}
-                                                                        @endif
-                                                                        @if (!$loop->last)
-                                                                            ,
-                                                                        @endif
-                                                                    @endforeach
-                                                                @else
-                                                                    Dịch vụ
-                                                                @endif
-                                                            </h6>
+                                <div class="mb-2">
+                                    @if ($appointment->booking_code)
+                                        <span class="badge bg-secondary text-white" style="white-space: nowrap;">{{ $appointment->booking_code }}</span> [cite: 78, 79]
+                                    @endif
+                                </div>
 
-                                                            <!-- Dòng thứ 2: Mã đơn -->
-                                                            <div class="mb-2">
-                                                                @if ($appointment->booking_code)
-                                                                    <span class="badge bg-secondary text-white"
-                                                                        style="white-space: nowrap;">{{ $appointment->booking_code }}</span>
-                                                                @endif
-                                                            </div>
+                                <div class="d-flex flex-column gap-1 mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user-tie me-1"></i>
+                                        @if ($appointment->employee && $appointment->employee->user)
+                                            Barber: <strong>{{ $appointment->employee->user->name }}</strong> [cite: 84, 85]
+                                        @else
+                                            <span class="text-warning">Chưa phân công nhân viên</span> [cite: 86, 87]
+                                        @endif
+                                    </small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        @if ($appointment->start_at)
+                                            <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong> [cite: 91]
+                                        @else
+                                            <span class="text-warning">Chưa có thời gian</span> [cite: 93]
+                                        @endif
+                                    </small>
+                                </div>
 
-                                                            <!-- Dòng thứ 3: Thông tin barber và thời gian -->
-                                                            <div class="d-flex flex-column gap-1 mb-2">
-                                                                <small class="text-muted">
-                                                                    <i class="fas fa-user-tie me-1"></i>
-                                                                    @if ($appointment->employee && $appointment->employee->user)
-                                                                        Barber:
-                                                                        <strong>{{ $appointment->employee->user->name }}</strong>
-                                                                    @else
-                                                                        <span class="text-warning">Chưa phân công nhân
-                                                                            viên</span>
-                                                                    @endif
-                                                                </small>
-                                                                <small class="text-muted">
-                                                                    <i class="fas fa-calendar-alt me-1"></i>
-                                                                    @if ($appointment->start_at)
-                                                                        <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong>
-                                                                    @else
-                                                                        <span class="text-warning">Chưa có thời gian</span>
-                                                                    @endif
-                                                                </small>
-                                                            </div>
+                                <div class="mb-2">
+                                    @php
+                                        $statusBadgeClass = 'bg-info text-white'; [cite: 97]
+                                        if ($appointment->status === 'Đã xác nhận') {
+                                            $statusBadgeClass = 'bg-success text-white'; [cite: 98]
+                                        } elseif ($appointment->status === 'Chờ xử lý') {
+                                            $statusBadgeClass = 'bg-warning text-white'; [cite: 99]
+                                        } elseif ($appointment->status === 'Đang thực hiện') {
+                                            $statusBadgeClass = 'bg-primary text-white'; [cite: 102]
+                                        } elseif ($appointment->status === 'Hoàn thành') {
+                                            $statusBadgeClass = 'bg-success text-white'; [cite: 103]
+                                        } elseif ($appointment->status === 'Đã thanh toán') {
+                                            $statusBadgeClass = 'bg-success text-white';
+                                        } elseif ($appointment->status === 'Đã hủy') {
+                                            $statusBadgeClass = 'bg-danger text-white'; [cite: 104]
+                                        }
+                                    @endphp
+                                    <span class="badge {{ $statusBadgeClass }} appointment-status-badge" data-status="{{ $appointment->status }}" style="white-space: nowrap;">
+                                        {{ $appointment->status ?? 'Chờ xử lý' }} [cite: 108, 109]
+                                    </span>
+                                </div>
+                            </div>
 
-                                                            <!-- Dòng thứ 4: Trạng thái -->
-                                                            <div class="mb-2">
-                                                                @php
-                                                                    $statusBadgeClass = 'bg-info text-white';
-                                                                    if ($appointment->status === 'Đã xác nhận') {
-                                                                        $statusBadgeClass = 'bg-success text-white';
-                                                                    } elseif ($appointment->status === 'Chờ xử lý') {
-                                                                        $statusBadgeClass = 'bg-warning text-white';
-                                                                    } elseif (
-                                                                        $appointment->status === 'Đang thực hiện'
-                                                                    ) {
-                                                                        $statusBadgeClass = 'bg-primary text-white';
-                                                                    } elseif ($appointment->status === 'Hoàn thành') {
-                                                                        $statusBadgeClass = 'bg-success text-white';
-                                                                    } elseif ($appointment->status === 'Đã hủy') {
-                                                                        $statusBadgeClass = 'bg-danger text-white';
-                                                                    }
-                                                                @endphp
-                                                                <span
-                                                                    class="badge {{ $statusBadgeClass }} appointment-status-badge"
-                                                                    data-status="{{ $appointment->status }}"
-                                                                    style="white-space: nowrap;">{{ $appointment->status ?? 'Chờ xử lý' }}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                                                            <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end appointment-actions"
-                                                                data-appointment-id="{{ $appointment->id }}">
-                                                                <a href="{{ route('site.appointment.show', $appointment->id) }}"
-                                                                    class="btn btn-sm btn-outline-primary">
-                                                                    <i class="fas fa-eye me-1"></i>Xem
-                                                                </a>
+                            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end appointment-actions" data-appointment-id="{{ $appointment->id }}">
+                                    <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Xem [cite: 114]
+                                    </a>
+
+                                    @if($appointment->status === 'Hoàn thành' || $appointment->status === 'Đã thanh toán') [cite: 115, 116]
+                                        @php
+                                            $hasReviewed = \App\Models\Review::where('appointment_id', $appointment->id)
+                                                ->where('user_id', auth()->id())
+                                                ->exists(); [cite: 118, 119]
+                                        @endphp
+                                        @if(!$hasReviewed)
+                                            <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-warning">
+                                                <i class="fas fa-star me-1"></i>Đánh giá [cite: 122]
+                                            </a>
+                                        @endif
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="col-12 text-center py-5">
+                <p class="text-muted">Không có lịch hẹn nào.</p>
+            </div>
+        @endforelse
+    </div>
+</div>
                                                                 @php
                                                                     // Chỉ hiển thị nút hủy nếu:
                                                                     // 1. Status = 'Chờ xử lý'
@@ -640,6 +648,32 @@
     </div>
 
 @endsection
+
+@push('styles')
+<style>
+    /* Style cho nút filter "Đã thanh toán" - màu teal/xanh lá cây đậm */
+    .status-filter-btn[data-status="Đã thanh toán"] {
+        border-color: #20c997 !important;
+        color: #20c997 !important;
+        font-weight: 600 !important;
+        background-color: transparent !important;
+    }
+
+    .status-filter-btn[data-status="Đã thanh toán"]:hover {
+        background-color: #20c997 !important;
+        border-color: #20c997 !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+    }
+
+    .status-filter-btn[data-status="Đã thanh toán"].active {
+        background-color: #20c997 !important;
+        border-color: #20c997 !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+    }
+</style>
+@endpush
 
 @push('scripts')
     <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>

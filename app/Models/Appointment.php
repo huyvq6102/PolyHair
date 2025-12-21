@@ -142,6 +142,86 @@ class Appointment extends Model
     }
 
     /**
+     * Ghi nhận việc sử dụng khuyến mãi khi appointment được thanh toán.
+     * Chỉ ghi nhận nếu appointment status là "Đã thanh toán" và có promotion được áp dụng.
+     */
+    public function recordPromotionUsage()
+    {
+        // Chỉ ghi nhận khi status là "Đã thanh toán"
+        if ($this->status !== 'Đã thanh toán') {
+            return false;
+        }
+
+        // Kiểm tra xem đã có PromotionUsage chưa
+        $existingUsage = \App\Models\PromotionUsage::where('appointment_id', $this->id)->first();
+        if ($existingUsage) {
+            return true; // Đã có rồi, không cần tạo lại
+        }
+
+        // Lấy promotion từ nhiều nguồn
+        $promotion = null;
+        
+        // 1. Kiểm tra từ PromotionUsage đã có (có thể đã được tạo trong PaymentService cho online payment)
+        $existingUsage = \App\Models\PromotionUsage::where('appointment_id', $this->id)->first();
+        if ($existingUsage) {
+            return true; // Đã có rồi, không cần tạo lại
+        }
+        
+        // 2. Kiểm tra từ session (nếu còn)
+        $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
+        if ($couponCode) {
+            $promotion = \App\Models\Promotion::where('code', $couponCode)->first();
+        }
+        
+        // 3. Nếu không có từ session, lấy từ applied_promotion_id
+        if (!$promotion) {
+            $appliedPromotionId = \Illuminate\Support\Facades\Session::get('applied_promotion_id');
+            if ($appliedPromotionId) {
+                $promotion = \App\Models\Promotion::find($appliedPromotionId);
+            }
+        }
+        
+        // 4. Nếu vẫn không có, thử tìm promotion từ payment bằng cách so sánh discount amount
+        // (Cách này không chính xác 100% nhưng là giải pháp cuối cùng)
+        if (!$promotion && $this->user_id) {
+            $payment = $this->payments()->where('status', 'completed')->first();
+            if ($payment) {
+                // Tính discount amount từ payment
+                // Tạm thời không làm vì không có thông tin đầy đủ
+                // Có thể lưu promotion_id vào payment trong tương lai
+            }
+        }
+
+        // Nếu có promotion và có user_id, ghi nhận việc sử dụng
+        if ($promotion && $this->user_id) {
+            // Kiểm tra lại xem đã có PromotionUsage chưa (double check)
+            $existingUsage = \App\Models\PromotionUsage::where('appointment_id', $this->id)
+                ->where('promotion_id', $promotion->id)
+                ->where('user_id', $this->user_id)
+                ->first();
+
+            if (!$existingUsage) {
+                \App\Models\PromotionUsage::create([
+                    'promotion_id'   => $promotion->id,
+                    'user_id'        => $this->user_id,
+                    'appointment_id' => $this->id,
+                    'used_at'        => now(),
+                ]);
+
+                // Giảm số lượt dùng còn lại (usage_limit) nếu đang được giới hạn
+                if (!is_null($promotion->usage_limit) && $promotion->usage_limit > 0) {
+                    $promotion->decrement('usage_limit', 1);
+                    $promotion->refresh();
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Get all reviews for the appointment.
      */
     public function reviews(): HasMany

@@ -918,6 +918,20 @@ class EmployeeAppointmentController extends Controller
         $appliedCoupon = null;
         $promotionMessage = null;
 
+        // Get applied promotion ID from request or session
+        $appliedPromotionId = $request->input('applied_promotion_id') 
+            ?? \Illuminate\Support\Facades\Session::get('applied_promotion_id');
+
+        // If promotion ID is provided, use it
+        if ($appliedPromotionId) {
+            $promotion = Promotion::find($appliedPromotionId);
+            if ($promotion) {
+                $couponCode = $promotion->code;
+                \Illuminate\Support\Facades\Session::put('coupon_code', $couponCode);
+                \Illuminate\Support\Facades\Session::put('applied_promotion_id', $appliedPromotionId);
+            }
+        }
+
         if ($couponCode) {
             $promotionService = app(PromotionService::class);
             $userIdForPromo = $appointment->user_id ?? $user->id;
@@ -942,6 +956,42 @@ class EmployeeAppointmentController extends Controller
         $taxablePrice = max(0, $subtotal - $promotionAmount);
         $VAT = 0;
         $total = $taxablePrice;
+
+        // Get available promotions for dropdown
+        $now = Carbon::now();
+        $availableOrderPromotions = Promotion::where('apply_scope', 'order')
+            ->whereNull('deleted_at')
+            ->where(function($query) use ($now) {
+                $query->whereNull('start_date')
+                      ->orWhere('start_date', '<=', $now);
+            })
+            ->where(function($query) use ($now) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', $now);
+            })
+            ->where(function($query) {
+                $query->whereNull('status')
+                      ->orWhere('status', 'active');
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $availableCustomerTierPromotions = Promotion::where('apply_scope', 'customer_tier')
+            ->whereNull('deleted_at')
+            ->where(function($query) use ($now) {
+                $query->whereNull('start_date')
+                      ->orWhere('start_date', '<=', $now);
+            })
+            ->where(function($query) use ($now) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', $now);
+            })
+            ->where(function($query) {
+                $query->whereNull('status')
+                      ->orWhere('status', 'active');
+            })
+            ->orderBy('id', 'desc')
+            ->get();
         
         return view('admin.employee-appointments.checkout', [
             'customer' => $customerData,
@@ -959,7 +1009,10 @@ class EmployeeAppointmentController extends Controller
                 ['id' => 'vnpay', 'name' => 'VNPAY'],
                 ['id' => 'zalopay', 'name' => 'ZaloPay'],
             ],
-            'appointment' => $appointment
+            'appointment' => $appointment,
+            // Pass available promotions
+            'availableOrderPromotions' => $availableOrderPromotions,
+            'availableCustomerTierPromotions' => $availableCustomerTierPromotions
         ]);
     }
 
@@ -1003,11 +1056,39 @@ class EmployeeAppointmentController extends Controller
 
             // If payer is null, it's a guest or product-only order
 
-
+            // Get promotion information from request or session
+            $appliedPromotionId = $request->input('applied_promotion_id');
+            $promotionDiscountAmount = $request->input('promotion_discount_amount', 0);
             $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
+            
+            // If applied_promotion_id is provided, ensure we have the correct coupon code
+            if ($appliedPromotionId) {
+                $promotion = \App\Models\Promotion::find($appliedPromotionId);
+                if ($promotion) {
+                    // Always update session with the correct coupon code from promotion
+                    $couponCode = $promotion->code;
+                    \Illuminate\Support\Facades\Session::put('coupon_code', $couponCode);
+                    \Illuminate\Support\Facades\Session::put('applied_promotion_id', $appliedPromotionId);
+                    
+                    \Illuminate\Support\Facades\Log::info('Employee checkout: Applied promotion', [
+                        'promotion_id' => $appliedPromotionId,
+                        'coupon_code' => $couponCode,
+                        'appointment_id' => $appointmentId,
+                        'employee_id' => $employee->id
+                    ]);
+                }
+            } elseif ($couponCode) {
+                // If only coupon_code is provided, try to find promotion and save ID
+                $promotion = \App\Models\Promotion::where('code', $couponCode)->first();
+                if ($promotion) {
+                    \Illuminate\Support\Facades\Session::put('applied_promotion_id', $promotion->id);
+                }
+            }
+            
             $paymentMethod = $request->input('payment_method', 'cash');
 
             // Process Payment
+            // Note: processPayment uses the passed user ($payer) as the owner of the payment record
             $payment = $paymentService->processPayment($payer, $cart, $paymentMethod, $couponCode);
 
             // Auto-complete Cash Payment
@@ -1020,6 +1101,10 @@ class EmployeeAppointmentController extends Controller
                      if ($appt) {
                          $appt->status = 'Đã thanh toán';
                          $appt->save();
+                         
+                         // Ghi nhận việc sử dụng khuyến mãi
+                         $appt->recordPromotionUsage();
+                         
                          foreach ($appt->appointmentDetails as $detail) {
                             $detail->status = 'Hoàn thành';
                             $detail->save();
@@ -1038,6 +1123,7 @@ class EmployeeAppointmentController extends Controller
             
             \Illuminate\Support\Facades\Session::forget('cart');
             \Illuminate\Support\Facades\Session::forget('coupon_code');
+            \Illuminate\Support\Facades\Session::forget('applied_promotion_id');
 
             if ($paymentMethod === 'vnpay') {
                 // Save context for return URL handling
@@ -1063,35 +1149,83 @@ class EmployeeAppointmentController extends Controller
      */
     public function applyCoupon(Request $request, PromotionService $promotionService)
     {
-        $request->validate([
-            'coupon_code' => 'required|string|max:50'
-        ]);
-
-        $code = $request->input('coupon_code');
-        $appointmentId = $request->input('appointment_id'); // Hidden field in form
-
-        if (!$appointmentId) {
-            return back()->with('error', 'Thiếu thông tin lịch hẹn để áp dụng mã khuyến mãi.');
+        try {
+            $request->validate([
+                'coupon_code' => 'required|string|max:50'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
         }
 
-        $appointment = \App\Models\Appointment::with('user')->find($appointmentId);
+        $code = $request->input('coupon_code');
+        $appointmentId = $request->input('appointment_id');
+
+        if (!$appointmentId) {
+            $errorMsg = 'Thiếu thông tin lịch hẹn để áp dụng mã khuyến mãi.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg,
+                    'error' => $errorMsg
+                ], 400);
+            }
+            return back()->with('error', $errorMsg);
+        }
+
+        $appointment = \App\Models\Appointment::with([
+            'user',
+            'appointmentDetails.serviceVariant',
+            'appointmentDetails.combo'
+        ])->find($appointmentId);
         if (!$appointment) {
-            return back()->with('error', 'Không tìm thấy lịch hẹn.');
+            $errorMsg = 'Không tìm thấy lịch hẹn.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg,
+                    'error' => $errorMsg
+                ], 404);
+            }
+            return back()->with('error', $errorMsg);
         }
 
         $user = auth()->user();
         $employee = $this->employeeService->getByUserId($user->id);
 
         if (!$employee) {
-            return redirect()->route('admin.dashboard')->with('error', 'Bạn không phải là nhân viên.');
+            $errorMsg = 'Bạn không phải là nhân viên.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg,
+                    'error' => $errorMsg
+                ], 403);
+            }
+            return redirect()->route('admin.dashboard')->with('error', $errorMsg);
         }
+        
         // Check Access
         $hasAccess = $employee->position === 'Receptionist' ||
             $appointment->employee_id == $employee->id ||
             $appointment->appointmentDetails->where('employee_id', $employee->id)->count() > 0;
 
         if (!$hasAccess) {
-            return back()->with('error', 'Bạn không có quyền áp dụng khuyến mãi cho đơn đặt này.');
+            $errorMsg = 'Bạn không có quyền áp dụng khuyến mãi cho đơn đặt này.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg,
+                    'error' => $errorMsg
+                ], 403);
+            }
+            return back()->with('error', $errorMsg);
         }
 
         // Calculate subtotal for promotion validation
@@ -1099,9 +1233,9 @@ class EmployeeAppointmentController extends Controller
         foreach ($appointment->appointmentDetails as $detail) {
             if ($detail->price_snapshot) {
                 $subtotal += $detail->price_snapshot;
-            } elseif ($detail->serviceVariant) {
+            } elseif ($detail->serviceVariant && $detail->serviceVariant->price) {
                 $subtotal += $detail->serviceVariant->price;
-            } elseif ($detail->combo) {
+            } elseif ($detail->combo && $detail->combo->price) {
                 $subtotal += $detail->combo->price;
             }
         }
@@ -1122,11 +1256,57 @@ class EmployeeAppointmentController extends Controller
             $appointment->user_id
         );
         
+        // Check if request is AJAX
+        if ($request->ajax() || $request->wantsJson()) {
+            if (!$result['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                    'error' => $result['message']
+                ], 400);
+            }
+            
+            \Illuminate\Support\Facades\Session::put('coupon_code', $code);
+            
+            // Save applied promotion ID if provided
+            $appliedPromotionId = $request->input('applied_promotion_id');
+            if ($appliedPromotionId && isset($result['promotion'])) {
+                \Illuminate\Support\Facades\Session::put('applied_promotion_id', $result['promotion']->id);
+            } elseif ($appliedPromotionId) {
+                \Illuminate\Support\Facades\Session::put('applied_promotion_id', $appliedPromotionId);
+            }
+            
+            $promotion = $result['promotion'];
+            return response()->json([
+                'success' => true,
+                'message' => 'Áp dụng mã khuyến mại thành công!',
+                'promotion' => [
+                    'id' => $promotion->id ?? null,
+                    'code' => $promotion->code ?? $code,
+                    'name' => $promotion->name ?? '',
+                    'discount_amount' => $result['discount_amount'] ?? 0,
+                    'discount_type' => $promotion->discount_type ?? 'amount',
+                    'discount_percent' => $promotion->discount_percent ?? 0,
+                    'max_discount_amount' => $promotion->max_discount_amount !== null ? $promotion->max_discount_amount : null,
+                    'apply_scope' => $promotion->apply_scope ?? 'order'
+                ]
+            ]);
+        }
+        
+        // Non-AJAX request handling
         if (!$result['valid']) {
             return back()->with('error', $result['message']);
         }
         
         \Illuminate\Support\Facades\Session::put('coupon_code', $code);
+        
+        // Save applied promotion ID if provided
+        $appliedPromotionId = $request->input('applied_promotion_id');
+        if ($appliedPromotionId && isset($result['promotion'])) {
+            \Illuminate\Support\Facades\Session::put('applied_promotion_id', $result['promotion']->id);
+        } elseif ($appliedPromotionId) {
+            \Illuminate\Support\Facades\Session::put('applied_promotion_id', $appliedPromotionId);
+        }
         
         return back()->with('success', 'Áp dụng mã khuyến mại thành công!');
     }
@@ -1137,6 +1317,16 @@ class EmployeeAppointmentController extends Controller
     public function removeCoupon(Request $request)
     {
         \Illuminate\Support\Facades\Session::forget('coupon_code');
+        \Illuminate\Support\Facades\Session::forget('applied_promotion_id');
+        
+        // Check if request is AJAX
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã gỡ bỏ mã khuyến mại.'
+            ]);
+        }
+        
         // Redirect back to the checkout page, potentially with the appointment_id if present
         $appointmentId = $request->input('appointment_id');
         if ($appointmentId) {

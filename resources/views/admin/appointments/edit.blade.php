@@ -97,6 +97,40 @@
                                 </thead>
                                 <tbody>
                                     @forelse($appointment->appointmentDetails as $detail)
+                                        @php
+                                            // Lấy giá gốc từ service/variant/combo
+                                            $originalPrice = 0;
+                                            if ($detail->combo_id) {
+                                                if ($detail->combo) {
+                                                    $originalPrice = $detail->combo->price ?? 0;
+                                                } else {
+                                                    // Nếu không load được relation, query trực tiếp
+                                                    $combo = \App\Models\Combo::withTrashed()->find($detail->combo_id);
+                                                    $originalPrice = $combo ? ($combo->price ?? 0) : 0;
+                                                }
+                                            } elseif ($detail->service_variant_id) {
+                                                if ($detail->serviceVariant) {
+                                                    $originalPrice = $detail->serviceVariant->price ?? 0;
+                                                } else {
+                                                    // Nếu không load được relation, query trực tiếp
+                                                    $variant = \App\Models\ServiceVariant::withTrashed()->find($detail->service_variant_id);
+                                                    $originalPrice = $variant ? ($variant->price ?? 0) : 0;
+                                                }
+                                            } elseif ($detail->notes) {
+                                                // Dịch vụ đơn - tìm Service theo tên trong notes
+                                                $service = \App\Models\Service::where('name', $detail->notes)->first();
+                                                if ($service) {
+                                                    $originalPrice = $service->base_price ?? 0;
+                                                }
+                                            }
+                                            
+                                            // Giá sau giảm (price_snapshot) - đây là giá đã được áp dụng discount tự động
+                                            $finalPrice = $detail->price_snapshot ?? $originalPrice;
+                                            
+                                            // Tính discount = giá gốc - giá sau giảm
+                                            $discountAmount = $originalPrice > 0 ? ($originalPrice - $finalPrice) : 0;
+                                            $hasDiscount = $discountAmount > 0 && $originalPrice > 0;
+                                        @endphp
                                         <tr>
                                             <td>
                                                 @if($detail->combo_id)
@@ -107,7 +141,23 @@
                                                     {{ $detail->notes ?? 'Dịch vụ đơn' }}
                                                 @endif
                                             </td>
-                                            <td>{{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} đ</td>
+                                            <td>
+                                                @if($hasDiscount && $originalPrice > 0)
+                                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                        <span style="text-decoration: line-through; color: #999; font-size: 12px;">
+                                                            {{ number_format($originalPrice, 0, ',', '.') }} đ
+                                                        </span>
+                                                        <span style="color: #28a745; font-weight: 600;">
+                                                            {{ number_format($finalPrice, 0, ',', '.') }} đ
+                                                        </span>
+                                                        <small style="color: #ff4444; font-size: 11px;">
+                                                            Giảm: {{ number_format($discountAmount, 0, ',', '.') }} đ
+                                                        </small>
+                                                    </div>
+                                                @else
+                                                    {{ number_format($finalPrice, 0, ',', '.') }} đ
+                                                @endif
+                                            </td>
                                             <td>{{ $detail->duration ?? 0 }}</td>
                                             <td>
                                                 <form action="{{ route('admin.appointments.remove-service', [$appointment->id, $detail->id]) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa dịch vụ này?');">
@@ -125,6 +175,110 @@
                                         </tr>
                                     @endforelse
                                 </tbody>
+                                <tfoot>
+                                    @php
+                                        // Tính tổng giá gốc và tổng discount từ từng dịch vụ
+                                        $totalOriginalPrice = 0;
+                                        $totalServiceDiscount = 0; // Discount tự động từ promotion service-level
+                                        
+                                        foreach ($appointment->appointmentDetails as $detail) {
+                                            // Lấy giá gốc
+                                            $originalPrice = 0;
+                                            if ($detail->combo_id) {
+                                                if ($detail->combo) {
+                                                    $originalPrice = $detail->combo->price ?? 0;
+                                                } else {
+                                                    $combo = \App\Models\Combo::withTrashed()->find($detail->combo_id);
+                                                    $originalPrice = $combo ? ($combo->price ?? 0) : 0;
+                                                }
+                                            } elseif ($detail->service_variant_id) {
+                                                if ($detail->serviceVariant) {
+                                                    $originalPrice = $detail->serviceVariant->price ?? 0;
+                                                } else {
+                                                    $variant = \App\Models\ServiceVariant::withTrashed()->find($detail->service_variant_id);
+                                                    $originalPrice = $variant ? ($variant->price ?? 0) : 0;
+                                                }
+                                            } elseif ($detail->notes) {
+                                                // Dịch vụ đơn - tìm Service theo tên trong notes
+                                                $service = \App\Models\Service::where('name', $detail->notes)->first();
+                                                if ($service) {
+                                                    $originalPrice = $service->base_price ?? 0;
+                                                }
+                                            }
+                                            
+                                            $finalPrice = $detail->price_snapshot ?? $originalPrice;
+                                            $serviceDiscount = $originalPrice > 0 ? ($originalPrice - $finalPrice) : 0;
+                                            
+                                            $totalOriginalPrice += $originalPrice;
+                                            $totalServiceDiscount += $serviceDiscount;
+                                        }
+                                        
+                                        // Lấy promotion từ payment nếu có (order-level discount)
+                                        $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->first();
+                                        $orderLevelDiscount = 0;
+                                        $promotionCode = null;
+                                        $promotion = null;
+                                        
+                                        if ($payment && $payment->promotion_id) {
+                                            $promotion = \App\Models\Promotion::find($payment->promotion_id);
+                                        } else {
+                                            // Nếu chưa có payment, kiểm tra promotionUsages
+                                            $promotionUsage = $appointment->promotionUsages()->first();
+                                            if ($promotionUsage && $promotionUsage->promotion_id) {
+                                                $promotion = \App\Models\Promotion::find($promotionUsage->promotion_id);
+                                            }
+                                        }
+                                        
+                                        // Tính order-level discount (áp dụng trên tổng giá gốc)
+                                        if ($promotion && $promotion->apply_scope === 'order') {
+                                            $promotionCode = $promotion->code;
+                                            if ($promotion->discount_type === 'percent') {
+                                                $orderLevelDiscount = ($totalOriginalPrice * ($promotion->discount_percent ?? 0)) / 100;
+                                                if ($promotion->max_discount_amount) {
+                                                    $orderLevelDiscount = min($orderLevelDiscount, $promotion->max_discount_amount);
+                                                }
+                                            } else {
+                                                $orderLevelDiscount = min($promotion->discount_amount ?? 0, $totalOriginalPrice);
+                                            }
+                                        }
+                                        
+                                        // Tổng discount = discount từ service + discount từ order
+                                        $totalDiscount = $totalServiceDiscount + $orderLevelDiscount;
+                                        
+                                        // Tổng thanh toán = giá gốc - tổng discount
+                                        $total = max(0, $totalOriginalPrice - $totalDiscount);
+                                    @endphp
+                                    <tr style="background-color: #f8f9fa;">
+                                        <td colspan="3" class="text-right font-weight-bold">Tổng giá gốc:</td>
+                                        <td class="font-weight-bold">{{ number_format($totalOriginalPrice, 0, ',', '.') }} đ</td>
+                                    </tr>
+                                    @if($totalServiceDiscount > 0)
+                                    <tr style="background-color: #e7f3ff;">
+                                        <td colspan="3" class="text-right text-info font-weight-bold">
+                                            Giảm giá tự động (từng dịch vụ):
+                                        </td>
+                                        <td class="text-info font-weight-bold">-{{ number_format($totalServiceDiscount, 0, ',', '.') }} đ</td>
+                                    </tr>
+                                    @endif
+                                    @if($orderLevelDiscount > 0)
+                                    <tr style="background-color: #fff3cd;">
+                                        <td colspan="3" class="text-right text-success font-weight-bold">
+                                            Giảm giá @if($promotionCode)({{ $promotionCode }})@endif:
+                                        </td>
+                                        <td class="text-success font-weight-bold">-{{ number_format($orderLevelDiscount, 0, ',', '.') }} đ</td>
+                                    </tr>
+                                    @endif
+                                    @if($totalDiscount > 0)
+                                    <tr style="background-color: #d1ecf1; border-top: 1px solid #bee5eb;">
+                                        <td colspan="3" class="text-right font-weight-bold">Tổng giảm giá:</td>
+                                        <td class="font-weight-bold text-danger">-{{ number_format($totalDiscount, 0, ',', '.') }} đ</td>
+                                    </tr>
+                                    @endif
+                                    <tr style="background-color: #d4edda; border-top: 2px solid #28a745;">
+                                        <td colspan="3" class="text-right font-weight-bold" style="font-size: 16px;">Tổng thanh toán:</td>
+                                        <td class="font-weight-bold" style="font-size: 18px; color: #28a745;">{{ number_format($total, 0, ',', '.') }} đ</td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
