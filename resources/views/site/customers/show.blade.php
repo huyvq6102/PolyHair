@@ -448,6 +448,10 @@
                                                 <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-warning">
                                                     <i class="fas fa-star me-1"></i>Đánh giá
                                                 </a>
+                                            @else
+                                                <span class="btn btn-sm btn-success disabled">
+                                                    <i class="fas fa-check me-1"></i>Đã đánh giá
+                                                </span>
                                             @endif
                                         @endif
                                     </div>
