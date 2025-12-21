@@ -171,12 +171,12 @@
             @endif
         </div>
         
-        <p><strong>Lưu ý:</strong> Vui lòng thanh toán để hoàn tất đặt lịch. Bạn có thể thanh toán tại giỏ hàng của mình.</p>
+        <!-- <p><strong>Lưu ý:</strong> Vui lòng thanh toán để hoàn tất đặt lịch. Bạn có thể thanh toán tại giỏ hàng của mình.</p>
         
         <div style="text-align: center;">
             <a href="{{ route('site.cart.index') }}" class="button">Xem giỏ hàng</a>
         </div>
-        
+         -->
         <p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi qua số điện thoại: <strong>+10 367 267 2678</strong></p>
     </div>
     

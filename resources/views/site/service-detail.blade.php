@@ -15,10 +15,10 @@
 
             <!-- Banner Section với 3 ảnh ngẫu nhiên -->
             <div class="container" style="padding: 20px 15px;">
-                <div class="service-banner" style="background: linear-gradient(135deg, #1a4d7a 0%, #2c5f8f 50%, #1a4d7a 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
+                <div class="service-banner" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 50%, #d8b26a 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
                     <!-- Decorative elements -->
-                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(74, 144, 226, 0.3) 0%, transparent 100%); transform: skewX(-20deg);"></div>
-                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(74, 144, 226, 0.3) 100%); transform: skewX(20deg);"></div>
+                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(246, 209, 122, 0.3) 0%, transparent 100%); transform: skewX(-20deg);"></div>
+                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(246, 209, 122, 0.3) 100%); transform: skewX(20deg);"></div>
 
                     <div style="position: relative; z-index: 1;">
                         <!-- Title -->
@@ -76,8 +76,8 @@
             <div class="service-process-section" style="padding: 60px 0; background: transparent;">
                 <div class="container">
                     <div class="d-flex align-items-center mb-4">
-                        <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: #000; margin-right: 12px; border-radius: 4px;"></span>
-                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #000; margin: 0; text-transform: uppercase;">
+                        <span class="process-bar" style="display: inline-block; width: 10px; height: 28px; background: linear-gradient(135deg, #f6d17a 0%, #d8b26a 50%, #8b5a2b 100%); margin-right: 12px; border-radius: 2px;"></span>
+                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; margin: 0; text-transform: uppercase; background: linear-gradient(135deg, #f6d17a 0%, #e8c46e 40%, #d8b26a 60%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
                             QUY TRÌNH DỊCH VỤ
                         </h2>
                     </div>
@@ -186,6 +186,12 @@
                             </h3>
                             <div class="row" style="margin: 0 -8px;">
                                 @foreach($service->serviceVariants as $variant)
+                                    @php
+                                        // Load variant attributes if not already loaded
+                                        if (!$variant->relationLoaded('variantAttributes')) {
+                                            $variant->load('variantAttributes');
+                                        }
+                                    @endphp
                                     <div class="col-md-6" style="padding: 0 8px; margin-bottom: 15px;">
                                         <div class="variant-card" style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; background: #fff; transition: all 0.3s; height: 100%;" onmouseover="this.style.borderColor='#d8b26a'; this.style.boxShadow='0 2px 10px rgba(216,178,106,0.2)';" onmouseout="this.style.borderColor='#e5e5e5'; this.style.boxShadow='none';">
                                             <h4 style="color: #4A3600; font-size: 18px; font-weight: 600; margin: 0 0 10px 0;">
@@ -197,9 +203,18 @@
                                                 </strong>
                                             </div>
                                             @if($variant->duration)
-                                                <div class="variant-duration" style="color: #666; font-size: 14px;">
+                                                <div class="variant-duration" style="color: #666; font-size: 14px; margin-bottom: 10px;">
                                                     <i class="fa fa-clock-o" style="margin-right: 4px;"></i>
                                                     {{ $variant->duration }} phút
+                                                </div>
+                                            @endif
+                                            @if($variant->variantAttributes && $variant->variantAttributes->count() > 0)
+                                                <div class="variant-attributes" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                                    @foreach($variant->variantAttributes as $attr)
+                                                        <span style="background: linear-gradient(135deg, #1a4d7a 0%, #2c5f8f 50%, #1a4d7a 100%); color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(26, 77, 122, 0.3);">
+                                                            {{ $attr->attribute_value }}
+                                                        </span>
+                                                    @endforeach
                                                 </div>
                                             @endif
                                         </div>

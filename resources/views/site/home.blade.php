@@ -734,7 +734,7 @@ function openVariantModal(button) {
         // Build discount badge HTML
         let discountBadgeHTML = '';
         if (hasDiscount && variant.discountTag) {
-            discountBadgeHTML = `<span style="position: absolute; top: 8px; right: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${variant.discountTag}</span>`;
+            discountBadgeHTML = `<span style="position: absolute; top: 8px; right: 8px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; z-index: 10; box-shadow: 0 2px 6px rgba(255, 68, 68, 0.3); letter-spacing: 0.3px; white-space: nowrap;">${variant.discountTag}</span>`;
         }
         
         // Build price HTML - hiển thị giá gốc (strikethrough) và giá sau discount

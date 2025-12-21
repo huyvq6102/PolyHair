@@ -650,7 +650,7 @@ function openVariantModal(button) {
                     <span style="text-decoration: line-through; color: #999; font-size: 12px;">${formattedOriginalPrice}</span>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span class="variant-price">${formattedPrice}</span>
-                        ${variant.discountTag ? `<span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600;">${variant.discountTag}</span>` : ''}
+                        ${variant.discountTag ? `<span style="background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: #fff; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; box-shadow: 0 2px 4px rgba(255, 68, 68, 0.25); letter-spacing: 0.2px; white-space: nowrap;">${variant.discountTag}</span>` : ''}
                     </div>
                 </div>
             `;
