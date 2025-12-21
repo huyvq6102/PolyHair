@@ -82,6 +82,14 @@
         </a>
     </li>
 
+    <!-- Nav Item - Orders (Visible to All Staff) -->
+    <li class="nav-item {{ str_contains($currentRoute, 'payment') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.payments.index') }}">
+            <i class="fas fa-fw fa-shopping-cart"></i>
+            <span>Hóa đơn</span>
+        </a>
+    </li>
+
     @if(!$isEmployee)
         <!-- Admin Only Items -->
 
@@ -101,14 +109,6 @@
                         href="{{ route('admin.services.index') }}">Quản lý dịch vụ</a>
                 </div>
             </div>
-        </li>
-
-        <!-- Nav Item - Orders -->
-        <li class="nav-item {{ str_contains($currentRoute, 'payment') ? 'active' : '' }}">
-            <a class="nav-link" href="{{ route('admin.payments.index') }}">
-                <i class="fas fa-fw fa-shopping-cart"></i>
-                <span>Hóa đơn</span>
-            </a>
         </li>
 
         <li class="nav-item {{ str_contains($currentRoute, 'reviews') ? 'active' : '' }}">
