@@ -2118,21 +2118,21 @@ class AppointmentController extends Controller
             }
 
             // Kiểm tra xem có thể hủy không
-            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 phút
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 10 giây
             if ($appointment->status !== 'Chờ xử lý') {
                 if ($appointment->status === 'Đã xác nhận') {
-                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 30 phút kể từ khi đặt.');
+                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 10 giây kể từ khi đặt.');
                 }
                 return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
             }
 
-            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 phút kể từ khi đặt
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 10 giây kể từ khi đặt
             $createdAt = \Carbon\Carbon::parse($appointment->created_at);
             $now = now();
-            $minutesSinceCreated = $createdAt->diffInMinutes($now);
+            $secondsSinceCreated = $createdAt->diffInSeconds($now);
 
-            if ($minutesSinceCreated > 30) {
-                // Tự động chuyển trạng thái nếu đã quá 30 phút nhưng vẫn còn "Chờ xử lý"
+            if ($secondsSinceCreated > 10) {
+                // Tự động chuyển trạng thái nếu đã quá 10 giây nhưng vẫn còn "Chờ xử lý"
                 if ($appointment->status === 'Chờ xử lý') {
                     $appointment->update(['status' => 'Đã xác nhận']);
                     
@@ -2155,7 +2155,7 @@ class AppointmentController extends Controller
                     event(new \App\Events\AppointmentStatusUpdated($appointment));
                 }
                 
-                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 10 giây kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
             }
 
             // Lấy lý do hủy từ form hoặc dùng mặc định
