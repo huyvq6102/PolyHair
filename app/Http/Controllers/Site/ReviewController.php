@@ -67,9 +67,10 @@ class ReviewController extends Controller
         }
 
         // Check if appointment is completed
-        if ($appointment->status !== 'Hoàn thành') {
-            return redirect()->back()->with('error', 'Chỉ có thể đánh giá sau khi dịch vụ đã hoàn thành.');
+        if ($appointment->status !== 'Hoàn thành' && $appointment->status !== 'Đã thanh toán') {
+            return redirect()->back()->with('error', 'Chỉ có thể đánh giá sau khi dịch vụ đã hoàn thành hoặc đã thanh toán.');
         }
+
 
         // Check if already reviewed - prevent duplicate reviews (STRICT CHECK)
         $existingReview = Review::where('appointment_id', $appointmentId)
@@ -130,8 +131,8 @@ class ReviewController extends Controller
         }
 
         // Check if appointment is completed
-        if ($appointment->status !== 'Hoàn thành') {
-            return redirect()->back()->with('error', 'Chỉ có thể đánh giá sau khi dịch vụ đã hoàn thành.');
+        if ($appointment->status !== 'Hoàn thành' && $appointment->status !== 'Đã thanh toán') {
+            return redirect()->back()->with('error', 'Chỉ có thể đánh giá sau khi dịch vụ đã hoàn thành hoặc đã thanh toán.');
         }
 
         // Check if already reviewed - prevent duplicate reviews (STRICT CHECK)
