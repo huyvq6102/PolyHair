@@ -57,7 +57,7 @@
 
       <div class="service-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
         @php
-          // Helper function để tính discount
+          // Helper function để tính discount - giống với trang dịch vụ
           function calculateDiscountForService($item, $itemType, $activePromotions) {
             $originalPrice = 0;
             $discount = 0;
@@ -79,10 +79,39 @@
 
             $now = \Carbon\Carbon::now();
 
-            foreach ($activePromotions as $promo) {
+            foreach ($activePromotions ?? [] as $promo) {
+              // Chỉ áp dụng giảm trực tiếp vào dịch vụ khi khuyến mãi được cấu hình "Theo dịch vụ"
+              if ($promo->apply_scope !== 'service') {
+                continue;
+              }
               if ($promo->status !== 'active') continue;
               if ($promo->start_date && $promo->start_date > $now) continue;
               if ($promo->end_date && $promo->end_date < $now) continue;
+              
+              // Check usage_limit - if promotion has reached its limit, skip it
+              if ($promo->usage_limit) {
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                if ($totalUsage >= $promo->usage_limit) {
+                  continue; // Skip this promotion, use original price
+                }
+              }
+              
+              // Check per_user_limit - if user has reached their limit, skip it
+              // CHỈ đếm các PromotionUsage có appointment đã thanh toán
+              if ($promo->per_user_limit) {
+                $userId = auth()->id();
+                if ($userId) {
+                  $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                    ->where('user_id', $userId)
+                    ->whereHas('appointment', function($query) {
+                        $query->where('status', 'Đã thanh toán');
+                    })
+                    ->count();
+                  if ($userUsage >= $promo->per_user_limit) {
+                    continue; // Skip this promotion, use original price
+                  }
+                }
+              }
 
               $applies = false;
 
@@ -94,29 +123,65 @@
                   (($promo->services ? $promo->services->count() : 0) +
                    ($promo->combos ? $promo->combos->count() : 0) +
                    ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                if ($promo->apply_scope === 'order' || $applyToAll) {
+                if ($applyToAll) {
                   $applies = true;
                 } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
+                  $applies = true;
+                }
+              } elseif ($itemType === 'variant') {
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                  || ($promo->combos && $promo->combos->count() > 0)
+                  || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                $applyToAll = !$hasSpecificServices ||
+                  (($promo->services ? $promo->services->count() : 0) +
+                   ($promo->combos ? $promo->combos->count() : 0) +
+                   ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                if ($applyToAll) {
+                  $applies = true;
+                } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
+                  $applies = true;
+                }
+              } elseif ($itemType === 'combo') {
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                  || ($promo->combos && $promo->combos->count() > 0)
+                  || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                $applyToAll = !$hasSpecificServices ||
+                  (($promo->services ? $promo->services->count() : 0) +
+                   ($promo->combos ? $promo->combos->count() : 0) +
+                   ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                if ($applyToAll) {
+                  $applies = true;
+                } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
                   $applies = true;
                 }
               }
 
               if ($applies) {
-                $promotion = $promo;
+                // Tính mức giảm cho promo hiện tại
+                $currentDiscount = 0;
+                $currentTag = '';
+
                 if ($promo->discount_type === 'percent') {
-                  $discount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                  $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
                   if ($promo->max_discount_amount) {
-                    $discount = min($discount, $promo->max_discount_amount);
+                    $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
                   }
-                  $discountTag = '-' . ($promo->discount_percent ?? 0) . '%';
+                  $currentTag = '-' . ($promo->discount_percent ?? 0) . '%';
                 } else {
-                  $discount = min($promo->discount_amount ?? 0, $originalPrice);
-                  $discountTag = '-' . number_format($discount / 1000, 0) . 'k';
+                  $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+                  $currentTag = '-' . number_format($currentDiscount / 1000, 0) . 'k';
                 }
-                $finalPrice = max(0, $originalPrice - $discount);
-                break;
+
+                // Ưu tiên khuyến mãi cho mức giảm tiền nhiều nhất
+                if ($currentDiscount > $discount) {
+                  $discount = $currentDiscount;
+                  $promotion = $promo;
+                  $discountTag = $currentTag;
+                }
               }
             }
+
+            $finalPrice = max(0, $originalPrice - $discount);
 
             return [
               'originalPrice' => $originalPrice,
@@ -129,19 +194,58 @@
         @endphp
         @forelse($services as $service)
           @php
-            // Lấy giá từ variant đầu tiên hoặc base_price
-            $price = $service->serviceVariants->where('is_active', true)->min('price')
-                     ?? $service->serviceVariants->min('price')
-                     ?? $service->base_price
-                     ?? 0;
-
-            // Tính discount
-            $serviceDiscount = calculateDiscountForService($service, 'service', $activePromotions ?? collect());
-            $displayPrice = $serviceDiscount['finalPrice'] > 0 ? $serviceDiscount['finalPrice'] : $price;
+            // Tính discount cho từng variant và lấy giá tốt nhất (giá sau discount thấp nhất)
+            $bestPrice = null;
+            $bestDiscount = null;
+            $bestOriginalPrice = null;
+            
+            if ($service->serviceVariants && $service->serviceVariants->count() > 0) {
+              // Nếu có variants, tính discount cho từng variant và lấy giá tốt nhất
+              foreach ($service->serviceVariants->where('is_active', true) as $variant) {
+                $variantDiscount = calculateDiscountForService($variant, 'variant', $activePromotions ?? collect());
+                $variantFinalPrice = $variantDiscount['finalPrice'] > 0 ? $variantDiscount['finalPrice'] : $variant->price;
+                
+                if ($bestPrice === null || $variantFinalPrice < $bestPrice) {
+                  $bestPrice = $variantFinalPrice;
+                  $bestDiscount = $variantDiscount;
+                  $bestOriginalPrice = $variantDiscount['originalPrice'];
+                }
+              }
+              
+              // Nếu không có variant active, lấy từ tất cả variants
+              if ($bestPrice === null) {
+                foreach ($service->serviceVariants as $variant) {
+                  $variantDiscount = calculateDiscountForService($variant, 'variant', $activePromotions ?? collect());
+                  $variantFinalPrice = $variantDiscount['finalPrice'] > 0 ? $variantDiscount['finalPrice'] : $variant->price;
+                  
+                  if ($bestPrice === null || $variantFinalPrice < $bestPrice) {
+                    $bestPrice = $variantFinalPrice;
+                    $bestDiscount = $variantDiscount;
+                    $bestOriginalPrice = $variantDiscount['originalPrice'];
+                  }
+                }
+              }
+            } else {
+              // Nếu không có variant, tính discount cho service
+              $serviceDiscount = calculateDiscountForService($service, 'service', $activePromotions ?? collect());
+              $bestPrice = $serviceDiscount['finalPrice'] > 0 ? $serviceDiscount['finalPrice'] : ($service->base_price ?? 0);
+              $bestDiscount = $serviceDiscount;
+              $bestOriginalPrice = $serviceDiscount['originalPrice'];
+            }
+            
+            // Fallback nếu không có giá
+            if ($bestPrice === null) {
+              $bestPrice = $service->base_price ?? 0;
+              $bestDiscount = ['discount' => 0, 'discountTag' => '', 'originalPrice' => $bestPrice];
+              $bestOriginalPrice = $bestPrice;
+            }
+            
+            $displayPrice = $bestPrice;
+            $serviceDiscount = $bestDiscount;
 
             // Format giá tiền
             $formattedPrice = number_format($displayPrice, 0, ',', '.') . 'vnđ';
-            $formattedOriginalPrice = $serviceDiscount['discount'] > 0 ? number_format($serviceDiscount['originalPrice'], 0, ',', '.') . 'vnđ' : '';
+            $formattedOriginalPrice = ($serviceDiscount['discount'] ?? 0) > 0 ? number_format($bestOriginalPrice ?? $serviceDiscount['originalPrice'] ?? 0, 0, ',', '.') . 'vnđ' : '';
 
             // Đường dẫn ảnh
             $imagePath = $service->image
@@ -177,10 +281,17 @@
                         ];
                     }
                     
+                    // Tính discount cho variant này
+                    $variantDiscount = calculateDiscountForService($variant, 'variant', $activePromotions ?? collect());
+                    
                     $variantsData[] = [
                         'id' => $variant->id,
                         'name' => $variant->name,
-                        'price' => $variant->price,
+                        'price' => $variant->price, // Giá gốc
+                        'originalPrice' => $variantDiscount['originalPrice'], // Giá gốc (để đảm bảo)
+                        'finalPrice' => $variantDiscount['finalPrice'], // Giá đã giảm
+                        'discount' => $variantDiscount['discount'], // Số tiền giảm
+                        'discountTag' => $variantDiscount['discountTag'], // Badge giảm giá
                         'duration' => $variant->duration,
                         'is_default' => $variant->is_default ?? false,
                         'attributes' => $attributes,
@@ -200,7 +311,7 @@
             <a class="svc-img" href="{{ $serviceLink }}" style="position: relative;">
               <img src="{{ $imagePath }}" alt="{{ $service->name }}">
               @if($serviceDiscount['discount'] > 0)
-                <span style="position: absolute; top: 8px; right: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ $serviceDiscount['discountTag'] }}</span>
+                <span style="position: absolute; top: 8px; left: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ $serviceDiscount['discountTag'] }}</span>
               @endif
             </a>
             <div class="svc-body">
@@ -611,8 +722,41 @@ function openVariantModal(button) {
         variantOption.className = 'variant-option';
         variantOption.dataset.variantId = variant.id;
         
-        const formattedPrice = new Intl.NumberFormat('vi-VN').format(variant.price) + 'vnđ';
+        // Tính giá hiển thị - sử dụng finalPrice nếu có discount, nếu không thì dùng price
+        const displayPrice = variant.finalPrice || variant.price;
+        const originalPrice = variant.originalPrice || variant.price;
+        const hasDiscount = variant.discount && variant.discount > 0;
+        
+        const formattedPrice = new Intl.NumberFormat('vi-VN').format(displayPrice) + 'vnđ';
+        const formattedOriginalPrice = hasDiscount ? new Intl.NumberFormat('vi-VN').format(originalPrice) + 'vnđ' : '';
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
+        
+        // Build discount badge HTML
+        let discountBadgeHTML = '';
+        if (hasDiscount && variant.discountTag) {
+            discountBadgeHTML = `<span style="position: absolute; top: 8px; right: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${variant.discountTag}</span>`;
+        }
+        
+        // Build price HTML - hiển thị giá gốc (strikethrough) và giá sau discount
+        let priceHTML = '';
+        if (hasDiscount) {
+            priceHTML = `
+                <div class="variant-price-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="text-decoration: line-through; color: #999; font-size: 13px;">${formattedOriginalPrice}</span>
+                        <span class="variant-price">${formattedPrice}</span>
+                    </div>
+                    <span class="variant-checkmark">✓</span>
+                </div>
+            `;
+        } else {
+            priceHTML = `
+                <div class="variant-price-wrapper">
+                    <span class="variant-price">${formattedPrice}</span>
+                    <span class="variant-checkmark">✓</span>
+                </div>
+            `;
+        }
         
         // Build attributes HTML
         let attributesHTML = '';
@@ -635,19 +779,19 @@ function openVariantModal(button) {
         }
         
         variantOption.innerHTML = `
-            <div class="variant-header">
-                <div style="flex: 1;">
-                    <span class="variant-name">${variant.name}</span>
-                    ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
+            <div style="position: relative;">
+                ${discountBadgeHTML}
+                <div class="variant-header">
+                    <div style="flex: 1;">
+                        <span class="variant-name">${variant.name}</span>
+                        ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
+                    </div>
+                    ${priceHTML}
                 </div>
-                <div class="variant-price-wrapper">
-                    <span class="variant-price">${formattedPrice}</span>
-                    <span class="variant-checkmark">✓</span>
-                </div>
+                ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
+                ${attributesHTML}
+                ${notesHTML}
             </div>
-            ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
-            ${attributesHTML}
-            ${notesHTML}
         `;
         
         // Click handler

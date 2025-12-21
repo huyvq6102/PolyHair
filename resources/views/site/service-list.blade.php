@@ -613,7 +613,13 @@ function openVariantModal(button) {
         variantOption.className = 'variant-option';
         variantOption.dataset.variantId = variant.id;
         
-        const formattedPrice = new Intl.NumberFormat('vi-VN').format(variant.price) + 'vnđ';
+        // Sử dụng giá đã giảm nếu có, nếu không thì dùng giá gốc
+        const displayPrice = variant.finalPrice !== undefined ? variant.finalPrice : variant.price;
+        const originalPrice = variant.originalPrice !== undefined ? variant.originalPrice : variant.price;
+        const hasDiscount = variant.discount && variant.discount > 0;
+        
+        const formattedPrice = new Intl.NumberFormat('vi-VN').format(displayPrice) + 'vnđ';
+        const formattedOriginalPrice = hasDiscount ? new Intl.NumberFormat('vi-VN').format(originalPrice) + 'vnđ' : '';
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
         
         // Build attributes HTML
@@ -636,6 +642,22 @@ function openVariantModal(button) {
             </div>`;
         }
         
+        // Build price HTML với discount
+        let priceHTML = '';
+        if (hasDiscount) {
+            priceHTML = `
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                    <span style="text-decoration: line-through; color: #999; font-size: 12px;">${formattedOriginalPrice}</span>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span class="variant-price">${formattedPrice}</span>
+                        ${variant.discountTag ? `<span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600;">${variant.discountTag}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            priceHTML = `<span class="variant-price">${formattedPrice}</span>`;
+        }
+        
         variantOption.innerHTML = `
             <div class="variant-header">
                 <div style="flex: 1;">
@@ -643,7 +665,7 @@ function openVariantModal(button) {
                     ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
                 </div>
                 <div class="variant-price-wrapper">
-                    <span class="variant-price">${formattedPrice}</span>
+                    ${priceHTML}
                     <span class="variant-checkmark">✓</span>
                 </div>
             </div>
