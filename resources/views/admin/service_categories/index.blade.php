@@ -6,7 +6,7 @@
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Danh mục dịch vụ</h1>
     <a href="{{ route('admin.service-categories.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Thêm danh mục
+        <i class="fas fa-plus"></i>
     </a>
 </div>
 
@@ -43,7 +43,7 @@
                         <th>#</th>
                         <th>Tên danh mục</th>
                         <th>Trạng thái</th>
-                        <th>Thao tác</th>
+                        <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,15 +56,15 @@
                                     {{ $category->is_active ? 'Hoạt động' : 'Ẩn' }}
                                 </span>
                             </td>
-                            <td>
-                                <a href="{{ route('admin.service-categories.edit', $category->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Sửa
+                            <td class="text-center">
+                                <a href="{{ route('admin.service-categories.edit', $category->id) }}" class="btn btn-sm btn-primary" title="Sửa">
+                                    <i class="fas fa-edit"></i>
                                 </a>
                                 <form action="{{ route('admin.service-categories.destroy', $category->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa danh mục này?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i> Xóa
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
                             </td>

@@ -7,11 +7,11 @@
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý dịch vụ</h1>
     <div>
-        <a href="{{ route('admin.services.trash') }}" class="btn btn-warning">
-            <i class="fas fa-trash-restore"></i> Thùng rác
+        <a href="{{ route('admin.services.trash') }}" class="btn btn-warning" title="Thùng rác">
+            <i class="fas fa-trash-restore"></i>
         </a>
-        <a href="{{ route('admin.services.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Thêm mới
+        <a href="{{ route('admin.services.create') }}" class="btn btn-primary" title="Thêm mới">
+            <i class="fas fa-plus"></i>
         </a>
     </div>
 </div>
@@ -130,24 +130,24 @@
                                     {{ Str::limit($service->description, 50) }}
                                 </div>
                             </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info view-detail-btn" data-id="{{ $service->id }}" data-type="service">
-                                    <i class="fas fa-eye"></i> Xem
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-info view-detail-btn" data-id="{{ $service->id }}" data-type="service" title="Xem">
+                                    <i class="fas fa-eye"></i>
                                 </button>
                                 @if($service->serviceVariants->count() > 0)
-                                    <a href="{{ route('admin.services.edit', $service->id) }}?type=variant" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-edit"></i> Sửa
+                                    <a href="{{ route('admin.services.edit', $service->id) }}?type=variant" class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="fas fa-edit"></i>
                                     </a>
                                 @else
-                                    <a href="{{ route('admin.services.edit', $service->id) }}" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-edit"></i> Sửa
+                                    <a href="{{ route('admin.services.edit', $service->id) }}" class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="fas fa-edit"></i>
                                     </a>
                                 @endif
                                 <form action="{{ route('admin.services.destroy', $service->id) }}" method="POST" class="d-inline delete-form">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i> Xóa
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
                             </td>
@@ -196,19 +196,19 @@
                                         {{ Str::limit($combo->description, 50) }}
                                     </div>
                                 </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-info view-detail-btn" data-id="{{ $combo->id }}" data-type="combo">
-                                        <i class="fas fa-eye"></i> Xem
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-info view-detail-btn" data-id="{{ $combo->id }}" data-type="combo" title="Xem">
+                                        <i class="fas fa-eye"></i>
                                     </button>
-                                    <a href="{{ route('admin.services.edit', $combo->id) }}?type=combo" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-edit"></i> Sửa
+                                    <a href="{{ route('admin.services.edit', $combo->id) }}?type=combo" class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="fas fa-edit"></i>
                                     </a>
                                     <form action="{{ route('admin.services.destroy', $combo->id) }}" method="POST" class="d-inline delete-form" data-type="combo">
                                         @csrf
                                         @method('DELETE')
                                         <input type="hidden" name="type" value="combo">
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i> Xóa
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
                                 </td>

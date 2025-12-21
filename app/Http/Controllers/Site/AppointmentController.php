@@ -1130,8 +1130,7 @@ class AppointmentController extends Controller
             'employee.user',
             'appointmentDetails.serviceVariant.service',
             'appointmentDetails.combo',
-            'promotionUsages.promotion',
-            'payments'
+            'promotionUsages.promotion'
         ])->findOrFail($id);
 
         // Tính tổng tiền từ appointment details (price_snapshot đã bao gồm discount tự động)
@@ -1158,42 +1157,11 @@ class AppointmentController extends Controller
             $serviceLevelDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
 
-        // Lấy payment để tính discount chính xác
-        $payment = $appointment->payments()->where('status', 'completed')->first();
-        $appliedPromotion = null;
+        // Tính tổng giảm giá từ order-level promotions (nếu có)
         $orderLevelPromotionAmount = 0;
-        
-        // Lấy promotion từ promotionUsages
         foreach ($appointment->promotionUsages as $usage) {
-            if ($usage->promotion) {
-                $appliedPromotion = $usage->promotion;
-                
-                // Tính discount amount từ promotion
-                if ($usage->promotion->apply_scope === 'order') {
-                    // QUAN TRỌNG: Tính discount từ totalOriginalPrice (giá gốc trước khi giảm service-level)
-                    // Giống như logic trong admin show page
-                    if ($appliedPromotion->discount_type === 'percent') {
-                        $orderLevelPromotionAmount = ($totalOriginalPrice * ($appliedPromotion->discount_percent ?? 0)) / 100;
-                        if ($appliedPromotion->max_discount_amount) {
-                            $orderLevelPromotionAmount = min($orderLevelPromotionAmount, $appliedPromotion->max_discount_amount);
-                        }
-                    } else {
-                        $orderLevelPromotionAmount = min($appliedPromotion->discount_amount ?? 0, $totalOriginalPrice);
-                    }
-                }
-                break; // Chỉ lấy promotion đầu tiên
-            }
-        }
-        
-        // Nếu không có promotion từ promotionUsages, thử tính từ payment
-        // Payment->total là tổng cuối cùng đã thanh toán
-        // Có thể tính discount = totalOriginalPrice - payment->total (nếu payment->total < totalOriginalPrice)
-        if (!$appliedPromotion && $payment && $payment->total < $totalOriginalPrice) {
-            // Tính discount từ payment
-            $calculatedDiscount = max(0, $totalOriginalPrice - $payment->total);
-            if ($calculatedDiscount > $serviceLevelDiscount) {
-                // Nếu discount lớn hơn service-level discount, có thể có order-level discount
-                $orderLevelPromotionAmount = $calculatedDiscount - $serviceLevelDiscount;
+            if ($usage->promotion && $usage->promotion->apply_scope === 'order') {
+                $orderLevelPromotionAmount += $usage->discount_amount ?? 0;
             }
         }
 
@@ -1210,8 +1178,6 @@ class AppointmentController extends Controller
             'orderLevelPromotionAmount' => $orderLevelPromotionAmount,
             'totalDiscount' => $totalDiscount,
             'totalAfterDiscount' => $totalAfterDiscount,
-            'appliedPromotion' => $appliedPromotion,
-            'payment' => $payment,
         ]);
     }
 
@@ -2152,21 +2118,21 @@ class AppointmentController extends Controller
             }
 
             // Kiểm tra xem có thể hủy không
-            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 phút
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 10 giây
             if ($appointment->status !== 'Chờ xử lý') {
                 if ($appointment->status === 'Đã xác nhận') {
-                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 30 phút kể từ khi đặt.');
+                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 10 giây kể từ khi đặt.');
                 }
                 return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
             }
 
-            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 phút kể từ khi đặt
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 10 giây kể từ khi đặt
             $createdAt = \Carbon\Carbon::parse($appointment->created_at);
             $now = now();
-            $minutesSinceCreated = $createdAt->diffInMinutes($now);
+            $secondsSinceCreated = $createdAt->diffInSeconds($now);
 
-            if ($minutesSinceCreated > 30) {
-                // Tự động chuyển trạng thái nếu đã quá 30 phút nhưng vẫn còn "Chờ xử lý"
+            if ($secondsSinceCreated > 10) {
+                // Tự động chuyển trạng thái nếu đã quá 10 giây nhưng vẫn còn "Chờ xử lý"
                 if ($appointment->status === 'Chờ xử lý') {
                     $appointment->update(['status' => 'Đã xác nhận']);
                     
@@ -2189,7 +2155,7 @@ class AppointmentController extends Controller
                     event(new \App\Events\AppointmentStatusUpdated($appointment));
                 }
                 
-                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 10 giây kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
             }
 
             // Lấy lý do hủy từ form hoặc dùng mặc định

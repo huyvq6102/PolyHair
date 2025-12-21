@@ -31,15 +31,11 @@
       }
       
       // Check per_user_limit - if user has reached their limit, skip it
-      // CHỈ đếm các PromotionUsage có appointment đã thanh toán
       if ($promo->per_user_limit) {
         $userId = auth()->id();
         if ($userId) {
           $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
             ->where('user_id', $userId)
-            ->whereHas('appointment', function($query) {
-                $query->where('status', 'Đã thanh toán');
-            })
             ->count();
           if ($userUsage >= $promo->per_user_limit) {
             continue; // Skip this promotion, use original price
@@ -181,21 +177,10 @@
           ];
         }
         
-        // Tính discount cho variant này
-        $variantItem = [
-          'id' => $variant->id,
-          'price' => $variant->price,
-        ];
-        $variantDiscount = calculateDiscountForItem($variantItem, 'service_variant', $activePromotions ?? collect());
-        
         $variantsData[] = [
           'id' => $variant->id,
           'name' => $variant->name,
-          'price' => $variant->price, // Giá gốc
-          'originalPrice' => $variantDiscount['originalPrice'], // Giá gốc (để đảm bảo)
-          'finalPrice' => $variantDiscount['finalPrice'], // Giá đã giảm
-          'discount' => $variantDiscount['discount'], // Số tiền giảm
-          'discountTag' => $variantDiscount['discountTag'], // Badge giảm giá
+          'price' => $variant->price,
           'duration' => $variant->duration,
           'is_default' => $variant->is_default ?? false,
           'attributes' => $attributes,

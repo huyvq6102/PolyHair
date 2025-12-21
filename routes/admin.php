@@ -50,11 +50,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
     Route::get('employee-skills', [EmployeeSkillController::class, 'index'])->name('employee-skills.index');
 
-    // Promotions (Accessible by Staff)
-    Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
-    Route::put('promotions/{id}/restore', [PromotionController::class, 'restore'])->name('promotions.restore');
-    Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
-    Route::resource('promotions', PromotionController::class);
+    // Promotions (View Only for Staff, Full CRUD for Admin)
+    Route::get('promotions', [PromotionController::class, 'index'])->name('promotions.index');
+    Route::get('promotions/{id}', [PromotionController::class, 'show'])->name('promotions.show');
 
     // Payments (Accessible by Staff)
     Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
@@ -111,6 +109,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
         Route::resource('orders', OrderController::class);
 
         Route::resource('news', NewsController::class);
+
+        // Promotions (Admin Only - Full CRUD)
+        Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
+        Route::get('promotions/create', [PromotionController::class, 'create'])->name('promotions.create');
+        Route::post('promotions', [PromotionController::class, 'store'])->name('promotions.store');
+        Route::get('promotions/{id}/edit', [PromotionController::class, 'edit'])->name('promotions.edit');
+        Route::put('promotions/{id}', [PromotionController::class, 'update'])->name('promotions.update');
+        Route::delete('promotions/{id}', [PromotionController::class, 'destroy'])->name('promotions.destroy');
+        Route::put('promotions/{id}/restore', [PromotionController::class, 'restore'])->name('promotions.restore');
+        Route::delete('promotions/{id}/force-delete', [PromotionController::class, 'forceDelete'])->name('promotions.force-delete');
 
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::put('settings', [SettingController::class, 'update'])->name('settings.update');

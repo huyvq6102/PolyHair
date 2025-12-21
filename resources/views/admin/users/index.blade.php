@@ -7,8 +7,8 @@
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý người dùng</h1>
     @if(auth()->user()->isAdmin())
-        <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Thêm mới
+        <a href="{{ route('admin.users.create') }}" class="btn btn-primary" title="Thêm mới">
+            <i class="fas fa-plus"></i>
         </a>
     @endif
 </div>
@@ -74,7 +74,7 @@
                         <th>Email</th>
                         <th>Chức vụ</th>
                         <th>Trạng thái</th>
-                        <th>Thao tác</th>
+                        <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>

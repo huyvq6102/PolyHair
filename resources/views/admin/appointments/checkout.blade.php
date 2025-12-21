@@ -384,80 +384,29 @@
                             </div>
 
                             <!-- Chi tiết mã khuyến mãi đã chọn -->
-                            <div id="promotion_details" class="border rounded p-3 mb-2" style="{{ (\Illuminate\Support\Facades\Session::has('coupon_code') && $appliedCoupon) ? 'display: block;' : 'display: none;' }} background: #f9f9f9;">
+                            <div id="promotion_details" class="border rounded p-3 mb-2" style="display: none; background: #f9f9f9;">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <div>
-                                        <h6 class="mb-1" id="promotion_name">{{ $appliedCoupon ? $appliedCoupon->name : '-' }}</h6>
-                                        <div class="small text-muted" id="promotion_code_display">{{ $appliedCoupon ? 'Mã: ' . $appliedCoupon->code : '-' }}</div>
+                                        <h6 class="mb-1" id="promotion_name">-</h6>
+                                        <div class="small text-muted" id="promotion_code_display">-</div>
                                     </div>
-                                    <span class="badge {{ $appliedCoupon && $appliedCoupon->apply_scope === 'order' ? 'bg-primary' : ($appliedCoupon ? 'bg-warning text-dark' : 'bg-success') }}" id="promotion_scope_badge" style="color: #fff;">
-                                        {{ $appliedCoupon && $appliedCoupon->apply_scope === 'order' ? 'HÓA ĐƠN' : ($appliedCoupon && $appliedCoupon->apply_scope === 'customer_tier' ? 'HẠNG KHÁCH HÀNG' : '-') }}
-                                    </span>
+                                    <span class="badge bg-success" id="promotion_scope_badge" style="color: #fff;">-</span>
                                 </div>
                                 <div class="small">
                                     <div class="mb-1">
-                                        <strong>Loại giảm:</strong> 
-                                        <span id="promotion_discount_info">
-                                            @if($appliedCoupon)
-                                                @if($appliedCoupon->discount_type === 'percent')
-                                                    Giảm {{ $appliedCoupon->discount_percent ?? 0 }}%
-                                                    @if($appliedCoupon->max_discount_amount)
-                                                        (tối đa {{ number_format($appliedCoupon->max_discount_amount, 0, ',', '.') }}đ)
-                                                    @endif
-                                                @else
-                                                    Giảm {{ number_format($appliedCoupon->discount_amount ?? 0, 0, ',', '.') }}đ
-                                                @endif
-                                            @else
-                                                -
-                                            @endif
-                                        </span>
+                                        <strong>Loại giảm:</strong> <span id="promotion_discount_info">-</span>
                                     </div>
-                                    <div id="promotion_conditions">
-                                        @if($appliedCoupon)
-                                            @php
-                                                $conditions = [];
-                                                if ($appliedCoupon->min_order_amount) {
-                                                    $conditions[] = 'Đơn hàng tối thiểu: ' . number_format($appliedCoupon->min_order_amount, 0, ',', '.') . 'đ';
-                                                }
-                                                if ($appliedCoupon->min_customer_tier) {
-                                                    $conditions[] = 'Từ hạng ' . $appliedCoupon->min_customer_tier . ' trở lên';
-                                                }
-                                                if ($appliedCoupon->per_user_limit) {
-                                                    $usageCount = \App\Models\PromotionUsage::where('promotion_id', $appliedCoupon->id)
-                                                        ->where('user_id', $appointment->user_id)
-                                                        ->count();
-                                                    $conditions[] = 'Mỗi khách hàng: ' . $usageCount . '/' . $appliedCoupon->per_user_limit . ' lần';
-                                                }
-                                                if ($appliedCoupon->usage_limit) {
-                                                    $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $appliedCoupon->id)->count();
-                                                    $conditions[] = 'Số lượt sử dụng: ' . $totalUsage . ' lượt';
-                                                }
-                                                if ($appliedCoupon->start_date) {
-                                                    $conditions[] = 'Bắt đầu: ' . $appliedCoupon->start_date->format('d/m/Y');
-                                                }
-                                                if ($appliedCoupon->end_date) {
-                                                    $conditions[] = 'Kết thúc: ' . $appliedCoupon->end_date->format('d/m/Y');
-                                                }
-                                            @endphp
-                                            @if(count($conditions) > 0)
-                                                <div class="mt-2"><strong>Điều kiện áp dụng:</strong></div>
-                                                <ul class="mb-0 mt-1" style="padding-left: 20px;">
-                                                    @foreach($conditions as $condition)
-                                                        <li>{{ $condition }}</li>
-                                                    @endforeach
-                                                </ul>
-                                            @endif
-                                        @endif
-                                    </div>
+                                    <div id="promotion_conditions"></div>
                                 </div>
-                                @if(\Illuminate\Support\Facades\Session::has('coupon_code') && $appliedCoupon)
-                                <div class="mt-3">
-                                    <button type="button" class="btn btn-sm btn-outline-danger" id="btn_remove_promotion" title="Xóa mã">
-                                        <i class="fa fa-times"></i> Xóa mã đã áp dụng
-                                    </button>
-                                </div>
-                                @endif
                             </div>
+
+                            @if(\Illuminate\Support\Facades\Session::has('coupon_code'))
+                                <div class="mt-2">
+                                    <a href="{{ route('admin.appointments.remove-coupon', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-danger" title="Xóa mã">
+                                        <i class="fa fa-times"></i> Xóa mã đã áp dụng
+                                    </a>
+                                </div>
+                            @endif
                             
                             @if(isset($promotionMessage))
                                 <small class="text-{{ $appliedCoupon ? 'success' : 'danger' }} d-block mt-2" style="word-wrap: break-word;">{{ $promotionMessage }}</small>
@@ -992,30 +941,6 @@
                                 // Update selectedPromotion cache
                                 selectedPromotion = promoData;
                                 displayPromotionDetails(promoData);
-                                
-                                // Show promotion details and remove button after successful application
-                                const promotionDetails = document.getElementById('promotion_details');
-                                if (promotionDetails) {
-                                    promotionDetails.style.display = 'block';
-                                    
-                                    // Show remove button if not already visible
-                                    const btnRemove = document.getElementById('btn_remove_promotion');
-                                    if (!btnRemove) {
-                                        // Create remove button if it doesn't exist
-                                        const removeBtnContainer = document.createElement('div');
-                                        removeBtnContainer.className = 'mt-3';
-                                        removeBtnContainer.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger" id="btn_remove_promotion" title="Xóa mã"><i class="fa fa-times"></i> Xóa mã đã áp dụng</button>';
-                                        promotionDetails.appendChild(removeBtnContainer);
-                                        
-                                        // Attach event listener to the new button
-                                        const newBtnRemove = document.getElementById('btn_remove_promotion');
-                                        if (newBtnRemove) {
-                                            attachRemoveButtonListener(newBtnRemove);
-                                        }
-                                    } else {
-                                        btnRemove.style.display = 'block';
-                                    }
-                                }
                             }
                             
                             // Show success message
@@ -1176,7 +1101,7 @@
             }
 
             // Initialize: Load promotions based on selected scope
-            @if($appliedCoupon && \Illuminate\Support\Facades\Session::has('coupon_code'))
+            @if($appliedCoupon)
                 @php
                     $appliedPromoData = [
                         'id' => $appliedCoupon->id,
@@ -1194,28 +1119,20 @@
                 @endphp
                 const appliedPromo = @json($appliedPromoData);
                 
-                // Display promotion details since promotion is already applied
-                displayPromotionDetails(appliedPromo);
-                
-                // Show promotion details and remove button
-                const promotionDetails = document.getElementById('promotion_details');
-                if (promotionDetails) {
-                    promotionDetails.style.display = 'block';
-                }
-                
-                const btnRemove = document.getElementById('btn_remove_promotion');
-                if (btnRemove) {
-                    btnRemove.style.display = 'block';
-                }
-                
-                // Set scope radio (but don't trigger change to avoid reload)
+                // Set scope radio and trigger change
                 const scopeRadio = document.querySelector('.promotion-scope-radio[value="' + appliedPromo.scope + '"]');
                 if (scopeRadio) {
                     scopeRadio.checked = true;
-                    // Update tab UI without triggering change event
-                    const select = document.getElementById('promotion_select');
-                    const label = document.getElementById('promotion_select_label');
-                    updateTabUI(appliedPromo.scope, select, label);
+                    scopeRadio.dispatchEvent(new Event('change'));
+                    
+                    // Set select value after a short delay to ensure dropdown is populated
+                    setTimeout(function() {
+                        const select = document.getElementById('promotion_select');
+                        if (select) {
+                            select.value = appliedPromo.id;
+                            select.dispatchEvent(new Event('change'));
+                        }
+                    }, 200);
                 }
             @else
                 // If no promotion applied, check URL parameter or default to 'order' scope
@@ -1229,107 +1146,6 @@
                     scopeRadio.dispatchEvent(new Event('change'));
                 }
             @endif
-
-            // Function to attach remove button listener
-            function attachRemoveButtonListener(button) {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    const appointmentId = {{ $appointment->id }};
-                    const messageDiv = document.getElementById('promotion_message');
-                    
-                    // Show loading
-                    if (messageDiv) {
-                        messageDiv.innerHTML = '<span class="text-info"><i class="fa fa-spinner fa-spin"></i> Đang xóa mã khuyến mãi...</span>';
-                        messageDiv.style.display = 'block';
-                    }
-                    
-                    // Disable button
-                    this.disabled = true;
-                    const originalText = this.innerHTML;
-                    this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang xóa...';
-                    
-                    // Call remove-coupon route via AJAX
-                    $.ajax({
-                        url: '{{ route("admin.appointments.remove-coupon") }}',
-                        method: 'GET',
-                        data: {
-                            appointment_id: appointmentId
-                        },
-                        success: function(response) {
-                            // Update prices (remove discount)
-                            updatePrices(0);
-                            
-                            // Hide promotion details
-                            const promotionDetails = document.getElementById('promotion_details');
-                            if (promotionDetails) {
-                                promotionDetails.style.display = 'none';
-                            }
-                            
-                            // Hide remove button
-                            const btnRemove = document.getElementById('btn_remove_promotion');
-                            if (btnRemove) {
-                                btnRemove.style.display = 'none';
-                            }
-                            
-                            // Clear selected promotion
-                            selectedPromotion = null;
-                            const select = document.getElementById('promotion_select');
-                            if (select) {
-                                select.value = '';
-                            }
-                            
-                            // Reset form fields
-                            const formPromotionId = document.getElementById('form_applied_promotion_id');
-                            if (formPromotionId) {
-                                formPromotionId.value = '';
-                            }
-                            
-                            // Show success message
-                            if (messageDiv) {
-                                messageDiv.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> Đã xóa mã khuyến mãi thành công!</span>';
-                                messageDiv.style.display = 'block';
-                            }
-                            
-                            // Re-enable button
-                            if (button) {
-                                button.disabled = false;
-                                button.innerHTML = originalText;
-                            }
-                            
-                            // Reload page after a short delay to refresh the view
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1000);
-                        },
-                        error: function(xhr) {
-                            // Re-enable button
-                            if (button) {
-                                button.disabled = false;
-                                button.innerHTML = originalText;
-                            }
-                            
-                            let errorMessage = 'Có lỗi xảy ra khi xóa mã khuyến mãi';
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                errorMessage = xhr.responseJSON.message;
-                            }
-                            
-                            if (messageDiv) {
-                                messageDiv.innerHTML = '<span class="text-danger"><i class="fa fa-exclamation-circle"></i> ' + errorMessage + '</span>';
-                                messageDiv.style.display = 'block';
-                            }
-                            
-                            console.error('AJAX Error:', xhr);
-                        }
-                    });
-                });
-            }
-
-            // Handle remove promotion button click (for existing button)
-            const btnRemovePromotion = document.getElementById('btn_remove_promotion');
-            if (btnRemovePromotion) {
-                attachRemoveButtonListener(btnRemovePromotion);
-            }
 
             // Initialize with already applied promotion
         });

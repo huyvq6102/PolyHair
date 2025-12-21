@@ -103,7 +103,7 @@
                         <th>Tổng tiền</th>
                         <th>Ngày tạo</th>
                         <th>Người tạo</th>
-                        <th>Hành động</th>
+                        <th class="text-center">Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -142,16 +142,16 @@
                         <td>{{ number_format($payment->total) }} VNĐ</td>
                         <td>{{ $payment->created_at ? $payment->created_at->format('d/m/Y H:i') : 'N/A' }}</td>
                         <td>{{ $payment->created_by }}</td>
-                        <td>
+                        <td class="text-center">
                             <a href="{{ route('admin.payments.show', $payment->id) }}" class="btn btn-info btn-sm" title="Xem chi tiết">
-                                <i class="fas fa-eye"></i> Xem
+                                <i class="fas fa-eye"></i>
                             </a>
                             @if(!auth()->user()->isEmployee())
                             <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa hóa đơn này? Hành động này không thể hoàn tác!');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger btn-sm" title="Xóa hóa đơn">
-                                    <i class="fas fa-trash"></i> Xóa
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </form>
                             @endif
