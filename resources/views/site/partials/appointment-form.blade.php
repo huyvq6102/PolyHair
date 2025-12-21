@@ -818,7 +818,7 @@
             // Remove previous messages
             $('.success-message, .error-message').remove();
             
-            // Submit form via AJAX
+                // Submit form via AJAX
             $.ajax({
                 url: $(this).attr('action'),
                 method: 'POST',
