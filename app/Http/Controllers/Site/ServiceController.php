@@ -160,7 +160,7 @@ class ServiceController extends Controller
                     'image' => $combo->image,
                     'price' => $price,
                     'category' => $combo->category,
-                    'link' => route('site.services.show', $combo->id),
+                    'link' => '#',
                 ]);
             }
         }
@@ -237,27 +237,7 @@ class ServiceController extends Controller
      */
     public function show($id)
     {
-        // Kiểm tra xem có phải combo không (kiểm tra combo trước vì combo và service có thể có ID khác nhau)
-        $combo = \App\Models\Combo::with([
-            'comboItems.service.category', 
-            'comboItems.serviceVariant.service.category', 
-            'category'
-        ])->find($id);
-        
-        if ($combo) {
-            // Đây là combo - truyền combo vào view
-            $relatedServices = collect();
-            $randomImages = [];
-            
-            return view('site.service-detail', compact('combo', 'relatedServices', 'randomImages'));
-        }
-        
-        // Đây là service thông thường
-        try {
-            $service = $this->serviceService->getOne($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            abort(404, 'Dịch vụ không tồn tại');
-        }
+        $service = $this->serviceService->getOne($id);
         $relatedServices = $this->serviceService->getRelated($service->category_id ?? 0, $id);
         
         // Kiểm tra category hoặc tên dịch vụ để quyết định lấy ảnh từ thư mục nào
