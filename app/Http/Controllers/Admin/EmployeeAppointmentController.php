@@ -1101,10 +1101,6 @@ class EmployeeAppointmentController extends Controller
                      if ($appt) {
                          $appt->status = 'Đã thanh toán';
                          $appt->save();
-                         
-                         // Ghi nhận việc sử dụng khuyến mãi
-                         $appt->recordPromotionUsage();
-                         
                          foreach ($appt->appointmentDetails as $detail) {
                             $detail->status = 'Hoàn thành';
                             $detail->save();

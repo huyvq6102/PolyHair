@@ -6,8 +6,8 @@
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý danh mục</h1>
-    <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Thêm mới
+    <a href="{{ route('admin.categories.create') }}" class="btn btn-primary" title="Thêm mới">
+        <i class="fas fa-plus"></i>
     </a>
 </div>
 
@@ -24,7 +24,7 @@
                         <th>Mã danh mục</th>
                         <th>Tên danh mục</th>
                         <th>Hình ảnh</th>
-                        <th>Thao tác</th>
+                        <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -37,15 +37,15 @@
                                     <img src="{{ asset('legacy/images/categories/' . $category->images) }}" alt="{{ $category->name }}" width="50" height="50">
                                 @endif
                             </td>
-                            <td>
-                                <a href="{{ route('admin.categories.edit', $category->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Sửa
+                            <td class="text-center">
+                                <a href="{{ route('admin.categories.edit', $category->id) }}" class="btn btn-sm btn-primary" title="Sửa">
+                                    <i class="fas fa-edit"></i>
                                 </a>
                                 <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i> Xóa
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
                             </td>

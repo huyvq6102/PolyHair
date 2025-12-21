@@ -14,11 +14,11 @@
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger mr-2">
-                            <i class="fas fa-trash-alt"></i> Xóa tất cả
+                            <i class="fas fa-trash-alt"></i>
                         </button>
                     </form>
-                    <a href="{{ route('admin.working-schedules.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Thêm mới
+                    <a href="{{ route('admin.working-schedules.create') }}" class="btn btn-primary" title="Thêm mới">
+                        <i class="fas fa-plus"></i>
                     </a>
                 @endif
             </div>

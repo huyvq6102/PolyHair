@@ -6,18 +6,20 @@
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý khuyến mãi</h1>
     <div>
-        @if(isset($isTrash) && $isTrash)
-            <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Quay lại
-            </a>
-        @else
-            <a href="{{ route('admin.promotions.trash') }}" class="btn btn-warning">
-                <i class="fas fa-trash-restore"></i> Thùng rác
-            </a>
-            <a href="{{ route('admin.promotions.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Thêm khuyến mãi
-            </a>
-        @endif
+            @if(auth()->user()->isAdmin())
+                @if(isset($isTrash) && $isTrash)
+                    <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary" title="Quay lại">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                @else
+                    <a href="{{ route('admin.promotions.trash') }}" class="btn btn-warning" title="Thùng rác">
+                        <i class="fas fa-trash-restore"></i>
+                    </a>
+                    <a href="{{ route('admin.promotions.create') }}" class="btn btn-primary" title="Thêm khuyến mãi">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                @endif
+            @endif
     </div>
 </div>
 
@@ -42,7 +44,7 @@
                         <th>Phạm vi áp dụng</th>
                         <th>Thời gian áp dụng</th>
                         <th>Trạng thái</th>
-                        <th>Thao tác</th>
+                        <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -165,39 +167,38 @@
                                     {{ $statusLabel }}
                                 </span>
                             </td>
-                            <td>
-                                @if(isset($isTrash) && $isTrash)
-                                    <a href="{{ route('admin.promotions.show', $promotion->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i> Xem
-                                    </a>
-                                    <form action="{{ route('admin.promotions.restore', $promotion->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn khôi phục khuyến mãi này?');">
-                                        @csrf
-                                        @method('PUT')
-                                        <button type="submit" class="btn btn-sm btn-success" title="Khôi phục">
-                                            <i class="fas fa-undo"></i> Khôi phục
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('admin.promotions.force-delete', $promotion->id) }}" method="POST" class="d-inline force-delete-form" data-id="{{ $promotion->id }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Xóa vĩnh viễn">
-                                            <i class="fas fa-trash-alt"></i> Xóa vĩnh viễn
-                                        </button>
-                                    </form>
-                                @else
-                                    <a href="{{ route('admin.promotions.show', $promotion->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i> Xem
-                                    </a>
-                                    <a href="{{ route('admin.promotions.edit', $promotion->id) }}" class="btn btn-sm btn-primary" title="Chỉnh sửa">
-                                        <i class="fas fa-edit"></i> Sửa
-                                    </a>
-                                    <form action="{{ route('admin.promotions.destroy', $promotion->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa khuyến mãi này?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
-                                            <i class="fas fa-trash"></i> Xóa
-                                        </button>
-                                    </form>
+                            <td class="text-center">
+                                <a href="{{ route('admin.promotions.show', $promotion->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                @if(auth()->user()->isAdmin())
+                                    @if(isset($isTrash) && $isTrash)
+                                        <form action="{{ route('admin.promotions.restore', $promotion->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn khôi phục khuyến mãi này?');">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" class="btn btn-sm btn-success" title="Khôi phục">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('admin.promotions.force-delete', $promotion->id) }}" method="POST" class="d-inline force-delete-form" data-id="{{ $promotion->id }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Xóa vĩnh viễn">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <a href="{{ route('admin.promotions.edit', $promotion->id) }}" class="btn btn-sm btn-primary" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('admin.promotions.destroy', $promotion->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa khuyến mãi này?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                 @endif
                             </td>
                         </tr>

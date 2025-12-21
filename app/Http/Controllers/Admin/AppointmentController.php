@@ -200,95 +200,6 @@ class AppointmentController extends Controller
         $serviceVariantData = [];
         $totalDuration = 0;
         
-        // Get active promotions for service-level discounts
-        $now = Carbon::now();
-        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
-            ->whereNull('deleted_at')
-            ->where('status', 'active')
-            ->where('apply_scope', 'service')
-            ->where(function($query) use ($now) {
-                $query->whereNull('start_date')->orWhere('start_date', '<=', $now);
-            })
-            ->where(function($query) use ($now) {
-                $query->whereNull('end_date')->orWhere('end_date', '>=', $now);
-            })
-            ->get();
-        
-        // Helper function to calculate discount for a service
-        $calculateDiscount = function($originalPrice, $serviceId, $serviceType, $variantId = null, $comboId = null) use ($activePromotions) {
-            $maxDiscount = 0;
-            
-            foreach ($activePromotions as $promo) {
-                // Check usage_limit
-                if ($promo->usage_limit) {
-                    $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
-                    if ($totalUsage >= $promo->usage_limit) {
-                        continue;
-                    }
-                }
-                
-                $applies = false;
-                
-                // Check if promotion applies to this service
-                if ($serviceType === 'single') {
-                    $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
-                        || ($promo->combos && $promo->combos->count() > 0)
-                        || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-                    $applyToAll = !$hasSpecificServices ||
-                        (($promo->services ? $promo->services->count() : 0) +
-                         ($promo->combos ? $promo->combos->count() : 0) +
-                         ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                    
-                    if ($applyToAll || ($promo->services && $promo->services->contains('id', $serviceId))) {
-                        $applies = true;
-                    }
-                } elseif ($serviceType === 'variant') {
-                    $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
-                        || ($promo->combos && $promo->combos->count() > 0)
-                        || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-                    $applyToAll = !$hasSpecificServices ||
-                        (($promo->services ? $promo->services->count() : 0) +
-                         ($promo->combos ? $promo->combos->count() : 0) +
-                         ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                    
-                    if ($applyToAll || ($promo->serviceVariants && $promo->serviceVariants->contains('id', $variantId))) {
-                        $applies = true;
-                    }
-                } elseif ($serviceType === 'combo') {
-                    $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
-                        || ($promo->combos && $promo->combos->count() > 0)
-                        || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-                    $applyToAll = !$hasSpecificServices ||
-                        (($promo->services ? $promo->services->count() : 0) +
-                         ($promo->combos ? $promo->combos->count() : 0) +
-                         ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                    
-                    if ($applyToAll || ($promo->combos && $promo->combos->contains('id', $comboId))) {
-                        $applies = true;
-                    }
-                }
-                
-                if ($applies) {
-                    $currentDiscount = 0;
-                    if ($promo->discount_type === 'percent') {
-                        $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
-                        if ($promo->max_discount_amount) {
-                            $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
-                        }
-                    } else {
-                        $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
-                    }
-                    
-                    // Take the maximum discount
-                    if ($currentDiscount > $maxDiscount) {
-                        $maxDiscount = $currentDiscount;
-                    }
-                }
-            }
-            
-            return $maxDiscount;
-        };
-        
         foreach ($validated['services'] as $serviceValue) {
             // Format: "type_id" (e.g., "single_1", "variant_5", "combo_2")
             $parts = explode('_', $serviceValue);
@@ -302,15 +213,11 @@ class AppointmentController extends Controller
             if ($serviceType === 'single') {
                 $service = \App\Models\Service::find($serviceId);
                 if ($service) {
-                    $originalPrice = $service->base_price ?? 0;
-                    $discount = $calculateDiscount($originalPrice, $service->id, 'single');
-                    $finalPrice = max(0, $originalPrice - $discount);
-                    
                     $serviceVariantData[] = [
                         'service_variant_id' => null,
                         'combo_id' => null,
                         'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $finalPrice, // Giá sau khi áp dụng discount
+                        'price_snapshot' => $service->base_price ?? 0,
                         'duration' => $service->base_duration ?? 0,
                         'status' => 'Chờ',
                         'notes' => $service->name,
@@ -320,15 +227,11 @@ class AppointmentController extends Controller
             } elseif ($serviceType === 'variant') {
                 $serviceVariant = ServiceVariant::find($serviceId);
                 if ($serviceVariant) {
-                    $originalPrice = $serviceVariant->price;
-                    $discount = $calculateDiscount($originalPrice, $serviceVariant->service_id, 'variant', $serviceVariant->id);
-                    $finalPrice = max(0, $originalPrice - $discount);
-                    
                     $serviceVariantData[] = [
                         'service_variant_id' => $serviceVariant->id,
                         'combo_id' => null,
                         'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $finalPrice, // Giá sau khi áp dụng discount
+                        'price_snapshot' => $serviceVariant->price,
                         'duration' => $serviceVariant->duration,
                         'status' => 'Chờ',
                     ];
@@ -347,15 +250,11 @@ class AppointmentController extends Controller
                         }
                     }
                     
-                    $originalPrice = $combo->price;
-                    $discount = $calculateDiscount($originalPrice, null, 'combo', null, $combo->id);
-                    $finalPrice = max(0, $originalPrice - $discount);
-                    
                     $serviceVariantData[] = [
                         'service_variant_id' => null,
                         'combo_id' => $combo->id,
                         'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $finalPrice, // Giá sau khi áp dụng discount
+                        'price_snapshot' => $combo->price,
                         'duration' => $comboDuration,
                         'status' => 'Chờ',
                         'notes' => $combo->name,
@@ -530,96 +429,6 @@ class AppointmentController extends Controller
             $newServiceVariantData = [];
             $additionalDuration = 0;
             
-            // Get active promotions for service-level discounts
-            $promotionService = app(\App\Services\PromotionService::class);
-            $now = Carbon::now();
-            $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
-                ->whereNull('deleted_at')
-                ->where('status', 'active')
-                ->where('apply_scope', 'service')
-                ->where(function($query) use ($now) {
-                    $query->whereNull('start_date')->orWhere('start_date', '<=', $now);
-                })
-                ->where(function($query) use ($now) {
-                    $query->whereNull('end_date')->orWhere('end_date', '>=', $now);
-                })
-                ->get();
-            
-            // Helper function to calculate discount for a service
-            $calculateDiscount = function($originalPrice, $serviceId, $serviceType, $variantId = null, $comboId = null) use ($activePromotions) {
-                $maxDiscount = 0;
-                
-                foreach ($activePromotions as $promo) {
-                    // Check usage_limit
-                    if ($promo->usage_limit) {
-                        $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
-                        if ($totalUsage >= $promo->usage_limit) {
-                            continue;
-                        }
-                    }
-                    
-                    $applies = false;
-                    
-                    // Check if promotion applies to this service
-                    if ($serviceType === 'single') {
-                        $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
-                            || ($promo->combos && $promo->combos->count() > 0)
-                            || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-                        $applyToAll = !$hasSpecificServices ||
-                            (($promo->services ? $promo->services->count() : 0) +
-                             ($promo->combos ? $promo->combos->count() : 0) +
-                             ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                        
-                        if ($applyToAll || ($promo->services && $promo->services->contains('id', $serviceId))) {
-                            $applies = true;
-                        }
-                    } elseif ($serviceType === 'variant') {
-                        $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
-                            || ($promo->combos && $promo->combos->count() > 0)
-                            || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-                        $applyToAll = !$hasSpecificServices ||
-                            (($promo->services ? $promo->services->count() : 0) +
-                             ($promo->combos ? $promo->combos->count() : 0) +
-                             ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                        
-                        if ($applyToAll || ($promo->serviceVariants && $promo->serviceVariants->contains('id', $variantId))) {
-                            $applies = true;
-                        }
-                    } elseif ($serviceType === 'combo') {
-                        $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
-                            || ($promo->combos && $promo->combos->count() > 0)
-                            || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-                        $applyToAll = !$hasSpecificServices ||
-                            (($promo->services ? $promo->services->count() : 0) +
-                             ($promo->combos ? $promo->combos->count() : 0) +
-                             ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                        
-                        if ($applyToAll || ($promo->combos && $promo->combos->contains('id', $comboId))) {
-                            $applies = true;
-                        }
-                    }
-                    
-                    if ($applies) {
-                        $currentDiscount = 0;
-                        if ($promo->discount_type === 'percent') {
-                            $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
-                            if ($promo->max_discount_amount) {
-                                $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
-                            }
-                        } else {
-                            $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
-                        }
-                        
-                        // Take the maximum discount
-                        if ($currentDiscount > $maxDiscount) {
-                            $maxDiscount = $currentDiscount;
-                        }
-                    }
-                }
-                
-                return $maxDiscount;
-            };
-            
             if (!empty($validated['new_services'])) {
                 foreach ($validated['new_services'] as $serviceValue) {
                     if (empty($serviceValue)) continue;
@@ -636,15 +445,11 @@ class AppointmentController extends Controller
                     if ($serviceType === 'single') {
                         $service = \App\Models\Service::find($serviceId);
                         if ($service) {
-                            $originalPrice = $service->base_price ?? 0;
-                            $discount = $calculateDiscount($originalPrice, $service->id, 'single');
-                            $finalPrice = max(0, $originalPrice - $discount);
-                            
                             $newServiceVariantData[] = [
                                 'service_variant_id' => null,
                                 'combo_id' => null,
                                 'employee_id' => $validated['employee_id'] ?? null,
-                                'price_snapshot' => $finalPrice, // Giá sau khi áp dụng discount
+                                'price_snapshot' => $service->base_price ?? 0,
                                 'duration' => $service->base_duration ?? 0,
                                 'status' => 'Chờ',
                                 'notes' => $service->name,
@@ -654,15 +459,11 @@ class AppointmentController extends Controller
                     } elseif ($serviceType === 'variant') {
                         $serviceVariant = ServiceVariant::find($serviceId);
                         if ($serviceVariant) {
-                            $originalPrice = $serviceVariant->price;
-                            $discount = $calculateDiscount($originalPrice, $serviceVariant->service_id, 'variant', $serviceVariant->id);
-                            $finalPrice = max(0, $originalPrice - $discount);
-                            
                             $newServiceVariantData[] = [
                                 'service_variant_id' => $serviceVariant->id,
                                 'combo_id' => null,
                                 'employee_id' => $validated['employee_id'] ?? null,
-                                'price_snapshot' => $finalPrice, // Giá sau khi áp dụng discount
+                                'price_snapshot' => $serviceVariant->price,
                                 'duration' => $serviceVariant->duration,
                                 'status' => 'Chờ',
                             ];
@@ -681,15 +482,11 @@ class AppointmentController extends Controller
                                 }
                             }
                             
-                            $originalPrice = $combo->price;
-                            $discount = $calculateDiscount($originalPrice, null, 'combo', null, $combo->id);
-                            $finalPrice = max(0, $originalPrice - $discount);
-                            
                             $newServiceVariantData[] = [
                                 'service_variant_id' => null,
                                 'combo_id' => $combo->id,
                                 'employee_id' => $validated['employee_id'] ?? null,
-                                'price_snapshot' => $finalPrice, // Giá sau khi áp dụng discount
+                                'price_snapshot' => $combo->price,
                                 'duration' => $comboDuration,
                                 'status' => 'Chờ',
                                 'notes' => $combo->name,
@@ -1045,50 +842,8 @@ class AppointmentController extends Controller
                 $appliedCoupon = $result['promotion'];
                 $promotionMessage = $result['message'];
             } else {
-                // Kiểm tra xem có phải do hết lượt per_user_limit không
-                $isUserLimitExceeded = false;
-                if ($result['promotion'] && $result['promotion']->per_user_limit && $userIdForPromo) {
-                    $usageCount = \App\Models\PromotionUsage::where('promotion_id', $result['promotion']->id)
-                        ->where('user_id', $userIdForPromo)
-                        ->count();
-                    
-                    if ($usageCount >= $result['promotion']->per_user_limit) {
-                        $isUserLimitExceeded = true;
-                    }
-                }
-                
-                // Nếu hết lượt per_user_limit, tìm mã thay thế
-                if ($isUserLimitExceeded) {
-                    $applyScope = $result['promotion']->apply_scope ?? 'order';
-                    $alternativeResult = $promotionService->findAlternativePromotion(
-                        $couponCode,
-                        $cart,
-                        $subtotal,
-                        $userIdForPromo,
-                        $applyScope
-                    );
-                    
-                    if ($alternativeResult['found']) {
-                        // Tự động áp dụng mã thay thế
-                        $promotionAmount = $alternativeResult['discount_amount'];
-                        $appliedCoupon = $alternativeResult['promotion'];
-                        $promotionMessage = $alternativeResult['message'];
-                        
-                        // Cập nhật session với mã mới
-                        \Illuminate\Support\Facades\Session::put('coupon_code', $alternativeResult['promotion']->code);
-                        \Illuminate\Support\Facades\Session::put('applied_promotion_id', $alternativeResult['promotion']->id);
-                    } else {
-                        // Không tìm thấy mã thay thế
-                        \Illuminate\Support\Facades\Session::forget('coupon_code');
-                        \Illuminate\Support\Facades\Session::forget('applied_promotion_id');
-                        $promotionMessage = $result['message'] . ' ' . $alternativeResult['message'];
-                    }
-                } else {
-                    // Lỗi khác, không phải do hết lượt
-                    \Illuminate\Support\Facades\Session::forget('coupon_code');
-                    \Illuminate\Support\Facades\Session::forget('applied_promotion_id');
-                    $promotionMessage = $result['message'];
-                }
+                \Illuminate\Support\Facades\Session::forget('coupon_code');
+                $promotionMessage = $result['message'];
             }
         }
 
@@ -1233,10 +988,6 @@ class AppointmentController extends Controller
                      if ($appt) {
                          $appt->status = 'Đã thanh toán';
                          $appt->save();
-                         
-                         // Ghi nhận việc sử dụng khuyến mãi TRƯỚC KHI xóa session
-                         $appt->recordPromotionUsage();
-                         
                          foreach ($appt->appointmentDetails as $detail) {
                             $detail->status = 'Hoàn thành';
                             $detail->save();
@@ -1253,10 +1004,8 @@ class AppointmentController extends Controller
                  }
             }
             
-            // Xóa session SAU KHI đã ghi nhận promotion usage
             \Illuminate\Support\Facades\Session::forget('cart');
             \Illuminate\Support\Facades\Session::forget('coupon_code');
-            \Illuminate\Support\Facades\Session::forget('applied_promotion_id');
 
             // Handle VNPAY redirect if needed (though usually Admin takes Cash)
             if ($paymentMethod === 'vnpay') {
@@ -1359,46 +1108,6 @@ class AppointmentController extends Controller
             $subtotal, // Use the dynamically calculated subtotal
             $appointment->user_id
         );
-        
-        // Nếu mã không hợp lệ và do hết lượt per_user_limit, tìm mã thay thế
-        if (!$result['valid'] && $result['promotion']) {
-            $isUserLimitExceeded = false;
-            if ($result['promotion']->per_user_limit && $appointment->user_id) {
-                $usageCount = \App\Models\PromotionUsage::where('promotion_id', $result['promotion']->id)
-                    ->where('user_id', $appointment->user_id)
-                    ->count();
-                
-                if ($usageCount >= $result['promotion']->per_user_limit) {
-                    $isUserLimitExceeded = true;
-                }
-            }
-            
-            // Tìm mã thay thế nếu hết lượt per_user_limit
-            if ($isUserLimitExceeded) {
-                $applyScope = $result['promotion']->apply_scope ?? 'order';
-                $alternativeResult = $promotionService->findAlternativePromotion(
-                    $code,
-                    $cart,
-                    $subtotal,
-                    $appointment->user_id,
-                    $applyScope
-                );
-                
-                if ($alternativeResult['found']) {
-                    // Sử dụng mã thay thế
-                    $result = [
-                        'valid' => true,
-                        'promotion' => $alternativeResult['promotion'],
-                        'discount_amount' => $alternativeResult['discount_amount'],
-                        'message' => $alternativeResult['message']
-                    ];
-                    $code = $alternativeResult['promotion']->code; // Cập nhật code để lưu vào session
-                } else {
-                    // Không tìm thấy mã thay thế, giữ nguyên thông báo lỗi
-                    $result['message'] = $result['message'] . ' ' . $alternativeResult['message'];
-                }
-            }
-        }
         
         // Check if request is AJAX
         if ($request->ajax() || $request->wantsJson()) {
