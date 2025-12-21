@@ -8,11 +8,7 @@
     <section class="about-section py-5">
         <div class="container">
             <!-- Header -->
-            <div class="mb-4">
-                <h2 class="about-header">
-                    | Về POLY HAIR
-                </h2>
-            </div>
+          
 
             <!-- Giới Thiệu -->
             <div class="about-content mb-5">

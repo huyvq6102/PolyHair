@@ -438,7 +438,7 @@
                             <a href="{{ route('site.appointment.create', ['employee_id' => $employee->id]) }}"
                                class="stylist-book"
                                style="padding: 8px 12px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #000; font-weight: 700; border-radius: 999px; text-transform: uppercase; font-size: 12px; text-decoration: none; display: inline-block; flex-shrink: 0; white-space: nowrap;">
-                                BookStylist ngay
+                                Book Stylist ngay
                             </a>
                         </div>
                     </div>
@@ -731,12 +731,6 @@ function openVariantModal(button) {
         const formattedOriginalPrice = hasDiscount ? new Intl.NumberFormat('vi-VN').format(originalPrice) + 'vnđ' : '';
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
         
-        // Build discount badge HTML
-        let discountBadgeHTML = '';
-        if (hasDiscount && variant.discountTag) {
-            discountBadgeHTML = `<span style="position: absolute; top: 8px; right: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${variant.discountTag}</span>`;
-        }
-        
         // Build price HTML - hiển thị giá gốc (strikethrough) và giá sau discount
         let priceHTML = '';
         if (hasDiscount) {
@@ -745,6 +739,7 @@ function openVariantModal(button) {
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="text-decoration: line-through; color: #999; font-size: 13px;">${formattedOriginalPrice}</span>
                         <span class="variant-price">${formattedPrice}</span>
+                        ${variant.discountTag ? `<span style="background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: #fff; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; box-shadow: 0 2px 4px rgba(255, 68, 68, 0.25); letter-spacing: 0.2px; white-space: nowrap;">${variant.discountTag}</span>` : ''}
                     </div>
                     <span class="variant-checkmark">✓</span>
                 </div>
@@ -779,19 +774,16 @@ function openVariantModal(button) {
         }
         
         variantOption.innerHTML = `
-            <div style="position: relative;">
-                ${discountBadgeHTML}
-                <div class="variant-header">
-                    <div style="flex: 1;">
-                        <span class="variant-name">${variant.name}</span>
-                        ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
-                    </div>
-                    ${priceHTML}
+            <div class="variant-header">
+                <div style="flex: 1;">
+                    <span class="variant-name">${variant.name}</span>
+                    ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
                 </div>
-                ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
-                ${attributesHTML}
-                ${notesHTML}
+                ${priceHTML}
             </div>
+            ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
+            ${attributesHTML}
+            ${notesHTML}
         `;
         
         // Click handler

@@ -203,7 +203,7 @@
                         <!-- Chọn dịch vụ -->
                         <div class="mb-2" style="margin-top: 15px;">
                             <h5 class="fw-semibold mb-2" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px; margin-bottom: 8px;">
-                                2. DỊCH VỤ <span class="text-danger">*</span>
+                                2. Dịch vụ <span class="text-danger">*</span>
                             </h5>
 
                             @php

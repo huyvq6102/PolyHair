@@ -260,51 +260,43 @@
     }
     
     .total-section {
-        background: linear-gradient(135deg, #4A3600 0%, #6B4E1F 100%);
-        border-radius: 8px;
+        margin-top: 25px;
         padding: 20px;
-        margin-top: 20px;
-        box-shadow: 0 4px 12px rgba(74, 54, 0, 0.2);
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        background: #ffffff;
     }
     
     .total-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
+        padding: 8px 0;
+        color: #212529;
+        font-size: 0.95rem;
+    }
+    
+    .total-row.discount {
+        color: #212529;
+    }
+    
+    .total-row.discount .total-amount {
+        color: #dc3545;
     }
     
     .total-row:last-child {
-        margin-bottom: 0;
-        padding-top: 12px;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
-        margin-top: 8px;
+        border-top: 1px solid #e0e0e0;
+        margin-top: 10px;
+        padding-top: 15px;
+        font-weight: 700;
+        font-size: 1rem;
     }
     
     .total-label {
-        font-size: 16px;
         font-weight: 500;
-        color: white;
     }
     
     .total-amount {
-        font-size: 18px;
-        font-weight: 700;
-        color: white;
-    }
-    
-    .total-row:last-child .total-label {
-        font-size: 18px;
-        font-weight: 600;
-    }
-    
-    .total-row:last-child .total-amount {
-        font-size: 22px;
-        font-weight: 700;
-    }
-    
-    .discount-amount {
-        color: #ffc107;
         font-weight: 600;
     }
     
@@ -482,8 +474,8 @@
                             <div class="service-item">
                                 <div class="service-info">
                                     <div class="service-name">
-                                        @if($detail->serviceVariant && $detail->serviceVariant->service)
-                                            {{ $detail->serviceVariant->service->name }} - {{ $detail->serviceVariant->name }}
+                                        @if($detail->serviceVariant)
+                                            {{ $detail->serviceVariant->name }}
                                         @elseif($detail->combo)
                                             {{ $detail->combo->name }}
                                         @elseif($detail->notes)
@@ -493,10 +485,10 @@
                                         @endif
                                     </div>
                                     <div class="service-meta">
-                                        @if($detail->combo)
-                                            <span class="service-type">Combo</span>
-                                        @else
-                                            <span class="service-type">Dịch vụ{{ $detail->serviceVariant ? '' : ' đơn' }}</span>
+                                        @if($detail->serviceVariant && $detail->serviceVariant->variantAttributes)
+                                            @foreach($detail->serviceVariant->variantAttributes as $attr)
+                                                <span class="service-type">{{ $attr->attribute_name }}: {{ $attr->attribute_value }}</span>
+                                            @endforeach
                                         @endif
                                         @if($detail->duration)
                                             <span class="service-duration">{{ $detail->duration }} phút</span>
@@ -526,14 +518,26 @@
                                 $displayTotalPrice = $totalOriginalPrice ?? $subtotal ?? 0;
                                 
                                 // Số tiền đã giảm = tổng tất cả các khoản giảm giá
-                                $displayDiscount = $totalDiscount ?? 0;
+                                $displayDiscount = $serviceLevelDiscount ?? ($totalDiscount ?? 0);
                                 
                                 // Số tiền cần thanh toán = tổng sau khi giảm giá
                                 $displayTotalAfterDiscount = $totalAfterDiscount ?? $subtotal ?? 0;
                             @endphp
                             
-                    
-                            <!-- Số tiền cần thanh toán -->
+                            <div class="total-row">
+                                <span class="total-label">Tổng giá gốc:</span>
+                                <span class="total-amount">{{ number_format($displayTotalPrice, 0, ',', '.') }} ₫</span>
+                            </div>
+                            @if($displayDiscount > 0)
+                            <div class="total-row discount">
+                                <span class="total-label">Giảm giá tự động (từng dịch vụ):</span>
+                                <span class="total-amount">-{{ number_format($displayDiscount, 0, ',', '.') }} ₫</span>
+                            </div>
+                            <div class="total-row discount">
+                                <span class="total-label">Tổng giảm giá:</span>
+                                <span class="total-amount">-{{ number_format($displayDiscount, 0, ',', '.') }} ₫</span>
+                            </div>
+                            @endif
                             <div class="total-row">
                                 <span class="total-label">Tổng cộng:</span>
                                 <span class="total-amount">{{ number_format($displayTotalAfterDiscount, 0, ',', '.') }} ₫</span>
@@ -547,9 +551,18 @@
         </div>
 
         <!-- Cancel Button - Hiển thị cho cả guest và logged in user -->
-        @if($appointment->status !== 'Đã hủy')
+        @php
+            $canCancel = false;
+            if ($appointment->status === 'Chờ xử lý') {
+                $createdAt = \Carbon\Carbon::parse($appointment->created_at);
+                $secondsSinceCreated = $createdAt->diffInSeconds(now());
+                $canCancel = $secondsSinceCreated <= 30;
+            }
+        @endphp
+        
+        @if($appointment->status !== 'Đã hủy' && $canCancel)
             <div class="cancel-section">
-                <form action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?');">
+                <form id="cancelAppointmentForm" action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST">
                     @csrf
                     <button type="submit" class="cancel-button">
                         <div class="cancel-button-left">
@@ -560,7 +573,39 @@
                     </button>
                 </form>
             </div>
+        @elseif($appointment->status !== 'Đã hủy' && $appointment->status === 'Đã xác nhận')
+            <div class="cancel-section" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 12px; padding: 16px; text-align: center; color: #856404;">
+                <p style="margin: 0; font-size: 14px;">
+                    <i class="fa fa-info-circle"></i> Lịch hẹn đã được xác nhận. Không thể hủy sau 30 giây kể từ khi đặt.
+                </p>
+            </div>
         @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cancelForm = document.getElementById('cancelAppointmentForm');
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
+                // Disable button để tránh double submit
+                const submitBtn = cancelForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.6';
+                    submitBtn.style.cursor = 'not-allowed';
+                }
+                
+                // Submit form
+                cancelForm.submit();
+            }
+        });
+    }
+});
+</script>
+@endpush
 @endsection

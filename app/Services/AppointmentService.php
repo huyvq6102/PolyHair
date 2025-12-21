@@ -847,6 +847,9 @@ class AppointmentService
 
             $appointment->update([
                 'user_id' => $data['user_id'] ?? $appointment->user_id,
+                'guest_name' => $data['guest_name'] ?? $appointment->guest_name,
+                'guest_phone' => $data['guest_phone'] ?? $appointment->guest_phone,
+                'guest_email' => $data['guest_email'] ?? $appointment->guest_email,
                 'employee_id' => $data['employee_id'] ?? $appointment->employee_id,
                 'status' => $data['status'] ?? $appointment->status,
                 'start_at' => $data['start_at'] ?? $appointment->start_at,
