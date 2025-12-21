@@ -2,677 +2,565 @@
 
 @section('content')
 
-    <div class="container py-5" style="margin-top: 120px;">
-        <div class="row">
-            <!-- Cột thông tin cá nhân và hành động -->
-            <div class="col-lg-4 mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body p-4 text-center">
-                        <!-- Avatar -->
-                        <div class="mb-3">
-                            @if ($user->avatar)
-                                <img src="{{ asset('legacy/images/avatars/' . $user->avatar) }}" alt="{{ $user->name }}"
-                                    class="rounded-circle img-fluid shadow-sm"
-                                    style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #f8f9fa;"
-                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <div class="rounded-circle mx-auto d-none align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
-                                    style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    {{ strtoupper(substr($user->name, 0, 1)) }}
+        <div class="container py-5" style="margin-top: 120px;">
+            <div class="row">
+                <!-- Cột thông tin cá nhân và hành động -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-4 text-center">
+                            <!-- Avatar -->
+                            <div class="mb-3">
+                                @if ($user->avatar)
+                                    <img src="{{ asset('legacy/images/avatars/' . $user->avatar) }}" alt="{{ $user->name }}"
+                                        class="rounded-circle img-fluid shadow-sm"
+                                        style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #f8f9fa;"
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="rounded-circle mx-auto d-none align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
+                                        style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                                    </div>
+                                @else
+                                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
+                                        style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                                    </div>
+                                @endif
+                            </div>
+
+                            <h4 class="mb-2 fw-bold text-dark">{{ $user->name }}</h4>
+                            {{-- Hạng thành viên --}}
+                            <div class="mb-3">
+                                @php
+                                    $tier = $user->tier;
+                                    // Màu sắc nổi bật cho từng hạng
+                                    $tierBadgeClass = 'bg-secondary text-white'; // Khách thường
+                                    if ($tier === 'Silver') {
+                                        $tierBadgeClass = 'bg-primary text-white';
+                                    } elseif ($tier === 'Gold') {
+                                        $tierBadgeClass = 'bg-warning text-dark';
+                                    } elseif ($tier === 'VIP') {
+                                        $tierBadgeClass = 'bg-danger text-white';
+                                    }
+
+                                    // Ngưỡng chi tiêu cho từng hạng
+                                    $thresholds = [
+                                        'Khách thường' => 0,
+                                        'Silver' => 2_000_000,
+                                        'Gold' => 5_000_000,
+                                        'VIP' => 10_000_000,
+                                    ];
+
+                                    // Xác định hạng tiếp theo và số tiền cần thêm
+                                    $nextTierName = null;
+                                    $nextTierThreshold = null;
+                                    if ($tier === 'Khách thường') {
+                                        $nextTierName = 'Silver';
+                                        $nextTierThreshold = $thresholds['Silver'];
+                                    } elseif ($tier === 'Silver') {
+                                        $nextTierName = 'Gold';
+                                        $nextTierThreshold = $thresholds['Gold'];
+                                    } elseif ($tier === 'Gold') {
+                                        $nextTierName = 'VIP';
+                                        $nextTierThreshold = $thresholds['VIP'];
+                                    }
+
+                                    $amountToNext = $nextTierThreshold
+                                        ? max(0, $nextTierThreshold - $user->total_spent)
+                                        : 0;
+                                @endphp
+                                <span class="badge {{ $tierBadgeClass }} px-3 py-2"
+                                    style="font-size: 0.85rem; text-transform: uppercase;">
+                                    Hạng: {{ $tier }}
+                                </span>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        Tổng chi tiêu: <strong>{{ number_format($user->total_spent) }}đ</strong>
+                                    </small>
+                                    @if ($nextTierName && $amountToNext > 0)
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                ➡️ Còn <strong>{{ number_format($amountToNext) }}đ</strong> nữa để lên hạng
+                                                <strong>{{ strtoupper($nextTierName) }}</strong>
+                                            </small>
+                                        </div>
+                                    @elseif($tier === 'VIP')
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                🎉 Bạn đang ở hạng cao nhất (VIP).
+                                            </small>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Thống kê -->
+                            <div class="mb-4 p-4 bg-light rounded-3">
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="mb-2">
+                                        <i class="fas fa-cut fa-2x text-primary"></i>
+                                    </div>
+                                    <h3 class="mb-1 fw-bold text-primary">
+                                        {{ $user->appointments->where('status', '!=', 'Đã hủy')->count() }}</h3>
+                                    <small class="text-muted fw-semibold">Lần cắt</small>
+                                </div>
+                            </div>
+
+                            <!-- Nút hành động chính -->
+                            <div class="d-grid gap-3">
+                                <a href="{{ route('site.appointment.create') }}"
+                                    class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm text-decoration-none">
+                                    <i class="fas fa-calendar-plus me-2"></i>Đặt lịch ngay
+                                </a>
+                                <a href="{{ route('profile.edit') }}"
+                                    class="btn btn-outline-secondary btn-lg rounded-pill fw-semibold d-flex align-items-center justify-content-center py-3 text-decoration-none">
+                                    <i class="fas fa-user-edit me-2"></i>Sửa hồ sơ
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card border-0 shadow-sm mt-4">
+                        <div class="card-header bg-white border-0 pb-2">
+                            <h5 class="mb-0 fw-bold">
+                                <i class="fas fa-heart text-danger me-2"></i>Barber yêu thích
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            @if ($favoriteBarber && $favoriteBarber->user)
+                                <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                    @if ($favoriteBarber->avatar)
+                                        <img src="{{ asset('legacy/images/avatars/' . $favoriteBarber->avatar) }}"
+                                            alt="{{ $favoriteBarber->user->name }}" class="rounded-circle me-3 shadow-sm"
+                                            style="width: 70px; height: 70px; object-fit: cover; border: 3px solid #fff;"
+                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="rounded-circle me-3 d-none align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
+                                            style="width: 70px; height: 70px; font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #fff;">
+                                            {{ strtoupper(substr($favoriteBarber->user->name, 0, 1)) }}
+                                        </div>
+                                    @else
+                                        <div class="rounded-circle me-3 d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
+                                            style="width: 70px; height: 70px; font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #fff;">
+                                            {{ strtoupper(substr($favoriteBarber->user->name, 0, 1)) }}
+                                        </div>
+                                    @endif
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 fw-bold text-dark">{{ $favoriteBarber->user->name }}</h6>
+                                        <small class="text-muted d-block mb-2">
+                                            <i class="fas fa-user-tag me-1"></i>
+                                            @if ($favoriteBarber->position)
+                                                {{ $favoriteBarber->position }}
+                                            @elseif($favoriteBarber->level)
+                                                {{ $favoriteBarber->level }}
+                                            @else
+                                                Barber
+                                            @endif
+                                        </small>
+                                        @php
+                                            $appointmentCount = $user
+                                                ->appointments()
+                                                ->where('employee_id', $favoriteBarber->id)
+                                                ->where('status', '!=', 'Đã hủy')
+                                                ->count();
+                                        @endphp
+                                        <small class="text-primary fw-semibold">
+                                            <i class="fas fa-calendar-check me-1"></i>{{ $appointmentCount }} lần đặt lịch
+                                        </small>
+                                    </div>
                                 </div>
                             @else
-                                <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
-                                    style="width: 150px; height: 150px; font-size: 48px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                                <div class="text-center py-4">
+                                    <div class="mb-3">
+                                        <i class="fas fa-user-slash fa-3x text-muted opacity-50"></i>
+                                    </div>
+                                    <p class="text-muted mb-1 fw-semibold">Chưa có barber yêu thích</p>
+                                    <small class="text-muted">Đặt lịch để tìm barber yêu thích của bạn</small>
                                 </div>
                             @endif
                         </div>
-
-                        <h4 class="mb-2 fw-bold text-dark">{{ $user->name }}</h4>
-                        {{-- Hạng thành viên --}}
-                        <div class="mb-3">
-                            @php
-                                $tier = $user->tier;
-                                // Màu sắc nổi bật cho từng hạng
-                                $tierBadgeClass = 'bg-secondary text-white'; // Khách thường
-                                if ($tier === 'Silver') {
-                                    $tierBadgeClass = 'bg-primary text-white';
-                                } elseif ($tier === 'Gold') {
-                                    $tierBadgeClass = 'bg-warning text-dark';
-                                } elseif ($tier === 'VIP') {
-                                    $tierBadgeClass = 'bg-danger text-white';
-                                }
-
-                                // Ngưỡng chi tiêu cho từng hạng
-                                $thresholds = [
-                                    'Khách thường' => 0,
-                                    'Silver' => 2_000_000,
-                                    'Gold' => 5_000_000,
-                                    'VIP' => 10_000_000,
-                                ];
-
-                                // Xác định hạng tiếp theo và số tiền cần thêm
-                                $nextTierName = null;
-                                $nextTierThreshold = null;
-                                if ($tier === 'Khách thường') {
-                                    $nextTierName = 'Silver';
-                                    $nextTierThreshold = $thresholds['Silver'];
-                                } elseif ($tier === 'Silver') {
-                                    $nextTierName = 'Gold';
-                                    $nextTierThreshold = $thresholds['Gold'];
-                                } elseif ($tier === 'Gold') {
-                                    $nextTierName = 'VIP';
-                                    $nextTierThreshold = $thresholds['VIP'];
-                                }
-
-                                $amountToNext = $nextTierThreshold
-                                    ? max(0, $nextTierThreshold - $user->total_spent)
-                                    : 0;
-                            @endphp
-                            <span class="badge {{ $tierBadgeClass }} px-3 py-2"
-                                style="font-size: 0.85rem; text-transform: uppercase;">
-                                Hạng: {{ $tier }}
-                            </span>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    Tổng chi tiêu: <strong>{{ number_format($user->total_spent) }}đ</strong>
-                                </small>
-                                @if ($nextTierName && $amountToNext > 0)
-                                    <div class="mt-1">
-                                        <small class="text-muted">
-                                            ➡️ Còn <strong>{{ number_format($amountToNext) }}đ</strong> nữa để lên hạng
-                                            <strong>{{ strtoupper($nextTierName) }}</strong>
-                                        </small>
-                                    </div>
-                                @elseif($tier === 'VIP')
-                                    <div class="mt-1">
-                                        <small class="text-muted">
-                                            🎉 Bạn đang ở hạng cao nhất (VIP).
-                                        </small>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- Thống kê -->
-                        <div class="mb-4 p-4 bg-light rounded-3">
-                            <div class="d-flex flex-column align-items-center">
-                                <div class="mb-2">
-                                    <i class="fas fa-cut fa-2x text-primary"></i>
-                                </div>
-                                <h3 class="mb-1 fw-bold text-primary">
-                                    {{ $user->appointments->where('status', '!=', 'Đã hủy')->count() }}</h3>
-                                <small class="text-muted fw-semibold">Lần cắt</small>
-                            </div>
-                        </div>
-
-                        <!-- Nút hành động chính -->
-                        <div class="d-grid gap-3">
-                            <a href="{{ route('site.appointment.create') }}"
-                                class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm text-decoration-none">
-                                <i class="fas fa-calendar-plus me-2"></i>Đặt lịch ngay
-                            </a>
-                            <a href="{{ route('profile.edit') }}"
-                                class="btn btn-outline-secondary btn-lg rounded-pill fw-semibold d-flex align-items-center justify-content-center py-3 text-decoration-none">
-                                <i class="fas fa-user-edit me-2"></i>Sửa hồ sơ
-                            </a>
-                        </div>
                     </div>
                 </div>
-                <div class="card border-0 shadow-sm mt-4">
-                    <div class="card-header bg-white border-0 pb-2">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-heart text-danger me-2"></i>Barber yêu thích
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
-                        @if ($favoriteBarber && $favoriteBarber->user)
-                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
-                                @if ($favoriteBarber->avatar)
-                                    <img src="{{ asset('legacy/images/avatars/' . $favoriteBarber->avatar) }}"
-                                        alt="{{ $favoriteBarber->user->name }}" class="rounded-circle me-3 shadow-sm"
-                                        style="width: 70px; height: 70px; object-fit: cover; border: 3px solid #fff;"
-                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="rounded-circle me-3 d-none align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
-                                        style="width: 70px; height: 70px; font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #fff;">
-                                        {{ strtoupper(substr($favoriteBarber->user->name, 0, 1)) }}
-                                    </div>
-                                @else
-                                    <div class="rounded-circle me-3 d-flex align-items-center justify-content-center bg-gradient-primary text-white shadow-sm"
-                                        style="width: 70px; height: 70px; font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #fff;">
-                                        {{ strtoupper(substr($favoriteBarber->user->name, 0, 1)) }}
-                                    </div>
-                                @endif
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold text-dark">{{ $favoriteBarber->user->name }}</h6>
-                                    <small class="text-muted d-block mb-2">
-                                        <i class="fas fa-user-tag me-1"></i>
-                                        @if ($favoriteBarber->position)
-                                            {{ $favoriteBarber->position }}
-                                        @elseif($favoriteBarber->level)
-                                            {{ $favoriteBarber->level }}
-                                        @else
-                                            Barber
-                                        @endif
-                                    </small>
-                                    @php
-                                        $appointmentCount = $user
-                                            ->appointments()
-                                            ->where('employee_id', $favoriteBarber->id)
-                                            ->where('status', '!=', 'Đã hủy')
-                                            ->count();
-                                    @endphp
-                                    <small class="text-primary fw-semibold">
-                                        <i class="fas fa-calendar-check me-1"></i>{{ $appointmentCount }} lần đặt lịch
-                                    </small>
-                                </div>
-                            </div>
-                        @else
-                            <div class="text-center py-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-user-slash fa-3x text-muted opacity-50"></i>
-                                </div>
-                                <p class="text-muted mb-1 fw-semibold">Chưa có barber yêu thích</p>
-                                <small class="text-muted">Đặt lịch để tìm barber yêu thích của bạn</small>
+
+                <!-- Cột nội dung chính với các tab -->
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        @if (session('status') === 'profile-updated')
+                            <div class="alert alert-success alert-dismissible fade show m-3" role="alert"
+                                style="color: #000 !important;">
+                                Thông tin đã được cập nhật thành công!
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
                             </div>
                         @endif
-                    </div>
-                </div>
-            </div>
 
-            <!-- Cột nội dung chính với các tab -->
-            <div class="col-lg-8">
-                <div class="card border-0 shadow-sm">
-                    @if (session('status') === 'profile-updated')
-                        <div class="alert alert-success alert-dismissible fade show m-3" role="alert"
-                            style="color: #000 !important;">
-                            Thông tin đã được cập nhật thành công!
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                        @if (session('status') === 'password-updated' || (session('status') && session('status') !== 'profile-updated'))
+                            <div class="alert alert-success alert-dismissible fade show m-3" role="alert"
+                                style="color: #000 !important;">
+                                {{ session('status') === 'password-updated' ? 'Mật khẩu đã được cập nhật thành công!' : session('status') }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        @endif
+
+                        <div class="card-header bg-white border-0">
+                            <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link {{ request()->get('tab') !== 'history' ? 'active' : '' }}"
+                                        id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button"
+                                        role="tab">
+                                        <i class="fas fa-user-cog me-2"></i>Thông tin cá nhân
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link {{ request()->get('tab') === 'history' ? 'active' : '' }}"
+                                        id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button"
+                                        role="tab">
+                                        <i class="fas fa-history me-2"></i>Lịch sử đặt lịch
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="payment-history-tab" data-bs-toggle="tab"
+                                        data-bs-target="#payment-history" type="button" role="tab">
+                                        <i class="fas fa-receipt me-2"></i>Lịch sử thanh toán
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                    @endif
+                        <div class="card-body">
+                            <div class="tab-content" id="myTabContent">
 
-                    @if (session('status') === 'password-updated' || (session('status') && session('status') !== 'profile-updated'))
-                        <div class="alert alert-success alert-dismissible fade show m-3" role="alert"
-                            style="color: #000 !important;">
-                            {{ session('status') === 'password-updated' ? 'Mật khẩu đã được cập nhật thành công!' : session('status') }}
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    @endif
+                                <!-- Tab Thông tin cá nhân -->
+                                <div class="tab-pane fade {{ request()->get('tab') !== 'history' ? 'show active' : '' }}"
+                                    id="profile" role="tabpanel">
+                                    <h5 class="mb-4" id="thong-tin-ca-nhan">Thông tin chi tiết</h5>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-3">
+                                            <p class="text-muted mb-0">Họ và tên</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
+                                                {{ $user->name }}</p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-3">
+                                            <p class="text-muted mb-0">Hạng thành viên</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
+                                                {{ $user->tier }}
+                                                <span class="text-muted" style="font-size: 0.85rem;">
+                                                    (Tổng chi tiêu: {{ number_format($user->total_spent) }}đ)
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-3">
+                                            <p class="text-muted mb-0">Email</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
+                                                {{ $user->email }}</p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-3">
+                                            <p class="text-muted mb-0">Số điện thoại</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
+                                                {{ $user->phone }}</p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row mb-3">
+                                        <div class="col-sm-3">
+                                            <p class="text-muted mb-0">Ngày sinh</p>
+                                        </div>
+                                        <div class="col-sm-9">
+                                            <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
+                                                {{ $user->dob ? $user->dob->format('d/m/Y') : 'Chưa cập nhật' }}</p>
+                                        </div>
+                                    </div>
+                                    <hr>
 
-                    <div class="card-header bg-white border-0">
-                        <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link {{ request()->get('tab') !== 'history' ? 'active' : '' }}"
-                                    id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button"
-                                    role="tab">
-                                    <i class="fas fa-user-cog me-2"></i>Thông tin cá nhân
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link {{ request()->get('tab') === 'history' ? 'active' : '' }}"
-                                    id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button"
-                                    role="tab">
-                                    <i class="fas fa-history me-2"></i>Lịch sử đặt lịch
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="payment-history-tab" data-bs-toggle="tab"
-                                    data-bs-target="#payment-history" type="button" role="tab">
-                                    <i class="fas fa-receipt me-2"></i>Lịch sử thanh toán
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="card-body">
-                        <div class="tab-content" id="myTabContent">
-
-                            <!-- Tab Thông tin cá nhân -->
-                            <div class="tab-pane fade {{ request()->get('tab') !== 'history' ? 'show active' : '' }}"
-                                id="profile" role="tabpanel">
-                                <h5 class="mb-4" id="thong-tin-ca-nhan">Thông tin chi tiết</h5>
-                                <div class="row mb-3">
-                                    <div class="col-sm-3">
-                                        <p class="text-muted mb-0">Họ và tên</p>
-                                    </div>
-                                    <div class="col-sm-9">
-                                        <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
-                                            {{ $user->name }}</p>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div class="row mb-3">
-                                    <div class="col-sm-3">
-                                        <p class="text-muted mb-0">Hạng thành viên</p>
-                                    </div>
-                                    <div class="col-sm-9">
-                                        <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
-                                            {{ $user->tier }}
-                                            <span class="text-muted" style="font-size: 0.85rem;">
-                                                (Tổng chi tiêu: {{ number_format($user->total_spent) }}đ)
-                                            </span>
+                                    {{-- Thông tin chương trình khách hàng thân thiết --}}
+                                    <div class="mt-4">
+                                        <h6 class="fw-bold mb-2">🎖️ Chương trình khách hàng thân thiết</h6>
+                                        <p class="mb-2" style="font-size: 0.9rem;">
+                                            Hệ thống phân hạng khách hàng dựa trên tổng chi tiêu sau khi thanh toán tại cửa
+                                            hàng.
+                                        </p>
+                                        <ul class="mb-2" style="font-size: 0.9rem; padding-left: 1.2rem;">
+                                            <li>Khách thường: <strong>&lt; 2.000.000đ</strong></li>
+                                            <li>Silver: <strong>&ge; 2.000.000đ</strong></li>
+                                            <li>Gold: <strong>&ge; 5.000.000đ</strong></li>
+                                            <li>VIP: <strong>&ge; 10.000.000đ</strong></li>
+                                        </ul>
+                                        <p class="mb-0 fw-bold"
+                                            style="font-size: 0.9rem; font-weight: 700 !important; color: #c89c5c;">
+                                            Ưu đãi sẽ được áp dụng khi thanh toán tại cửa hàng.
                                         </p>
                                     </div>
                                 </div>
-                                <hr>
-                                <div class="row mb-3">
-                                    <div class="col-sm-3">
-                                        <p class="text-muted mb-0">Email</p>
-                                    </div>
-                                    <div class="col-sm-9">
-                                        <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
-                                            {{ $user->email }}</p>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div class="row mb-3">
-                                    <div class="col-sm-3">
-                                        <p class="text-muted mb-0">Số điện thoại</p>
-                                    </div>
-                                    <div class="col-sm-9">
-                                        <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
-                                            {{ $user->phone }}</p>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div class="row mb-3">
-                                    <div class="col-sm-3">
-                                        <p class="text-muted mb-0">Ngày sinh</p>
-                                    </div>
-                                    <div class="col-sm-9">
-                                        <p class="fw-bold mb-0" style="font-weight: 700 !important; color: #212529;">
-                                            {{ $user->dob ? $user->dob->format('d/m/Y') : 'Chưa cập nhật' }}</p>
-                                    </div>
-                                </div>
-                                <hr>
+    <div class="tab-pane fade {{ request()->get('tab') === 'history' ? 'show active' : '' }}" id="history" role="tabpanel">
+        <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
 
-                                {{-- Thông tin chương trình khách hàng thân thiết --}}
-                                <div class="mt-4">
-                                    <h6 class="fw-bold mb-2">🎖️ Chương trình khách hàng thân thiết</h6>
-                                    <p class="mb-2" style="font-size: 0.9rem;">
-                                        Hệ thống phân hạng khách hàng dựa trên tổng chi tiêu sau khi thanh toán tại cửa
-                                        hàng.
-                                    </p>
-                                    <ul class="mb-2" style="font-size: 0.9rem; padding-left: 1.2rem;">
-                                        <li>Khách thường: <strong>&lt; 2.000.000đ</strong></li>
-                                        <li>Silver: <strong>&ge; 2.000.000đ</strong></li>
-                                        <li>Gold: <strong>&ge; 5.000.000đ</strong></li>
-                                        <li>VIP: <strong>&ge; 10.000.000đ</strong></li>
-                                    </ul>
-                                    <p class="mb-0 fw-bold"
-                                        style="font-size: 0.9rem; font-weight: 700 !important; color: #c89c5c;">
-                                        Ưu đãi sẽ được áp dụng khi thanh toán tại cửa hàng.
-                                    </p>
-                                </div>
-                            </div>
-<div class="tab-pane fade {{ request()->get('tab') === 'history' ? 'show active' : '' }}" id="history" role="tabpanel">
-    <h5 class="mb-4">Các lịch hẹn sắp tới</h5>
+        @php
+            // Danh sách các trạng thái theo thứ tự: Chờ xử lý -> Đã xác nhận -> Đang thực hiện -> Hoàn thành -> Đã thanh toán -> Đã hủy
+            // Luôn hiển thị tất cả các trạng thái này, không phụ thuộc vào dữ liệu
+            $allStatuses = collect([
+                'Chờ xử lý',
+                'Đã xác nhận',
+                'Đang thực hiện',
+                'Hoàn thành',
+                'Đã thanh toán',
+                'Đã hủy'
+            ]);
 
-    @php
-        // Danh sách các trạng thái theo thứ tự: Chờ xử lý -> Đã xác nhận -> Đang thực hiện -> Hoàn thành -> Đã thanh toán -> Đã hủy [cite: 44]
-        // Luôn hiển thị tất cả các trạng thái này, không phụ thuộc vào dữ liệu [cite: 44]
-        $allStatuses = collect([
-            'Chờ xử lý',
-            'Đã xác nhận',
-            'Đang thực hiện',
-            'Hoàn thành',
-            'Đã thanh toán',
-            'Đã hủy'
-        ]); [cite: 45, 46, 47]
+            // Lấy tất cả appointments để filter (bao gồm cả đã hủy)
+            $allAppointmentsForFilter = $user->appointments->filter(function ($appointment) {
+                return !$appointment->trashed();
+            })->sortByDesc('start_at');
+        @endphp
 
-        // Lấy tất cả appointments để filter (bao gồm cả đã hủy) [cite: 48]
-        $allAppointmentsForFilter = $user->appointments->filter(function($appointment) {
-            return !$appointment->trashed(); [cite: 48]
-        })->sortByDesc('start_at'); [cite: 49]
-    @endphp
-
-    @if($allStatuses->count() > 0)
-        <div class="mb-4">
-            <div class="d-flex flex-wrap status-filter-buttons" style="gap: 1.5rem;">
-                <button type="button" class="btn btn-sm btn-outline-primary status-filter-btn active" data-status="all" style="margin-right: 0.5rem;">
-                    <i class="fas fa-list me-1"></i>Tất cả [cite: 52]
-                </button>
-                @foreach($allStatuses as $status)
-                    @php
-                        $statusClass = 'btn-outline-secondary'; [cite: 53]
-                        $customStyle = ''; [cite: 54]
-                        if ($status === 'Đã xác nhận') {
-                            $statusClass = 'btn-outline-success'; [cite: 54]
-                        } elseif ($status === 'Chờ xử lý') {
-                            $statusClass = 'btn-outline-warning'; [cite: 55]
-                        } elseif ($status === 'Đang thực hiện') {
-                            $statusClass = 'btn-outline-info'; [cite: 56]
-                        } elseif ($status === 'Hoàn thành') {
-                            $statusClass = 'btn-outline-success'; [cite: 58]
-                        } elseif ($status === 'Đã thanh toán') {
-                            // Màu teal/xanh lá cây đậm để rõ ràng [cite: 58]
-                            $statusClass = 'btn-outline-secondary'; [cite: 59]
-                            $customStyle = 'border-color: #20c997 !important; color: #20c997 !important; font-weight: 600; background-color: transparent !important;';
-                        } elseif ($status === 'Đã hủy') {
-                            $statusClass = 'btn-outline-danger'; [cite: 61]
-                        }
-                    @endphp
-                    <button type="button" class="btn btn-sm {{ $statusClass }} status-filter-btn" data-status="{{ $status }}" style="margin-right: 0.5rem; {{ $customStyle }}">
-                        {{ $status }} [cite: 63]
+        @if($allStatuses->count() > 0)
+            <div class="mb-4">
+                <div class="d-flex flex-wrap status-filter-buttons" style="gap: 1.5rem;">
+                    <button type="button" class="btn btn-sm btn-outline-primary status-filter-btn active" data-status="all" style="margin-right: 0.5rem;">
+                        <i class="fas fa-list me-1"></i>Tất cả
                     </button>
-                @endforeach
+                    @foreach($allStatuses as $status)
+                        @php
+                            $statusClass = 'btn-outline-secondary';
+                            $customStyle = '';
+                            if ($status === 'Đã xác nhận') {
+                                $statusClass = 'btn-outline-success';
+                            } elseif ($status === 'Chờ xử lý') {
+                                $statusClass = 'btn-outline-warning';
+                            } elseif ($status === 'Đang thực hiện') {
+                                $statusClass = 'btn-outline-info';
+                            } elseif ($status === 'Hoàn thành') {
+                                $statusClass = 'btn-outline-success';
+                            } elseif ($status === 'Đã thanh toán') {
+                                // Màu teal/xanh lá cây đậm để rõ ràng
+                                $statusClass = 'btn-outline-secondary';
+                                $customStyle = 'border-color: #20c997 !important; color: #20c997 !important; font-weight: 600; background-color: transparent !important;';
+                            } elseif ($status === 'Đã hủy') {
+                                $statusClass = 'btn-outline-danger';
+                            }
+                        @endphp
+                        <button type="button" class="btn btn-sm {{ $statusClass }} status-filter-btn" data-status="{{ $status }}" style="margin-right: 0.5rem; {{ $customStyle }}">
+                            {{ $status }}
+                        </button>
+                    @endforeach
+                </div>
             </div>
-        </div>
-    @endif
+        @endif
 
-    <div class="row g-3" id="appointments-list">
-        @forelse($allAppointmentsForFilter as $appointment)
-            <div class="col-12 appointment-item" data-appointment-id="{{ $appointment->id }}" data-appointment-status="{{ $appointment->status ?? 'Chờ xử lý' }}">
-                <div class="card border shadow-sm h-100">
-                    <div class="card-body p-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h6 class="mb-2 fw-bold">
-                                    @if($appointment->appointmentDetails->count() > 0)
-                                        @foreach($appointment->appointmentDetails as $detail)
-                                            @if($detail->serviceVariant)
-                                                {{ $detail->serviceVariant->name }} [cite: 71]
-                                            @elseif($detail->combo)
-                                                {{ $detail->combo->name }} [cite: 73]
+        <div class="row g-3" id="appointments-list">
+            @forelse($allAppointmentsForFilter as $appointment)
+                <div class="col-12 appointment-item" data-appointment-id="{{ $appointment->id }}" data-appointment-status="{{ $appointment->status ?? 'Chờ xử lý' }}">
+                    <div class="card border shadow-sm h-100">
+                        <div class="card-body p-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="mb-2 fw-bold">
+                                        @if($appointment->appointmentDetails->count() > 0)
+                                            @foreach($appointment->appointmentDetails as $detail)
+                                                @if($detail->serviceVariant)
+                                                    {{ $detail->serviceVariant->name }}
+                                                @elseif($detail->combo)
+                                                    {{ $detail->combo->name }}
+                                                @else
+                                                    Dịch vụ
+                                                @endif
+                                                @if (!$loop->last) , @endif
+                                            @endforeach
+                                        @endif
+                                    </h6>
+
+                                    <div class="mb-2">
+                                        @if ($appointment->booking_code)
+                                            <span class="badge bg-secondary text-white" style="white-space: nowrap;">{{ $appointment->booking_code }}</span>
+                                        @endif
+                                    </div>
+
+                                    <div class="d-flex flex-column gap-1 mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user-tie me-1"></i>
+                                            @if ($appointment->employee && $appointment->employee->user)
+                                                Barber: <strong>{{ $appointment->employee->user->name }}</strong>
                                             @else
-                                                Dịch vụ [cite: 74]
+                                                <span class="text-warning">Chưa phân công nhân viên</span>
                                             @endif
-                                            @if (!$loop->last) , @endif
-                                        @endforeach
-                                    @endif
-                                </h6>
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            @if ($appointment->start_at)
+                                                <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong>
+                                            @else
+                                                <span class="text-warning">Chưa có thời gian</span>
+                                            @endif
+                                        </small>
+                                    </div>
 
-                                <div class="mb-2">
-                                    @if ($appointment->booking_code)
-                                        <span class="badge bg-secondary text-white" style="white-space: nowrap;">{{ $appointment->booking_code }}</span> [cite: 78, 79]
-                                    @endif
-                                </div>
-
-                                <div class="d-flex flex-column gap-1 mb-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-user-tie me-1"></i>
-                                        @if ($appointment->employee && $appointment->employee->user)
-                                            Barber: <strong>{{ $appointment->employee->user->name }}</strong> [cite: 84, 85]
-                                        @else
-                                            <span class="text-warning">Chưa phân công nhân viên</span> [cite: 86, 87]
-                                        @endif
-                                    </small>
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar-alt me-1"></i>
-                                        @if ($appointment->start_at)
-                                            <strong>{{ $appointment->start_at->format('H:i, d/m/Y') }}</strong> [cite: 91]
-                                        @else
-                                            <span class="text-warning">Chưa có thời gian</span> [cite: 93]
-                                        @endif
-                                    </small>
-                                </div>
-
-                                <div class="mb-2">
-                                    @php
-                                        $statusBadgeClass = 'bg-info text-white'; [cite: 97]
-                                        if ($appointment->status === 'Đã xác nhận') {
-                                            $statusBadgeClass = 'bg-success text-white'; [cite: 98]
-                                        } elseif ($appointment->status === 'Chờ xử lý') {
-                                            $statusBadgeClass = 'bg-warning text-white'; [cite: 99]
-                                        } elseif ($appointment->status === 'Đang thực hiện') {
-                                            $statusBadgeClass = 'bg-primary text-white'; [cite: 102]
-                                        } elseif ($appointment->status === 'Hoàn thành') {
-                                            $statusBadgeClass = 'bg-success text-white'; [cite: 103]
-                                        } elseif ($appointment->status === 'Đã thanh toán') {
-                                            $statusBadgeClass = 'bg-success text-white';
-                                        } elseif ($appointment->status === 'Đã hủy') {
-                                            $statusBadgeClass = 'bg-danger text-white'; [cite: 104]
-                                        }
-                                    @endphp
-                                    <span class="badge {{ $statusBadgeClass }} appointment-status-badge" data-status="{{ $appointment->status }}" style="white-space: nowrap;">
-                                        {{ $appointment->status ?? 'Chờ xử lý' }} [cite: 108, 109]
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                                <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end appointment-actions" data-appointment-id="{{ $appointment->id }}">
-                                    <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye me-1"></i>Xem [cite: 114]
-                                    </a>
-
-                                    @if($appointment->status === 'Hoàn thành' || $appointment->status === 'Đã thanh toán') [cite: 115, 116]
+                                    <div class="mb-2">
                                         @php
-                                            $hasReviewed = \App\Models\Review::where('appointment_id', $appointment->id)
-                                                ->where('user_id', auth()->id())
-                                                ->exists(); [cite: 118, 119]
+                                            $statusBadgeClass = 'bg-info text-white';
+                                            if ($appointment->status === 'Đã xác nhận') {
+                                                $statusBadgeClass = 'bg-success text-white';
+                                            } elseif ($appointment->status === 'Chờ xử lý') {
+                                                $statusBadgeClass = 'bg-warning text-white';
+                                            } elseif ($appointment->status === 'Đang thực hiện') {
+                                                $statusBadgeClass = 'bg-primary text-white';
+                                            } elseif ($appointment->status === 'Hoàn thành') {
+                                                $statusBadgeClass = 'bg-success text-white';
+                                            } elseif ($appointment->status === 'Đã thanh toán') {
+                                                $statusBadgeClass = 'bg-success text-white';
+                                            } elseif ($appointment->status === 'Đã hủy') {
+                                                $statusBadgeClass = 'bg-danger text-white';
+                                            }
                                         @endphp
-                                        @if(!$hasReviewed)
-                                            <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-warning">
-                                                <i class="fas fa-star me-1"></i>Đánh giá [cite: 122]
-                                            </a>
+                                        <span class="badge {{ $statusBadgeClass }} appointment-status-badge" data-status="{{ $appointment->status }}" style="white-space: nowrap;">
+                                            {{ $appointment->status ?? 'Chờ xử lý' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                    <div class="d-flex flex-column flex-md-row gap-2 justify-content-md-end appointment-actions" data-appointment-id="{{ $appointment->id }}">
+                                        <a href="{{ route('site.appointment.show', $appointment->id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>Xem
+                                        </a>
+
+                                        @if($appointment->status === 'Hoàn thành' || $appointment->status === 'Đã thanh toán')
+                                            @php
+                                                $hasReviewed = \App\Models\Review::where('appointment_id', $appointment->id)
+                                                    ->where('user_id', auth()->id())
+                                                    ->exists();
+                                            @endphp
+                                            @if(!$hasReviewed)
+                                                <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-warning">
+                                                    <i class="fas fa-star me-1"></i>Đánh giá
+                                                </a>
+                                            @endif
                                         @endif
-                                    @endif
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        @empty
-            <div class="col-12 text-center py-5">
-                <p class="text-muted">Không có lịch hẹn nào.</p>
-            </div>
-        @endforelse
+            @empty
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">Không có lịch hẹn nào.</p>
+                </div>
+            @endforelse
+        </div>
     </div>
-</div>
-                                                                @php
-                                                                    // Chỉ hiển thị nút hủy nếu:
-                                                                    // 1. Status = 'Chờ xử lý'
-                                                                    // 2. Chưa quá 30 phút kể từ khi đặt
-                                                                    $canCancel = false;
-                                                                    if (
-                                                                        $appointment->status === 'Chờ xử lý' &&
-                                                                        $appointment->created_at
-                                                                    ) {
-                                                                        $createdAt = \Carbon\Carbon::parse(
-                                                                            $appointment->created_at,
-                                                                        );
-                                                                        $minutesSinceCreated = $createdAt->diffInMinutes(
-                                                                            now(),
-                                                                        );
-                                                                        $canCancel = $minutesSinceCreated <= 30;
-                                                                    }
-                                                                @endphp
-                                                                @if ($canCancel)
-                                                                    <button type="button"
-                                                                        class="btn btn-sm btn-outline-danger appointment-cancel-btn"
-                                                                        data-bs-toggle="modal"
-                                                                        data-bs-target="#cancelModal{{ $appointment->id }}">
-                                                                        <i class="fas fa-times me-1"></i>Hủy
-                                                                    </button>
 
-                                                                    <!-- Modal xác nhận hủy -->
-                                                                    <div class="modal fade"
-                                                                        id="cancelModal{{ $appointment->id }}"
-                                                                        tabindex="-1"
-                                                                        aria-labelledby="cancelModalLabel{{ $appointment->id }}"
-                                                                        aria-hidden="true">
-                                                                        <div class="modal-dialog">
-                                                                            <div class="modal-content">
-                                                                                <div class="modal-header">
-                                                                                    <h5 class="modal-title"
-                                                                                        id="cancelModalLabel{{ $appointment->id }}">
-                                                                                        Xác nhận hủy lịch hẹn</h5>
-                                                                                    <button type="button"
-                                                                                        class="btn-close"
-                                                                                        data-bs-dismiss="modal"
-                                                                                        aria-label="Close"></button>
-                                                                                </div>
-                                                                                <form
-                                                                                    action="{{ route('site.appointment.cancel', $appointment->id) }}"
-                                                                                    method="POST"
-                                                                                    id="cancelForm{{ $appointment->id }}">
-                                                                                    @csrf
-                                                                                    <div class="modal-body">
-                                                                                        <p>Bạn có chắc chắn muốn hủy lịch
-                                                                                            hẹn này?</p>
-                                                                                        <div class="mb-3">
-                                                                                            <label
-                                                                                                for="cancellation_reason{{ $appointment->id }}"
-                                                                                                class="form-label">Lý do
-                                                                                                hủy (tùy chọn):</label>
-                                                                                            <textarea class="form-control" id="cancellation_reason{{ $appointment->id }}" name="cancellation_reason"
-                                                                                                rows="3" placeholder="Nhập lý do hủy lịch hẹn..."></textarea>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div class="modal-footer">
-                                                                                        <button type="button"
-                                                                                            class="btn btn-secondary"
-                                                                                            data-bs-dismiss="modal">Đóng</button>
-                                                                                        <button type="submit"
-                                                                                            class="btn btn-danger">Xác nhận
-                                                                                            hủy</button>
-                                                                                    </div>
-                                                                                </form>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                @endif
-
-                                                                @if ($appointment->status === 'Hoàn thành' || $appointment->status === 'Đã thanh toán')
-                                                                    @php
-                                                                        $hasReviewed = \App\Models\Review::where(
-                                                                            'appointment_id',
-                                                                            $appointment->id,
-                                                                        )
-                                                                            ->where('user_id', auth()->id())
-                                                                            ->exists();
-                                                                    @endphp
-                                                                    @if (!$hasReviewed)
-                                                                        <a href="{{ route('site.reviews.create', ['appointment_id' => $appointment->id]) }}"
-                                                                            class="btn btn-sm btn-outline-warning">
-                                                                            <i class="fas fa-star me-1"></i>Đánh giá
-                                                                        </a>
-                                                                    @else
-                                                                        <span class="btn btn-sm btn-success disabled">
-                                                                            <i class="fas fa-check me-1"></i>Đã đánh giá
-                                                                        </span>
-                                                                    @endif
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                <!-- Tab Lịch sử thanh toán -->
+                                <div class="tab-pane fade" id="payment-history" role="tabpanel">
+                                    <h5 class="mb-4">Lịch sử thanh toán</h5>
+                                    <div class="list-group">
+                                        @forelse($user->payments as $payment)
+                                            <div class="list-group-item mb-3">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1">Hóa đơn: <strong>{{ $payment->invoice_code }}</strong>
+                                                    </h6>
+                                                    <small
+                                                        class="text-muted">{{ $payment->created_at ? $payment->created_at->format('H:i d/m/Y') : 'N/A' }}</small>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    @empty
-                                        <div class="col-12">
-                                            <div class="card border text-center py-5">
-                                                <div class="card-body">
-                                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                                                    <p class="text-muted mb-0">Chưa có lịch hẹn sắp tới</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforelse
-                                </div>
-                            </div>
+                                                <p class="mb-1">Tổng tiền: <strong
+                                                        class="text-danger">{{ number_format($payment->total) }}đ</strong></p>
+                                                <div class="d-flex justify-content-between">
+                                                    <p class="mb-1"><small>Phương thức: {{ $payment->payment_type }}</small>
+                                                    </p>
+                                                    @php
+                                                        $status = $payment->status ?? 'pending';
+                                                        $badgeClass = 'bg-secondary';
+                                                        $statusText = 'Chờ xử lý';
 
-                            <!-- Tab Lịch sử thanh toán -->
-                            <div class="tab-pane fade" id="payment-history" role="tabpanel">
-                                <h5 class="mb-4">Lịch sử thanh toán</h5>
-                                <div class="list-group">
-                                    @forelse($user->payments as $payment)
-                                        <div class="list-group-item mb-3">
-                                            <div class="d-flex w-100 justify-content-between">
-                                                <h6 class="mb-1">Hóa đơn: <strong>{{ $payment->invoice_code }}</strong>
-                                                </h6>
-                                                <small
-                                                    class="text-muted">{{ $payment->created_at ? $payment->created_at->format('H:i d/m/Y') : 'N/A' }}</small>
-                                            </div>
-                                            <p class="mb-1">Tổng tiền: <strong
-                                                    class="text-danger">{{ number_format($payment->total) }}đ</strong></p>
-                                            <div class="d-flex justify-content-between">
-                                                <p class="mb-1"><small>Phương thức: {{ $payment->payment_type }}</small>
-                                                </p>
+                                                        if ($status == 'completed') {
+                                                            $badgeClass = 'bg-success';
+                                                            $statusText = 'Thành công';
+                                                        } elseif ($status == 'failed') {
+                                                            $badgeClass = 'bg-danger';
+                                                            $statusText = 'Thất bại';
+                                                        } elseif ($status == 'refunded') {
+                                                            $badgeClass = 'bg-warning';
+                                                            $statusText = 'Hoàn tiền';
+                                                        }
+                                                    @endphp
+                                                    <span class="badge {{ $badgeClass }}">{{ $statusText }}</span>
+                                                </div>
+
                                                 @php
-                                                    $status = $payment->status ?? 'pending';
-                                                    $badgeClass = 'bg-secondary';
-                                                    $statusText = 'Chờ xử lý';
-
-                                                    if ($status == 'completed') {
-                                                        $badgeClass = 'bg-success';
-                                                        $statusText = 'Thành công';
-                                                    } elseif ($status == 'failed') {
-                                                        $badgeClass = 'bg-danger';
-                                                        $statusText = 'Thất bại';
-                                                    } elseif ($status == 'refunded') {
-                                                        $badgeClass = 'bg-warning';
-                                                        $statusText = 'Hoàn tiền';
-                                                    }
-                                                @endphp
-                                                <span class="badge {{ $badgeClass }}">{{ $statusText }}</span>
-                                            </div>
-
-                                            @php
-                                                $appliedPromo = null;
-                                                if ($payment->appointment_id) {
-                                                    foreach ($user->promotionUsages as $usage) {
-                                                        if ($usage->appointment_id == $payment->appointment_id) {
-                                                            $appliedPromo = $usage->promotion; // Assuming promotion relation is loaded on PromotionUsage
-                                                            break;
+                                                    $appliedPromo = null;
+                                                    if ($payment->appointment_id) {
+                                                        foreach ($user->promotionUsages as $usage) {
+                                                            if ($usage->appointment_id == $payment->appointment_id) {
+                                                                $appliedPromo = $usage->promotion; // Assuming promotion relation is loaded on PromotionUsage
+                                                                break;
+                                                            }
                                                         }
                                                     }
-                                                }
-                                            @endphp
+                                                @endphp
 
-                                            @if ($appliedPromo)
-                                                <p class="mb-0 text-success">
-                                                    <small>
-                                                        <i class="fas fa-tag me-1"></i>Mã KM:
-                                                        <strong>{{ $appliedPromo->code }}</strong>
-                                                        (-{{ $appliedPromo->discount_percent }}%)
-                                                    </small>
-                                                </p>
-                                            @endif
-                                        </div>
-                                    @empty
-                                        <div class="alert alert-info">Chưa có lịch sử thanh toán nào.</div>
-                                    @endforelse
+                                                @if ($appliedPromo)
+                                                    <p class="mb-0 text-success">
+                                                        <small>
+                                                            <i class="fas fa-tag me-1"></i>Mã KM:
+                                                            <strong>{{ $appliedPromo->code }}</strong>
+                                                            (-{{ $appliedPromo->discount_percent }}%)
+                                                        </small>
+                                                    </p>
+                                                @endif
+                                            </div>
+                                        @empty
+                                            <div class="alert alert-info">Chưa có lịch sử thanh toán nào.</div>
+                                        @endforelse
+                                    </div>
                                 </div>
-                            </div>
 
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
 @endsection
 
 @push('styles')
-<style>
-    /* Style cho nút filter "Đã thanh toán" - màu teal/xanh lá cây đậm */
-    .status-filter-btn[data-status="Đã thanh toán"] {
-        border-color: #20c997 !important;
-        color: #20c997 !important;
-        font-weight: 600 !important;
-        background-color: transparent !important;
-    }
+    <style>
+        /* Style cho nút filter "Đã thanh toán" - màu teal/xanh lá cây đậm */
+        .status-filter-btn[data-status="Đã thanh toán"] {
+            border-color: #20c997 !important;
+            color: #20c997 !important;
+            font-weight: 600 !important;
+            background-color: transparent !important;
+        }
 
-    .status-filter-btn[data-status="Đã thanh toán"]:hover {
-        background-color: #20c997 !important;
-        border-color: #20c997 !important;
-        color: #fff !important;
-        font-weight: 600 !important;
-    }
+        .status-filter-btn[data-status="Đã thanh toán"]:hover {
+            background-color: #20c997 !important;
+            border-color: #20c997 !important;
+            color: #fff !important;
+            font-weight: 600 !important;
+        }
 
-    .status-filter-btn[data-status="Đã thanh toán"].active {
-        background-color: #20c997 !important;
-        border-color: #20c997 !important;
-        color: #fff !important;
-        font-weight: 600 !important;
-    }
-</style>
+        .status-filter-btn[data-status="Đã thanh toán"].active {
+            background-color: #20c997 !important;
+            border-color: #20c997 !important;
+            color: #fff !important;
+            font-weight: 600 !important;
+        }
+    </style>
 @endpush
 
 @push('scripts')
