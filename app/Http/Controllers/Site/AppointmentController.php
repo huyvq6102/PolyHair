@@ -76,6 +76,21 @@ class AppointmentController extends Controller
             ->get();
 
 
+        // Load active promotions for automatic discount calculation (only service-level promotions)
+        $now = Carbon::now();
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where('apply_scope', 'service') // Chỉ lấy promotion có apply_scope = 'service'
+            ->where(function($query) use ($now) {
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                })->where(function($q) use ($now) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                });
+            })
+            ->get();
+
         // Load promotion nếu có promotion_id trong URL
         $selectedPromotion = null;
         $promotionForJs = null;
@@ -104,7 +119,7 @@ class AppointmentController extends Controller
             }
         }
 
-        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory', 'selectedPromotion', 'promotionForJs'));
+        return view('site.appointment.select-services', compact('categories', 'combosWithoutCategory', 'selectedPromotion', 'promotionForJs', 'activePromotions'));
     }
 
     /**
@@ -418,6 +433,21 @@ class AppointmentController extends Controller
                 ->find($promotionId);
         }
 
+        // Get all active promotions for automatic discount calculation
+        $now = Carbon::now();
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where(function($query) use ($now) {
+                $query->whereNull('start_date')
+                    ->orWhere('start_date', '<=', $now);
+            })
+            ->where(function($query) use ($now) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $now);
+            })
+            ->get();
+
         return view('site.appointment.create', compact(
             'employees', 
             'wordTimes', 
@@ -425,8 +455,145 @@ class AppointmentController extends Controller
             'combos',
             'restoredAppointmentDate',
             'restoredWordTimeId',
-            'selectedPromotion'
+            'selectedPromotion',
+            'activePromotions'
         ));
+    }
+
+    /**
+     * Helper function to calculate discount for an item (service/variant/combo)
+     * Logic must match with service-list-items.blade.php and create.blade.php
+     */
+    protected function calculateDiscountForItem($item, $itemType, $activePromotions)
+    {
+        $originalPrice = 0;
+        if ($itemType === 'service') {
+            $originalPrice = $item->base_price ?? 0;
+        } elseif ($itemType === 'variant') {
+            $originalPrice = $item->price ?? 0;
+        } elseif ($itemType === 'combo') {
+            $originalPrice = $item->price ?? 0;
+        }
+
+        $discount = 0;        // Highest discount found
+        $finalPrice = $originalPrice;
+        $promotion = null;    // Promotion with highest discount
+
+        if ($originalPrice <= 0) {
+            return [
+                'originalPrice' => 0,
+                'discount' => 0,
+                'finalPrice' => 0,
+                'promotion' => null
+            ];
+        }
+
+        $now = Carbon::now();
+
+        foreach ($activePromotions ?? [] as $promo) {
+            // Only apply discount directly to service when promotion is configured "By service"
+            if ($promo->apply_scope !== 'service') {
+                continue;
+            }
+            if ($promo->status !== 'active') continue;
+            if ($promo->start_date && $promo->start_date > $now) continue;
+            if ($promo->end_date && $promo->end_date < $now) continue;
+            
+            // Check usage_limit - if promotion has reached its limit, skip it
+            if ($promo->usage_limit) {
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                if ($totalUsage >= $promo->usage_limit) {
+                    continue; // Skip this promotion, use original price
+                }
+            }
+            
+            // Check per_user_limit - if user has reached their limit, skip it
+            if ($promo->per_user_limit) {
+                $userId = auth()->id();
+                if ($userId) {
+                    $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                        ->where('user_id', $userId)
+                        ->count();
+                    if ($userUsage >= $promo->per_user_limit) {
+                        continue; // Skip this promotion, use original price
+                    }
+                }
+            }
+
+            $applies = false;
+
+            if ($itemType === 'service') {
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                    || ($promo->combos && $promo->combos->count() > 0)
+                    || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                $applyToAll = !$hasSpecificServices ||
+                    (($promo->services ? $promo->services->count() : 0) +
+                     ($promo->combos ? $promo->combos->count() : 0) +
+                     ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                if ($promo->apply_scope === 'order' || $applyToAll) {
+                    $applies = true;
+                } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
+                    $applies = true;
+                }
+            } elseif ($itemType === 'variant') {
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                    || ($promo->combos && $promo->combos->count() > 0)
+                    || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                $applyToAll = !$hasSpecificServices ||
+                    (($promo->services ? $promo->services->count() : 0) +
+                     ($promo->combos ? $promo->combos->count() : 0) +
+                     ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                if ($promo->apply_scope === 'order' || $applyToAll) {
+                    $applies = true;
+                } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
+                    $applies = true;
+                } elseif ($item->service_id && $promo->services && $promo->services->contains('id', $item->service_id)) {
+                    $applies = true;
+                }
+            } elseif ($itemType === 'combo') {
+                $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                    || ($promo->combos && $promo->combos->count() > 0)
+                    || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                $applyToAll = !$hasSpecificServices ||
+                    (($promo->services ? $promo->services->count() : 0) +
+                     ($promo->combos ? $promo->combos->count() : 0) +
+                     ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                if ($promo->apply_scope === 'order' || $applyToAll) {
+                    $applies = true;
+                } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
+                    $applies = true;
+                }
+            }
+
+            if ($applies) {
+                // Calculate discount for current promo
+                $currentDiscount = 0;
+
+                if ($promo->discount_type === 'percent') {
+                    $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                    if ($promo->max_discount_amount) {
+                        $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
+                    }
+                } else {
+                    $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+                }
+
+                // Prioritize promotion with highest discount amount
+                if ($currentDiscount > $discount) {
+                    $discount = $currentDiscount;
+                    $promotion = $promo;
+                }
+            }
+        }
+
+        $finalPrice = max(0, $originalPrice - $discount);
+
+        return [
+            'originalPrice' => $originalPrice,
+            'discount' => $discount,
+            'finalPrice' => $finalPrice > 0 ? $finalPrice : $originalPrice,
+            'promotion' => $promotion
+        ];
     }
 
     /**
@@ -502,6 +669,21 @@ class AppointmentController extends Controller
             $appointmentDate = Carbon::parse($validated['appointment_date']);
             $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
             
+            // Load active promotions for automatic discount calculation (only service-level promotions)
+            $now = Carbon::now();
+            $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+                ->whereNull('deleted_at')
+                ->where('status', 'active')
+                ->where('apply_scope', 'service') // Only get promotions with apply_scope = 'service'
+                ->where(function($query) use ($now) {
+                    $query->where(function($q) use ($now) {
+                        $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                    })->where(function($q) use ($now) {
+                        $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                    });
+                })
+                ->get();
+            
             // Calculate total duration from selected service variants, service, or combo FIRST
             // (Cần tính trước để dùng cho việc tìm nhân viên còn trống)
             $totalDuration = 0;
@@ -544,13 +726,17 @@ class AppointmentController extends Controller
 
                 foreach ($variantIds as $variantId) {
                     try {
-                        $variant = \App\Models\ServiceVariant::findOrFail($variantId);
+                        $variant = \App\Models\ServiceVariant::with('service')->findOrFail($variantId);
                         $totalDuration += $variant->duration ?? 60; // Default 60 minutes if not set
+
+                        // Calculate discount for this variant
+                        $discountResult = $this->calculateDiscountForItem($variant, 'variant', $activePromotions);
+                        $finalPrice = $discountResult['finalPrice'];
 
                         $serviceVariantData[] = [
                             'service_variant_id' => $variantId,
                             'employee_id' => $validated['employee_id'] ?? null,
-                            'price_snapshot' => $variant->price,
+                            'price_snapshot' => $finalPrice, // Save price after discount
                             'duration' => $variant->duration ?? 60,
                             'status' => 'Chờ',
                         ];
@@ -593,11 +779,15 @@ class AppointmentController extends Controller
                     }
                     $totalDuration += $comboDuration;
 
+                    // Calculate discount for this combo
+                    $discountResult = $this->calculateDiscountForItem($combo, 'combo', $activePromotions);
+                    $finalPrice = $discountResult['finalPrice'];
+
                     $serviceVariantData[] = [
                         'service_variant_id' => null,
                         'combo_id' => $combo->id,
                         'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $combo->price ?? 0,
+                        'price_snapshot' => $finalPrice, // Save price after discount
                         'duration' => $comboDuration,
                         'status' => 'Chờ',
                         'notes' => $combo->name, // Store combo name in notes for display
@@ -621,10 +811,14 @@ class AppointmentController extends Controller
                     $service = \App\Models\Service::findOrFail($serviceId);
                     $totalDuration += $service->base_duration ?? 60; // Default 60 minutes if not set
 
+                    // Calculate discount for this service
+                    $discountResult = $this->calculateDiscountForItem($service, 'service', $activePromotions);
+                    $finalPrice = $discountResult['finalPrice'];
+
                     $serviceVariantData[] = [
                         'service_variant_id' => null, // No variant selected
                         'employee_id' => $validated['employee_id'] ?? null,
-                        'price_snapshot' => $service->base_price ?? 0,
+                        'price_snapshot' => $finalPrice, // Save price after discount
                         'duration' => $service->base_duration ?? 60,
                         'status' => 'Chờ',
                         'notes' => $service->name, // Store service name in notes for display
@@ -885,10 +1079,31 @@ class AppointmentController extends Controller
             'reviews'
         ])->findOrFail($id);
 
-        // Calculate total price
+        // Calculate total price (price_snapshot already includes discount)
         $totalPrice = 0;
+        $totalOriginalPrice = 0;
+        $totalDiscount = 0;
+        
         foreach ($appointment->appointmentDetails as $detail) {
-            $totalPrice += $detail->price_snapshot ?? 0;
+            $priceAfterDiscount = $detail->price_snapshot ?? 0;
+            $totalPrice += $priceAfterDiscount;
+            
+            // Calculate original price and discount for display
+            $originalPrice = 0;
+            if ($detail->serviceVariant && $detail->serviceVariant->price) {
+                $originalPrice = $detail->serviceVariant->price;
+            } elseif ($detail->combo && $detail->combo->price) {
+                $originalPrice = $detail->combo->price;
+            } elseif ($detail->serviceVariant && $detail->serviceVariant->service && $detail->serviceVariant->service->base_price) {
+                // Fallback: get from parent service
+                $originalPrice = $detail->serviceVariant->service->base_price;
+            } else {
+                // If we can't determine original price, use price_snapshot (no discount was applied)
+                $originalPrice = $priceAfterDiscount;
+            }
+            
+            $totalOriginalPrice += $originalPrice;
+            $totalDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
 
         // Check if user can review (appointment completed and not reviewed yet)
@@ -902,7 +1117,7 @@ class AppointmentController extends Controller
             $canReview = !$existingReview;
         }
 
-        return view('site.appointment.show', compact('appointment', 'totalPrice', 'canReview', 'existingReview'));
+        return view('site.appointment.show', compact('appointment', 'totalPrice', 'totalOriginalPrice', 'totalDiscount', 'canReview', 'existingReview'));
     }
 
     /**
@@ -915,37 +1130,88 @@ class AppointmentController extends Controller
             'employee.user',
             'appointmentDetails.serviceVariant.service',
             'appointmentDetails.combo',
-            'promotionUsages.promotion'
+            'promotionUsages.promotion',
+            'payments'
         ])->findOrFail($id);
 
-        // Tính tổng tiền từ appointment details
+        // Tính tổng tiền từ appointment details (price_snapshot đã bao gồm discount tự động)
         $subtotal = 0;
+        $totalOriginalPrice = 0;
+        $serviceLevelDiscount = 0; // Discount từ service-level promotions (đã áp dụng vào price_snapshot)
+        
         foreach ($appointment->appointmentDetails as $detail) {
-            $price = $detail->price_snapshot ?? 0;
+            $priceAfterDiscount = $detail->price_snapshot ?? 0;
+            $subtotal += $priceAfterDiscount;
+            
+            // Calculate original price for display
+            $originalPrice = 0;
             if ($detail->serviceVariant) {
-                $price = $detail->price_snapshot ?? ($detail->serviceVariant->price ?? 0);
+                $originalPrice = $detail->serviceVariant->price ?? 0;
             } elseif ($detail->combo) {
-                $price = $detail->price_snapshot ?? ($detail->combo->price ?? 0);
+                $originalPrice = $detail->combo->price ?? 0;
+            } else {
+                // For service without variant
+                $originalPrice = $priceAfterDiscount; // Fallback
             }
-            $subtotal += $price;
+            
+            $totalOriginalPrice += $originalPrice;
+            $serviceLevelDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
 
-        // Tính tổng giảm giá từ promotions
-        $promotionAmount = 0;
+        // Lấy payment để tính discount chính xác
+        $payment = $appointment->payments()->where('status', 'completed')->first();
+        $appliedPromotion = null;
+        $orderLevelPromotionAmount = 0;
+        
+        // Lấy promotion từ promotionUsages
         foreach ($appointment->promotionUsages as $usage) {
             if ($usage->promotion) {
-                $promotionAmount += $usage->discount_amount ?? 0;
+                $appliedPromotion = $usage->promotion;
+                
+                // Tính discount amount từ promotion
+                if ($usage->promotion->apply_scope === 'order') {
+                    // QUAN TRỌNG: Tính discount từ totalOriginalPrice (giá gốc trước khi giảm service-level)
+                    // Giống như logic trong admin show page
+                    if ($appliedPromotion->discount_type === 'percent') {
+                        $orderLevelPromotionAmount = ($totalOriginalPrice * ($appliedPromotion->discount_percent ?? 0)) / 100;
+                        if ($appliedPromotion->max_discount_amount) {
+                            $orderLevelPromotionAmount = min($orderLevelPromotionAmount, $appliedPromotion->max_discount_amount);
+                        }
+                    } else {
+                        $orderLevelPromotionAmount = min($appliedPromotion->discount_amount ?? 0, $totalOriginalPrice);
+                    }
+                }
+                break; // Chỉ lấy promotion đầu tiên
+            }
+        }
+        
+        // Nếu không có promotion từ promotionUsages, thử tính từ payment
+        // Payment->total là tổng cuối cùng đã thanh toán
+        // Có thể tính discount = totalOriginalPrice - payment->total (nếu payment->total < totalOriginalPrice)
+        if (!$appliedPromotion && $payment && $payment->total < $totalOriginalPrice) {
+            // Tính discount từ payment
+            $calculatedDiscount = max(0, $totalOriginalPrice - $payment->total);
+            if ($calculatedDiscount > $serviceLevelDiscount) {
+                // Nếu discount lớn hơn service-level discount, có thể có order-level discount
+                $orderLevelPromotionAmount = $calculatedDiscount - $serviceLevelDiscount;
             }
         }
 
-        // Tính tổng sau giảm giá
-        $totalAfterDiscount = max(0, $subtotal - $promotionAmount);
+        // Tính tổng sau giảm giá (đã bao gồm service-level discount trong price_snapshot)
+        // Trừ thêm order-level promotion nếu có
+        $totalAfterDiscount = max(0, $subtotal - $orderLevelPromotionAmount);
+        $totalDiscount = $serviceLevelDiscount + $orderLevelPromotionAmount;
 
         return view('site.appointment.success', [
             'appointment' => $appointment,
             'subtotal' => $subtotal,
-            'promotionAmount' => $promotionAmount,
+            'totalOriginalPrice' => $totalOriginalPrice,
+            'serviceLevelDiscount' => $serviceLevelDiscount,
+            'orderLevelPromotionAmount' => $orderLevelPromotionAmount,
+            'totalDiscount' => $totalDiscount,
             'totalAfterDiscount' => $totalAfterDiscount,
+            'appliedPromotion' => $appliedPromotion,
+            'payment' => $payment,
         ]);
     }
 
@@ -2120,5 +2386,161 @@ class AppointmentController extends Controller
         }
 
         return $hours . ' giờ ' . $minutes . ' phút';
+    }
+
+    /**
+     * Apply coupon code for appointment booking.
+     */
+    public function applyCoupon(Request $request, \App\Services\PromotionService $promotionService)
+    {
+        try {
+            $request->validate([
+                'coupon_code' => 'required|string|max:50'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        }
+
+        $code = $request->input('coupon_code');
+        
+        // Get service IDs from request
+        $serviceIds = $request->input('service_id', []);
+        $variantIds = $request->input('service_variants', []);
+        $comboIds = $request->input('combo_id', []);
+
+        // Convert to arrays if single values
+        if (!is_array($serviceIds)) {
+            $serviceIds = $serviceIds ? [$serviceIds] : [];
+        }
+        if (!is_array($variantIds)) {
+            $variantIds = $variantIds ? [$variantIds] : [];
+        }
+        if (!is_array($comboIds)) {
+            $comboIds = $comboIds ? [$comboIds] : [];
+        }
+
+        // Build cart from selected services
+        $cart = [];
+        $subtotal = 0;
+
+        // Add services
+        if (!empty($serviceIds)) {
+            $services = \App\Models\Service::whereIn('id', $serviceIds)->get();
+            foreach ($services as $service) {
+                $price = $service->base_price ?? 0;
+                $cart[] = [
+                    'type' => 'service',
+                    'id' => $service->id,
+                    'price' => $price,
+                    'quantity' => 1
+                ];
+                $subtotal += $price;
+            }
+        }
+
+        // Add variants
+        if (!empty($variantIds)) {
+            $variants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->get();
+            foreach ($variants as $variant) {
+                $price = $variant->price ?? 0;
+                $cart[] = [
+                    'type' => 'service_variant',
+                    'id' => $variant->id,
+                    'price' => $price,
+                    'quantity' => 1
+                ];
+                $subtotal += $price;
+            }
+        }
+
+        // Add combos
+        if (!empty($comboIds)) {
+            $combos = \App\Models\Combo::whereIn('id', $comboIds)->get();
+            foreach ($combos as $combo) {
+                $price = $combo->price ?? 0;
+                $cart[] = [
+                    'type' => 'combo',
+                    'id' => $combo->id,
+                    'price' => $price,
+                    'quantity' => 1
+                ];
+                $subtotal += $price;
+            }
+        }
+
+        $user = Auth::user();
+        $result = $promotionService->validateAndCalculateDiscount(
+            $code,
+            $cart,
+            $subtotal,
+            $user ? $user->id : null
+        );
+
+        if ($request->ajax() || $request->wantsJson()) {
+            if (!$result['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'],
+                    'error' => $result['message']
+                ], 400);
+            }
+
+            Session::put('coupon_code', $code);
+
+            $appliedPromotionId = $request->input('applied_promotion_id');
+            if (isset($result['promotion'])) {
+                Session::put('applied_promotion_id', $result['promotion']->id);
+            } elseif ($appliedPromotionId) {
+                Session::put('applied_promotion_id', $appliedPromotionId);
+            }
+
+            $promotion = $result['promotion'];
+            return response()->json([
+                'success' => true,
+                'message' => 'Áp dụng mã khuyến mại thành công!',
+                'promotion' => [
+                    'id' => $promotion->id ?? null,
+                    'code' => $promotion->code ?? $code,
+                    'name' => $promotion->name ?? '',
+                    'discount_amount' => $result['discount_amount'] ?? 0,
+                    'discount_type' => $promotion->discount_type ?? 'amount',
+                    'discount_percent' => $promotion->discount_percent ?? 0,
+                    'max_discount_amount' => $promotion->max_discount_amount ?? null,
+                    'apply_scope' => $promotion->apply_scope ?? 'order'
+                ]
+            ]);
+        }
+
+        Session::put('coupon_code', $code);
+        if (isset($result['promotion'])) {
+            Session::put('applied_promotion_id', $result['promotion']->id);
+        }
+
+        return back()->with('success', 'Áp dụng mã khuyến mại thành công!');
+    }
+
+    /**
+     * Remove applied coupon code.
+     */
+    public function removeCoupon(Request $request)
+    {
+        Session::forget('coupon_code');
+        Session::forget('applied_promotion_id');
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã gỡ bỏ mã khuyến mại.'
+            ]);
+        }
+
+        return back()->with('success', 'Đã gỡ bỏ mã khuyến mại.');
     }
 }

@@ -208,6 +208,7 @@
 
                             @php
                                 // Helper function để tính discount cho từng item
+                                // Logic này phải giống với service-list-items.blade.php để đảm bảo discount hiển thị đúng
                                 function calculateDiscountForItemInCreate($item, $itemType, $activePromotions) {
                                     $originalPrice = 0;
                                     if ($itemType === 'service') {
@@ -218,9 +219,9 @@
                                         $originalPrice = $item->price ?? 0;
                                     }
 
-                                    $discount = 0;
+                                    $discount = 0;        // Mức giảm cao nhất tìm được
                                     $finalPrice = $originalPrice;
-                                    $promotion = null;
+                                    $promotion = null;    // Khuyến mãi mang lại giảm giá cao nhất
 
                                     if ($originalPrice <= 0) {
                                         return ['originalPrice' => 0, 'discount' => 0, 'finalPrice' => 0, 'promotion' => null];
@@ -229,9 +230,39 @@
                                     $now = \Carbon\Carbon::now();
 
                                     foreach ($activePromotions ?? [] as $promo) {
+                                        // Chỉ áp dụng giảm trực tiếp vào dịch vụ khi khuyến mãi được cấu hình "Theo dịch vụ"
+                                        // Logic này phải giống với service-list-items.blade.php
+                                        if ($promo->apply_scope !== 'service') {
+                                            continue;
+                                        }
                                         if ($promo->status !== 'active') continue;
                                         if ($promo->start_date && $promo->start_date > $now) continue;
                                         if ($promo->end_date && $promo->end_date < $now) continue;
+                                        
+                                        // Check usage_limit - if promotion has reached its limit, skip it
+                                        if ($promo->usage_limit) {
+                                            $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                                            if ($totalUsage >= $promo->usage_limit) {
+                                                continue; // Skip this promotion, use original price
+                                            }
+                                        }
+                                        
+                                        // Check per_user_limit - if user has reached their limit, skip it
+                                        // CHỈ đếm các PromotionUsage có appointment đã thanh toán
+                                        if ($promo->per_user_limit) {
+                                            $userId = auth()->id();
+                                            if ($userId) {
+                                                $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                                                    ->where('user_id', $userId)
+                                                    ->whereHas('appointment', function($query) {
+                                                        $query->where('status', 'Đã thanh toán');
+                                                    })
+                                                    ->count();
+                                                if ($userUsage >= $promo->per_user_limit) {
+                                                    continue; // Skip this promotion, use original price
+                                                }
+                                            }
+                                        }
 
                                         $applies = false;
 
@@ -243,7 +274,7 @@
                                                 (($promo->services ? $promo->services->count() : 0) +
                                                  ($promo->combos ? $promo->combos->count() : 0) +
                                                  ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                                            if ($promo->apply_scope === 'all' || $applyToAll) {
+                                            if ($promo->apply_scope === 'order' || $applyToAll) {
                                                 $applies = true;
                                             } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
                                                 $applies = true;
@@ -256,7 +287,7 @@
                                                 (($promo->services ? $promo->services->count() : 0) +
                                                  ($promo->combos ? $promo->combos->count() : 0) +
                                                  ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                                            if ($promo->apply_scope === 'all' || $applyToAll) {
+                                            if ($promo->apply_scope === 'order' || $applyToAll) {
                                                 $applies = true;
                                             } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
                                                 $applies = true;
@@ -271,7 +302,7 @@
                                                 (($promo->services ? $promo->services->count() : 0) +
                                                  ($promo->combos ? $promo->combos->count() : 0) +
                                                  ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                                            if ($promo->apply_scope === 'all' || $applyToAll) {
+                                            if ($promo->apply_scope === 'order' || $applyToAll) {
                                                 $applies = true;
                                             } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
                                                 $applies = true;
@@ -279,19 +310,27 @@
                                         }
 
                                         if ($applies) {
-                                            $promotion = $promo;
+                                            // Tính mức giảm cho promo hiện tại
+                                            $currentDiscount = 0;
+
                                             if ($promo->discount_type === 'percent') {
-                                                $discount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                                                $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
                                                 if ($promo->max_discount_amount) {
-                                                    $discount = min($discount, $promo->max_discount_amount);
+                                                    $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
                                                 }
                                             } else {
-                                                $discount = min($promo->discount_amount ?? 0, $originalPrice);
+                                                $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
                                             }
-                                            $finalPrice = max(0, $originalPrice - $discount);
-                                            break; // Chỉ áp dụng promotion đầu tiên tìm thấy
+
+                                            // Ưu tiên khuyến mãi cho mức giảm tiền nhiều nhất (giống service-list)
+                                            if ($currentDiscount > $discount) {
+                                                $discount = $currentDiscount;
+                                                $promotion = $promo;
+                                            }
                                         }
                                     }
+
+                                    $finalPrice = max(0, $originalPrice - $discount);
 
                                     return [
                                         'originalPrice' => $originalPrice,
@@ -311,12 +350,15 @@
                                 $totalDuration = 0;
                                 $totalCount = 0;
 
+                                // Get active promotions for automatic discount calculation
+                                $activePromotions = $activePromotions ?? collect();
+                                
                                 // Get services
                                 if (request('service_id')) {
                                     $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
                                     $selectedServices = \App\Models\Service::whereIn('id', $serviceIds)->get();
                                     foreach ($selectedServices as $service) {
-                                        $serviceDiscount = calculateDiscountForItemInCreate($service, 'service', $activePromotions ?? collect());
+                                        $serviceDiscount = calculateDiscountForItemInCreate($service, 'service', $activePromotions);
                                         $allSelectedItems[] = [
                                             'name' => $service->name,
                                             'price' => $serviceDiscount['finalPrice'],
@@ -340,7 +382,7 @@
                                     $selectedVariants = \App\Models\ServiceVariant::whereIn('id', $variantIds)->with('service')->get();
                                     foreach ($selectedVariants as $variant) {
                                         $name = $variant->service ? $variant->service->name . ' - ' . $variant->name : $variant->name;
-                                        $variantDiscount = calculateDiscountForItemInCreate($variant, 'variant', $activePromotions ?? collect());
+                                        $variantDiscount = calculateDiscountForItemInCreate($variant, 'variant', $activePromotions);
                                         $allSelectedItems[] = [
                                             'name' => $name,
                                             'price' => $variantDiscount['finalPrice'],
@@ -372,7 +414,7 @@
                                             });
                                         }
 
-                                        $comboDiscount = calculateDiscountForItemInCreate($combo, 'combo', $activePromotions ?? collect());
+                                        $comboDiscount = calculateDiscountForItemInCreate($combo, 'combo', $activePromotions);
                                         $allSelectedItems[] = [
                                             'name' => $combo->name,
                                             'price' => $comboDiscount['finalPrice'],
@@ -417,8 +459,12 @@
                                 <!-- Tổng số tiền -->
                                 <div style="background: #fff; padding: 12px 16px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
                                     <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                                        @if($totalDiscount > 0)
+                                            <div style="font-size: 11px; color: #666; line-height: 1.3; margin-bottom: 2px;">Tổng tiền: {{ $formattedTotalPrice }} VNĐ</div>
+                                            <div style="font-size: 11px; color: #28a745; line-height: 1.3; margin-bottom: 2px;">Giảm giá: -{{ $formattedDiscountAmount }} VNĐ</div>
+                                        @endif
                                         <div style="font-size: 11px; color: #666; line-height: 1.3; margin-bottom: 1px;">Tổng thanh toán</div>
-                                        <div style="font-size: 20px; font-weight: 700; color: #000; line-height: 1.2;">{{ $formattedFinalPrice }} VNĐ</div>
+                                        <div style="font-size: 20px; font-weight: 700; color: #000; line-height: 1.2;" id="total_price_display">{{ $formattedFinalPrice }} VNĐ</div>
                                     </div>
                                 </div>
 
@@ -607,6 +653,7 @@
     .alert.alert-danger li {
         display: none !important;
     }
+
 
     .appointment-form-container {
         animation: fadeIn 0.5s ease-in;
@@ -3357,6 +3404,7 @@
                 }
             });
         });
+
     });
 </script>
 @endpush

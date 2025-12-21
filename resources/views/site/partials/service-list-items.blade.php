@@ -21,6 +21,31 @@
       if ($promo->status !== 'active') continue;
       if ($promo->start_date && $promo->start_date > $now) continue;
       if ($promo->end_date && $promo->end_date < $now) continue;
+      
+      // Check usage_limit - if promotion has reached its limit, skip it
+      if ($promo->usage_limit) {
+        $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+        if ($totalUsage >= $promo->usage_limit) {
+          continue; // Skip this promotion, use original price
+        }
+      }
+      
+      // Check per_user_limit - if user has reached their limit, skip it
+      // CHỈ đếm các PromotionUsage có appointment đã thanh toán
+      if ($promo->per_user_limit) {
+        $userId = auth()->id();
+        if ($userId) {
+          $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+            ->where('user_id', $userId)
+            ->whereHas('appointment', function($query) {
+                $query->where('status', 'Đã thanh toán');
+            })
+            ->count();
+          if ($userUsage >= $promo->per_user_limit) {
+            continue; // Skip this promotion, use original price
+          }
+        }
+      }
 
       $applies = false;
 
@@ -156,10 +181,21 @@
           ];
         }
         
+        // Tính discount cho variant này
+        $variantItem = [
+          'id' => $variant->id,
+          'price' => $variant->price,
+        ];
+        $variantDiscount = calculateDiscountForItem($variantItem, 'service_variant', $activePromotions ?? collect());
+        
         $variantsData[] = [
           'id' => $variant->id,
           'name' => $variant->name,
-          'price' => $variant->price,
+          'price' => $variant->price, // Giá gốc
+          'originalPrice' => $variantDiscount['originalPrice'], // Giá gốc (để đảm bảo)
+          'finalPrice' => $variantDiscount['finalPrice'], // Giá đã giảm
+          'discount' => $variantDiscount['discount'], // Số tiền giảm
+          'discountTag' => $variantDiscount['discountTag'], // Badge giảm giá
           'duration' => $variant->duration,
           'is_default' => $variant->is_default ?? false,
           'attributes' => $attributes,
