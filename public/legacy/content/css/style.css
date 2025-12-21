@@ -4506,7 +4506,10 @@ h6 {
 .slider_area .slider_text.text-center {
   position: absolute;
   top: 30%;
-  left: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  text-align: center;
 }
 
 /* Product_list */

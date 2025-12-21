@@ -82,7 +82,7 @@
                                         <tr>
                                             <td>{{ $appointment->booking_code ?? 'N/A' }}</td>
                                             <td>{{ $appointment->user->name ?? $appointment->guest_name ?? 'N/A' }}</td>
-                                            <td>{{ $appointment->user->phone ?? 'N/A' }}</td>
+                                            <td>{{ $appointment->user->phone ?? $appointment->guest_phone ?? 'N/A' }}</td>
                                             <td>
                                                 @if($appointment->appointmentDetails->count() > 0)
                                                     @foreach($appointment->appointmentDetails->take(2) as $detail)

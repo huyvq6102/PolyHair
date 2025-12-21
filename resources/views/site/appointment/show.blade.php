@@ -256,9 +256,6 @@
                                             @if($detail->duration)
                                                 | Thời lượng: {{ $detail->duration }} phút
                                             @endif
-                                            @if($detail->status)
-                                                | Trạng thái: {{ $detail->status }}
-                                            @endif
                                         </div>
                                     </div>
                                     <div class="service-price">

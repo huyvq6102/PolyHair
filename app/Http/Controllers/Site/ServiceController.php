@@ -228,7 +228,7 @@ class ServiceController extends Controller
                 'count' => $items->count()
             ]);
         }
-
+        //dd($items, $types, $typeId, $categories, $filterType, $categoryId, $keyword, $minPrice, $maxPrice, $sortBy, $activePromotions);
         return view('site.service-list', compact('items', 'types', 'typeId', 'categories', 'filterType', 'categoryId', 'keyword', 'minPrice', 'maxPrice', 'sortBy', 'activePromotions'));
     }
 

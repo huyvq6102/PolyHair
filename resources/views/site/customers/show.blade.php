@@ -280,13 +280,14 @@
                             
                             <!-- Filter by Status -->
                             @php
-                                // Danh sách các trạng thái theo thứ tự: Chờ xử lý -> Đã xác nhận -> Đang thực hiện -> Hoàn thành -> Đã hủy
+                                // Danh sách các trạng thái theo thứ tự: Chờ xử lý -> Đã xác nhận -> Đang thực hiện -> Hoàn thành -> Đã thanh toán -> Đã hủy
                                 // Luôn hiển thị tất cả các trạng thái này, không phụ thuộc vào dữ liệu
                                 $allStatuses = collect([
                                     'Chờ xử lý',
                                     'Đã xác nhận',
                                     'Đang thực hiện',
                                     'Hoàn thành',
+                                    'Đã thanh toán',
                                     'Đã hủy'
                                 ]);
                                 
@@ -305,6 +306,7 @@
                                     @foreach($allStatuses as $status)
                                         @php
                                             $statusClass = 'btn-outline-secondary';
+                                            $customStyle = '';
                                             if ($status === 'Đã xác nhận') {
                                                 $statusClass = 'btn-outline-success';
                                             } elseif ($status === 'Chờ xử lý') {
@@ -312,12 +314,17 @@
                                             } elseif ($status === 'Đang thực hiện') {
                                                 $statusClass = 'btn-outline-info';
                                             } elseif ($status === 'Hoàn thành') {
+                                                // Màu xanh lá
                                                 $statusClass = 'btn-outline-success';
+                                            } elseif ($status === 'Đã thanh toán') {
+                                                // Màu teal/xanh lá cây đậm để rõ ràng và không trùng với các màu khác
+                                                $statusClass = 'btn-outline-secondary';
+                                                $customStyle = 'border-color: #20c997 !important; color: #20c997 !important; font-weight: 600; background-color: transparent !important;';
                                             } elseif ($status === 'Đã hủy') {
                                                 $statusClass = 'btn-outline-danger';
                                             }
                                         @endphp
-                                        <button type="button" class="btn btn-sm {{ $statusClass }} status-filter-btn" data-status="{{ $status }}" style="margin-right: 0.5rem;">
+                                        <button type="button" class="btn btn-sm {{ $statusClass }} status-filter-btn" data-status="{{ $status }}" style="margin-right: 0.5rem; {{ $customStyle }}">
                                             {{ $status }}
                                         </button>
                                     @endforeach
@@ -444,7 +451,7 @@
                                                             </div>
                                                         @endif
                                                         
-                                                        @if($appointment->status === 'Hoàn thành')
+                                                        @if($appointment->status === 'Hoàn thành' || $appointment->status === 'Đã thanh toán')
                                                             @php
                                                                 // Kiểm tra xem đã đánh giá chưa
                                                                 $hasReviewed = \App\Models\Review::where('appointment_id', $appointment->id)
@@ -546,6 +553,32 @@
 </div>
 
 @endsection
+
+@push('styles')
+<style>
+    /* Style cho nút filter "Đã thanh toán" - màu teal/xanh lá cây đậm */
+    .status-filter-btn[data-status="Đã thanh toán"] {
+        border-color: #20c997 !important;
+        color: #20c997 !important;
+        font-weight: 600 !important;
+        background-color: transparent !important;
+    }
+    
+    .status-filter-btn[data-status="Đã thanh toán"]:hover {
+        background-color: #20c997 !important;
+        border-color: #20c997 !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+    }
+    
+    .status-filter-btn[data-status="Đã thanh toán"].active {
+        background-color: #20c997 !important;
+        border-color: #20c997 !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>

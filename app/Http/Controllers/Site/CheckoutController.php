@@ -357,6 +357,9 @@ class CheckoutController extends Controller
                              $appt->status = 'Đã thanh toán';
                              $appt->save();
                              
+                             // Ghi nhận việc sử dụng khuyến mãi TRƯỚC KHI xóa session
+                             $appt->recordPromotionUsage();
+                             
                              // Update details status
                              foreach ($appt->appointmentDetails as $detail) {
                                 $detail->status = 'Hoàn thành';
@@ -379,8 +382,10 @@ class CheckoutController extends Controller
             // Backup cart before clearing
             Session::put('cart_backup', $cart);
 
+            // Xóa session SAU KHI đã ghi nhận promotion usage
             Session::forget('cart');
             Session::forget('coupon_code');
+            Session::forget('applied_promotion_id');
 
             // -------------------------
             // XỬ LÝ VNPAY
@@ -427,6 +432,9 @@ class CheckoutController extends Controller
                         if ($appointment) {
                             $appointment->status = 'Đã thanh toán';
                             $appointment->save();
+
+                            // Ghi nhận việc sử dụng khuyến mãi
+                            $appointment->recordPromotionUsage();
 
                             // Cập nhật chi tiết
                             foreach ($appointment->appointmentDetails as $detail) {

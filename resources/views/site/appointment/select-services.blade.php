@@ -177,10 +177,10 @@
     // Helper function để tính discount cho một item (service/variant/combo)
     function calculateDiscount($item, $itemType, $activePromotions) {
         $originalPrice = 0;
-        $discount = 0;
-        $finalPrice = 0;
-        $promotion = null;
-        $discountTag = '';
+        $discount = 0;        // Mức giảm cao nhất tìm được
+        $finalPrice = 0;      // Giá sau khi áp dụng mức giảm cao nhất
+        $promotion = null;    // Khuyến mãi mang lại giảm giá cao nhất
+        $discountTag = '';    // Badge hiển thị trên thẻ dịch vụ
 
         if ($itemType === 'service') {
             $originalPrice = $item->base_price ?? 0;
@@ -203,42 +203,64 @@
         $now = \Carbon\Carbon::now();
 
         // Tìm promotion áp dụng cho item này
-        foreach ($activePromotions as $promo) {
-            // Kiểm tra promotion có active không
+        foreach ($activePromotions ?? [] as $promo) {
+            // Chỉ áp dụng giảm trực tiếp vào dịch vụ khi khuyến mãi được cấu hình "Theo dịch vụ"
+            if ($promo->apply_scope !== 'service') {
+                continue;
+            }
             if ($promo->status !== 'active') continue;
             if ($promo->start_date && $promo->start_date > $now) continue;
             if ($promo->end_date && $promo->end_date < $now) continue;
+            
+            // Check usage_limit - if promotion has reached its limit, skip it
+            if ($promo->usage_limit) {
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                if ($totalUsage >= $promo->usage_limit) {
+                    continue; // Skip this promotion, use original price
+                }
+            }
+            
+            // Check per_user_limit - if user has reached their limit, skip it
+            // CHỈ đếm các PromotionUsage có appointment đã thanh toán
+            if ($promo->per_user_limit) {
+                $userId = auth()->id();
+                if ($userId) {
+                    $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                        ->where('user_id', $userId)
+                        ->whereHas('appointment', function($query) {
+                            $query->where('status', 'Đã thanh toán');
+                        })
+                        ->count();
+                    if ($userUsage >= $promo->per_user_limit) {
+                        continue; // Skip this promotion, use original price
+                    }
+                }
+            }
 
             $applies = false;
 
             // Kiểm tra promotion có áp dụng cho item này không
             if ($itemType === 'service') {
-                // Check if promotion applies to all services
                 $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
                     || ($promo->combos && $promo->combos->count() > 0)
                     || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-
                 $applyToAll = !$hasSpecificServices ||
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-
                 if ($promo->apply_scope === 'order' || $applyToAll) {
                     $applies = true;
                 } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
                     $applies = true;
                 }
             } elseif ($itemType === 'variant') {
-                // Check if promotion applies to this variant or its parent service
                 $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
                     || ($promo->combos && $promo->combos->count() > 0)
                     || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-
                 $applyToAll = !$hasSpecificServices ||
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-
                 if ($promo->apply_scope === 'order' || $applyToAll) {
                     $applies = true;
                 } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
@@ -247,16 +269,13 @@
                     $applies = true;
                 }
             } elseif ($itemType === 'combo') {
-                // Check if promotion applies to this combo
                 $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
                     || ($promo->combos && $promo->combos->count() > 0)
                     || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
-
                 $applyToAll = !$hasSpecificServices ||
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-
                 if ($promo->apply_scope === 'order' || $applyToAll) {
                     $applies = true;
                 } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
@@ -265,22 +284,31 @@
             }
 
             if ($applies) {
-                $promotion = $promo;
-                // Tính discount
+                // Tính mức giảm cho promo hiện tại
+                $currentDiscount = 0;
+                $currentTag = '';
+
                 if ($promo->discount_type === 'percent') {
-                    $discount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                    $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
                     if ($promo->max_discount_amount) {
-                        $discount = min($discount, $promo->max_discount_amount);
+                        $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
                     }
-                    $discountTag = '-' . ($promo->discount_percent ?? 0) . '%';
+                    $currentTag = '-' . ($promo->discount_percent ?? 0) . '%';
                 } else {
-                    $discount = min($promo->discount_amount ?? 0, $originalPrice);
-                    $discountTag = '-' . number_format($discount / 1000, 0) . 'k';
+                    $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+                    $currentTag = '-' . number_format($currentDiscount / 1000, 0) . 'k';
                 }
-                $finalPrice = max(0, $originalPrice - $discount);
-                break; // Chỉ áp dụng promotion đầu tiên tìm thấy
+
+                // Ưu tiên khuyến mãi cho mức giảm tiền nhiều nhất
+                if ($currentDiscount > $discount) {
+                    $discount = $currentDiscount;
+                    $promotion = $promo;
+                    $discountTag = $currentTag;
+                }
             }
         }
+
+        $finalPrice = max(0, $originalPrice - $discount);
 
         return [
             'originalPrice' => $originalPrice,
@@ -476,6 +504,7 @@
                                                                          data-variant-id="{{ $variant->id }}"
                                                                          data-service-id="{{ $service->id }}"
                                                                          data-variant-price="{{ $variantDiscount['finalPrice'] }}"
+                                                                         data-variant-original-price="{{ $variantDiscount['originalPrice'] }}"
                                                                          data-variant-name="{{ $service->name }} - {{ $variant->name }}"
                                                                          style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 16px; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; gap: 6px; width: max-content; min-width: max-content; box-sizing: border-box; margin: 0; flex-shrink: 0; word-wrap: break-word; overflow-wrap: break-word;">
                                                                     <!-- Dòng 1: Tên biến thể + Tag thuộc tính -->
@@ -542,6 +571,7 @@
                                                                 data-has-variants="false"
                                                                 data-service-id="{{ $service->id }}"
                                                                 data-service-price="{{ $serviceDiscount['finalPrice'] }}"
+                                                                data-service-original-price="{{ $serviceDiscount['originalPrice'] }}"
                                                                 data-service-name="{{ $service->name }}"
                                                                 style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%; display: block;">
                                                             <i class="fa fa-check"></i> Chọn
@@ -639,6 +669,7 @@
                                                                 data-has-variants="false"
                                                                 data-combo-id="{{ $combo->id }}"
                                                                 data-combo-price="{{ $comboDiscount['finalPrice'] }}"
+                                                                data-combo-original-price="{{ $comboDiscount['originalPrice'] }}"
                                                                 data-combo-name="{{ $combo->name }}"
                                                                 style="background: #000; border: 1px solid #000; color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; transition: all 0.3s ease; text-align: center; position: relative; z-index: 1; cursor: pointer; width: 100%; display: block;">
                                                             <i class="fa fa-check"></i> Chọn
@@ -808,6 +839,43 @@
                             <span style="font-size: 14px; font-weight: 600; color: #333;">Ẩn dịch vụ đã chọn</span>
                             <i class="fa fa-chevron-down" style="color: #666; transition: transform 0.3s;" id="toggleServicesList"></i>
                         </div>
+                        
+                        <!-- Coupon Code Section -->
+                        <div class="coupon-section" style="padding: 15px 20px; border-bottom: 1px solid #e0e0e0; background: #fff;">
+                            <div style="font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px;">
+                                <i class="fa fa-tag" style="color: #007bff; margin-right: 5px;"></i>Mã giảm giá
+                            </div>
+                            <div id="couponInputContainer" style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" 
+                                       id="couponCodeInput" 
+                                       placeholder="Nhập mã giảm giá" 
+                                       style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none;"
+                                       maxlength="50">
+                                <button type="button" 
+                                        id="applyCouponBtn" 
+                                        style="padding: 8px 16px; background: #007bff; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.3s;">
+                                    Áp dụng
+                                </button>
+                            </div>
+                            <div id="couponAppliedContainer" style="display: none; margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 6px; border: 1px solid #4caf50;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <div style="font-size: 13px; font-weight: 600; color: #2e7d32; margin-bottom: 4px;">
+                                            <i class="fa fa-check-circle" style="margin-right: 5px;"></i>
+                                            <span id="appliedCouponCode"></span>
+                                        </div>
+                                        <div id="couponDiscountInfo" style="font-size: 12px; color: #4caf50;"></div>
+                                    </div>
+                                    <button type="button" 
+                                            id="removeCouponBtn" 
+                                            style="padding: 4px 8px; background: #dc3545; color: #fff; border: none; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                                        <i class="fa fa-times"></i> Xóa
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="couponMessage" style="margin-top: 8px; font-size: 12px; display: none;"></div>
+                        </div>
+                        
                         <div class="selected-services-body" id="selectedServicesBody" style="padding: 8px 0;">
                             <!-- Services will be dynamically added here -->
                         </div>
@@ -1373,7 +1441,8 @@ document.addEventListener('DOMContentLoaded', function() {
         serviceIds: [],
         variantIds: [],
         comboIds: [],
-        prices: {},
+        prices: {}, // Final prices (after auto discount)
+        originalPrices: {}, // Original prices (before any discount) - for coupon calculation
         names: {}, // Store service names for display
         variantParentServices: {} // Store parent service ID for each variant: {variantId: parentServiceId}
     };
@@ -1418,6 +1487,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 variantIds: [],
                 comboIds: [],
                 prices: {},
+                originalPrices: {},
                 names: {},
                 variantParentServices: {}
             };
@@ -1543,9 +1613,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         // QUAN TRỌNG: Luôn lấy giá gốc từ DOM (data attributes), không dùng giá đã discount
                         const name = btn.getAttribute('data-service-name') || 'Dịch vụ #' + id;
                         const price = parseFloat(btn.getAttribute('data-service-price') || 0);
+                        const originalPrice = parseFloat(btn.getAttribute('data-service-original-price') || price);
                         // Luôn update để đảm bảo dùng giá gốc từ DOM
                         selectedServices.names['service_' + id] = name;
                         selectedServices.prices['service_' + id] = price;
+                        selectedServices.originalPrices['service_' + id] = originalPrice;
                         hasUpdates = true;
                     } else if (!selectedServices.names['service_' + id]) {
                         // If button not found, still keep the ID and use default name/price
@@ -1563,11 +1635,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         // QUAN TRỌNG: Luôn lấy giá gốc từ DOM (data attributes), không dùng giá đã discount
                         const name = variantBox.getAttribute('data-variant-name') || 'Biến thể #' + id;
                         const price = parseFloat(variantBox.getAttribute('data-variant-price') || 0);
+                        const originalPrice = parseFloat(variantBox.getAttribute('data-variant-original-price') || price);
                         const parentServiceId = variantBox.getAttribute('data-service-id');
 
                         // Luôn update để đảm bảo dùng giá gốc từ DOM
                         selectedServices.names['variant_' + id] = name;
                         selectedServices.prices['variant_' + id] = price;
+                        selectedServices.originalPrices['variant_' + id] = originalPrice;
                         if (parentServiceId) {
                             selectedServices.variantParentServices[id] = parentServiceId;
                         }
@@ -1588,9 +1662,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         // QUAN TRỌNG: Luôn lấy giá gốc từ DOM (data attributes), không dùng giá đã discount
                         const name = btn.getAttribute('data-combo-name') || 'Combo #' + id;
                         const price = parseFloat(btn.getAttribute('data-combo-price') || 0);
+                        const originalPrice = parseFloat(btn.getAttribute('data-combo-original-price') || price);
                         // Luôn update để đảm bảo dùng giá gốc từ DOM
                         selectedServices.names['combo_' + id] = name;
                         selectedServices.prices['combo_' + id] = price;
+                        selectedServices.originalPrices['combo_' + id] = originalPrice;
                         hasUpdates = true;
                     } else if (!selectedServices.names['combo_' + id]) {
                         // If button not found, still keep the ID and use default name/price
@@ -1655,6 +1731,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         variantIds: parsed.variantIds || [],
                         comboIds: parsed.comboIds || [],
                         prices: parsed.prices || {},
+                        originalPrices: parsed.originalPrices || {},
                         names: parsed.names || {},
                         variantParentServices: parsed.variantParentServices || {}
                     };
@@ -1665,6 +1742,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         variantIds: [],
                         comboIds: [],
                         prices: {},
+                        originalPrices: {},
                         names: {},
                         variantParentServices: {}
                     };
@@ -1678,6 +1756,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     variantIds: [],
                     comboIds: [],
                     prices: {},
+                    originalPrices: {},
                     names: {},
                     variantParentServices: {}
                 };
@@ -1730,18 +1809,21 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalPrice = 0;
 
         // Calculate total price from stored prices
+        // LƯU Ý: Giá trong selectedServices.prices đã là giá sau discount tự động (finalPrice) từ PHP
         Object.values(selectedServices.prices).forEach(price => {
             totalPrice += parseFloat(price) || 0;
         });
 
-        // Calculate discount if promotion exists - only on applicable services
+        // Calculate discount if promotion from URL exists (order-level promotion)
+        // LƯU Ý: Giá đã được discount tự động ở PHP, chỉ tính discount thêm nếu có promotion từ URL (order-level)
         let discountAmount = 0;
         let applicablePrice = 0; // Price of services that match promotion
         let finalPrice = totalPrice;
         let applicableServices = []; // Track which services are eligible
         let nonApplicableServices = []; // Track which services are NOT eligible
 
-        if (promotionData) {
+        // Chỉ tính discount thêm nếu có promotion từ URL và là order-level promotion
+        if (promotionData && promotionData.apply_scope === 'order') {
             // Check if promotion applies to all services
             const hasSpecificServices = (promotionData.service_ids && promotionData.service_ids.length > 0)
                 || (promotionData.combo_ids && promotionData.combo_ids.length > 0)
@@ -1751,7 +1833,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ((promotionData.service_ids?.length || 0) + (promotionData.combo_ids?.length || 0) + (promotionData.variant_ids?.length || 0)) >= 20;
 
             // Calculate applicable price (only for services that match promotion)
-            if (promotionData.apply_scope === 'order' || applyToAll) {
+            if (applyToAll) {
                 // Apply to all services
                 applicablePrice = totalPrice;
                 // All services are applicable
@@ -1810,9 +1892,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
 
-            // Calculate discount on applicable price only
-            // QUAN TRỌNG: CHỈ tính discount để hiển thị, KHÔNG lưu vào selectedServices.prices
-            // Giữ nguyên giá gốc trong selectedServices.prices để tránh giá nhảy lung tung
+            // Calculate discount on applicable price only (order-level promotion)
             if (applicablePrice > 0) {
                 if (promotionData.discount_type === 'percent') {
                     discountAmount = (applicablePrice * promotionData.discount_percent) / 100;
@@ -1925,8 +2005,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle service selection
-    function handleServiceSelection(serviceId, price, type, name = '', serviceParentId = null) {
+    function handleServiceSelection(serviceId, price, type, name = '', serviceParentId = null, originalPrice = null) {
         const id = serviceId.toString();
+        // Use originalPrice if provided, otherwise use price as fallback
+        const origPrice = originalPrice !== null ? originalPrice : price;
 
         // KHÔNG CHO PHÉP BỎ CHỌN: Nếu dịch vụ đã được chọn, không làm gì cả
         // Chỉ cho phép bỏ chọn từ form "dịch vụ đã chọn" (nút X)
@@ -1937,6 +2019,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 selectedServices.serviceIds.push(id);
                 selectedServices.prices['service_' + id] = price;
+                selectedServices.originalPrices['service_' + id] = origPrice;
                 selectedServices.names['service_' + id] = name || 'Dịch vụ #' + id;
             }
         } else if (type === 'variant') {
@@ -1956,6 +2039,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Remove other variants from selection
                         selectedServices.variantIds = selectedServices.variantIds.filter(vid => vid !== variantId);
                         delete selectedServices.prices['variant_' + variantId];
+                        delete selectedServices.originalPrices['variant_' + variantId];
                         delete selectedServices.names['variant_' + variantId];
                         delete selectedServices.variantParentServices[variantId];
                         // Reset visual state
@@ -1967,6 +2051,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             selectedServices.variantIds.push(id);
             selectedServices.prices['variant_' + id] = price;
+            selectedServices.originalPrices['variant_' + id] = origPrice;
             selectedServices.names['variant_' + id] = name || 'Biến thể #' + id;
             // Store parent service ID if available
             if (serviceParentId) {
@@ -1979,6 +2064,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 selectedServices.comboIds.push(id);
                 selectedServices.prices['combo_' + id] = price;
+                selectedServices.originalPrices['combo_' + id] = origPrice;
                 selectedServices.names['combo_' + id] = name || 'Combo #' + id;
             }
         }
@@ -2000,15 +2086,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (type === 'service') {
             selectedServices.serviceIds = selectedServices.serviceIds.filter(sid => sid !== id);
             delete selectedServices.prices['service_' + id];
+            delete selectedServices.originalPrices['service_' + id];
             delete selectedServices.names['service_' + id];
         } else if (type === 'variant') {
             selectedServices.variantIds = selectedServices.variantIds.filter(vid => vid !== id);
             delete selectedServices.prices['variant_' + id];
+            delete selectedServices.originalPrices['variant_' + id];
             delete selectedServices.names['variant_' + id];
             delete selectedServices.variantParentServices[id];
         } else if (type === 'combo') {
             selectedServices.comboIds = selectedServices.comboIds.filter(cid => cid !== id);
             delete selectedServices.prices['combo_' + id];
+            delete selectedServices.originalPrices['combo_' + id];
             delete selectedServices.names['combo_' + id];
         }
 
@@ -2298,8 +2387,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const variantId = this.getAttribute('data-variant-id');
             const comboId = this.getAttribute('data-combo-id');
             const servicePrice = parseFloat(this.getAttribute('data-service-price') || 0);
+            const serviceOriginalPrice = parseFloat(this.getAttribute('data-service-original-price') || servicePrice);
             const variantPrice = parseFloat(this.getAttribute('data-variant-price') || 0);
+            const variantOriginalPrice = parseFloat(this.getAttribute('data-variant-original-price') || variantPrice);
             const comboPrice = parseFloat(this.getAttribute('data-combo-price') || 0);
+            const comboOriginalPrice = parseFloat(this.getAttribute('data-combo-original-price') || comboPrice);
             const serviceName = this.getAttribute('data-service-name') || '';
             const comboName = this.getAttribute('data-combo-name') || '';
 
@@ -2313,11 +2405,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 const variantName = this.getAttribute('data-variant-name') || '';
-                handleServiceSelection(variantId, variantPrice, 'variant', variantName, parentServiceId);
+                handleServiceSelection(variantId, variantPrice, 'variant', variantName, parentServiceId, variantOriginalPrice);
             } else if (comboId) {
-                handleServiceSelection(comboId, comboPrice, 'combo', comboName);
+                handleServiceSelection(comboId, comboPrice, 'combo', comboName, null, comboOriginalPrice);
             } else if (serviceId) {
-                handleServiceSelection(serviceId, servicePrice, 'service', serviceName);
+                handleServiceSelection(serviceId, servicePrice, 'service', serviceName, null, serviceOriginalPrice);
             }
         });
     });
@@ -2419,11 +2511,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const variantId = this.getAttribute('data-variant-id');
             const serviceId = this.getAttribute('data-service-id');
             const variantPrice = parseFloat(this.getAttribute('data-variant-price') || 0);
+            const variantOriginalPrice = parseFloat(this.getAttribute('data-variant-original-price') || variantPrice);
             if (variantId) {
                 const variantName = this.getAttribute('data-variant-name') || 'Biến thể #' + variantId;
                 const isCurrentlySelected = selectedServices.variantIds.includes(variantId);
 
-                handleServiceSelection(variantId, variantPrice, 'variant', variantName, serviceId);
+                handleServiceSelection(variantId, variantPrice, 'variant', variantName, serviceId, variantOriginalPrice);
 
                 // Visual feedback - highlight selected variant
                 const variantsList = this.closest('.variants-list');
@@ -2495,6 +2588,338 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial adjustment
     setTimeout(adjustSummaryPosition, 100);
+
+    // Coupon code handling
+    let appliedCoupon = null;
+    const couponCodeInput = document.getElementById('couponCodeInput');
+    const applyCouponBtn = document.getElementById('applyCouponBtn');
+    const removeCouponBtn = document.getElementById('removeCouponBtn');
+    const couponInputContainer = document.getElementById('couponInputContainer');
+    const couponAppliedContainer = document.getElementById('couponAppliedContainer');
+    const appliedCouponCode = document.getElementById('appliedCouponCode');
+    const couponDiscountInfo = document.getElementById('couponDiscountInfo');
+    const couponMessage = document.getElementById('couponMessage');
+
+    // Load applied coupon from session on page load
+    function loadAppliedCoupon() {
+        // Check if there's a coupon in session (we'll get it from server via a hidden input or check on page load)
+        @if(\Illuminate\Support\Facades\Session::has('coupon_code'))
+            const couponCode = '{{ \Illuminate\Support\Facades\Session::get("coupon_code") }}';
+            if (couponCode) {
+                // Apply coupon automatically if exists in session
+                applyCouponFromCode(couponCode, false);
+            }
+        @endif
+    }
+
+    // Apply coupon function
+    function applyCouponFromCode(code, showLoading = true) {
+        if (!code || code.trim() === '') {
+            showCouponMessage('Vui lòng nhập mã giảm giá', 'error');
+            return;
+        }
+
+        if (showLoading) {
+            applyCouponBtn.disabled = true;
+            applyCouponBtn.textContent = 'Đang xử lý...';
+        }
+
+        // Get selected services data
+        const serviceIds = selectedServices.serviceIds || [];
+        const variantIds = selectedServices.variantIds || [];
+        const comboIds = selectedServices.comboIds || [];
+
+        // Call API to apply coupon
+        fetch('{{ route("site.payments.appointment.apply-coupon") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                coupon_code: code.trim(),
+                service_id: serviceIds,
+                service_variants: variantIds,
+                combo_id: comboIds
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (showLoading) {
+                applyCouponBtn.disabled = false;
+                applyCouponBtn.textContent = 'Áp dụng';
+            }
+
+            if (data.success) {
+                appliedCoupon = data.promotion;
+                showCouponApplied(data.promotion, data.promotion.discount_amount || 0);
+                showCouponMessage('Áp dụng mã khuyến mại thành công!', 'success');
+                
+                // Update total price
+                updateSummaryBar();
+            } else {
+                showCouponMessage(data.message || 'Mã giảm giá không hợp lệ', 'error');
+                hideCouponApplied();
+            }
+        })
+        .catch(error => {
+            console.error('Error applying coupon:', error);
+            if (showLoading) {
+                applyCouponBtn.disabled = false;
+                applyCouponBtn.textContent = 'Áp dụng';
+            }
+            showCouponMessage('Có lỗi xảy ra khi áp dụng mã giảm giá', 'error');
+        });
+    }
+
+    // Remove coupon function
+    function removeCoupon() {
+        fetch('{{ route("site.payments.appointment.remove-coupon") }}', {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                appliedCoupon = null;
+                hideCouponApplied();
+                showCouponMessage('Đã gỡ bỏ mã khuyến mại', 'success');
+                
+                // Update total price
+                updateSummaryBar();
+            }
+        })
+        .catch(error => {
+            console.error('Error removing coupon:', error);
+        });
+    }
+
+    // Show coupon applied UI
+    function showCouponApplied(promotion, discountAmount) {
+        if (couponInputContainer) couponInputContainer.style.display = 'none';
+        if (couponAppliedContainer) couponAppliedContainer.style.display = 'block';
+        if (appliedCouponCode) appliedCouponCode.textContent = promotion.code || '';
+        
+        let discountText = '';
+        if (promotion.discount_type === 'percent') {
+            discountText = `Giảm ${promotion.discount_percent}%`;
+            if (promotion.max_discount_amount) {
+                discountText += ` (tối đa ${formatPrice(promotion.max_discount_amount)} VNĐ)`;
+            }
+        } else {
+            discountText = `Giảm ${formatPrice(promotion.discount_amount)} VNĐ`;
+        }
+        if (couponDiscountInfo) couponDiscountInfo.textContent = discountText;
+        
+        if (couponCodeInput) couponCodeInput.value = '';
+    }
+
+    // Hide coupon applied UI
+    function hideCouponApplied() {
+        if (couponInputContainer) couponInputContainer.style.display = 'flex';
+        if (couponAppliedContainer) couponAppliedContainer.style.display = 'none';
+        if (couponCodeInput) couponCodeInput.value = '';
+    }
+
+    // Show coupon message
+    function showCouponMessage(message, type) {
+        if (!couponMessage) return;
+        couponMessage.textContent = message;
+        couponMessage.style.display = 'block';
+        couponMessage.style.color = type === 'success' ? '#28a745' : '#dc3545';
+        couponMessage.style.fontWeight = '500';
+        
+        // Auto hide after 3 seconds
+        setTimeout(() => {
+            couponMessage.style.display = 'none';
+        }, 3000);
+    }
+
+    // Event listeners
+    if (applyCouponBtn) {
+        applyCouponBtn.addEventListener('click', function() {
+            const code = couponCodeInput ? couponCodeInput.value.trim() : '';
+            applyCouponFromCode(code, true);
+        });
+    }
+
+    if (couponCodeInput) {
+        couponCodeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyCouponBtn.click();
+            }
+        });
+    }
+
+    if (removeCouponBtn) {
+        removeCouponBtn.addEventListener('click', function() {
+            removeCoupon();
+        });
+    }
+
+    // Load applied coupon on page load
+    loadAppliedCoupon();
+
+    // Override updateSummaryBar to include coupon discount
+    const originalUpdateSummaryBar = updateSummaryBar;
+    updateSummaryBar = function() {
+        // Calculate total ORIGINAL price (before any discount) for coupon calculation
+        let totalOriginalPrice = 0;
+        Object.values(selectedServices.originalPrices || {}).forEach(price => {
+            totalOriginalPrice += parseFloat(price) || 0;
+        });
+        // Fallback to prices if originalPrices not available
+        if (totalOriginalPrice === 0) {
+            Object.values(selectedServices.prices).forEach(price => {
+                totalOriginalPrice += parseFloat(price) || 0;
+            });
+        }
+        
+        // Calculate total price from selected services (after auto discount)
+        let totalPrice = 0;
+        Object.values(selectedServices.prices).forEach(price => {
+            totalPrice += parseFloat(price) || 0;
+        });
+        
+        // Priority: Use coupon code discount if exists, otherwise use promotion from URL
+        let discountAmount = 0;
+        let discountSource = null;
+        
+        if (appliedCoupon) {
+            // Calculate discount from coupon code - use ORIGINAL price (like checkout page)
+            if (appliedCoupon.discount_type === 'percent') {
+                discountAmount = (totalOriginalPrice * (appliedCoupon.discount_percent || 0)) / 100;
+                if (appliedCoupon.max_discount_amount) {
+                    discountAmount = Math.min(discountAmount, appliedCoupon.max_discount_amount);
+                }
+            } else {
+                discountAmount = Math.min(appliedCoupon.discount_amount || 0, totalOriginalPrice);
+            }
+            discountSource = 'coupon';
+        } else if (promotionData && promotionData.apply_scope === 'order') {
+            // Use original logic for promotion from URL
+            let applicablePrice = totalPrice;
+            const hasSpecificServices = (promotionData.service_ids && promotionData.service_ids.length > 0)
+                || (promotionData.combo_ids && promotionData.combo_ids.length > 0)
+                || (promotionData.variant_ids && promotionData.variant_ids.length > 0);
+            const applyToAll = !hasSpecificServices ||
+                ((promotionData.service_ids?.length || 0) + (promotionData.combo_ids?.length || 0) + (promotionData.variant_ids?.length || 0)) >= 20;
+            
+            if (!applyToAll) {
+                applicablePrice = 0;
+                selectedServices.serviceIds.forEach(id => {
+                    if (promotionData.service_ids && promotionData.service_ids.includes(parseInt(id))) {
+                        applicablePrice += parseFloat(selectedServices.prices['service_' + id] || 0);
+                    }
+                });
+                selectedServices.variantIds.forEach(id => {
+                    const parentServiceId = selectedServices.variantParentServices[id];
+                    if ((promotionData.variant_ids && promotionData.variant_ids.includes(parseInt(id))) ||
+                        (parentServiceId && promotionData.service_ids && promotionData.service_ids.includes(parseInt(parentServiceId)))) {
+                        applicablePrice += parseFloat(selectedServices.prices['variant_' + id] || 0);
+                    }
+                });
+                selectedServices.comboIds.forEach(id => {
+                    if (promotionData.combo_ids && promotionData.combo_ids.includes(parseInt(id))) {
+                        applicablePrice += parseFloat(selectedServices.prices['combo_' + id] || 0);
+                    }
+                });
+            }
+            
+            if (applicablePrice > 0) {
+                if (promotionData.discount_type === 'percent') {
+                    discountAmount = (applicablePrice * promotionData.discount_percent) / 100;
+                    if (promotionData.max_discount_amount) {
+                        discountAmount = Math.min(discountAmount, promotionData.max_discount_amount);
+                    }
+                } else {
+                    discountAmount = Math.min(promotionData.discount_amount, applicablePrice);
+                }
+            }
+            discountSource = 'promotion';
+        }
+        
+        // Final price = original price - coupon discount (if any)
+        // Note: totalPrice already has auto discount applied, so we need to calculate from original
+        const finalPrice = Math.max(0, totalOriginalPrice - discountAmount);
+        
+        // Update UI
+        const selectedCountEl = document.getElementById('selectedCount');
+        const totalPriceEl = document.getElementById('totalPrice');
+        const doneButton = document.getElementById('doneButton');
+        
+        if (selectedCountEl) {
+            const totalCount = selectedServices.serviceIds.length + selectedServices.variantIds.length + selectedServices.comboIds.length;
+            selectedCountEl.textContent = totalCount;
+        }
+        
+        if (totalPriceEl) {
+            const priceSection = totalPriceEl.closest('.total-price-section');
+            if (!priceSection) return;
+            
+            // Find or create label
+            let labelEl = priceSection.querySelector('.total-label');
+            if (!labelEl) {
+                labelEl = document.createElement('div');
+                labelEl.className = 'total-label';
+                labelEl.style.cssText = 'font-size: 11px; color: #666; line-height: 1.3; margin-bottom: 1px;';
+                priceSection.insertBefore(labelEl, totalPriceEl);
+            }
+            labelEl.textContent = 'Tổng thanh toán';
+            
+            // Update discount display
+            if (discountAmount > 0) {
+                let existingStrike = priceSection.querySelector('.original-price-strike');
+                let existingDiscount = priceSection.querySelector('.discount-amount');
+                
+                if (!existingStrike) {
+                    existingStrike = document.createElement('div');
+                    existingStrike.className = 'original-price-strike';
+                    existingStrike.style.cssText = 'font-size: 11px; color: #999; text-decoration: line-through; line-height: 1.3; margin-bottom: 1px;';
+                    priceSection.insertBefore(existingStrike, labelEl);
+                }
+                existingStrike.textContent = formatPrice(totalOriginalPrice) + ' VNĐ';
+                existingStrike.style.display = 'block';
+                
+                if (!existingDiscount) {
+                    existingDiscount = document.createElement('div');
+                    existingDiscount.className = 'discount-amount';
+                    existingDiscount.style.cssText = 'font-size: 11px; color: #28a745; line-height: 1.3; margin-bottom: 3px;';
+                    priceSection.insertBefore(existingDiscount, labelEl);
+                }
+                existingDiscount.textContent = 'Giảm: ' + formatPrice(discountAmount) + ' VNĐ';
+                existingDiscount.style.display = 'block';
+            } else {
+                const existingStrike = priceSection.querySelector('.original-price-strike');
+                const existingDiscount = priceSection.querySelector('.discount-amount');
+                if (existingStrike) existingStrike.style.display = 'none';
+                if (existingDiscount) existingDiscount.style.display = 'none';
+            }
+            
+            // Update final price
+            totalPriceEl.textContent = formatPrice(finalPrice) + ' VNĐ';
+            totalPriceEl.style.cssText = 'font-size: 20px; font-weight: 700; color: #000; line-height: 1.2;';
+        }
+        
+        // Update button style
+        if (doneButton) {
+            const totalCount = selectedServices.serviceIds.length + selectedServices.variantIds.length + selectedServices.comboIds.length;
+            if (totalCount > 0) {
+                doneButton.classList.add('active');
+                doneButton.style.background = '#007bff';
+                doneButton.style.color = '#fff';
+            } else {
+                doneButton.classList.remove('active');
+                doneButton.style.background = '#e0e0e0';
+                doneButton.style.color = '#666';
+            }
+        }
+    };
 });
 </script>
 @endsection

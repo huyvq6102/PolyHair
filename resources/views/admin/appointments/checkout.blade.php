@@ -24,17 +24,204 @@
         height: 30px;
         object-fit: contain;
     }
+    
+    /* Promotion radio button styles */
+    .promotion-radio {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        margin: 0;
+    }
+
+    label:has(.promotion-radio:checked) {
+        background: #e8f5e9 !important;
+        border-color: #4caf50 !important;
+        border-width: 2px !important;
+    }
+
+    label:has(.promotion-radio):hover {
+        background: #f5f5f5 !important;
+        border-color: #999 !important;
+    }
+    
+    /* Promotion scope selection styles */
+    .promotion-scope-radio:checked + label {
+        background: #e7f3ff !important;
+        border-color: #0d6efd !important;
+    }
+    
+    .promotion-scope-radio + label:hover {
+        background: #f0f8ff !important;
+        border-color: #0d6efd !important;
+    }
+    
+    .form-check-input.promotion-scope-radio {
+        display: none;
+    }
+    
+    /* Responsive styles for promotion section */
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        .promotion-scope-radio + label {
+            padding: 10px !important;
+            font-size: 13px;
+        }
+        
+        .promotion-scope-radio + label .small {
+            font-size: 11px;
+        }
+        
+        #promotion_select_label {
+            font-size: 12px;
+            line-height: 1.4;
+            display: block;
+            width: 100%;
+        }
+        
+        .promotion-select {
+            font-size: 13px !important;
+            padding: 8px 35px 8px 12px !important;
+        }
+        
+        #btn_apply_promotion {
+            font-size: 13px;
+            padding: 8px 12px;
+        }
+        
+        h4, h6 {
+            font-size: 1.1rem;
+        }
+        
+        .list-group-item {
+            font-size: 14px;
+            padding: 0.75rem 0;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .container-fluid {
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+        
+        .card-body {
+            padding: 0.75rem;
+        }
+        
+        h4 {
+            font-size: 1rem;
+        }
+        
+        h6 {
+            font-size: 0.95rem;
+        }
+    }
+    
+    /* Prevent overflow */
+    .container {
+        max-width: 100%;
+        overflow-x: hidden;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .card-body {
+        overflow-x: hidden;
+        word-wrap: break-word;
+        padding: 1.25rem;
+    }
+    
+    .card {
+        max-width: 100%;
+        overflow: hidden;
+    }
+    
+    .row {
+        margin-left: -10px;
+        margin-right: -10px;
+    }
+    
+    .row > * {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    /* Promotion select dropdown styles */
+    .promotion-select {
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+    
+    .promotion-select:hover {
+        border-color: #0d6efd !important;
+        background-color: #f8f9fa !important;
+    }
+    
+    .promotion-select:focus {
+        border-color: #0d6efd !important;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+        outline: none;
+    }
+    
+    .promotion-select option {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    .promotion-select option:checked {
+        background: #e7f3ff;
+        color: #0d6efd;
+    }
+    
+    /* Promotion code select auto-apply styles */
+    .promotion-select-auto {
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+    }
+    
+    .promotion-select-auto:hover {
+        border-color: #0d6efd !important;
+        background-color: #f8f9fa !important;
+    }
+    
+    .promotion-select-auto:focus {
+        border-color: #0d6efd !important;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+        outline: none;
+    }
+    
+    .promotion-select-auto option {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    .promotion-select-auto option:checked {
+        background: #e7f3ff;
+        color: #0d6efd;
+    }
 </style>
-    <div class="container py-5">
+    <div class="container-fluid py-3 py-md-5">
         <div class="mb-3">
             <a href="{{ route('admin.appointments.index') }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Quay lại danh sách
             </a>
         </div>
-        <div class="row">
+        <div class="row g-3">
             <!-- Cột thông tin và thanh toán -->
-            <div class="col-lg-7 mb-4">
-                <div class="card shadow-sm mb-4">
+            <div class="col-12 col-lg-7 mb-3 mb-lg-0">
+                <div class="card shadow-sm mb-3">
                     <div class="card-body">
                         <h4 class="mb-4">Thông tin của bạn</h4>
                         <form class="needs-validation" novalidate>
@@ -105,7 +292,7 @@
             </div>
 
             <!-- Cột tóm tắt đơn hàng -->
-            <div class="col-lg-5">
+            <div class="col-12 col-lg-5">
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h4 class="mb-4">Tóm tắt đơn hàng</h4>
@@ -125,35 +312,172 @@
                         @endif
 
                         <div class="mb-3">
-                            <h6 class="mb-2">Mã khuyến mãi</h6>
-                            <form action="{{ route('admin.appointments.apply-coupon') }}" method="POST" class="input-group">
-                                @csrf
-                                <input type="hidden" name="appointment_id" value="{{ $appointment->id }}">
-                                <input type="text" name="coupon_code" class="form-control" placeholder="Nhập mã khuyến mãi"
-                                    value="{{ \Illuminate\Support\Facades\Session::get('coupon_code') }}" aria-label="Mã khuyến mãi"
-                                    aria-describedby="button-apply-coupon">
-                                <button class="btn btn-outline-secondary" type="submit" id="button-apply-coupon">Áp dụng</button>
-                                @if(\Illuminate\Support\Facades\Session::has('coupon_code'))
-                                    <a href="{{ route('admin.appointments.remove-coupon', ['appointment_id' => $appointment->id]) }}" class="btn btn-outline-danger" title="Xóa mã">X</a>
+                            <h6 class="mb-3">Khuyến mãi</h6>
+                            
+                            <!-- Chọn loại khuyến mãi (Tab) -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold mb-2">Chọn loại khuyến mãi:</label>
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-check" style="padding-left: 0px !important;">
+                                            <input class="form-check-input promotion-scope-radio" 
+                                                   type="radio" 
+                                                   name="promotion_scope" 
+                                                   id="scope_order" 
+                                                   value="order"
+                                                   {{ $appliedCoupon && $appliedCoupon->apply_scope === 'order' ? 'checked' : '' }}
+                                                   style="cursor: pointer;">
+                                            <label class="form-check-label w-100 border rounded p-2" 
+                                                   for="scope_order" 
+                                                   style="cursor: pointer; transition: all 0.2s; {{ $appliedCoupon && $appliedCoupon->apply_scope === 'order' ? 'background: #e7f3ff; border-color: #0d6efd !important;' : 'background: #f9f9f9;' }}">
+                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                    <i class="fa fa-file-text-o"></i>
+                                                    <strong class="small">Theo hóa đơn</strong>
+                                                </div>
+                                                <div class="text-muted small" style="word-wrap: break-word;">Áp dụng trên tổng tiền hóa đơn.</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-check" style="padding-left: 0px !important;">
+                                            <input class="form-check-input promotion-scope-radio" 
+                                                   type="radio" 
+                                                   name="promotion_scope" 
+                                                   id="scope_customer_tier" 
+                                                   value="customer_tier"
+                                                   {{ $appliedCoupon && $appliedCoupon->apply_scope === 'customer_tier' ? 'checked' : '' }}
+                                                   style="cursor: pointer;">
+                                            <label class="form-check-label w-100 border rounded p-2" 
+                                                   for="scope_customer_tier" 
+                                                   style="cursor: pointer; transition: all 0.2s; {{ $appliedCoupon && $appliedCoupon->apply_scope === 'customer_tier' ? 'background: #e7f3ff; border-color: #0d6efd !important;' : 'background: #f9f9f9;' }}">
+                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                    <strong class="small">Theo hạng khách hàng</strong>
+                                                </div>
+                                                <div class="text-muted small" style="word-wrap: break-word;">Chỉ áp dụng khi khách đạt hạng tối thiểu.</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Select mã khuyến mãi -->
+                            <div class="mb-3" id="promotion_select_container">
+                                <label for="promotion_select" class="form-label small fw-semibold mb-2">
+                                    <i class="fa fa-tag" style="color: #0d6efd;"></i>
+                                    <span id="promotion_select_label" style="word-wrap: break-word; overflow-wrap: break-word;">Chọn mã khuyến mãi áp dụng theo hóa đơn:</span>
+                                </label>
+                                <div class="row g-2">
+                                    <div class="col-12 col-sm-8 col-md-8">
+                                        <div class="position-relative">
+                                            <select class="form-select promotion-select" id="promotion_select" name="promotion_select" style="padding: 10px 40px 10px 15px; font-size: 14px; border: 2px solid #e0e0e0; border-radius: 8px; transition: all 0.3s ease; background-color: #fff; width: 100%;">
+                                                <option value="">-- Chọn mã khuyến mãi --</option>
+                                            </select>
+                                            <i class="fa fa-chevron-down" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #666; pointer-events: none; font-size: 12px;"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-4 col-md-4">
+                                        <button type="button" class="btn btn-primary w-100" id="btn_apply_promotion" style="white-space: nowrap;">
+                                        <span class="d-none d-sm-inline">Áp dụng</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Chi tiết mã khuyến mãi đã chọn -->
+                            <div id="promotion_details" class="border rounded p-3 mb-2" style="{{ (\Illuminate\Support\Facades\Session::has('coupon_code') && $appliedCoupon) ? 'display: block;' : 'display: none;' }} background: #f9f9f9;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1" id="promotion_name">{{ $appliedCoupon ? $appliedCoupon->name : '-' }}</h6>
+                                        <div class="small text-muted" id="promotion_code_display">{{ $appliedCoupon ? 'Mã: ' . $appliedCoupon->code : '-' }}</div>
+                                    </div>
+                                    <span class="badge {{ $appliedCoupon && $appliedCoupon->apply_scope === 'order' ? 'bg-primary' : ($appliedCoupon ? 'bg-warning text-dark' : 'bg-success') }}" id="promotion_scope_badge" style="color: #fff;">
+                                        {{ $appliedCoupon && $appliedCoupon->apply_scope === 'order' ? 'HÓA ĐƠN' : ($appliedCoupon && $appliedCoupon->apply_scope === 'customer_tier' ? 'HẠNG KHÁCH HÀNG' : '-') }}
+                                    </span>
+                                </div>
+                                <div class="small">
+                                    <div class="mb-1">
+                                        <strong>Loại giảm:</strong> 
+                                        <span id="promotion_discount_info">
+                                            @if($appliedCoupon)
+                                                @if($appliedCoupon->discount_type === 'percent')
+                                                    Giảm {{ $appliedCoupon->discount_percent ?? 0 }}%
+                                                    @if($appliedCoupon->max_discount_amount)
+                                                        (tối đa {{ number_format($appliedCoupon->max_discount_amount, 0, ',', '.') }}đ)
+                                                    @endif
+                                                @else
+                                                    Giảm {{ number_format($appliedCoupon->discount_amount ?? 0, 0, ',', '.') }}đ
+                                                @endif
+                                            @else
+                                                -
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <div id="promotion_conditions">
+                                        @if($appliedCoupon)
+                                            @php
+                                                $conditions = [];
+                                                if ($appliedCoupon->min_order_amount) {
+                                                    $conditions[] = 'Đơn hàng tối thiểu: ' . number_format($appliedCoupon->min_order_amount, 0, ',', '.') . 'đ';
+                                                }
+                                                if ($appliedCoupon->min_customer_tier) {
+                                                    $conditions[] = 'Từ hạng ' . $appliedCoupon->min_customer_tier . ' trở lên';
+                                                }
+                                                if ($appliedCoupon->per_user_limit) {
+                                                    $usageCount = \App\Models\PromotionUsage::where('promotion_id', $appliedCoupon->id)
+                                                        ->where('user_id', $appointment->user_id)
+                                                        ->count();
+                                                    $conditions[] = 'Mỗi khách hàng: ' . $usageCount . '/' . $appliedCoupon->per_user_limit . ' lần';
+                                                }
+                                                if ($appliedCoupon->usage_limit) {
+                                                    $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $appliedCoupon->id)->count();
+                                                    $conditions[] = 'Số lượt sử dụng: ' . $totalUsage . ' lượt';
+                                                }
+                                                if ($appliedCoupon->start_date) {
+                                                    $conditions[] = 'Bắt đầu: ' . $appliedCoupon->start_date->format('d/m/Y');
+                                                }
+                                                if ($appliedCoupon->end_date) {
+                                                    $conditions[] = 'Kết thúc: ' . $appliedCoupon->end_date->format('d/m/Y');
+                                                }
+                                            @endphp
+                                            @if(count($conditions) > 0)
+                                                <div class="mt-2"><strong>Điều kiện áp dụng:</strong></div>
+                                                <ul class="mb-0 mt-1" style="padding-left: 20px;">
+                                                    @foreach($conditions as $condition)
+                                                        <li>{{ $condition }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            @endif
+                                        @endif
+                                    </div>
+                                </div>
+                                @if(\Illuminate\Support\Facades\Session::has('coupon_code') && $appliedCoupon)
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="btn_remove_promotion" title="Xóa mã">
+                                        <i class="fa fa-times"></i> Xóa mã đã áp dụng
+                                    </button>
+                                </div>
                                 @endif
-                            </form>
+                            </div>
+                            
                             @if(isset($promotionMessage))
-                                <small class="text-{{ $appliedCoupon ? 'success' : 'danger' }}">{{ $promotionMessage }}</small>
+                                <small class="text-{{ $appliedCoupon ? 'success' : 'danger' }} d-block mt-2" style="word-wrap: break-word;">{{ $promotionMessage }}</small>
                             @endif
+
+                            <div id="promotion_message" class="mt-2 small" style="display: none; word-wrap: break-word;"></div>
+                            <input type="hidden" id="applied_promotion_id" name="applied_promotion_id" value="{{ $appliedCoupon ? $appliedCoupon->id : '' }}">
+                            <input type="hidden" id="promotion_discount_amount" name="promotion_discount_amount" value="{{ $promotion }}">
                         </div>
 
-                        <ul class="list-group list-group-flush">
+                        <ul class="list-group list-group-flush" style="padding: 15px">
                             @foreach($services as $s)
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                     {{ $s['name'] }}<span>{{ number_format($s['price']) }}đ</span></li>
                             @endforeach
 
-                            @if($promotion > 0)
-                                <li class="list-group-item d-flex justify-content-between align-items-center px-0 text-success">
-                                    Khuyến mãi
-                                    <span>-{{ number_format($promotion) }}đ</span>
-                                </li>
-                            @endif
+                            <li id="promotion_discount_item" class="list-group-item d-flex justify-content-between align-items-center px-0 text-success" style="{{ $promotion > 0 ? '' : 'display: none;' }}">
+                                Khuyến mãi
+                                <span id="promotion_discount_display">-{{ number_format($promotion) }}đ</span>
+                            </li>
 
                             @php
                                 // Tính lại nếu chưa có
@@ -163,7 +487,7 @@
 
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span>Tạm tính</span>
-                                <span>{{ number_format($displayTaxablePrice) }}đ</span>
+                                <span id="taxable_price_amount">{{ number_format($displayTaxablePrice) }}đ</span>
                             </li>
                             {{-- <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span>VAT (10%)</span>
@@ -173,12 +497,15 @@
                             <li
                                 class="list-group-item d-flex justify-content-between align-items-center border-top pt-3 px-0">
                                 <strong>Tổng cộng</strong><strong
-                                    style="font-size: 1.2rem;">{{ number_format($total) }}đ</strong></li>
+                                    style="font-size: 1.2rem;" id="total_amount">{{ number_format($total) }}đ</strong></li>
                         </ul>
-                        <form action="{{ route('admin.appointments.process-checkout') }}" method="POST" id="paymentForm">
+                        <form style="padding: 15px" action="{{ route('admin.appointments.process-checkout') }}" method="POST" id="paymentForm">
                             @csrf
+                            <input type="hidden" name="appointment_id" value="{{ $appointment->id }}">
                             <input type="hidden" name="payment_method" id="selectedPaymentMethod" value="cash"> {{-- Giá trị
                             mặc định --}}
+                            <input type="hidden" name="applied_promotion_id" id="form_applied_promotion_id" value="{{ $appliedCoupon ? $appliedCoupon->id : '' }}">
+                            <input type="hidden" name="promotion_discount_amount" id="form_promotion_discount_amount" value="{{ $promotion }}">
                             <button class="btn btn-primary btn-lg btn-block mt-4" type="submit">Xác nhận thanh toán</button>
                         </form>
                     </div>
@@ -235,6 +562,776 @@
                     updatePaymentSelection(cashOption);
                 }
             }
+
+            // Promotion data from PHP
+            @php
+                $orderPromotionsData = $availableOrderPromotions->map(function($promo) use ($appointment) {
+                    $remainingUsage = null;
+                    if ($promo->per_user_limit && $appointment->user) {
+                        $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                            ->where('user_id', $appointment->user->id)
+                            ->count();
+                        $remainingUsage = max(0, $promo->per_user_limit - $usageCount);
+                    }
+                    return [
+                        'id' => $promo->id,
+                        'code' => $promo->code,
+                        'name' => $promo->name,
+                        'scope' => 'order',
+                        'discount_type' => $promo->discount_type,
+                        'discount_percent' => $promo->discount_percent ?? 0,
+                        'discount_amount' => $promo->discount_amount ?? 0,
+                        'max_discount_amount' => $promo->max_discount_amount ?? 0,
+                        'min_order_amount' => $promo->min_order_amount ?? 0,
+                        'per_user_limit' => $promo->per_user_limit ?? 0,
+                        'usage_limit' => $promo->usage_limit ?? null,
+                        'start_date' => $promo->start_date ? $promo->start_date->format('d/m/Y') : null,
+                        'end_date' => $promo->end_date ? $promo->end_date->format('d/m/Y') : null,
+                        'remaining_usage' => $remainingUsage,
+                    ];
+                });
+                
+                $customerTierPromotionsData = $availableCustomerTierPromotions->map(function($promo) use ($appointment) {
+                    $remainingUsage = null;
+                    if ($promo->per_user_limit && $appointment->user) {
+                        $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                            ->where('user_id', $appointment->user->id)
+                            ->count();
+                        $remainingUsage = max(0, $promo->per_user_limit - $usageCount);
+                    }
+                    return [
+                        'id' => $promo->id,
+                        'code' => $promo->code,
+                        'name' => $promo->name,
+                        'scope' => 'customer_tier',
+                        'discount_type' => $promo->discount_type,
+                        'discount_percent' => $promo->discount_percent ?? 0,
+                        'discount_amount' => $promo->discount_amount ?? 0,
+                        'max_discount_amount' => $promo->max_discount_amount ?? 0,
+                        'min_order_amount' => $promo->min_order_amount ?? 0,
+                        'min_customer_tier' => $promo->min_customer_tier ?? null,
+                        'per_user_limit' => $promo->per_user_limit ?? 0,
+                        'usage_limit' => $promo->usage_limit ?? null,
+                        'start_date' => $promo->start_date ? $promo->start_date->format('d/m/Y') : null,
+                        'end_date' => $promo->end_date ? $promo->end_date->format('d/m/Y') : null,
+                        'remaining_usage' => $remainingUsage,
+                    ];
+                });
+            @endphp
+            const orderPromotions = @json($orderPromotionsData);
+            const customerTierPromotions = @json($customerTierPromotionsData);
+            const subtotal = {{ $subtotal }};
+            let selectedPromotion = null;
+            let isApplyingPromotion = false;
+
+            // Function to format number with Vietnamese format
+            function formatNumber(num) {
+                return new Intl.NumberFormat('vi-VN').format(num);
+            }
+
+            // Function to update prices on the page
+            function updatePrices(discountAmount) {
+                // Ensure discountAmount is a valid number
+                const promotionDiscount = (discountAmount !== undefined && discountAmount !== null && !isNaN(discountAmount)) 
+                    ? parseFloat(discountAmount) 
+                    : 0;
+                
+                const taxablePrice = Math.max(0, subtotal - promotionDiscount);
+                const total = taxablePrice;
+
+                // Update promotion discount display
+                const promotionItem = document.getElementById('promotion_discount_item');
+                const promotionAmount = document.getElementById('promotion_discount_display');
+                if (promotionItem && promotionAmount) {
+                    if (promotionDiscount > 0) {
+                        promotionItem.style.display = '';
+                        promotionAmount.textContent = '-' + formatNumber(promotionDiscount) + 'đ';
+                    } else {
+                        promotionItem.style.display = 'none';
+                    }
+                }
+
+                // Update taxable price
+                const taxablePriceEl = document.getElementById('taxable_price_amount');
+                if (taxablePriceEl) {
+                    taxablePriceEl.textContent = formatNumber(taxablePrice) + 'đ';
+                }
+
+                // Update total
+                const totalEl = document.getElementById('total_amount');
+                if (totalEl) {
+                    totalEl.textContent = formatNumber(total) + 'đ';
+                }
+
+                // Update hidden form fields
+                const formPromotionId = document.getElementById('form_applied_promotion_id');
+                const formDiscountAmount = document.getElementById('form_promotion_discount_amount');
+                if (formDiscountAmount) {
+                    formDiscountAmount.value = promotionDiscount;
+                }
+            }
+
+            // Function to populate promotion select dropdown
+            function populatePromotionSelect(promotions) {
+                const select = document.getElementById('promotion_select');
+                if (!select) return;
+                
+                // Clear existing options except the first one
+                select.innerHTML = '<option value="">-- Chọn mã khuyến mãi --</option>';
+                
+                if (promotions && promotions.length > 0) {
+                    promotions.forEach(function(promo) {
+                        const option = document.createElement('option');
+                        option.value = promo.id;
+                        option.textContent = promo.code + ' - ' + promo.name;
+                        option.dataset.promotion = JSON.stringify(promo);
+                        select.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'Không có mã khuyến mãi nào';
+                    option.disabled = true;
+                    select.appendChild(option);
+                }
+                
+                // Reset selection
+                selectedPromotion = null;
+                displayPromotionDetails(null);
+            }
+
+            // Function to display promotion details
+            function displayPromotionDetails(promo) {
+                const detailsDiv = document.getElementById('promotion_details');
+                if (!promo) {
+                    detailsDiv.style.display = 'none';
+                    return;
+                }
+
+                detailsDiv.style.display = 'block';
+
+                // Promotion name and code
+                document.getElementById('promotion_name').textContent = promo.name;
+                document.getElementById('promotion_code_display').textContent = 'Mã: ' + promo.code;
+
+                // Scope badge
+                const scopeBadge = document.getElementById('promotion_scope_badge');
+                if (promo.scope === 'order') {
+                    scopeBadge.textContent = 'HÓA ĐƠN';
+                    scopeBadge.className = 'badge bg-primary';
+                } else {
+                    scopeBadge.textContent = 'HẠNG KHÁCH HÀNG';
+                    scopeBadge.className = 'badge bg-warning text-dark';
+                }
+
+                // Discount info
+                let discountInfo = '';
+                if (promo.discount_type === 'percent') {
+                    discountInfo = 'Giảm ' + (promo.discount_percent || 0) + '%';
+                    // Check if max_discount_amount exists and is greater than 0
+                    // Handle both string and number types
+                    const maxDiscount = promo.max_discount_amount !== undefined && promo.max_discount_amount !== null 
+                        ? parseFloat(promo.max_discount_amount) 
+                        : null;
+                    if (maxDiscount !== null && !isNaN(maxDiscount) && maxDiscount > 0) {
+                        discountInfo += ' (tối đa ' + new Intl.NumberFormat('vi-VN').format(maxDiscount) + 'đ)';
+                    }
+                } else {
+                    discountInfo = 'Giảm ' + new Intl.NumberFormat('vi-VN').format(promo.discount_amount || 0) + 'đ';
+                }
+                document.getElementById('promotion_discount_info').textContent = discountInfo;
+
+                // Conditions
+                let conditions = [];
+                if (promo.min_order_amount) {
+                    conditions.push('Đơn hàng tối thiểu: ' + new Intl.NumberFormat('vi-VN').format(promo.min_order_amount) + 'đ');
+                }
+                if (promo.min_customer_tier) {
+                    conditions.push('Từ hạng ' + promo.min_customer_tier + ' trở lên');
+                }
+                if (promo.per_user_limit) {
+                    const usageText = promo.remaining_usage !== null 
+                        ? 'Mỗi khách hàng: ' + promo.remaining_usage + '/' + promo.per_user_limit + ' lần'
+                        : 'Mỗi khách hàng: ' + promo.per_user_limit + ' lần';
+                    conditions.push(usageText);
+                }
+                if (promo.usage_limit) {
+                    conditions.push('Số lượt sử dụng: ' + promo.usage_limit + ' lượt');
+                }
+                if (promo.start_date) {
+                    conditions.push('Bắt đầu: ' + promo.start_date);
+                }
+                if (promo.end_date) {
+                    conditions.push('Kết thúc: ' + promo.end_date);
+                }
+
+                const conditionsDiv = document.getElementById('promotion_conditions');
+                if (conditions.length > 0) {
+                    conditionsDiv.innerHTML = '<div class="mt-2"><strong>Điều kiện áp dụng:</strong></div>' +
+                        '<ul class="mb-0 mt-1" style="padding-left: 20px;">' +
+                        conditions.map(c => '<li>' + c + '</li>').join('') +
+                        '</ul>';
+                } else {
+                    conditionsDiv.innerHTML = '';
+                }
+            }
+
+            // Handle promotion scope radio change
+            document.querySelectorAll('.promotion-scope-radio').forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        const scope = this.value;
+                        const select = document.getElementById('promotion_select');
+                        const label = document.getElementById('promotion_select_label');
+                        const appliedPromotionId = document.getElementById('applied_promotion_id');
+                        
+                        // Check if there's an applied promotion, remove it when switching tabs
+                        if (appliedPromotionId && appliedPromotionId.value) {
+                            const appointmentId = {{ $appointment->id }};
+                            
+                            // Remove applied promotion via AJAX, then reload with scope parameter
+                            $.ajax({
+                                url: '{{ route("admin.appointments.remove-coupon") }}',
+                                method: 'GET',
+                                data: {
+                                    appointment_id: appointmentId
+                                },
+                                success: function(response) {
+                                    // After removing, reload page with scope parameter to maintain selected tab
+                                    const currentUrl = new URL(window.location.href);
+                                    currentUrl.searchParams.set('promotion_scope', scope);
+                                    window.location.href = currentUrl.toString();
+                                },
+                                error: function(xhr) {
+                                    console.error('Error removing promotion:', xhr);
+                                    // Continue with tab switching even if removal fails
+                                    updateTabUI(scope, select, label);
+                                }
+                            });
+                        } else {
+                            // No applied promotion, just switch tab
+                            updateTabUI(scope, select, label);
+                        }
+                    }
+                });
+            });
+
+            // Function to update tab UI
+            function updateTabUI(scope, select, label) {
+                // Update label styles
+                document.querySelectorAll('.promotion-scope-radio').forEach(function(r) {
+                    const labelEl = document.querySelector('label[for="' + r.id + '"]');
+                    if (labelEl) {
+                        if (r.checked) {
+                            labelEl.style.background = '#e7f3ff';
+                            labelEl.style.borderColor = '#0d6efd';
+                        } else {
+                            labelEl.style.background = '#f9f9f9';
+                            labelEl.style.borderColor = '#ddd';
+                        }
+                    }
+                });
+
+                // Update label text
+                if (label) {
+                    if (scope === 'order') {
+                        label.textContent = 'Chọn mã khuyến mãi áp dụng theo hóa đơn:';
+                    } else {
+                        label.textContent = 'Chọn mã khuyến mãi áp dụng theo hạng khách hàng:';
+                    }
+                }
+                
+                // Populate select with appropriate promotions
+                if (scope === 'order') {
+                    populatePromotionSelect(orderPromotions);
+                } else if (scope === 'customer_tier') {
+                    populatePromotionSelect(customerTierPromotions);
+                }
+
+                // Reset selection
+                if (select) {
+                    select.value = '';
+                }
+                selectedPromotion = null;
+                displayPromotionDetails(null);
+            }
+
+            // Get promotion select element (make it accessible globally in this scope)
+            const promotionSelect = document.getElementById('promotion_select');
+            
+            // Handle promotion select change
+            if (promotionSelect) {
+                promotionSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption && selectedOption.value) {
+                        try {
+                            const promoDataStr = selectedOption.dataset.promotion;
+                            if (promoDataStr && promoDataStr !== 'undefined') {
+                                const promoData = JSON.parse(promoDataStr);
+                                selectedPromotion = promoData;
+                                displayPromotionDetails(promoData);
+                            } else {
+                                selectedPromotion = null;
+                                displayPromotionDetails(null);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing promotion data:', e, selectedOption);
+                            selectedPromotion = null;
+                            displayPromotionDetails(null);
+                            // Don't show alert on every change, only log error
+                        }
+                    } else {
+                        selectedPromotion = null;
+                        displayPromotionDetails(null);
+                    }
+                });
+            }
+
+            // Function to apply promotion
+            function applyPromotion(promotionCode, promotionId = null) {
+                if (isApplyingPromotion) {
+                    console.log('Already applying promotion, skipping...');
+                    return;
+                }
+                
+                if (!promotionCode || promotionCode.trim() === '') {
+                    alert('Mã khuyến mãi không hợp lệ!');
+                    return;
+                }
+                
+                // Check if jQuery is available
+                if (typeof $ === 'undefined') {
+                    alert('Lỗi: jQuery chưa được tải. Vui lòng tải lại trang.');
+                    console.error('jQuery is not loaded');
+                    return;
+                }
+                
+                isApplyingPromotion = true;
+                const appointmentId = {{ $appointment->id }};
+                const messageDiv = document.getElementById('promotion_message');
+                const btnApply = document.getElementById('btn_apply_promotion');
+                const selectEl = document.getElementById('promotion_select');
+                
+                // Disable button and select while applying
+                if (btnApply) {
+                    btnApply.disabled = true;
+                    const originalHtml = btnApply.innerHTML;
+                    btnApply.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang áp dụng...';
+                    btnApply.dataset.originalHtml = originalHtml;
+                }
+                if (selectEl) {
+                    selectEl.disabled = true;
+                }
+                
+                // Show loading
+                if (messageDiv) {
+                    messageDiv.innerHTML = '<span class="text-info"><i class="fa fa-spinner fa-spin"></i> Đang áp dụng mã khuyến mãi...</span>';
+                    messageDiv.style.display = 'block';
+                }
+
+                // Call apply-coupon route via AJAX
+                $.ajax({
+                    url: '{{ route("admin.appointments.apply-coupon") }}',
+                    method: 'POST',
+                    dataType: 'json',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        appointment_id: appointmentId,
+                        coupon_code: promotionCode,
+                        applied_promotion_id: promotionId
+                    },
+                    success: function(response) {
+                        // Check if response indicates success
+                        if (response && response.success) {
+                            // Get discount amount from response
+                            let discountAmount = 0;
+                            if (response.promotion) {
+                                // Try to get discount_amount from response
+                                if (response.promotion.discount_amount !== undefined && response.promotion.discount_amount !== null) {
+                                    discountAmount = parseFloat(response.promotion.discount_amount);
+                                    // If parseFloat returns NaN, set to 0
+                                    if (isNaN(discountAmount)) {
+                                        discountAmount = 0;
+                                    }
+                                }
+                            }
+                            
+                            // Update prices on the page without reloading
+                            updatePrices(discountAmount);
+                            
+                            // Update applied promotion ID in form
+                            if (response.promotion && response.promotion.id) {
+                                const formPromotionId = document.getElementById('form_applied_promotion_id');
+                                if (formPromotionId) {
+                                    formPromotionId.value = response.promotion.id;
+                                }
+                            }
+                            
+                            // Update promotion details display if promotion info is available
+                            if (response.promotion) {
+                                // Parse max_discount_amount to number if it exists (handle both string and number)
+                                let maxDiscountAmount = null;
+                                if (response.promotion.max_discount_amount !== undefined && response.promotion.max_discount_amount !== null) {
+                                    const parsed = parseFloat(response.promotion.max_discount_amount);
+                                    maxDiscountAmount = !isNaN(parsed) ? parsed : null;
+                                } else if (selectedPromotion && selectedPromotion.max_discount_amount !== undefined) {
+                                    const parsed = parseFloat(selectedPromotion.max_discount_amount);
+                                    maxDiscountAmount = !isNaN(parsed) ? parsed : null;
+                                }
+                                
+                                const promoData = {
+                                    id: response.promotion.id,
+                                    code: response.promotion.code,
+                                    name: response.promotion.name || response.promotion.code,
+                                    scope: response.promotion.apply_scope || (selectedPromotion ? selectedPromotion.scope : 'order'),
+                                    discount_type: response.promotion.discount_type || (selectedPromotion ? selectedPromotion.discount_type : 'amount'),
+                                    discount_percent: response.promotion.discount_percent !== undefined ? response.promotion.discount_percent : (selectedPromotion ? selectedPromotion.discount_percent : 0),
+                                    discount_amount: response.promotion.discount_amount !== undefined ? parseFloat(response.promotion.discount_amount) || 0 : 0,
+                                    max_discount_amount: maxDiscountAmount
+                                };
+                                // Update selectedPromotion cache
+                                selectedPromotion = promoData;
+                                displayPromotionDetails(promoData);
+                                
+                                // Show promotion details and remove button after successful application
+                                const promotionDetails = document.getElementById('promotion_details');
+                                if (promotionDetails) {
+                                    promotionDetails.style.display = 'block';
+                                    
+                                    // Show remove button if not already visible
+                                    const btnRemove = document.getElementById('btn_remove_promotion');
+                                    if (!btnRemove) {
+                                        // Create remove button if it doesn't exist
+                                        const removeBtnContainer = document.createElement('div');
+                                        removeBtnContainer.className = 'mt-3';
+                                        removeBtnContainer.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger" id="btn_remove_promotion" title="Xóa mã"><i class="fa fa-times"></i> Xóa mã đã áp dụng</button>';
+                                        promotionDetails.appendChild(removeBtnContainer);
+                                        
+                                        // Attach event listener to the new button
+                                        const newBtnRemove = document.getElementById('btn_remove_promotion');
+                                        if (newBtnRemove) {
+                                            attachRemoveButtonListener(newBtnRemove);
+                                        }
+                                    } else {
+                                        btnRemove.style.display = 'block';
+                                    }
+                                }
+                            }
+                            
+                            // Show success message
+                            if (messageDiv) {
+                                messageDiv.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> ' + (response.message || 'Áp dụng mã khuyến mãi thành công!') + '</span>';
+                                messageDiv.style.display = 'block';
+                            }
+                            
+                            // Re-enable button and select
+                            isApplyingPromotion = false;
+                            if (btnApply) {
+                                btnApply.disabled = false;
+                                const originalHtml = btnApply.dataset.originalHtml || '<span class="d-none d-sm-inline">Áp dụng</span>';
+                                btnApply.innerHTML = originalHtml;
+                            }
+                            if (selectEl) {
+                                selectEl.disabled = false;
+                            }
+                        } else {
+                            // Response indicates failure
+                            isApplyingPromotion = false;
+                            
+                            // Re-enable button and select
+                            if (btnApply) {
+                                btnApply.disabled = false;
+                                const originalHtml = btnApply.dataset.originalHtml || '<span class="d-none d-sm-inline">Áp dụng</span>';
+                                btnApply.innerHTML = originalHtml;
+                            }
+                            if (selectEl) {
+                                selectEl.disabled = false;
+                            }
+                            
+                            const errorMessage = (response && response.message) ? response.message : 'Có lỗi xảy ra khi áp dụng mã khuyến mãi';
+                            if (messageDiv) {
+                                messageDiv.innerHTML = '<span class="text-danger"><i class="fa fa-exclamation-circle"></i> ' + errorMessage + '</span>';
+                                messageDiv.style.display = 'block';
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        isApplyingPromotion = false;
+                        
+                        // Re-enable button and select
+                        if (btnApply) {
+                            btnApply.disabled = false;
+                            const originalHtml = btnApply.dataset.originalHtml || '<span class="d-none d-sm-inline">Áp dụng</span>';
+                            btnApply.innerHTML = originalHtml;
+                        }
+                        if (selectEl) {
+                            selectEl.disabled = false;
+                        }
+                        
+                        let errorMessage = 'Có lỗi xảy ra khi áp dụng mã khuyến mãi';
+                        
+                        // Try to get error message from response
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON.error) {
+                                errorMessage = xhr.responseJSON.error;
+                            } else if (xhr.responseJSON.errors) {
+                                // Validation errors
+                                const errors = xhr.responseJSON.errors;
+                                const firstError = Object.values(errors)[0];
+                                errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                            }
+                        } else if (xhr.responseText) {
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                if (response.message) {
+                                    errorMessage = response.message;
+                                } else if (response.error) {
+                                    errorMessage = response.error;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing response:', e, xhr.responseText);
+                            }
+                        }
+                        
+                        if (messageDiv) {
+                            messageDiv.innerHTML = '<span class="text-danger"><i class="fa fa-exclamation-circle"></i> ' + errorMessage + '</span>';
+                            messageDiv.style.display = 'block';
+                        }
+                        
+                        console.error('AJAX Error:', xhr);
+                    }
+                });
+            }
+
+            // Handle apply button click
+            const btnApplyPromotion = document.getElementById('btn_apply_promotion');
+            if (btnApplyPromotion) {
+                btnApplyPromotion.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Get selected promotion from dropdown
+                    const select = document.getElementById('promotion_select');
+                    if (!select || !select.value) {
+                        alert('Vui lòng chọn mã khuyến mãi trước khi áp dụng!');
+                        return;
+                    }
+                    
+                    const selectedOption = select.options[select.selectedIndex];
+                    if (!selectedOption || !selectedOption.value) {
+                        alert('Vui lòng chọn mã khuyến mãi trước khi áp dụng!');
+                        return;
+                    }
+                    
+                    // Try to get promotion data
+                    let promoCode = '';
+                    let promoId = null;
+                    
+                    // First try to use cached promotion data
+                    if (selectedPromotion && selectedPromotion.code) {
+                        promoCode = selectedPromotion.code;
+                        promoId = selectedPromotion.id;
+                    } else {
+                        // Try to parse from dataset
+                        try {
+                            const promoDataStr = selectedOption.dataset.promotion;
+                            if (promoDataStr && promoDataStr !== 'undefined' && promoDataStr.trim() !== '') {
+                                const promoData = JSON.parse(promoDataStr);
+                                if (promoData && promoData.code) {
+                                    promoCode = promoData.code;
+                                    promoId = promoData.id || null;
+                                    // Cache it for next time
+                                    selectedPromotion = promoData;
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error parsing promotion data:', e, selectedOption);
+                        }
+                        
+                        // If still no code, try to extract from text
+                        if (!promoCode) {
+                            const textParts = selectedOption.textContent.split(' - ');
+                            if (textParts.length > 0) {
+                                promoCode = textParts[0].trim();
+                            }
+                        }
+                    }
+                    
+                    if (!promoCode || promoCode === '') {
+                        alert('Không thể lấy thông tin mã khuyến mãi. Vui lòng chọn lại mã khuyến mãi.');
+                        return;
+                    }
+                    
+                    // Call applyPromotion function
+                    try {
+                        applyPromotion(promoCode, promoId);
+                    } catch (error) {
+                        console.error('Error calling applyPromotion:', error);
+                        alert('Có lỗi xảy ra khi áp dụng mã khuyến mãi. Vui lòng thử lại.');
+                        isApplyingPromotion = false;
+                    }
+                });
+            }
+
+            // Initialize: Load promotions based on selected scope
+            @if($appliedCoupon && \Illuminate\Support\Facades\Session::has('coupon_code'))
+                @php
+                    $appliedPromoData = [
+                        'id' => $appliedCoupon->id,
+                        'code' => $appliedCoupon->code,
+                        'name' => $appliedCoupon->name,
+                        'scope' => $appliedCoupon->apply_scope,
+                        'discount_type' => $appliedCoupon->discount_type,
+                        'discount_percent' => $appliedCoupon->discount_percent ?? 0,
+                        'discount_amount' => $appliedCoupon->discount_amount ?? 0,
+                        'max_discount_amount' => $appliedCoupon->max_discount_amount ?? 0,
+                        'min_order_amount' => $appliedCoupon->min_order_amount ?? 0,
+                        'min_customer_tier' => $appliedCoupon->min_customer_tier ?? null,
+                        'per_user_limit' => $appliedCoupon->per_user_limit ?? 0,
+                    ];
+                @endphp
+                const appliedPromo = @json($appliedPromoData);
+                
+                // Display promotion details since promotion is already applied
+                displayPromotionDetails(appliedPromo);
+                
+                // Show promotion details and remove button
+                const promotionDetails = document.getElementById('promotion_details');
+                if (promotionDetails) {
+                    promotionDetails.style.display = 'block';
+                }
+                
+                const btnRemove = document.getElementById('btn_remove_promotion');
+                if (btnRemove) {
+                    btnRemove.style.display = 'block';
+                }
+                
+                // Set scope radio (but don't trigger change to avoid reload)
+                const scopeRadio = document.querySelector('.promotion-scope-radio[value="' + appliedPromo.scope + '"]');
+                if (scopeRadio) {
+                    scopeRadio.checked = true;
+                    // Update tab UI without triggering change event
+                    const select = document.getElementById('promotion_select');
+                    const label = document.getElementById('promotion_select_label');
+                    updateTabUI(appliedPromo.scope, select, label);
+                }
+            @else
+                // If no promotion applied, check URL parameter or default to 'order' scope
+                @php
+                    $selectedScope = request('promotion_scope', 'order');
+                @endphp
+                const selectedScope = @json($selectedScope);
+                const scopeRadio = document.querySelector('.promotion-scope-radio[value="' + selectedScope + '"]');
+                if (scopeRadio) {
+                    scopeRadio.checked = true;
+                    scopeRadio.dispatchEvent(new Event('change'));
+                }
+            @endif
+
+            // Function to attach remove button listener
+            function attachRemoveButtonListener(button) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const appointmentId = {{ $appointment->id }};
+                    const messageDiv = document.getElementById('promotion_message');
+                    
+                    // Show loading
+                    if (messageDiv) {
+                        messageDiv.innerHTML = '<span class="text-info"><i class="fa fa-spinner fa-spin"></i> Đang xóa mã khuyến mãi...</span>';
+                        messageDiv.style.display = 'block';
+                    }
+                    
+                    // Disable button
+                    this.disabled = true;
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang xóa...';
+                    
+                    // Call remove-coupon route via AJAX
+                    $.ajax({
+                        url: '{{ route("admin.appointments.remove-coupon") }}',
+                        method: 'GET',
+                        data: {
+                            appointment_id: appointmentId
+                        },
+                        success: function(response) {
+                            // Update prices (remove discount)
+                            updatePrices(0);
+                            
+                            // Hide promotion details
+                            const promotionDetails = document.getElementById('promotion_details');
+                            if (promotionDetails) {
+                                promotionDetails.style.display = 'none';
+                            }
+                            
+                            // Hide remove button
+                            const btnRemove = document.getElementById('btn_remove_promotion');
+                            if (btnRemove) {
+                                btnRemove.style.display = 'none';
+                            }
+                            
+                            // Clear selected promotion
+                            selectedPromotion = null;
+                            const select = document.getElementById('promotion_select');
+                            if (select) {
+                                select.value = '';
+                            }
+                            
+                            // Reset form fields
+                            const formPromotionId = document.getElementById('form_applied_promotion_id');
+                            if (formPromotionId) {
+                                formPromotionId.value = '';
+                            }
+                            
+                            // Show success message
+                            if (messageDiv) {
+                                messageDiv.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> Đã xóa mã khuyến mãi thành công!</span>';
+                                messageDiv.style.display = 'block';
+                            }
+                            
+                            // Re-enable button
+                            if (button) {
+                                button.disabled = false;
+                                button.innerHTML = originalText;
+                            }
+                            
+                            // Reload page after a short delay to refresh the view
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        },
+                        error: function(xhr) {
+                            // Re-enable button
+                            if (button) {
+                                button.disabled = false;
+                                button.innerHTML = originalText;
+                            }
+                            
+                            let errorMessage = 'Có lỗi xảy ra khi xóa mã khuyến mãi';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            
+                            if (messageDiv) {
+                                messageDiv.innerHTML = '<span class="text-danger"><i class="fa fa-exclamation-circle"></i> ' + errorMessage + '</span>';
+                                messageDiv.style.display = 'block';
+                            }
+                            
+                            console.error('AJAX Error:', xhr);
+                        }
+                    });
+                });
+            }
+
+            // Handle remove promotion button click (for existing button)
+            const btnRemovePromotion = document.getElementById('btn_remove_promotion');
+            if (btnRemovePromotion) {
+                attachRemoveButtonListener(btnRemovePromotion);
+            }
+
+            // Initialize with already applied promotion
         });
     </script>
 @endpush

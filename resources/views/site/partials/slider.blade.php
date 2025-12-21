@@ -89,3 +89,24 @@
 <!-- slider_area_end -->
 @endif
 
+<style>
+    /* Căn giữa nút Đặt lịch ngay trong banner */
+    .slider_area .slider_text .book_room {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .slider_area .slider_text .book_btn {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* Giữ chữ "Chăm sóc chuyên nghiệp" trên 1 dòng */
+    .slider_area .slider_text h3 {
+        white-space: nowrap;
+    }
+</style>
+
