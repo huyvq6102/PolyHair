@@ -11,11 +11,11 @@
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Quản lý lịch hẹn</h1>
     <div>
-        <a href="{{ route('admin.appointments.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Thêm mới lịch hẹn
+        <a href="{{ route('admin.appointments.create') }}" class="btn btn-primary" title="Thêm mới lịch hẹn">
+            <i class="fas fa-plus"></i>
         </a>
-        <a href="{{ route('admin.appointments.cancelled') }}" class="btn btn-secondary">
-            <i class="fas fa-ban"></i> Xem lịch đã hủy
+        <a href="{{ route('admin.appointments.cancelled') }}" class="btn btn-secondary" title="Xem lịch đã hủy">
+            <i class="fas fa-ban"></i>
         </a>
     </div>
 </div>
@@ -113,7 +113,7 @@
                         <th>Ngày đặt</th>
                         <th>Trạng thái</th>
                         <th>Mô tả</th>
-                        <th>Hành động</th>
+                        <th class="text-center">Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -150,7 +150,7 @@
                                 @endif
                             </td>
                             <td>{{ Str::limit($appointment->note ?? 'N/A', 50) }}</td>
-                            <td>
+                            <td class="text-center">
                                 <a href="{{ route('admin.appointments.show', $appointment->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
                                     <i class="fas fa-eye"></i>
                                 </a>

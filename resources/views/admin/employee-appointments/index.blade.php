@@ -74,7 +74,7 @@
                             <th>Dịch vụ</th>
                             <th>Ngày và giờ</th>
                             <th>Trạng thái</th>
-                            <th>Thao tác</th>
+                            <th class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -127,8 +127,8 @@
                                                     {{ $appointment->status }}
                                                 </span>
                                             </td>
-                                            <td>
-                                                <div class="d-flex flex-wrap gap-1">
+                                            <td class="text-center">
+                                                <div class="d-flex flex-wrap gap-1 justify-content-center">
                                                     <a href="{{ route('employee.appointments.show', $appointment->id) }}"
                                                         class="btn btn-sm btn-info" title="Xem chi tiết">
                                                         <i class="fas fa-eye"></i>
@@ -143,7 +143,7 @@
                                                     @if(isset($employee) && $employee && $employee->position === 'Receptionist')
                                                         <a href="{{ route('employee.appointments.edit', $appointment->id) }}"
                                                             class="btn btn-sm btn-warning" title="Sửa lịch hẹn">
-                                                            <i class="fas fa-edit"></i> Sửa
+                                                            <i class="fas fa-edit"></i>
                                                         </a>
                                                     @endif
 
@@ -152,12 +152,12 @@
                                                             method="POST" class="d-inline">
                                                             @csrf
                                                             <button type="submit" class="btn btn-sm btn-success" title="Xác nhận đơn">
-                                                                <i class="fas fa-check"></i> Xác nhận
+                                                                <i class="fas fa-check"></i>
                                                             </button>
                                                         </form>
                                                         <button type="button" class="btn btn-sm btn-danger" title="Hủy đơn" data-toggle="modal"
                                                             data-target="#cancelModal{{ $appointment->id }}">
-                                                            <i class="fas fa-times"></i> Hủy
+                                                            <i class="fas fa-times"></i>
                                                         </button>
                                                     @endif
 
@@ -167,7 +167,7 @@
                                                             @csrf
                                                             <button type="submit" class="btn btn-sm btn-info" title="Bắt đầu thực hiện"
                                                                 onclick="return confirm('Bạn có chắc chắn muốn bắt đầu thực hiện đơn đặt này?');">
-                                                                <i class="fas fa-play"></i> Bắt đầu
+                                                                <i class="fas fa-play"></i>
                                                             </button>
                                                         </form>
                                                     @endif
@@ -178,7 +178,7 @@
                                                             @csrf
                                                             <button type="submit" class="btn btn-sm btn-success" title="Hoàn thành"
                                                                 onclick="return confirm('Bạn có chắc chắn muốn hoàn thành đơn đặt này?');">
-                                                                <i class="fas fa-check-circle"></i> Hoàn thành
+                                                                <i class="fas fa-check-circle"></i>
                                                             </button>
                                                         </form>
                                                     @endif

@@ -178,7 +178,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td>
+                            <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('admin.reviews.show', $review->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
                                         <i class="fas fa-eye"></i>

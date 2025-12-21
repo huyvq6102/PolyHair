@@ -248,15 +248,11 @@
                                         }
                                         
                                         // Check per_user_limit - if user has reached their limit, skip it
-                                        // CHỈ đếm các PromotionUsage có appointment đã thanh toán
                                         if ($promo->per_user_limit) {
                                             $userId = auth()->id();
                                             if ($userId) {
                                                 $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
                                                     ->where('user_id', $userId)
-                                                    ->whereHas('appointment', function($query) {
-                                                        $query->where('status', 'Đã thanh toán');
-                                                    })
                                                     ->count();
                                                 if ($userUsage >= $promo->per_user_limit) {
                                                     continue; // Skip this promotion, use original price

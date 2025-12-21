@@ -1130,8 +1130,7 @@ class AppointmentController extends Controller
             'employee.user',
             'appointmentDetails.serviceVariant.service',
             'appointmentDetails.combo',
-            'promotionUsages.promotion',
-            'payments'
+            'promotionUsages.promotion'
         ])->findOrFail($id);
 
         // Tính tổng tiền từ appointment details (price_snapshot đã bao gồm discount tự động)
@@ -1158,42 +1157,11 @@ class AppointmentController extends Controller
             $serviceLevelDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
 
-        // Lấy payment để tính discount chính xác
-        $payment = $appointment->payments()->where('status', 'completed')->first();
-        $appliedPromotion = null;
+        // Tính tổng giảm giá từ order-level promotions (nếu có)
         $orderLevelPromotionAmount = 0;
-        
-        // Lấy promotion từ promotionUsages
         foreach ($appointment->promotionUsages as $usage) {
-            if ($usage->promotion) {
-                $appliedPromotion = $usage->promotion;
-                
-                // Tính discount amount từ promotion
-                if ($usage->promotion->apply_scope === 'order') {
-                    // QUAN TRỌNG: Tính discount từ totalOriginalPrice (giá gốc trước khi giảm service-level)
-                    // Giống như logic trong admin show page
-                    if ($appliedPromotion->discount_type === 'percent') {
-                        $orderLevelPromotionAmount = ($totalOriginalPrice * ($appliedPromotion->discount_percent ?? 0)) / 100;
-                        if ($appliedPromotion->max_discount_amount) {
-                            $orderLevelPromotionAmount = min($orderLevelPromotionAmount, $appliedPromotion->max_discount_amount);
-                        }
-                    } else {
-                        $orderLevelPromotionAmount = min($appliedPromotion->discount_amount ?? 0, $totalOriginalPrice);
-                    }
-                }
-                break; // Chỉ lấy promotion đầu tiên
-            }
-        }
-        
-        // Nếu không có promotion từ promotionUsages, thử tính từ payment
-        // Payment->total là tổng cuối cùng đã thanh toán
-        // Có thể tính discount = totalOriginalPrice - payment->total (nếu payment->total < totalOriginalPrice)
-        if (!$appliedPromotion && $payment && $payment->total < $totalOriginalPrice) {
-            // Tính discount từ payment
-            $calculatedDiscount = max(0, $totalOriginalPrice - $payment->total);
-            if ($calculatedDiscount > $serviceLevelDiscount) {
-                // Nếu discount lớn hơn service-level discount, có thể có order-level discount
-                $orderLevelPromotionAmount = $calculatedDiscount - $serviceLevelDiscount;
+            if ($usage->promotion && $usage->promotion->apply_scope === 'order') {
+                $orderLevelPromotionAmount += $usage->discount_amount ?? 0;
             }
         }
 
@@ -1210,8 +1178,6 @@ class AppointmentController extends Controller
             'orderLevelPromotionAmount' => $orderLevelPromotionAmount,
             'totalDiscount' => $totalDiscount,
             'totalAfterDiscount' => $totalAfterDiscount,
-            'appliedPromotion' => $appliedPromotion,
-            'payment' => $payment,
         ]);
     }
 
