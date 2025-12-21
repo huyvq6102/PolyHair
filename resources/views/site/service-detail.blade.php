@@ -1,6 +1,6 @@
 @extends('layouts.site')
 
-@section('title', $service->name ?? 'Chi tiết dịch vụ')
+@section('title', ($combo ?? $service)->name ?? 'Chi tiết dịch vụ')
 
 @section('content')
     <div class="service-detail-page" style="min-height: calc(100vh - 120px); margin-top: 120px; padding: 0; background: transparent;">
@@ -13,25 +13,79 @@
                 </a>
             </div>
 
-            <!-- Banner Section với 3 ảnh ngẫu nhiên -->
-            <div class="container" style="padding: 20px 15px;">
-                <div class="service-banner" style="background: linear-gradient(135deg, #1a4d7a 0%, #2c5f8f 50%, #1a4d7a 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
+            @if(isset($combo))
+                <!-- Combo Detail Section -->
+                @include('site.service-detail-combo', ['combo' => $combo])
+            @else
+                <!-- Service Detail Section -->
+                <!-- Banner Section với 3 ảnh ngẫu nhiên -->
+                <div class="container" style="padding: 20px 15px;">
+                <div class="service-banner" style="background: linear-gradient(135deg, #bc913f 0%, #a88235 50%, #bc913f 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
                     <!-- Decorative elements -->
-                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(74, 144, 226, 0.3) 0%, transparent 100%); transform: skewX(-20deg);"></div>
-                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(74, 144, 226, 0.3) 100%); transform: skewX(20deg);"></div>
+                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%); transform: skewX(-20deg);"></div>
+                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 100%); transform: skewX(20deg);"></div>
 
-                    <div style="position: relative; z-index: 1;">
-                        <!-- Title -->
-                        <div class="text-center mb-4">
-                            <h1 style="color: #fff; font-size: 32px; font-weight: 800; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 8px rgba(0,0,0,0.3);">
-                                {{ $service->name ?? 'Chi tiết dịch vụ' }}
-                            </h1>
-                        </div>
+                        <div style="position: relative; z-index: 1;">
+                            <!-- Title -->
+                            <div class="text-center mb-4">
+                                <h1 style="color: #fff; font-size: 32px; font-weight: 800; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 8px rgba(0,0,0,0.3);">
+                                    {{ $service->name ?? 'Chi tiết dịch vụ' }}
+                                </h1>
+                            </div>
 
                         <!-- 3 ảnh ngẫu nhiên -->
                         <div class="banner-images" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 800px; margin: 0 auto;">
                             @php
-                                $bannerImages = $randomImages ?? [];
+                                // Xác định loại dịch vụ và folder ảnh tương ứng
+                                // Ưu tiên kiểm tra tên dịch vụ trước, sau đó mới kiểm tra category
+                                $categoryName = strtolower($service->category->name ?? '');
+                                $serviceName = strtolower($service->name ?? '');
+                                
+                                // Kiểm tra tên dịch vụ trước (ưu tiên cao hơn)
+                                $isUonService = strpos($serviceName, 'uốn') !== false;
+                                $isNhuomService = strpos($serviceName, 'nhuộm') !== false;
+                                $isGoiService = strpos($serviceName, 'gội') !== false;
+                                $isCatService = strpos($serviceName, 'cắt') !== false;
+                                
+                                // Nếu tên dịch vụ không có, mới kiểm tra category
+                                if (!$isUonService && !$isNhuomService && !$isGoiService && !$isCatService) {
+                                    $isUonService = strpos($categoryName, 'uốn') !== false;
+                                    $isNhuomService = strpos($categoryName, 'nhuộm') !== false;
+                                    $isGoiService = strpos($categoryName, 'gội') !== false;
+                                    $isCatService = strpos($categoryName, 'cắt') !== false;
+                                }
+
+                                // Xác định folder ảnh dựa trên loại dịch vụ
+                                // Ưu tiên cắt trước gội để tránh trường hợp category có cả "cắt" và "gội"
+                                if ($isUonService) {
+                                    $bannerFolder = 'uon';
+                                } elseif ($isNhuomService) {
+                                    $bannerFolder = 'nhuom';
+                                } elseif ($isCatService) {
+                                    $bannerFolder = 'cat';
+                                } elseif ($isGoiService) {
+                                    $bannerFolder = 'goi';
+                                } else {
+                                    // Không xác định được - dùng folder mặc định
+                                    $bannerFolder = 'cat';
+                                }
+
+                                // Lấy tất cả ảnh từ folder tương ứng
+                                $bannerImageDir = public_path('legacy/images/' . $bannerFolder);
+                                $bannerImages = [];
+                                
+                                if (is_dir($bannerImageDir)) {
+                                    $allImages = array_filter(scandir($bannerImageDir), function($file) {
+                                        return in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif']);
+                                    });
+                                    $allImages = array_values($allImages); // Reset keys
+                                    
+                                    if (count($allImages) > 0) {
+                                        shuffle($allImages);
+                                        $bannerImages = array_slice($allImages, 0, 3);
+                                    }
+                                }
+                                
                                 // Nếu không có đủ 3 ảnh, lặp lại hoặc dùng ảnh mặc định
                                 while (count($bannerImages) < 3) {
                                     if (count($bannerImages) > 0) {
@@ -41,23 +95,6 @@
                                     }
                                 }
                                 $bannerImages = array_slice($bannerImages, 0, 3);
-                            @endphp
-                            @php
-                                $categoryName = strtolower($service->category->name ?? '');
-                                $serviceName = strtolower($service->name ?? '');
-                                $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
-                                $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
-                                $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
-
-                                if ($isUonService) {
-                                    $bannerFolder = 'uon';
-                                } elseif ($isNhuomService) {
-                                    $bannerFolder = 'nhuom';
-                                } elseif ($isGoiService) {
-                                    $bannerFolder = 'goi';
-                                } else {
-                                    $bannerFolder = 'cat';
-                                }
                             @endphp
                             @foreach($bannerImages as $bannerImg)
                                 <div class="banner-image-card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.3); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
@@ -76,18 +113,30 @@
             <div class="service-process-section" style="padding: 60px 0; background: transparent;">
                 <div class="container">
                     <div class="d-flex align-items-center mb-4">
-                        <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: #000; margin-right: 12px; border-radius: 4px;"></span>
-                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #000; margin: 0; text-transform: uppercase;">
+                        <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: #bc913f; margin-right: 12px; border-radius: 4px;"></span>
+                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #bc913f; margin: 0; text-transform: uppercase;">
                             QUY TRÌNH DỊCH VỤ
                         </h2>
                     </div>
                     <p class="process-desc" style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 40px; padding-left: 20px;">
                         @php
+                            // Ưu tiên kiểm tra tên dịch vụ trước, sau đó mới kiểm tra category
                             $categoryName = strtolower($service->category->name ?? '');
                             $serviceName = strtolower($service->name ?? '');
-                            $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
-                            $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
-                            $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
+                            
+                            // Kiểm tra tên dịch vụ trước (ưu tiên cao hơn)
+                            $isUonService = strpos($serviceName, 'uốn') !== false;
+                            $isNhuomService = strpos($serviceName, 'nhuộm') !== false;
+                            $isGoiService = strpos($serviceName, 'gội') !== false;
+                            $isCatService = strpos($serviceName, 'cắt') !== false;
+                            
+                            // Nếu tên dịch vụ không có, mới kiểm tra category
+                            if (!$isUonService && !$isNhuomService && !$isGoiService && !$isCatService) {
+                                $isUonService = strpos($categoryName, 'uốn') !== false;
+                                $isNhuomService = strpos($categoryName, 'nhuộm') !== false;
+                                $isGoiService = strpos($categoryName, 'gội') !== false;
+                                $isCatService = strpos($categoryName, 'cắt') !== false;
+                            }
                         @endphp
                         @if($isUonService)
                             Dịch vụ uốn tóc chuyên nghiệp mang đến kiểu tóc xoăn tự nhiên, bền đẹp và phù hợp với phong cách cá nhân.
@@ -95,20 +144,35 @@
                             Dịch vụ nhuộm tóc chuyên nghiệp mang đến màu sắc hiện đại, bền màu và phù hợp với phong cách cá nhân.
                         @elseif($isGoiService)
                             Dịch vụ gội đầu chuyên nghiệp mang đến trải nghiệm thư giãn và chăm sóc tóc toàn diện.
+                        @elseif($isCatService)
+                            Dịch vụ cắt tóc chuyên nghiệp mang đến kiểu tóc hiện đại, gọn gàng và phù hợp phong cách cá nhân.
                         @else
-                            Dịch vụ cắt xả mang đến kiểu tóc hiện đại, gọn gàng và phù hợp phong cách cá nhân.
+                            Dịch vụ chuyên nghiệp mang đến trải nghiệm tốt nhất cho khách hàng.
                         @endif
                     </p>
 
                     <div class="process-steps-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px;">
                         @php
                             // Kiểm tra category hoặc tên dịch vụ để quyết định hiển thị bước nào
+                            // Ưu tiên kiểm tra tên dịch vụ trước, sau đó mới kiểm tra category
                             $categoryName = strtolower($service->category->name ?? '');
                             $serviceName = strtolower($service->name ?? '');
-                            $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
-                            $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
-                            $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
+                            
+                            // Kiểm tra tên dịch vụ trước (ưu tiên cao hơn)
+                            $isUonService = strpos($serviceName, 'uốn') !== false;
+                            $isNhuomService = strpos($serviceName, 'nhuộm') !== false;
+                            $isGoiService = strpos($serviceName, 'gội') !== false;
+                            $isCatService = strpos($serviceName, 'cắt') !== false;
+                            
+                            // Nếu tên dịch vụ không có, mới kiểm tra category
+                            if (!$isUonService && !$isNhuomService && !$isGoiService && !$isCatService) {
+                                $isUonService = strpos($categoryName, 'uốn') !== false;
+                                $isNhuomService = strpos($categoryName, 'nhuộm') !== false;
+                                $isGoiService = strpos($categoryName, 'gội') !== false;
+                                $isCatService = strpos($categoryName, 'cắt') !== false;
+                            }
 
+                            // Ưu tiên cắt trước gội để tránh trường hợp category có cả "cắt" và "gội"
                             if ($isUonService) {
                                 // Dịch vụ uốn
                                 $steps = [
@@ -125,6 +189,15 @@
                                     ['image' => 'nhuomb3.jpg', 'title' => 'Xả tóc', 'folder' => 'nhuom'],
                                     ['image' => 'nhuomb4.jpg', 'title' => 'Sấy vuốt tạo kiểu', 'folder' => 'nhuom'],
                                 ];
+                            } elseif ($isCatService) {
+                                // Chỉ dịch vụ có chữ "cắt" mới hiển thị các bước cắt
+                                $steps = [
+                                    ['image' => 'catb1.png', 'title' => 'Tư vấn kiểu tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb2.png', 'title' => 'Cắt tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb3.png', 'title' => 'Xả sạch tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb4.png', 'title' => 'Sấy tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb5.png', 'title' => 'Tạo kiểu tóc', 'folder' => 'cat'],
+                                ];
                             } elseif ($isGoiService) {
                                 // Dịch vụ gội
                                 $steps = [
@@ -135,14 +208,8 @@
                                     ['image' => 'goib5.png', 'title' => 'Sấy tóc', 'folder' => 'goi'],
                                 ];
                             } else {
-                                // Dịch vụ cắt (mặc định)
-                                $steps = [
-                                    ['image' => 'catb1.png', 'title' => 'Tư vấn kiểu tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb2.png', 'title' => 'Cắt tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb3.png', 'title' => 'Xả sạch tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb4.png', 'title' => 'Sấy tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb5.png', 'title' => 'Tạo kiểu tóc', 'folder' => 'cat'],
-                                ];
+                                // Không hiển thị bước nào nếu không phải uốn, nhuộm, gội, cắt
+                                $steps = [];
                             }
                         @endphp
                         @foreach($steps as $step)
@@ -219,6 +286,7 @@
                     Đặt lịch ngay
                 </a>
             </div>
+            @endif
         </div>
     </div>
 @endsection
