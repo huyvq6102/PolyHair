@@ -76,6 +76,10 @@ Route::prefix('payment')->name('site.payments.')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'checkout'])->name('checkout');
     Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('apply-coupon');
     Route::get('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('remove-coupon');
+    
+    // Appointment promotion routes
+    Route::post('/appointment/apply-coupon', [AppointmentController::class, 'applyCoupon'])->name('appointment.apply-coupon');
+    Route::get('/appointment/remove-coupon', [AppointmentController::class, 'removeCoupon'])->name('appointment.remove-coupon');
     Route::post('/process', [CheckoutController::class, 'processPayment'])->name('process');
     Route::get('/vnpay-return', [CheckoutController::class, 'vnpayReturn'])->name('vnpay-return');
     Route::get('/success/{appointmentId?}', [CheckoutController::class, 'paymentSuccess'])->name('success');

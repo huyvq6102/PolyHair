@@ -159,7 +159,7 @@
                                         <i class="fas fa-money-bill-wave"></i>
                                     </a>
                                 @endif
-                                @if($appointment->status != 'Đã hủy')
+                                @if($appointment->status != 'Đã hủy' && $appointment->status != 'Hoàn thành' && $appointment->status != 'Đã thanh toán')
                                     <a href="{{ route('admin.appointments.edit', $appointment->id) }}" class="btn btn-sm btn-warning" title="Sửa">
                                         <i class="fas fa-edit"></i>
                                     </a>
@@ -169,7 +169,7 @@
                                             <i class="fas fa-ban"></i>
                                         </button>
                                     </form>
-                                @else
+                                @elseif($appointment->status == 'Đã hủy')
                                     <span class="btn btn-sm btn-secondary" title="Lịch đã hủy" disabled>
                                         <i class="fas fa-ban"></i>
                                     </span>

@@ -315,19 +315,40 @@ class PromotionService
             }
         }
 
-        // 5. Check User Limit
-        if ($promotion->per_user_limit && $userId) {
-            $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promotion->id)
-                ->where('user_id', $userId)
-                ->count();
-            
-            if ($usageCount >= $promotion->per_user_limit) {
-                return [
-                    'valid' => false,
-                    'promotion' => $promotion,
-                    'discount_amount' => 0,
-                    'message' => 'Bạn đã sử dụng hết số lần được phép cho mã khuyến mại này.'
-                ];
+        // 5. Check User Limit (per_user_limit)
+        // QUAN TRỌNG: Kiểm tra số lượt sử dụng của mỗi khách hàng
+        if ($promotion->per_user_limit) {
+            if (!$userId) {
+                // Nếu có per_user_limit nhưng user chưa đăng nhập
+                // Chỉ báo lỗi nếu promotion yêu cầu đăng nhập (customer_tier)
+                if ($promotion->apply_scope === 'customer_tier') {
+                    return [
+                        'valid' => false,
+                        'promotion' => $promotion,
+                        'discount_amount' => 0,
+                        'message' => 'Vui lòng đăng nhập để sử dụng mã khuyến mại này.'
+                    ];
+                }
+                // Với order scope, có thể cho phép guest nhưng sẽ không check per_user_limit
+                // (có thể check bằng phone hoặc email nếu cần)
+            } else {
+                // Check số lần đã sử dụng của user này
+                // CHỈ đếm các PromotionUsage có appointment đã thanh toán (status = 'Đã thanh toán')
+                $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promotion->id)
+                    ->where('user_id', $userId)
+                    ->whereHas('appointment', function($query) {
+                        $query->where('status', 'Đã thanh toán');
+                    })
+                    ->count();
+                
+                if ($usageCount >= $promotion->per_user_limit) {
+                    return [
+                        'valid' => false,
+                        'promotion' => $promotion,
+                        'discount_amount' => 0,
+                        'message' => 'Bạn đã sử dụng hết số lần được phép cho mã khuyến mại này. (Đã dùng: ' . $usageCount . '/' . $promotion->per_user_limit . ' lần)'
+                    ];
+                }
             }
         }
 
@@ -572,7 +593,177 @@ class PromotionService
     }
 
     /**
+     * Tìm mã khuyến mãi thay thế khi mã hiện tại đã hết lượt cho user.
+     * 
+     * @param string $currentCode Mã khuyến mãi hiện tại đã hết lượt
+     * @param array $cartItems Cart items
+     * @param float $subtotal Tổng tiền
+     * @param int|null $userId User ID
+     * @param string $applyScope Loại khuyến mãi (order hoặc customer_tier)
+     * @return array ['found' => bool, 'promotion' => Promotion|null, 'message' => string]
+     */
+    public function findAlternativePromotion($currentCode, $cartItems, $subtotal, $userId = null, $applyScope = 'order')
+    {
+        $now = Carbon::now();
+        
+        // Lấy mã khuyến mãi hiện tại để biết thông tin
+        $currentPromotion = Promotion::where('code', $currentCode)->first();
+        
+        // Tìm các mã khuyến mãi khác cùng scope và đang active
+        $alternativePromotions = Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->where('code', '!=', $currentCode)
+            ->where('apply_scope', $applyScope)
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where(function($query) use ($now) {
+                $query->whereNull('start_date')->orWhere('start_date', '<=', $now);
+            })
+            ->where(function($query) use ($now) {
+                $query->whereNull('end_date')->orWhere('end_date', '>=', $now);
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+        
+        // Thử từng mã khuyến mãi để tìm mã có thể áp dụng
+        foreach ($alternativePromotions as $promo) {
+            // Kiểm tra usage_limit
+            if ($promo->usage_limit) {
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                if ($totalUsage >= $promo->usage_limit) {
+                    continue;
+                }
+            }
+            
+            // Kiểm tra per_user_limit
+            if ($promo->per_user_limit && $userId) {
+                // CHỈ đếm các PromotionUsage có appointment đã thanh toán
+                $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                    ->where('user_id', $userId)
+                    ->whereHas('appointment', function($query) {
+                        $query->where('status', 'Đã thanh toán');
+                    })
+                    ->count();
+                
+                if ($usageCount >= $promo->per_user_limit) {
+                    continue; // Mã này cũng đã hết lượt, thử mã khác
+                }
+            }
+            
+            // Kiểm tra min_order_amount
+            if ($promo->min_order_amount && $subtotal < $promo->min_order_amount) {
+                continue;
+            }
+            
+            // Kiểm tra customer tier nếu là customer_tier scope
+            if ($applyScope === 'customer_tier' && $promo->min_customer_tier && $userId) {
+                $user = \App\Models\User::find($userId);
+                if ($user) {
+                    $tierOrder = [
+                        'Khách thường' => 1,
+                        'Silver' => 2,
+                        'Gold' => 3,
+                        'VIP' => 4,
+                    ];
+                    
+                    $userTier = $user->tier ?? 'Khách thường';
+                    $requiredTier = $promo->min_customer_tier ?: 'Khách thường';
+                    
+                    $userLevel = $tierOrder[$userTier] ?? 1;
+                    $requiredLevel = $tierOrder[$requiredTier] ?? 1;
+                    
+                    if ($userLevel < $requiredLevel) {
+                        continue;
+                    }
+                }
+            }
+            
+            // Validate mã này với cart items
+            $tempValidation = $this->validateAndCalculateDiscount(
+                $promo->code,
+                $cartItems,
+                $subtotal,
+                $userId
+            );
+            
+            // Nếu validation thành công, sử dụng mã này
+            if ($tempValidation['valid']) {
+                return [
+                    'found' => true,
+                    'promotion' => $promo,
+                    'discount_amount' => $tempValidation['discount_amount'],
+                    'message' => 'Đã tự động chuyển sang mã khuyến mãi khác: ' . $promo->code
+                ];
+            }
+            
+            // Nếu validation fail, tiếp tục tìm mã khác
+            continue;
+        }
+        
+        // Không tìm thấy mã thay thế nào
+        return [
+            'found' => false,
+            'promotion' => null,
+            'discount_amount' => 0,
+            'message' => 'Không tìm thấy mã khuyến mãi thay thế khả dụng.'
+        ];
+    }
 
+    /**
+     * Tự động cập nhật trạng thái cho một promotion dựa trên ngày bắt đầu và kết thúc.
+     * Được gọi khi create hoặc update promotion.
+     */
+    protected function autoUpdateStatus(array &$data)
+    {
+        $now = Carbon::now();
+        
+        // Nếu status đã được set thủ công và là 'inactive', giữ nguyên
+        if (isset($data['status']) && $data['status'] === 'inactive') {
+            return;
+        }
+        
+        // Nếu có start_date và end_date
+        if (isset($data['start_date']) && isset($data['end_date'])) {
+            $startDate = Carbon::parse($data['start_date'])->startOfDay();
+            $endDate = Carbon::parse($data['end_date'])->endOfDay();
+            
+            if ($now->lt($startDate)) {
+                // Chưa đến ngày bắt đầu
+                $data['status'] = 'scheduled';
+            } elseif ($now->gt($endDate)) {
+                // Đã qua ngày kết thúc
+                $data['status'] = 'expired';
+            } else {
+                // Đang trong thời gian áp dụng
+                $data['status'] = 'active';
+            }
+        } elseif (isset($data['start_date'])) {
+            // Chỉ có start_date
+            $startDate = Carbon::parse($data['start_date'])->startOfDay();
+            
+            if ($now->lt($startDate)) {
+                $data['status'] = 'scheduled';
+            } else {
+                $data['status'] = 'active';
+            }
+        } elseif (isset($data['end_date'])) {
+            // Chỉ có end_date
+            $endDate = Carbon::parse($data['end_date'])->endOfDay();
+            
+            if ($now->gt($endDate)) {
+                $data['status'] = 'expired';
+            } else {
+                // Nếu không có start_date, mặc định là active
+                $data['status'] = $data['status'] ?? 'active';
+            }
+        } else {
+            // Không có start_date và end_date, mặc định là active
+            if (!isset($data['status'])) {
+                $data['status'] = 'active';
+            }
+        }
+    }
+
+    /**
      * Tự động cập nhật trạng thái cho tất cả khuyến mãi dựa trên ngày bắt đầu và kết thúc.
      * Chỉ cập nhật những khuyến mãi chưa bị xóa và không ở trạng thái 'inactive'.
      */

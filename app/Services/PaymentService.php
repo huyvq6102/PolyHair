@@ -269,18 +269,31 @@ class PaymentService
             }
 
             // Save Promotion Usage (chỉ lưu nếu có promotion được áp dụng và có user)
+            // Chỉ lưu khi appointment status là "Đã thanh toán" hoặc payment method không phải cash/momo/vnpay
             if ($appliedPromotion && $appointmentId && $userId) {
-                PromotionUsage::create([
-                    'promotion_id'   => $appliedPromotion->id,
-                    'user_id'        => $userId,
-                    'appointment_id' => $appointmentId, // Link to the last created/processed appointment
-                    'used_at'        => now(),
-                ]);
+                // Kiểm tra xem đã có PromotionUsage cho appointment này chưa
+                $existingUsage = PromotionUsage::where('appointment_id', $appointmentId)
+                    ->where('promotion_id', $appliedPromotion->id)
+                    ->where('user_id', $userId)
+                    ->first();
+                
+                if (!$existingUsage) {
+                    // Chỉ tạo PromotionUsage nếu appointment đã thanh toán hoặc payment method là online
+                    $appointment = Appointment::find($appointmentId);
+                    if ($appointment && ($appointment->status === 'Đã thanh toán' || !in_array($paymentMethod, ['cash', 'momo', 'vnpay']))) {
+                        PromotionUsage::create([
+                            'promotion_id'   => $appliedPromotion->id,
+                            'user_id'        => $userId,
+                            'appointment_id' => $appointmentId,
+                            'used_at'        => now(),
+                        ]);
 
-                // Giảm số lượt dùng còn lại (usage_limit) nếu đang được giới hạn
-                if (!is_null($appliedPromotion->usage_limit) && $appliedPromotion->usage_limit > 0) {
-                    $appliedPromotion->decrement('usage_limit', 1);
-                    $appliedPromotion->refresh();
+                        // Giảm số lượt dùng còn lại (usage_limit) nếu đang được giới hạn
+                        if (!is_null($appliedPromotion->usage_limit) && $appliedPromotion->usage_limit > 0) {
+                            $appliedPromotion->decrement('usage_limit', 1);
+                            $appliedPromotion->refresh();
+                        }
+                    }
                 }
             }
 
