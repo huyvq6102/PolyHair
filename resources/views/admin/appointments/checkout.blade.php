@@ -315,7 +315,7 @@
                             <h6 class="mb-3">Khuyến mãi</h6>
                             
                             <!-- Chọn loại khuyến mãi (Tab) -->
-                            <div class="mb-3">
+                            <div class="mb-3" id="promotion_scope_selection" style="{{ (\Illuminate\Support\Facades\Session::has('coupon_code') || !empty($appliedCoupon) || ($promotion ?? 0) > 0) ? 'display:none;' : '' }}">
                                 <label class="form-label small fw-semibold mb-2">Chọn loại khuyến mãi:</label>
                                 <div class="row g-2">
                                     <div class="col-12 col-md-6">
@@ -385,6 +385,7 @@
                                            class="btn btn-outline-danger w-100"
                                            title="Bỏ mã khuyến mãi"
                                            id="btn_remove_promotion"
+                                           onclick="document.getElementById('promotion_scope_selection').style.display = '';"
                                            style="{{ (!\Illuminate\Support\Facades\Session::has('coupon_code') && empty($appliedCoupon) && ($promotion ?? 0) <= 0) ? 'display:none;' : '' }}">
                                             <i class="fa fa-times"></i> Bỏ mã
                                         </a>
@@ -747,6 +748,12 @@
                                     appointment_id: appointmentId
                                 },
                                 success: function(response) {
+                                    // Hiện lại phần chọn loại khuyến mãi khi bỏ mã
+                                    const promotionScopeSelection = document.getElementById('promotion_scope_selection');
+                                    if (promotionScopeSelection) {
+                                        promotionScopeSelection.style.display = '';
+                                    }
+                                    
                                     // After removing, reload page with scope parameter to maintain selected tab
                                     const currentUrl = new URL(window.location.href);
                                     currentUrl.searchParams.set('promotion_scope', scope);
@@ -954,6 +961,12 @@
                             const btnRemove = document.getElementById('btn_remove_promotion');
                             if (btnRemove) {
                                 btnRemove.style.display = 'block';
+                            }
+                            
+                            // Ẩn phần chọn loại khuyến mãi sau khi áp dụng thành công
+                            const promotionScopeSelection = document.getElementById('promotion_scope_selection');
+                            if (promotionScopeSelection) {
+                                promotionScopeSelection.style.display = 'none';
                             }
                             
                             // Re-enable button and select

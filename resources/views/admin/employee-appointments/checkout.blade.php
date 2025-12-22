@@ -162,7 +162,7 @@
                             <h6 class="mb-3">Khuyến mãi</h6>
                             
                             <!-- Chọn loại khuyến mãi (Tab) -->
-                            <div class="mb-3">
+                            <div class="mb-3" id="promotion_scope_selection" style="{{ (\Illuminate\Support\Facades\Session::has('coupon_code') || !empty($appliedCoupon) || ($promotion ?? 0) > 0) ? 'display:none;' : '' }}">
                                 <label class="form-label small fw-semibold mb-2">Chọn loại khuyến mãi:</label>
                                 <div class="row g-2">
                                     <div class="col-12 col-md-6">
@@ -249,7 +249,11 @@
 
                             @if(\Illuminate\Support\Facades\Session::has('coupon_code'))
                                 <div class="mt-2">
-                                    <a href="{{ route('employee.appointments.remove-coupon', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-danger" title="Xóa mã">
+                                    <a href="{{ route('employee.appointments.remove-coupon', ['appointment_id' => $appointment->id]) }}" 
+                                       class="btn btn-sm btn-outline-danger" 
+                                       title="Xóa mã"
+                                       id="btn_remove_promotion"
+                                       onclick="document.getElementById('promotion_scope_selection').style.display = '';">
                                         <i class="fa fa-times"></i> Xóa mã đã áp dụng
                                     </a>
                                 </div>
@@ -581,6 +585,12 @@
                                     appointment_id: appointmentId
                                 },
                                 success: function(response) {
+                                    // Hiện lại phần chọn loại khuyến mãi khi bỏ mã
+                                    const promotionScopeSelection = document.getElementById('promotion_scope_selection');
+                                    if (promotionScopeSelection) {
+                                        promotionScopeSelection.style.display = '';
+                                    }
+                                    
                                     const currentUrl = new URL(window.location.href);
                                     currentUrl.searchParams.set('promotion_scope', scope);
                                     window.location.href = currentUrl.toString();
@@ -723,6 +733,12 @@
                             }
                             
                             updatePrices(discountAmount);
+                            
+                            // Ẩn phần chọn loại khuyến mãi sau khi áp dụng thành công
+                            const promotionScopeSelection = document.getElementById('promotion_scope_selection');
+                            if (promotionScopeSelection) {
+                                promotionScopeSelection.style.display = 'none';
+                            }
                             
                             if (response.promotion && response.promotion.id) {
                                 const formPromotionId = document.getElementById('form_applied_promotion_id');

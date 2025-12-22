@@ -28,7 +28,7 @@ class CustomerController extends Controller
             abort(403, 'Bạn không có quyền xem thông tin người dùng này.');
         }
 
-        // Tự động cập nhật trạng thái lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" nếu đã quá 1 phút
+        // Tự động cập nhật trạng thái lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" nếu đã quá 30 phút
         $this->autoConfirmPendingAppointments($id);
 
         $user = User::with([
@@ -113,17 +113,17 @@ $appointments = $user->appointments->map(function($appointment) {
     }
 
     /**
-     * Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 30 giây
+     * Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 30 phút
      */
     private function autoConfirmPendingAppointments($userId)
     {
         try {
-            $cutoffTime = \Carbon\Carbon::now()->subMinute(1);
+            $cutoffTime = \Carbon\Carbon::now()->subMinutes(30);
 
             $appointments = Appointment::where('user_id', $userId)
                 ->where('status', 'Chờ xử lý')
                 ->where('created_at', '<=', $cutoffTime)
-                ->whereRaw('TIMESTAMPDIFF(SECOND, created_at, NOW()) >= 60') // Đảm bảo đã qua ít nhất 1 phút
+                ->whereRaw('TIMESTAMPDIFF(SECOND, created_at, NOW()) >= 1800') // Đảm bảo đã qua ít nhất 30 phút (1800 giây)
                 ->get();
 
             foreach ($appointments as $appointment) {
