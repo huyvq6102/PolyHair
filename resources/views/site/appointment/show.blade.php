@@ -289,13 +289,49 @@
                     </div>
                     
                     <div class="total-section">
+                        @php
+                            $displayTotalPrice = $totalOriginalPrice ?? $totalPrice ?? 0;
+                            $displayServiceLevelDiscount = $serviceLevelDiscount ?? 0;
+                            $displayOrderLevelDiscount = $orderLevelDiscount ?? 0;
+                            $displayTotalDiscount = $totalDiscount ?? ($displayServiceLevelDiscount + $displayOrderLevelDiscount);
+                            $displayTotalAfterDiscount = $totalPrice ?? 0;
+                        @endphp
+
                         <div class="total-row">
                             <span class="total-label">Tổng giá gốc:</span>
-                            <span class="total-value">{{ number_format($totalOriginalPrice ?? $totalPrice, 0, ',', '.') }} ₫</span>
+                            <span class="total-value">{{ number_format($displayTotalPrice, 0, ',', '.') }} ₫</span>
                         </div>
+                        
+                        @if($displayServiceLevelDiscount > 0)
+                        <div class="total-row discount">
+                            <span class="total-label">Giảm giá tự động (từng dịch vụ):</span>
+                            <span class="total-value" style="color: #d32f2f;">-{{ number_format($displayServiceLevelDiscount, 0, ',', '.') }} ₫</span>
+                        </div>
+                        @endif
+                        
+                        @if($displayOrderLevelDiscount > 0)
+                        <div class="total-row discount">
+                            <span class="total-label">
+                                Giảm giá
+                                @if(isset($orderLevelPromotionCode) && $orderLevelPromotionCode)
+                                    <span style="font-weight: 600;">({{ $orderLevelPromotionCode }})</span>
+                                @endif
+                                :
+                            </span>
+                            <span class="total-value" style="color: #d32f2f;">-{{ number_format($displayOrderLevelDiscount, 0, ',', '.') }} ₫</span>
+                        </div>
+                        @endif
+                        
+                        @if($displayTotalDiscount > 0)
+                        <div class="total-row discount">
+                            <span class="total-label">Tổng giảm giá:</span>
+                            <span class="total-value" style="color: #d32f2f;">-{{ number_format($displayTotalDiscount, 0, ',', '.') }} ₫</span>
+                        </div>
+                        @endif
+                        
                         <div class="total-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
-                            <span class="total-label">Tổng cộng:</span>
-                            <span class="total-value" style="font-weight: 700; font-size: 18px;">{{ number_format($totalPrice, 0, ',', '.') }} ₫</span>
+                            <span class="total-label" style="font-weight: 700;">Tổng thanh toán:</span>
+                            <span class="total-value" style="font-weight: 700; font-size: 18px;">{{ number_format($displayTotalAfterDiscount, 0, ',', '.') }} ₫</span>
                         </div>
                     </div>
             </div>
