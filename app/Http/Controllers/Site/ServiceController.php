@@ -311,6 +311,21 @@ class ServiceController extends Controller
             }
         }
 
-        return view('site.service-detail', compact('service', 'relatedServices', 'randomImages'));
+        // Load active promotions for discount calculation
+        $now = \Carbon\Carbon::now();
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where('apply_scope', 'service') // Chỉ lấy promotion có apply_scope = 'service'
+            ->where(function($query) use ($now) {
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                })->where(function($q) use ($now) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                });
+            })
+            ->get();
+
+        return view('site.service-detail', compact('service', 'relatedServices', 'randomImages', 'activePromotions'));
     }
 }
