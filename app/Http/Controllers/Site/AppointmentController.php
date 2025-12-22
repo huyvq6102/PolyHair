@@ -938,11 +938,11 @@ class AppointmentController extends Controller
             ]);
 
             // Khi lấy được thông tin discount thì sẽ save giữ liệu vào bảng promotion_usage
-            // Chỉ tạo PromotionUsage nếu có user_id (không tạo cho guest)
-            if ($discountResult['discount'] > 0 && $user) {
+             // Khi lấy được thông tin discount thì sẽ save giữ liệu vào bảng promotion_usage
+             if ($discountResult['discount'] > 0) {
                 \App\Models\PromotionUsage::create([
                     'promotion_id' => $discountResult['promotion']->id,
-                    'user_id' => $user->id,
+                    'user_id' => $user ? $user->id : null,
                     'appointment_id' => $appointment->id,
                     'used_at' => Carbon::now(),
                 ]);
@@ -1112,7 +1112,8 @@ class AppointmentController extends Controller
             'appointmentDetails.serviceVariant.variantAttributes',
             'appointmentDetails.combo',
             'payments',
-            'reviews'
+            'reviews',
+            'promotionUsages.promotion'
         ])->findOrFail($id);
 
         // Calculate total price (price_snapshot already includes service-level discount)
@@ -1152,10 +1153,21 @@ class AppointmentController extends Controller
 
         // Tính order-level discount từ Payment (giống admin)
         $orderLevelDiscount = 0;
+        $orderLevelPromotionCode = null;
         $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->orderBy('created_at', 'desc')->first();
         if ($payment && $payment->total > 0 && $totalAfterServiceLevel > 0) {
             // Order-level discount = tổng sau service-level discount - tổng trong payment
             $orderLevelDiscount = max(0, $totalAfterServiceLevel - $payment->total);
+            
+            // Tìm mã khuyến mại order-level từ promotionUsages
+            if ($orderLevelDiscount > 0 && $appointment->promotionUsages) {
+                foreach ($appointment->promotionUsages as $usage) {
+                    if ($usage->promotion && in_array($usage->promotion->apply_scope, ['order', 'customer_tier'])) {
+                        $orderLevelPromotionCode = $usage->promotion->code;
+                        break;
+                    }
+                }
+            }
         }
 
         // Tổng thanh toán cuối cùng
@@ -1173,7 +1185,17 @@ class AppointmentController extends Controller
             $canReview = !$existingReview;
         }
 
-        return view('site.appointment.show', compact('appointment', 'totalPrice', 'totalOriginalPrice', 'totalDiscount', 'canReview', 'existingReview'));
+        return view('site.appointment.show', compact(
+            'appointment', 
+            'totalPrice', 
+            'totalOriginalPrice', 
+            'serviceLevelDiscount',
+            'orderLevelDiscount',
+            'orderLevelPromotionCode',
+            'totalDiscount', 
+            'canReview', 
+            'existingReview'
+        ));
     }
 
     /**
@@ -1224,10 +1246,21 @@ class AppointmentController extends Controller
 
         // Tính order-level discount từ Payment (giống admin)
         $orderLevelPromotionAmount = 0;
+        $orderLevelPromotionCode = null;
         $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->orderBy('created_at', 'desc')->first();
         if ($payment && $payment->total > 0 && $subtotal > 0) {
             // Order-level discount = tổng sau service-level discount - tổng trong payment
             $orderLevelPromotionAmount = max(0, $subtotal - $payment->total);
+            
+            // Tìm mã khuyến mại order-level từ promotionUsages
+            if ($orderLevelPromotionAmount > 0 && $appointment->promotionUsages) {
+                foreach ($appointment->promotionUsages as $usage) {
+                    if ($usage->promotion && in_array($usage->promotion->apply_scope, ['order', 'customer_tier'])) {
+                        $orderLevelPromotionCode = $usage->promotion->code;
+                        break;
+                    }
+                }
+            }
         }
 
         // Tính tổng sau giảm giá (đã bao gồm service-level discount trong price_snapshot)
@@ -1241,6 +1274,7 @@ class AppointmentController extends Controller
             'totalOriginalPrice' => $totalOriginalPrice,
             'serviceLevelDiscount' => $serviceLevelDiscount,
             'orderLevelPromotionAmount' => $orderLevelPromotionAmount,
+            'orderLevelPromotionCode' => $orderLevelPromotionCode,
             'totalDiscount' => $totalDiscount,
             'totalAfterDiscount' => $totalAfterDiscount,
         ]);
