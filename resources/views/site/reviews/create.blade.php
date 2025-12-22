@@ -28,7 +28,7 @@
         .review-title {
             font-size: 28px;
             font-weight: 600;
-            color: #4A3600;
+            color: #d8b26a;
             margin-bottom: 10px;
         }
 

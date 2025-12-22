@@ -15,8 +15,8 @@
 @endpush
 
 @section('content')
-<div class="appointment-detail-section" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
-    <div class="container" style="max-width: 900px; margin: 0 auto;">
+        <div class="appointment-detail-section">
+    <div class="container">
         @if(!auth()->check())
         <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 30px; border-left: 4px solid #28a745; background-color: #d4edda; color: #155724; padding: 20px 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
@@ -53,14 +53,13 @@
             </div>
         </div>
         
-        <div class="appointment-content" style="display: flex; justify-content: center;">
-            <div style="width: 100%; max-width: 800px;">
-                <!-- Thông tin lịch đặt -->
-                <div class="appointment-card">
-                    <h3 class="card-title">
-                        <i class="fa fa-info-circle"></i>
-                        Thông tin lịch đặt
-                    </h3>
+        <div class="appointment-content">
+            <!-- Thông tin lịch đặt -->
+            <div class="appointment-card appointment-info-card">
+                <h3 class="card-title">
+                    <i class="fa fa-info-circle"></i>
+                    Thông tin lịch đặt
+                </h3>
                     
                     <div class="info-row">
                         <span class="info-label">Trạng thái:</span>
@@ -171,15 +170,15 @@
                         <div class="note-text">{{ $appointment->note }}</div>
                     </div>
                     @endif
-                </div>
-                
-                <!-- Danh sách dịch vụ -->
-                @if($appointment->appointmentDetails->count() > 0)
-                <div class="appointment-card" style="margin-top: 30px;">
-                    <h3 class="card-title">
-                        <i class="fa fa-scissors"></i>
-                        Danh sách dịch vụ
-                    </h3>
+            </div>
+            
+            <!-- Danh sách dịch vụ -->
+            @if($appointment->appointmentDetails->count() > 0)
+            <div class="appointment-card appointment-services-card">
+                <h3 class="card-title">
+                    <i class="fa fa-scissors"></i>
+                    Danh sách dịch vụ
+                </h3>
                     
                     <div class="service-list">
                         @foreach($appointment->appointmentDetails as $detail)
@@ -245,18 +244,11 @@
                                                 Dịch vụ không xác định
                                             @endif
                                         </div>
+                                        @if($detail->duration)
                                         <div class="service-details">
-                                            @if($detail->serviceVariant && $detail->serviceVariant->service)
-                                                Danh mục: {{ $detail->serviceVariant->service->name }}
-                                            @elseif($detail->combo_id && $detail->combo)
-                                                Loại: Combo
-                                            @elseif($detail->notes)
-                                                Loại: Dịch vụ đơn
-                                            @endif
-                                            @if($detail->duration)
-                                                | Thời lượng: {{ $detail->duration }} phút
-                                            @endif
+                                            {{ $detail->duration }} phút
                                         </div>
+                                        @endif
                                         @if(count($attributes) > 0)
                                         <div class="service-attributes" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
                                             @foreach($attributes as $attr)
@@ -268,7 +260,7 @@
                                         @endif
                                     </div>
                                     <div class="service-price">
-                                        {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ
+                                        {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }} ₫
                                     </div>
                                     @if($serviceImage || count($attributes) > 0)
                                     <div class="service-tooltip">
@@ -298,14 +290,16 @@
                     
                     <div class="total-section">
                         <div class="total-row">
+                            <span class="total-label">Tổng giá gốc:</span>
+                            <span class="total-value">{{ number_format($totalOriginalPrice ?? $totalPrice, 0, ',', '.') }} ₫</span>
+                        </div>
+                        <div class="total-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
                             <span class="total-label">Tổng cộng:</span>
-                            <span class="total-value">{{ number_format($totalPrice, 0, ',', '.') }}đ</span>
+                            <span class="total-value" style="font-weight: 700; font-size: 18px;">{{ number_format($totalPrice, 0, ',', '.') }} ₫</span>
                         </div>
                     </div>
-                </div>
-                @endif
-                
             </div>
+            @endif
         </div>
     </div>
 </div>

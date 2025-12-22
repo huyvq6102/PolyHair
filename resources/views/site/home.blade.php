@@ -569,11 +569,16 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body" style="padding: 24px;">
+            <div class="modal-body" style="padding: 24px; max-height: 60vh; overflow-y: auto;">
                 <p class="service-name-display" style="font-size: 16px; color: #666; margin-bottom: 20px; font-weight: 600;"></p>
                 <div class="variants-list" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Variants will be inserted here -->
                 </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e5e5e5; padding: 20px 24px; border-radius: 0 0 16px 16px;">
+                <button type="button" id="continueBookingBtn" class="btn-continue-booking" style="width: 100%; padding: 14px 24px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); border: none; color: #fff; transition: all 0.3s ease; cursor: pointer; opacity: 0.5; pointer-events: none;" disabled>
+                    Tiếp tục đặt lịch
+                </button>
             </div>
         </div>
     </div>
@@ -633,23 +638,16 @@
     white-space: nowrap;
 }
 
-.variant-checkmark {
-    display: none;
-    width: 22px;
-    height: 22px;
-    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
-    color: #fff;
-    border-radius: 50%;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
+
+.btn-continue-booking:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(216, 178, 106, 0.4);
 }
 
-.variant-option.selected .variant-checkmark {
-    display: flex;
+.btn-continue-booking:not(:disabled) {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
 }
 
 .variant-duration {
@@ -731,59 +729,40 @@ function openVariantModal(button) {
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
 
 
-        // Build price HTML - hiển thị giá gốc (strikethrough) và giá sau discount
+        // Build price HTML với discount
         let priceHTML = '';
         if (hasDiscount) {
             priceHTML = `
-                <div class="variant-price-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="text-decoration: line-through; color: #999; font-size: 13px;">${formattedOriginalPrice}</span>
-                        <span class="variant-price">${formattedPrice}</span>
-                        ${variant.discountTag ? `<span style="background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: #fff; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; box-shadow: 0 2px 4px rgba(255, 68, 68, 0.25); letter-spacing: 0.2px; white-space: nowrap;">${variant.discountTag}</span>` : ''}
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span style="text-decoration: line-through; color: #999; font-size: 13px;">${formattedOriginalPrice}</span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="variant-price" style="font-size: 20px; font-weight: 700; color: #333;">${formattedPrice}</span>
+                        ${variant.discountTag ? `<span style="background: #ff4444; color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; white-space: nowrap;">${variant.discountTag}</span>` : ''}
                     </div>
-                    <span class="variant-checkmark">✓</span>
                 </div>
             `;
         } else {
-            priceHTML = `
-                <div class="variant-price-wrapper">
-                    <span class="variant-price">${formattedPrice}</span>
-                    <span class="variant-checkmark">✓</span>
-                </div>
-            `;
+            priceHTML = `<span class="variant-price" style="font-size: 20px; font-weight: 700; color: #333;">${formattedPrice}</span>`;
         }
 
-        // Build attributes HTML
-        let attributesHTML = '';
+        // Format attributes thành badge như trong ảnh (Mỏng: Ngắn, Dày: Trung bình, etc.)
+        let attrBadgeHTML = '';
         if (variant.attributes && variant.attributes.length > 0) {
-            attributesHTML = '<div class="variant-attributes" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">';
-            variant.attributes.forEach(attr => {
-                attributesHTML += `<span class="variant-attr-badge" style="display: inline-block; background: #f5f5f5; color: #666; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e5e5;">
-                    <strong style="color: #333;">${attr.name}:</strong> ${attr.value}
-                </span>`;
-            });
-            attributesHTML += '</div>';
-        }
-
-        // Build notes HTML
-        let notesHTML = '';
-        if (variant.notes) {
-            notesHTML = `<div class="variant-notes" style="margin-top: 8px; font-size: 13px; color: #666; font-style: italic; padding: 8px; background: #f9f9f9; border-radius: 6px; border-left: 3px solid #d8b26a;">
-                ${variant.notes}
-            </div>`;
+            const attrText = variant.attributes.map(attr => `${attr.name}: ${attr.value}`).join(', ');
+            attrBadgeHTML = `<span style="display: inline-block; background: #f5f5f5; color: #666; font-size: 12px; padding: 6px 12px; border-radius: 12px; border: 1px solid #e5e5e5; margin-top: 8px;">${attrText}</span>`;
         }
 
         variantOption.innerHTML = `
-             <div class="variant-header">
-                <div style="flex: 1;">
-                    <span class="variant-name">${variant.name}</span>
-                    ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                <div style="flex: 1; min-width: 0;">
+                    <div class="variant-name" style="font-size: 16px; font-weight: 700; color: #333; margin-bottom: 8px;">${variant.name}</div>
+                    ${durationText ? `<div class="variant-duration" style="font-size: 13px; color: #666; margin-bottom: 8px;">${durationText}</div>` : ''}
+                    ${attrBadgeHTML}
                 </div>
-                ${priceHTML}
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                    ${priceHTML}
+                </div>
             </div>
-            ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
-            ${attributesHTML}
-            ${notesHTML}
         `;
 
         // Click handler
@@ -802,6 +781,7 @@ function openVariantModal(button) {
                 continueBtn.disabled = false;
                 continueBtn.style.opacity = '1';
                 continueBtn.style.cursor = 'pointer';
+                continueBtn.style.pointerEvents = 'auto';
             }
         });
 
@@ -839,19 +819,10 @@ function closeVariantModal() {
 
 // Handle continue button
 document.addEventListener('DOMContentLoaded', function() {
-    // Create continue button if not exists
+    // Get continue button from modal footer
     let continueBtn = document.getElementById('continueBookingBtn');
-    if (!continueBtn) {
-        const modalBody = document.querySelector('#variantSelectionModal .modal-body');
-        continueBtn = document.createElement('button');
-        continueBtn.id = 'continueBookingBtn';
-        continueBtn.className = 'btn btn-primary btn-block';
-        continueBtn.style.cssText = 'margin-top: 20px; padding: 12px 24px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); border: none; color: #fff; transition: all 0.3s ease;';
-        continueBtn.textContent = 'Tiếp tục đặt lịch';
-        continueBtn.disabled = true;
-        continueBtn.style.opacity = '0.5';
-        continueBtn.style.cursor = 'not-allowed';
-
+    
+    if (continueBtn) {
         continueBtn.addEventListener('click', function() {
             const selectedVariant = document.querySelector('.variant-option.selected');
             if (selectedVariant) {
@@ -860,8 +831,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = bookingUrl;
             }
         });
-
-        modalBody.appendChild(continueBtn);
     }
 
     // Reset modal when closed
@@ -869,10 +838,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.variant-option').forEach(opt => {
             opt.classList.remove('selected');
         });
+        const continueBtn = document.getElementById('continueBookingBtn');
         if (continueBtn) {
             continueBtn.disabled = true;
             continueBtn.style.opacity = '0.5';
             continueBtn.style.cursor = 'not-allowed';
+            continueBtn.style.pointerEvents = 'none';
         }
     });
 
