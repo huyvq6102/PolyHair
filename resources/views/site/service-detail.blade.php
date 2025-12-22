@@ -33,72 +33,47 @@
                                 </h1>
                             </div>
 
-                        <!-- 3 ảnh ngẫu nhiên -->
+                        <!-- 3 ảnh ngẫu nhiên từ các thư mục uốn, nhuộm, cắt, gội -->
                         <div class="banner-images" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 800px; margin: 0 auto;">
                             @php
-                                // Xác định loại dịch vụ và folder ảnh tương ứng
-                                // Ưu tiên kiểm tra tên dịch vụ trước, sau đó mới kiểm tra category
-                                $categoryName = strtolower($service->category->name ?? '');
-                                $serviceName = strtolower($service->name ?? '');
+                                // Lấy ảnh ngẫu nhiên từ tất cả các thư mục: uon, nhuom, cat, goi
+                                $bannerFolders = ['uon', 'nhuom', 'cat', 'goi'];
+                                $allBannerImages = [];
                                 
-                                // Kiểm tra tên dịch vụ trước (ưu tiên cao hơn)
-                                $isUonService = strpos($serviceName, 'uốn') !== false;
-                                $isNhuomService = strpos($serviceName, 'nhuộm') !== false;
-                                $isGoiService = strpos($serviceName, 'gội') !== false;
-                                $isCatService = strpos($serviceName, 'cắt') !== false;
-                                
-                                // Nếu tên dịch vụ không có, mới kiểm tra category
-                                if (!$isUonService && !$isNhuomService && !$isGoiService && !$isCatService) {
-                                    $isUonService = strpos($categoryName, 'uốn') !== false;
-                                    $isNhuomService = strpos($categoryName, 'nhuộm') !== false;
-                                    $isGoiService = strpos($categoryName, 'gội') !== false;
-                                    $isCatService = strpos($categoryName, 'cắt') !== false;
-                                }
-
-                                // Xác định folder ảnh dựa trên loại dịch vụ
-                                // Ưu tiên cắt trước gội để tránh trường hợp category có cả "cắt" và "gội"
-                                if ($isUonService) {
-                                    $bannerFolder = 'uon';
-                                } elseif ($isNhuomService) {
-                                    $bannerFolder = 'nhuom';
-                                } elseif ($isCatService) {
-                                    $bannerFolder = 'cat';
-                                } elseif ($isGoiService) {
-                                    $bannerFolder = 'goi';
-                                } else {
-                                    // Không xác định được - dùng folder mặc định
-                                    $bannerFolder = 'cat';
-                                }
-
-                                // Lấy tất cả ảnh từ folder tương ứng
-                                $bannerImageDir = public_path('legacy/images/' . $bannerFolder);
-                                $bannerImages = [];
-                                
-                                if (is_dir($bannerImageDir)) {
-                                    $allImages = array_filter(scandir($bannerImageDir), function($file) {
-                                        return in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif']);
-                                    });
-                                    $allImages = array_values($allImages); // Reset keys
-                                    
-                                    if (count($allImages) > 0) {
-                                        shuffle($allImages);
-                                        $bannerImages = array_slice($allImages, 0, 3);
+                                // Lấy tất cả ảnh từ các thư mục
+                                foreach ($bannerFolders as $folder) {
+                                    $imageDir = public_path('legacy/images/' . $folder);
+                                    if (is_dir($imageDir)) {
+                                        $images = array_filter(scandir($imageDir), function($file) {
+                                            return in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif']);
+                                        });
+                                        
+                                        foreach ($images as $img) {
+                                            $allBannerImages[] = [
+                                                'image' => $img,
+                                                'folder' => $folder
+                                            ];
+                                        }
                                     }
                                 }
                                 
+                                // Xáo trộn và lấy 3 ảnh ngẫu nhiên
+                                shuffle($allBannerImages);
+                                $bannerImages = array_slice($allBannerImages, 0, 3);
+                                
                                 // Nếu không có đủ 3 ảnh, lặp lại hoặc dùng ảnh mặc định
                                 while (count($bannerImages) < 3) {
-                                    if (count($bannerImages) > 0) {
-                                        $bannerImages[] = $bannerImages[count($bannerImages) - 1];
+                                    if (count($bannerImages) > 0 && count($allBannerImages) > 0) {
+                                        $bannerImages[] = $allBannerImages[array_rand($allBannerImages)];
                                     } else {
-                                        $bannerImages[] = 'default.jpg';
+                                        $bannerImages[] = ['image' => 'default.jpg', 'folder' => 'products'];
                                     }
                                 }
                                 $bannerImages = array_slice($bannerImages, 0, 3);
                             @endphp
-                            @foreach($bannerImages as $bannerImg)
+                            @foreach($bannerImages as $bannerData)
                                 <div class="banner-image-card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.3); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
-                                    <img src="{{ asset('legacy/images/' . $bannerFolder . '/' . $bannerImg) }}"
+                                    <img src="{{ asset('legacy/images/' . $bannerData['folder'] . '/' . $bannerData['image']) }}"
                                          alt="Banner image"
                                          style="width: 100%; height: 200px; object-fit: cover; display: block;"
                                          onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}';">
@@ -253,11 +228,29 @@
                             </h3>
                             <div class="row" style="margin: 0 -8px;">
                                 @foreach($service->serviceVariants as $variant)
+                                    @php
+                                        // Load variant attributes nếu chưa được load
+                                        if (!$variant->relationLoaded('variantAttributes')) {
+                                            $variant->load('variantAttributes');
+                                        }
+                                    @endphp
                                     <div class="col-md-6" style="padding: 0 8px; margin-bottom: 15px;">
                                         <div class="variant-card" style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; background: #fff; transition: all 0.3s; height: 100%;" onmouseover="this.style.borderColor='#d8b26a'; this.style.boxShadow='0 2px 10px rgba(216,178,106,0.2)';" onmouseout="this.style.borderColor='#e5e5e5'; this.style.boxShadow='none';">
                                             <h4 style="color: #4A3600; font-size: 18px; font-weight: 600; margin: 0 0 10px 0;">
                                                 {{ $variant->name }}
                                             </h4>
+                                            
+                                            <!-- Variant Attributes -->
+                                            @if($variant->variantAttributes && $variant->variantAttributes->count() > 0)
+                                                <div class="variant-attributes" style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                                    @foreach($variant->variantAttributes as $attr)
+                                                        <span style="display: inline-block; background: #f5f5f5; color: #666; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e5e5;">
+                                                            <strong style="color: #333;">{{ $attr->attribute_name }}:</strong> {{ $attr->attribute_value }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                            
                                             <div class="variant-price" style="margin-bottom: 8px;">
                                                 <strong style="color: #BC9321; font-size: 24px; font-weight: 700;">
                                                     {{ number_format($variant->price, 0, ',', '.') }}đ
@@ -281,7 +274,12 @@
 
             <!-- Booking Button - Centered -->
             <div class="text-center" style="padding: 20px 0 40px 0;">
-                <a href="{{ route('site.appointment.create') }}" class="btn-booking" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
+                @php
+                    // Nếu dịch vụ có variants, truyền service_id để hiển thị các variants để chọn
+                    // Nếu không có variants, truyền service_id để đặt dịch vụ đơn
+                    $bookingParams = ['service_id' => [$service->id]];
+                @endphp
+                <a href="{{ route('site.appointment.create', $bookingParams) }}" class="btn-booking" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
                     <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
                     Đặt lịch ngay
                 </a>
