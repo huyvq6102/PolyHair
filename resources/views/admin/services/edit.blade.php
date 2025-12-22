@@ -130,14 +130,15 @@
                 </div>
                 <div class="form-group col-md-6">
                     <label for="service_type">Loại dịch vụ <span class="text-danger">*</span></label>
-                    <select name="service_type" id="service_type" class="form-control @error('service_type') is-invalid @enderror" required>
+                    <select name="service_type" id="service_type" class="form-control @error('service_type') is-invalid @enderror" required disabled>
                         <option value="">-- Chọn loại dịch vụ --</option>
                         <option value="single" {{ $serviceType == 'single' ? 'selected' : '' }}>Dịch vụ đơn</option>
                         <option value="variant" {{ $serviceType == 'variant' ? 'selected' : '' }}>Dịch vụ biến thể</option>
                         <option value="combo" {{ $serviceType == 'combo' ? 'selected' : '' }}>Combo</option>
                     </select>
+                    <input type="hidden" name="service_type" value="{{ $serviceType }}">
                     <small class="form-text text-muted">
-                        <i class="fas fa-info-circle"></i> Form sẽ tự động hiển thị các trường phù hợp
+                        <i class="fas fa-info-circle"></i> Không thể thay đổi loại dịch vụ khi đang sửa
                     </small>
                     @error('service_type')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -807,24 +808,15 @@
         }
 
         if (serviceTypeSelect) {
-            serviceTypeSelect.addEventListener('change', function() {
-                const selectedType = this.value;
-                
-                // Thêm hiệu ứng khi chọn loại dịch vụ
-                if (selectedType) {
-                    // Scroll đến phần form tương ứng
-                    setTimeout(function() {
-                        if (selectedType === 'single' && singleForm) {
-                            singleForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        } else if (selectedType === 'variant' && variantServiceForm) {
-                            variantServiceForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        } else if (selectedType === 'combo' && comboForm) {
-                            comboForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        }
-                    }, 100);
-                }
-                
-                showForm(selectedType);
+            // Disable service type change when editing - this is the edit page
+            // Prevent any changes to service type when editing
+            serviceTypeSelect.addEventListener('change', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Reset to original value
+                this.value = '{{ $serviceType }}';
+                alert('Không thể thay đổi loại dịch vụ khi đang sửa!');
+                return false;
             });
 
             // Show form based on current type

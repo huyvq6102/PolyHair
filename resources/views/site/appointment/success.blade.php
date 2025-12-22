@@ -560,14 +560,15 @@
             $canCancel = false;
             if ($appointment->status === 'Chờ xử lý') {
                 $createdAt = \Carbon\Carbon::parse($appointment->created_at);
-                $secondsSinceCreated = $createdAt->diffInSeconds(now());
-                $canCancel = $secondsSinceCreated <= 30;
+                $minutesSinceCreated = $createdAt->diffInMinutes(now());
+                $canCancel = $minutesSinceCreated <= 30; // Cho phép hủy trong vòng 30 phút
             }
         @endphp
 
         @if($appointment->status !== 'Đã hủy' && $canCancel)
             <div class="cancel-section">
                  <form id="cancelAppointmentForm" action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST">
+                    @csrf
                     <button type="submit" class="cancel-button">
                         <div class="cancel-button-left">
                             <div class="cancel-icon">×</div>
@@ -580,7 +581,7 @@
              @elseif($appointment->status !== 'Đã hủy' && $appointment->status === 'Đã xác nhận')
             <div class="cancel-section" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 12px; padding: 16px; text-align: center; color: #856404;">
                 <p style="margin: 0; font-size: 14px;">
-                    <i class="fa fa-info-circle"></i> Lịch hẹn đã được xác nhận. Không thể hủy sau 30 giây kể từ khi đặt.
+                    <i class="fa fa-info-circle"></i> Lịch hẹn đã được xác nhận. Không thể hủy sau 30 phút kể từ khi đặt.
                 </p>
             </div>
         @endif
@@ -595,6 +596,15 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
 
             if (confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
+                // Refresh CSRF token trước khi submit để tránh lỗi 419
+                const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                if (csrfToken) {
+                    const tokenInput = cancelForm.querySelector('input[name="_token"]');
+                    if (tokenInput) {
+                        tokenInput.value = csrfToken.getAttribute('content');
+                    }
+                }
+
                 // Disable button để tránh double submit
                 const submitBtn = cancelForm.querySelector('button[type="submit"]');
                 if (submitBtn) {
@@ -608,6 +618,38 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Tự động ẩn nút hủy sau 30 phút kể từ khi tạo appointment
+    @if($appointment->status === 'Chờ xử lý' && isset($appointment->created_at))
+        @php
+            $createdAt = \Carbon\Carbon::parse($appointment->created_at);
+            $minutesSinceCreated = $createdAt->diffInMinutes(now());
+            $remainingMinutes = max(0, 30 - $minutesSinceCreated);
+            $remainingSeconds = $remainingMinutes * 60;
+        @endphp
+        
+        @if($remainingSeconds > 0)
+            setTimeout(function() {
+                const cancelSection = document.querySelector('.cancel-section');
+                if (cancelSection) {
+                    cancelSection.style.display = 'none';
+                    
+                    // Hiển thị thông báo nếu chưa có
+                    const infoSection = document.querySelector('.cancel-section[style*="background: #fff3cd"]');
+                    if (!infoSection) {
+                        const appointmentDetailWrapper = document.querySelector('.appointment-detail-wrapper');
+                        if (appointmentDetailWrapper) {
+                            const infoDiv = document.createElement('div');
+                            infoDiv.className = 'cancel-section';
+                            infoDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; border-radius: 12px; padding: 16px; text-align: center; color: #856404;';
+                            infoDiv.innerHTML = '<p style="margin: 0; font-size: 14px;"><i class="fa fa-info-circle"></i> Lịch hẹn đã được xác nhận. Không thể hủy sau 30 phút kể từ khi đặt.</p>';
+                            appointmentDetailWrapper.appendChild(infoDiv);
+                        }
+                    }
+                }
+            }, {{ $remainingSeconds * 1000 }}); // Chuyển đổi từ giây sang milliseconds
+        @endif
+    @endif
 });
 </script>
 @endsection
