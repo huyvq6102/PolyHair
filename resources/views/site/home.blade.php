@@ -47,7 +47,7 @@
       <div>
         <h3 class="title ba-title mb-0">DỊCH VỤ TÓC & COMBO</h3>
         <p class="desc">
-        Top 6 những dịch vụ được khách hàng lựa chọn nhiều nhất tại salon
+        Top những dịch vụ được khách hàng lựa chọn nhiều nhất tại salon
         </p>
       </div>
     </div>
@@ -361,7 +361,7 @@
         <div class="stylist-left-wrapper">
             <div class="stylist-left">
                 <!-- <div class="stylist-letter">T</div> -->
-                <h2 class="stylist-title ba-title mb-0">TOP 4 POLY'S STYLIST</h2>
+                <h2 class="stylist-title ba-title mb-0">POLY'S TOP STYLIST</h2>
                 <p class="stylist-desc">
                     Chúng tôi tự hào sở hữu một đội ngũ nghệ sĩ tóc tài năng và có kinh nghiệm. Với sự đam mê sáng tạo
                     và kiến thức chuyên sâu về xu hướng làm đẹp, họ không chỉ biến ý tưởng của bạn thành hiện thực
@@ -533,7 +533,7 @@
 
 
     <!-- cộng đồng -->
-     <section class="community-section py-4">
+<section class="community-section py-4">
   <div class="container">
     <div class="community-slider">
       <div class="comm-viewport">
@@ -821,7 +821,7 @@ function closeVariantModal() {
 document.addEventListener('DOMContentLoaded', function() {
     // Get continue button from modal footer
     let continueBtn = document.getElementById('continueBookingBtn');
-    
+
     if (continueBtn) {
         continueBtn.addEventListener('click', function() {
             const selectedVariant = document.querySelector('.variant-option.selected');
