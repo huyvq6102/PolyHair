@@ -273,7 +273,6 @@
         </div>
       </div>
       <div class="svc-right">
-        <span class="svc-rating">5 ★ Đánh giá</span>
         @if($hasVariants)
           <a class="svc-book select-variant-btn" 
              href="#" 
