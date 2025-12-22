@@ -308,53 +308,32 @@
 <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Pusher configuration
-        const pusherKey = '{{ config("broadcasting.connections.pusher.key", env("PUSHER_APP_KEY")) }}';
-        const pusherCluster = '{{ config("broadcasting.connections.pusher.options.cluster", env("PUSHER_APP_CLUSTER", "ap1")) }}';
+        // Real-time update với Pusher WebSocket + Polling fallback
+        @php
+            // Lắng nghe nếu trạng thái có thể thay đổi
+            // "Hoàn thành" vẫn có thể chuyển sang "Đã thanh toán", nên không coi là final
+            // Chỉ dừng lắng nghe khi đã "Đã thanh toán" hoặc "Đã hủy"
+            $finalStatuses = ['Đã hủy', 'Đã thanh toán'];
+            $shouldListen = !in_array($appointment->status, $finalStatuses);
+        @endphp
         
-        if (!pusherKey) {
-            console.error('Pusher key is not configured. Please set PUSHER_APP_KEY in .env file.');
-            return;
-        }
-        
-        const pusher = new Pusher(pusherKey, {
-            cluster: pusherCluster,
-            encrypted: true,
-            authEndpoint: '/broadcasting/auth',
-            auth: {
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        @if($shouldListen)
+            const appointmentId = {{ $appointment->id }};
+            let currentStatus = '{{ $appointment->status }}';
+            let statusPollingInterval = null;
+            let pusherChannel = null;
+            let pusher = null;
+            
+            console.log('Bắt đầu real-time update cho appointment ID:', appointmentId, 'Trạng thái hiện tại:', currentStatus);
+            
+            // Function để cập nhật UI khi trạng thái thay đổi
+            function updateStatusUI(newStatus) {
+                const statusBadge = document.getElementById('appointment-status-badge');
+                if (!statusBadge) {
+                    console.error('Status badge element not found!');
+                    return;
                 }
-            }
-        });
-
-        // Lắng nghe private channel cho appointment này
-        const channel = pusher.subscribe('private-appointment.{{ $appointment->id }}');
-        
-        // Xử lý subscription success
-        channel.bind('pusher:subscription_succeeded', function() {
-            console.log('Successfully subscribed to appointment channel:', '{{ $appointment->id }}');
-        });
-        
-        // Xử lý subscription error
-        channel.bind('pusher:subscription_error', function(status) {
-            console.error('Failed to subscribe to appointment channel:', status);
-        });
-        
-        // Lắng nghe event status.updated
-        channel.bind('status.updated', function(data) {
-            console.log('Appointment status updated event received:', data);
-            console.log('New status:', data.status);
-            
-            // Cập nhật status badge
-            const statusBadge = document.getElementById('appointment-status-badge');
-            if (!statusBadge) {
-                console.error('Status badge element not found!');
-                return;
-            }
-            
-            const status = data.status;
-            console.log('Updating status badge to:', status);
+                
                 const statusColors = {
                     'Chờ xử lý': '#ffc107',
                     'Đã xác nhận': '#28a745',
@@ -375,11 +354,11 @@
                     'Chưa thanh toán': 'status-unpaid'
                 };
                 
-                const color = statusColors[status] || '#ffc107';
-                const statusClass = statusClasses[status] || 'status-pending';
+                const color = statusColors[newStatus] || '#ffc107';
+                const statusClass = statusClasses[newStatus] || 'status-pending';
                 
                 // Cập nhật text và style
-                statusBadge.textContent = status;
+                statusBadge.textContent = newStatus;
                 statusBadge.className = 'status-badge ' + statusClass;
                 statusBadge.style.backgroundColor = color;
                 
@@ -392,24 +371,150 @@
                 
                 // Hiển thị thông báo
                 if (typeof toastr !== 'undefined') {
-                    toastr.success('Trạng thái lịch hẹn đã được cập nhật: ' + status, 'Thông báo', {
+                    toastr.success('Trạng thái lịch hẹn đã được cập nhật: ' + newStatus, 'Thông báo', {
                         timeOut: 3000,
                         positionClass: 'toast-top-right'
                     });
                 } else {
-                    alert('Trạng thái lịch hẹn đã được cập nhật: ' + status);
+                    console.log('Trạng thái đã cập nhật:', newStatus);
+                }
+                
+                // Dừng polling và disconnect Pusher nếu đã chuyển sang trạng thái cuối cùng
+                const finalStatuses = ['Đã hủy', 'Đã thanh toán'];
+                if (finalStatuses.includes(newStatus)) {
+                    console.log('[Real-time] Dừng lắng nghe vì trạng thái đã chuyển sang:', newStatus);
+                    if (statusPollingInterval) {
+                        clearInterval(statusPollingInterval);
+                        statusPollingInterval = null;
+                    }
+                    if (pusher && pusherChannel) {
+                        pusherChannel.unbind('status.updated');
+                        pusher.unsubscribe('private-appointment.' + appointmentId);
+                        console.log('[Pusher] Đã unsubscribe khỏi channel');
+                    }
                 }
             }
-        });
-        
-        // Xử lý lỗi kết nối
-        pusher.connection.bind('error', function(err) {
-            console.error('Pusher connection error:', err);
-        });
-        
-        pusher.connection.bind('connected', function() {
-            console.log('Pusher connected successfully');
-        });
+            
+            // Function để polling (fallback nếu Pusher không hoạt động)
+            function startPolling() {
+                if (statusPollingInterval) return; // Đã có polling rồi
+                
+                console.log('Bắt đầu polling fallback...');
+                statusPollingInterval = setInterval(function() {
+                    fetch(`/appointment/${appointmentId}/status`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        cache: 'no-cache'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success && data.status !== currentStatus) {
+                            console.log('Polling: Trạng thái đã thay đổi từ', currentStatus, 'sang', data.status);
+                            currentStatus = data.status;
+                            updateStatusUI(data.status);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking appointment status:', error);
+                    });
+                }, 5000); // Polling mỗi 5 giây
+            }
+            
+            // Khởi tạo Pusher cho real-time updates
+            function initPusher() {
+                const pusherKey = '{{ config("broadcasting.connections.pusher.key", env("PUSHER_APP_KEY")) }}';
+                const pusherCluster = '{{ config("broadcasting.connections.pusher.options.cluster", env("PUSHER_APP_CLUSTER", "ap1")) }}';
+                
+                if (!pusherKey || typeof Pusher === 'undefined') {
+                    console.warn('[Pusher] Pusher không được cấu hình, sử dụng polling fallback');
+                    startPolling();
+                    return;
+                }
+                
+                try {
+                    pusher = new Pusher(pusherKey, {
+                        cluster: pusherCluster,
+                        encrypted: true,
+                        authEndpoint: '/broadcasting/auth',
+                        auth: {
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            }
+                        }
+                    });
+                    
+                    // Lắng nghe private channel cho appointment này
+                    pusherChannel = pusher.subscribe('private-appointment.' + appointmentId);
+                    
+                    // Xử lý subscription success
+                    pusherChannel.bind('pusher:subscription_succeeded', function() {
+                        console.log('[Pusher] Đã subscribe thành công vào channel appointment.' + appointmentId);
+                    });
+                    
+                    // Xử lý subscription error - fallback to polling
+                    pusherChannel.bind('pusher:subscription_error', function(status) {
+                        console.error('[Pusher] Lỗi khi subscribe vào channel:', status);
+                        console.log('[Pusher] Chuyển sang polling fallback...');
+                        startPolling();
+                    });
+                    
+                    // Lắng nghe event status.updated
+                    pusherChannel.bind('status.updated', function(data) {
+                        console.log('[Pusher] Nhận được event status.updated:', data);
+                        if (data.status && data.status !== currentStatus) {
+                            console.log('[Pusher] Trạng thái đã thay đổi từ', currentStatus, 'sang', data.status);
+                            currentStatus = data.status;
+                            updateStatusUI(data.status);
+                        }
+                    });
+                    
+                    // Xử lý lỗi kết nối - fallback to polling
+                    pusher.connection.bind('error', function(err) {
+                        console.error('[Pusher] Lỗi kết nối:', err);
+                        console.log('[Pusher] Chuyển sang polling fallback...');
+                        startPolling();
+                    });
+                    
+                    pusher.connection.bind('connected', function() {
+                        console.log('[Pusher] Đã kết nối thành công');
+                    });
+                    
+                    pusher.connection.bind('disconnected', function() {
+                        console.log('[Pusher] Đã ngắt kết nối, chuyển sang polling fallback...');
+                        startPolling();
+                    });
+                    
+                } catch (error) {
+                    console.error('[Pusher] Lỗi khi khởi tạo:', error);
+                    console.log('[Pusher] Chuyển sang polling fallback...');
+                    startPolling();
+                }
+            }
+            
+            // Khởi tạo Pusher
+            initPusher();
+            
+            // Dọn dẹp khi rời khỏi trang
+            window.addEventListener('beforeunload', function() {
+                if (statusPollingInterval) {
+                    clearInterval(statusPollingInterval);
+                }
+                if (pusher && pusherChannel) {
+                    pusherChannel.unbind('status.updated');
+                    pusher.unsubscribe('private-appointment.' + appointmentId);
+                }
+            });
+        @else
+            console.log('Real-time update không được bật vì appointment đã ở trạng thái cuối cùng. Trạng thái hiện tại: {{ $appointment->status }}');
+        @endif
     });
 </script>
 @endpush

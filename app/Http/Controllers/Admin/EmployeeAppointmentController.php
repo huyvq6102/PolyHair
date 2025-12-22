@@ -1131,12 +1131,23 @@ class EmployeeAppointmentController extends Controller
                  if ($payment->appointment_id) {
                      $appt = \App\Models\Appointment::find($payment->appointment_id);
                      if ($appt) {
+                         $oldStatus = $appt->status;
                          $appt->status = 'Đã thanh toán';
                          $appt->save();
                          foreach ($appt->appointmentDetails as $detail) {
                             $detail->status = 'Hoàn thành';
                             $detail->save();
                          }
+                         
+                         // Broadcast status update event
+                         $appt->refresh();
+                         $appt->load([
+                             'user',
+                             'employee.user',
+                             'appointmentDetails.serviceVariant.service',
+                             'appointmentDetails.combo'
+                         ]);
+                         event(new \App\Events\AppointmentStatusUpdated($appt));
                      }
                  }
 

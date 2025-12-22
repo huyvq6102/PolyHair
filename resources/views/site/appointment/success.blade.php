@@ -395,7 +395,7 @@
                                 $statusClass = 'status-cancelled';
                             }
                         @endphp
-                        <span class="status-badge {{ $statusClass }}">{{ $status }}</span>
+                        <span class="status-badge {{ $statusClass }}" id="appointment_status_badge">{{ $status }}</span>
                     </span>
                 </div>
 
@@ -588,6 +588,7 @@
     </div>
 </div>
 @push('scripts')
+<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const cancelForm = document.getElementById('cancelAppointmentForm');
@@ -649,6 +650,215 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, {{ $remainingSeconds * 1000 }}); // Chuyển đổi từ giây sang milliseconds
         @endif
+    @endif
+
+    // Real-time update với Pusher WebSocket + Polling fallback
+    // Luôn lắng nghe để cập nhật trạng thái real-time từ admin/employee
+    @php
+        // Lắng nghe nếu trạng thái có thể thay đổi
+        // "Hoàn thành" vẫn có thể chuyển sang "Đã thanh toán", nên không coi là final
+        // Chỉ dừng lắng nghe khi đã "Đã thanh toán" hoặc "Đã hủy"
+        $finalStatuses = ['Đã hủy', 'Đã thanh toán'];
+        $shouldListen = !in_array($appointment->status, $finalStatuses);
+    @endphp
+    
+    @if($shouldListen)
+        const appointmentId = {{ $appointment->id }};
+        let currentStatus = '{{ $appointment->status }}';
+        let statusPollingInterval = null;
+        let pusherChannel = null;
+        let pusher = null;
+        
+        console.log('Bắt đầu real-time update cho appointment ID:', appointmentId, 'Trạng thái hiện tại:', currentStatus);
+        
+        // Function để cập nhật UI khi trạng thái thay đổi
+        function updateStatusUI(newStatus) {
+            const statusBadge = document.getElementById('appointment_status_badge');
+            if (!statusBadge) return;
+            
+            // Cập nhật text
+            statusBadge.textContent = newStatus;
+            
+            // Cập nhật class CSS
+            statusBadge.className = 'status-badge ';
+            if (newStatus === 'Đã xác nhận') {
+                statusBadge.className += 'status-confirmed';
+            } else if (newStatus === 'Chờ xử lý') {
+                statusBadge.className += 'status-pending';
+            } else if (newStatus === 'Đang thực hiện') {
+                statusBadge.className += 'status-in-progress';
+            } else if (newStatus === 'Hoàn thành') {
+                statusBadge.className += 'status-completed';
+            } else if (newStatus === 'Đã hủy') {
+                statusBadge.className += 'status-cancelled';
+            }
+            
+            // Ẩn nút hủy nếu đã chuyển sang "Đã xác nhận"
+            if (newStatus === 'Đã xác nhận') {
+                const cancelSection = document.querySelector('.cancel-section');
+                if (cancelSection && cancelSection.querySelector('#cancelAppointmentForm')) {
+                    cancelSection.style.display = 'none';
+                    
+                    // Hiển thị thông báo
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'cancel-section';
+                    infoDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; border-radius: 12px; padding: 16px; text-align: center; color: #856404; margin-top: 20px;';
+                    infoDiv.innerHTML = '<p style="margin: 0; font-size: 14px;"><i class="fa fa-info-circle"></i> Lịch hẹn đã được xác nhận. Không thể hủy sau 30 phút kể từ khi đặt.</p>';
+                    const appointmentDetailWrapper = document.querySelector('.appointment-detail-wrapper');
+                    if (appointmentDetailWrapper) {
+                        appointmentDetailWrapper.appendChild(infoDiv);
+                    }
+                }
+            }
+            
+            // Dừng polling và disconnect Pusher nếu đã chuyển sang trạng thái cuối cùng
+            // Chỉ dừng khi "Đã thanh toán" hoặc "Đã hủy" (không bao gồm "Hoàn thành" vì có thể chuyển sang "Đã thanh toán")
+            const finalStatuses = ['Đã hủy', 'Đã thanh toán'];
+            if (finalStatuses.includes(newStatus)) {
+                console.log('[Real-time] Dừng lắng nghe vì trạng thái đã chuyển sang:', newStatus);
+                if (statusPollingInterval) {
+                    clearInterval(statusPollingInterval);
+                    statusPollingInterval = null;
+                }
+                if (pusher && pusherChannel) {
+                    pusherChannel.unbind('status.updated');
+                    pusher.unsubscribe('private-appointment.' + appointmentId);
+                    console.log('[Pusher] Đã unsubscribe khỏi channel');
+                }
+            }
+            
+            // Hiển thị thông báo cập nhật trạng thái
+            if (typeof toastr !== 'undefined') {
+                toastr.success('Trạng thái lịch hẹn đã được cập nhật: ' + newStatus, 'Thông báo', {
+                    timeOut: 3000,
+                    positionClass: 'toast-top-right'
+                });
+            } else if (typeof showToast === 'function') {
+                showToast('success', 'Trạng thái lịch hẹn đã được cập nhật: ' + newStatus);
+            } else {
+                console.log('Trạng thái đã cập nhật:', newStatus);
+            }
+        }
+        
+        // Function để polling (fallback nếu Pusher không hoạt động)
+        function startPolling() {
+            if (statusPollingInterval) return; // Đã có polling rồi
+            
+            console.log('Bắt đầu polling fallback...');
+            statusPollingInterval = setInterval(function() {
+                fetch(`/appointment/${appointmentId}/status`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    cache: 'no-cache'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && data.status !== currentStatus) {
+                        console.log('Polling: Trạng thái đã thay đổi từ', currentStatus, 'sang', data.status);
+                        currentStatus = data.status;
+                        updateStatusUI(data.status);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking appointment status:', error);
+                });
+            }, 5000); // Polling mỗi 5 giây
+        }
+        
+        // Khởi tạo Pusher cho real-time updates
+        function initPusher() {
+            const pusherKey = '{{ config("broadcasting.connections.pusher.key", env("PUSHER_APP_KEY")) }}';
+            const pusherCluster = '{{ config("broadcasting.connections.pusher.options.cluster", env("PUSHER_APP_CLUSTER", "ap1")) }}';
+            
+            if (!pusherKey || typeof Pusher === 'undefined') {
+                console.warn('[Pusher] Pusher không được cấu hình, sử dụng polling fallback');
+                startPolling();
+                return;
+            }
+            
+            try {
+                pusher = new Pusher(pusherKey, {
+                    cluster: pusherCluster,
+                    encrypted: true,
+                    authEndpoint: '/broadcasting/auth',
+                    auth: {
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        }
+                    }
+                });
+                
+                // Lắng nghe private channel cho appointment này
+                pusherChannel = pusher.subscribe('private-appointment.' + appointmentId);
+                
+                // Xử lý subscription success
+                pusherChannel.bind('pusher:subscription_succeeded', function() {
+                    console.log('[Pusher] Đã subscribe thành công vào channel appointment.' + appointmentId);
+                });
+                
+                // Xử lý subscription error - fallback to polling
+                pusherChannel.bind('pusher:subscription_error', function(status) {
+                    console.error('[Pusher] Lỗi khi subscribe vào channel:', status);
+                    console.log('[Pusher] Chuyển sang polling fallback...');
+                    startPolling();
+                });
+                
+                // Lắng nghe event status.updated
+                pusherChannel.bind('status.updated', function(data) {
+                    console.log('[Pusher] Nhận được event status.updated:', data);
+                    if (data.status && data.status !== currentStatus) {
+                        console.log('[Pusher] Trạng thái đã thay đổi từ', currentStatus, 'sang', data.status);
+                        currentStatus = data.status;
+                        updateStatusUI(data.status);
+                    }
+                });
+                
+                // Xử lý lỗi kết nối - fallback to polling
+                pusher.connection.bind('error', function(err) {
+                    console.error('[Pusher] Lỗi kết nối:', err);
+                    console.log('[Pusher] Chuyển sang polling fallback...');
+                    startPolling();
+                });
+                
+                pusher.connection.bind('connected', function() {
+                    console.log('[Pusher] Đã kết nối thành công');
+                });
+                
+                pusher.connection.bind('disconnected', function() {
+                    console.log('[Pusher] Đã ngắt kết nối, chuyển sang polling fallback...');
+                    startPolling();
+                });
+                
+            } catch (error) {
+                console.error('[Pusher] Lỗi khi khởi tạo:', error);
+                console.log('[Pusher] Chuyển sang polling fallback...');
+                startPolling();
+            }
+        }
+        
+        // Khởi tạo Pusher
+        initPusher();
+        
+        // Dọn dẹp khi rời khỏi trang
+        window.addEventListener('beforeunload', function() {
+            if (statusPollingInterval) {
+                clearInterval(statusPollingInterval);
+            }
+            if (pusher && pusherChannel) {
+                pusherChannel.unbind('status.updated');
+                pusher.unsubscribe('private-appointment.' + appointmentId);
+            }
+        });
+    @else
+        console.log('Real-time update không được bật vì appointment không ở trạng thái "Chờ xử lý". Trạng thái hiện tại: {{ $appointment->status }}');
     @endif
 });
 </script>
