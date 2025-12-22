@@ -2151,6 +2151,29 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Get appointment status (API endpoint for polling)
+     */
+    public function getStatus($id)
+    {
+        try {
+            $appointment = \App\Models\Appointment::findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'appointment_id' => $appointment->id,
+                'status' => $appointment->status,
+                'booking_code' => $appointment->booking_code,
+                'updated_at' => $appointment->updated_at->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy lịch hẹn'
+            ], 404);
+        }
+    }
+
+    /**
      * Cancel an appointment.
      */
     public function cancel(Request $request, $id)

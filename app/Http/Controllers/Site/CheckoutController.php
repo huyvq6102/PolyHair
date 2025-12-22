@@ -354,6 +354,7 @@ class CheckoutController extends Controller
                      if ($payment->appointment_id) {
                          $appt = \App\Models\Appointment::find($payment->appointment_id);
                          if ($appt) {
+                             $oldStatus = $appt->status;
                              $appt->status = 'Đã thanh toán';
                              $appt->save();
                              
@@ -365,6 +366,16 @@ class CheckoutController extends Controller
                                 $detail->status = 'Hoàn thành';
                                 $detail->save();
                              }
+                             
+                             // Broadcast status update event
+                             $appt->refresh();
+                             $appt->load([
+                                 'user',
+                                 'employee.user',
+                                 'appointmentDetails.serviceVariant.service',
+                                 'appointmentDetails.combo'
+                             ]);
+                             event(new \App\Events\AppointmentStatusUpdated($appt));
                          }
                      }
                      
@@ -430,6 +441,7 @@ class CheckoutController extends Controller
                     if ($payment->appointment_id) {
                         $appointment = \App\Models\Appointment::find($payment->appointment_id);
                         if ($appointment) {
+                            $oldStatus = $appointment->status;
                             $appointment->status = 'Đã thanh toán';
                             $appointment->save();
 
@@ -441,6 +453,16 @@ class CheckoutController extends Controller
                                 $detail->status = 'Hoàn thành'; 
                                 $detail->save();
                             }
+                            
+                            // Broadcast status update event
+                            $appointment->refresh();
+                            $appointment->load([
+                                'user',
+                                'employee.user',
+                                'appointmentDetails.serviceVariant.service',
+                                'appointmentDetails.combo'
+                            ]);
+                            event(new \App\Events\AppointmentStatusUpdated($appointment));
                         }
                     }
 
