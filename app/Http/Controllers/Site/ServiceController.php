@@ -160,7 +160,7 @@ class ServiceController extends Controller
                     'image' => $combo->image,
                     'price' => $price,
                     'category' => $combo->category,
-                    'link' => '#',
+                    'link' => route('site.services.show', $combo->id),
                 ]);
             }
         }
@@ -233,10 +233,32 @@ class ServiceController extends Controller
     }
 
     /**
-     * Display the specified service.
+     * Display the specified service or combo.
      */
     public function show($id)
     {
+        // Kiểm tra xem là service hay combo
+        $service = Service::find($id);
+        $combo = null;
+        
+        if (!$service) {
+            // Nếu không tìm thấy service, kiểm tra xem có phải combo không
+            $combo = Combo::with([
+                'category', 
+                'comboItems.service.category',
+                'comboItems.service.serviceVariants',
+                'comboItems.serviceVariant.service'
+            ])->find($id);
+            
+            if (!$combo) {
+                abort(404, 'Dịch vụ hoặc combo không tồn tại');
+            }
+            
+            // Render view cho combo
+            return view('site.combo-detail', compact('combo'));
+        }
+        
+        // Xử lý service như cũ
         $service = $this->serviceService->getOne($id);
         $relatedServices = $this->serviceService->getRelated($service->category_id ?? 0, $id);
         

@@ -32,16 +32,24 @@ class PromotionController extends Controller
     /**
      * Display a listing of promotions.
      */
-    public function index()
+    public function index(Request $request)
     {
         // Tự động cập nhật trạng thái khuyến mãi trước khi hiển thị
         $this->promotionService->autoUpdateAllPromotionStatuses();
         
-        $promotions = $this->promotionService->getAll();
+        // Lấy filter parameters từ request
+        $filters = [
+            'code' => $request->input('filter_code'),
+            'scope' => $request->input('filter_scope'),
+            'discount_type' => $request->input('filter_discount_type'),
+            'discount_amount' => $request->input('filter_discount_amount'),
+        ];
+        
+        $promotions = $this->promotionService->getAll($filters);
         $statuses = $this->statuses;
         $isTrash = false;
 
-        return view('admin.promotions.index', compact('promotions', 'statuses', 'isTrash'));
+        return view('admin.promotions.index', compact('promotions', 'statuses', 'isTrash', 'filters'));
     }
 
     /**

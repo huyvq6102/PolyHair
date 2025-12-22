@@ -52,7 +52,20 @@
                 <div class="form-group">
                     <label>Trạng thái:</label>
                     <div>
-                        <span class="badge badge-{{ $appointment->status == 'Hoàn thành' ? 'success' : ($appointment->status == 'Đã hủy' ? 'danger' : ($appointment->status == 'Đã xác nhận' ? 'info' : ($appointment->status == 'Đã thanh toán' ? 'success' : 'warning'))) }} badge-lg" style="font-size: 14px; padding: 8px 12px;">
+                        @php
+                            // Định nghĩa màu cho từng trạng thái (giống index.blade.php)
+                            $statusColors = [
+                                'Chờ xử lý' => 'secondary',      // Xám
+                                'Đã xác nhận' => 'info',        // Xanh dương
+                                'Đang thực hiện' => 'warning',   // Cam/vàng
+                                'Hoàn thành' => 'success',       // Xanh lá
+                                'Đã thanh toán' => 'primary',    // Xanh đậm
+                                'Đã hủy' => 'danger',           // Đỏ
+                                'Chưa thanh toán' => 'warning',  // Cam/vàng
+                            ];
+                            $badgeClass = $statusColors[$appointment->status] ?? 'secondary';
+                        @endphp
+                        <span class="badge badge-{{ $badgeClass }} badge-lg" style="font-size: 14px; padding: 8px 12px;">
                             {{ $appointment->status }}
                         </span>
                     </div>
@@ -108,9 +121,10 @@
     </div>
     <div class="card-body">
         @php
-            // Tính tổng giá gốc trước để phân bổ order-level discount
+            // Tính tổng giá gốc và tổng giá sau giảm theo dịch vụ (price_snapshot)
             $totalOriginalPriceForAllocation = 0;
             $detailOriginalPrices = [];
+            $totalAfterServiceLevel = 0; // Tổng sau khi áp dụng giảm giá theo từng dịch vụ
             
             foreach ($appointment->appointmentDetails as $detail) {
                 $originalPrice = 0;
@@ -137,32 +151,22 @@
                 
                 $detailOriginalPrices[$detail->id] = $originalPrice;
                 $totalOriginalPriceForAllocation += $originalPrice;
+
+                // Giá sau giảm của từng dịch vụ (service-level discount đã nằm trong price_snapshot)
+                $finalAfterService = $detail->price_snapshot ?? $originalPrice;
+                $totalAfterServiceLevel += $finalAfterService;
             }
             
-            // Lấy promotion từ payment hoặc promotionUsages
-            $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->first();
+            // Tính order-level discount dựa trên Payment (nếu có)
+            // Payment.total đã là tổng sau khi trừ mã giảm giá hóa đơn
             $orderLevelDiscount = 0;
-            $promotion = null;
+            $payment = \App\Models\Payment::where('appointment_id', $appointment->id)
+                ->orderByDesc('id')
+                ->first();
             
-            if ($payment && $payment->promotion_id) {
-                $promotion = \App\Models\Promotion::find($payment->promotion_id);
-            } else {
-                $promotionUsage = $appointment->promotionUsages()->first();
-                if ($promotionUsage && $promotionUsage->promotion_id) {
-                    $promotion = \App\Models\Promotion::find($promotionUsage->promotion_id);
-                }
-            }
-            
-            // Tính order-level discount nếu có
-            if ($promotion && $promotion->apply_scope === 'order' && $totalOriginalPriceForAllocation > 0) {
-                if ($promotion->discount_type === 'percent') {
-                    $orderLevelDiscount = ($totalOriginalPriceForAllocation * ($promotion->discount_percent ?? 0)) / 100;
-                    if ($promotion->max_discount_amount) {
-                        $orderLevelDiscount = min($orderLevelDiscount, $promotion->max_discount_amount);
-                    }
-                } else {
-                    $orderLevelDiscount = min($promotion->discount_amount ?? 0, $totalOriginalPriceForAllocation);
-                }
+            if ($payment && $totalAfterServiceLevel > 0) {
+                // Chênh lệch giữa tổng sau giảm theo dịch vụ và tổng thanh toán thực tế chính là order-level discount
+                $orderLevelDiscount = max(0, $totalAfterServiceLevel - ($payment->total ?? $totalAfterServiceLevel));
             }
         @endphp
         <div class="table-responsive">
@@ -263,9 +267,10 @@
                             $totalServiceDiscount += $serviceLevelDiscount;
                         }
                         
-                        // Order-level discount đã được tính ở trên
-                        $promotionCode = $promotion ? $promotion->code : null;
-                        $promotionName = $promotion ? $promotion->name : null;
+                        // Order-level discount đã được tính ở trên (theo Payment)
+                        // Không còn object $promotion, chỉ hiển thị tổng số tiền giảm
+                        $promotionCode = null;
+                        $promotionName = null;
                         
                         // Tổng discount = discount từ service + discount từ order
                         $totalDiscount = $totalServiceDiscount + $orderLevelDiscount;

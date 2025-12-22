@@ -15,10 +15,10 @@
 
             <!-- Banner Section với 3 ảnh ngẫu nhiên -->
             <div class="container" style="padding: 20px 15px;">
-                <div class="service-banner" style="background: linear-gradient(135deg, #1a4d7a 0%, #2c5f8f 50%, #1a4d7a 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
+                <div class="service-banner" style="background: linear-gradient(135deg, #bc913f 0%, #a88235 50%, #bc913f 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
                     <!-- Decorative elements -->
-                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(74, 144, 226, 0.3) 0%, transparent 100%); transform: skewX(-20deg);"></div>
-                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(74, 144, 226, 0.3) 100%); transform: skewX(20deg);"></div>
+                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(188, 145, 63, 0.3) 0%, transparent 100%); transform: skewX(-20deg);"></div>
+                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(188, 145, 63, 0.3) 100%); transform: skewX(20deg);"></div>
 
                     <div style="position: relative; z-index: 1;">
                         <!-- Title -->
@@ -28,40 +28,47 @@
                             </h1>
                         </div>
 
-                        <!-- 3 ảnh ngẫu nhiên -->
+                        <!-- 3 ảnh ngẫu nhiên từ các thư mục uốn, nhuộm, cắt, gội -->
                         <div class="banner-images" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 800px; margin: 0 auto;">
                             @php
-                                $bannerImages = $randomImages ?? [];
+                                // Lấy ảnh ngẫu nhiên từ tất cả các thư mục: uon, nhuom, cat, goi
+                                $bannerFolders = ['uon', 'nhuom', 'cat', 'goi'];
+                                $allBannerImages = [];
+                                
+                                // Lấy tất cả ảnh từ các thư mục
+                                foreach ($bannerFolders as $folder) {
+                                    $imageDir = public_path('legacy/images/' . $folder);
+                                    if (is_dir($imageDir)) {
+                                        $images = array_filter(scandir($imageDir), function($file) {
+                                            return in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif']);
+                                        });
+                                        
+                                        foreach ($images as $img) {
+                                            $allBannerImages[] = [
+                                                'image' => $img,
+                                                'folder' => $folder
+                                            ];
+                                        }
+                                    }
+                                }
+                                
+                                // Xáo trộn và lấy 3 ảnh ngẫu nhiên
+                                shuffle($allBannerImages);
+                                $bannerImages = array_slice($allBannerImages, 0, 3);
+                                
                                 // Nếu không có đủ 3 ảnh, lặp lại hoặc dùng ảnh mặc định
                                 while (count($bannerImages) < 3) {
-                                    if (count($bannerImages) > 0) {
-                                        $bannerImages[] = $bannerImages[count($bannerImages) - 1];
+                                    if (count($bannerImages) > 0 && count($allBannerImages) > 0) {
+                                        $bannerImages[] = $allBannerImages[array_rand($allBannerImages)];
                                     } else {
-                                        $bannerImages[] = 'default.jpg';
+                                        $bannerImages[] = ['image' => 'default.jpg', 'folder' => 'products'];
                                     }
                                 }
                                 $bannerImages = array_slice($bannerImages, 0, 3);
                             @endphp
-                            @php
-                                $categoryName = strtolower($service->category->name ?? '');
-                                $serviceName = strtolower($service->name ?? '');
-                                $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
-                                $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
-                                $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
-
-                                if ($isUonService) {
-                                    $bannerFolder = 'uon';
-                                } elseif ($isNhuomService) {
-                                    $bannerFolder = 'nhuom';
-                                } elseif ($isGoiService) {
-                                    $bannerFolder = 'goi';
-                                } else {
-                                    $bannerFolder = 'cat';
-                                }
-                            @endphp
                             @foreach($bannerImages as $bannerImg)
                                 <div class="banner-image-card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.3); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
-                                    <img src="{{ asset('legacy/images/' . $bannerFolder . '/' . $bannerImg) }}"
+                                    <img src="{{ asset('legacy/images/' . $bannerImg['folder'] . '/' . $bannerImg['image']) }}"
                                          alt="Banner image"
                                          style="width: 100%; height: 200px; object-fit: cover; display: block;"
                                          onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}';">
@@ -76,8 +83,8 @@
             <div class="service-process-section" style="padding: 60px 0; background: transparent;">
                 <div class="container">
                     <div class="d-flex align-items-center mb-4">
-                        <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: #000; margin-right: 12px; border-radius: 4px;"></span>
-                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #000; margin: 0; text-transform: uppercase;">
+                        <span class="process-bar" style="display: inline-block; width: 8px; height: 40px; background: #bc913f; margin-right: 12px; border-radius: 4px;"></span>
+                        <h2 class="process-title" style="font-size: 32px; font-weight: 800; color: #bc913f; margin: 0; text-transform: uppercase;">
                             QUY TRÌNH DỊCH VỤ
                         </h2>
                     </div>
@@ -181,16 +188,34 @@
                         <!-- Service Variants -->
                         @if($service->serviceVariants && $service->serviceVariants->count() > 0)
                         <div class="col-xl-12" style="padding: 0 15px; margin-bottom: 30px;">
-                            <h3 style="color: #4A3600; font-size: 24px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #d8b26a; padding-bottom: 10px;">
+                            <h3 style="color: #bc913f; font-size: 24px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #bc913f; padding-bottom: 10px;">
                                 Các gói dịch vụ
                             </h3>
                             <div class="row" style="margin: 0 -8px;">
                                 @foreach($service->serviceVariants as $variant)
+                                    @php
+                                        // Load variant attributes nếu chưa được load
+                                        if (!$variant->relationLoaded('variantAttributes')) {
+                                            $variant->load('variantAttributes');
+                                        }
+                                    @endphp
                                     <div class="col-md-6" style="padding: 0 8px; margin-bottom: 15px;">
                                         <div class="variant-card" style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; background: #fff; transition: all 0.3s; height: 100%;" onmouseover="this.style.borderColor='#d8b26a'; this.style.boxShadow='0 2px 10px rgba(216,178,106,0.2)';" onmouseout="this.style.borderColor='#e5e5e5'; this.style.boxShadow='none';">
                                             <h4 style="color: #4A3600; font-size: 18px; font-weight: 600; margin: 0 0 10px 0;">
                                                 {{ $variant->name }}
                                             </h4>
+                                            
+                                            <!-- Variant Attributes -->
+                                            @if($variant->variantAttributes && $variant->variantAttributes->count() > 0)
+                                                <div class="variant-attributes" style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                                    @foreach($variant->variantAttributes as $attr)
+                                                        <span style="display: inline-block; background: #f5f5f5; color: #666; font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e5e5;">
+                                                            <strong style="color: #333;">{{ $attr->attribute_name }}:</strong> {{ $attr->attribute_value }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                            
                                             <div class="variant-price" style="margin-bottom: 8px;">
                                                 <strong style="color: #BC9321; font-size: 24px; font-weight: 700;">
                                                     {{ number_format($variant->price, 0, ',', '.') }}đ
@@ -214,7 +239,12 @@
 
             <!-- Booking Button - Centered -->
             <div class="text-center" style="padding: 20px 0 40px 0;">
-                <a href="{{ route('site.appointment.create') }}" class="btn-booking" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
+                @php
+                    // Nếu dịch vụ có variants, truyền service_id để hiển thị các variants để chọn
+                    // Nếu không có variants, truyền service_id để đặt dịch vụ đơn
+                    $bookingParams = ['service_id' => [$service->id]];
+                @endphp
+                <a href="{{ route('site.appointment.create', $bookingParams) }}" class="btn-booking" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
                     <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
                     Đặt lịch ngay
                 </a>

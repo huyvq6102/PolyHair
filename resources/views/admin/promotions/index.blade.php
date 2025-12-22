@@ -23,6 +23,79 @@
     </div>
 </div>
 
+<!-- Filter Section -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-filter"></i> Bộ lọc
+        </h6>
+    </div>
+    <div class="card-body">
+            <form method="GET" action="{{ route('admin.promotions.index') }}" id="filterForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="filter_code">Mã KM</label>
+                            <input type="text" 
+                                   name="filter_code" 
+                                   id="filter_code" 
+                                   class="form-control" 
+                                   value="{{ request('filter_code') }}"
+                                   placeholder="Nhập mã KM...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="filter_scope">Phạm vi áp dụng</label>
+                            <select name="filter_scope" id="filter_scope" class="form-control">
+                                <option value="">Tất cả</option>
+                                <option value="service" {{ request('filter_scope') == 'service' ? 'selected' : '' }}>Theo dịch vụ</option>
+                                <option value="order" {{ request('filter_scope') == 'order' ? 'selected' : '' }}>Theo hóa đơn</option>
+                                <option value="customer_tier" {{ request('filter_scope') == 'customer_tier' ? 'selected' : '' }}>Theo hạng thành viên</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="filter_discount_type">Loại giảm giá</label>
+                            <select name="filter_discount_type" id="filter_discount_type" class="form-control">
+                                <option value="">Tất cả</option>
+                                <option value="percent" {{ request('filter_discount_type') == 'percent' ? 'selected' : '' }}>Theo phần trăm (%)</option>
+                                <option value="amount" {{ request('filter_discount_type') == 'amount' ? 'selected' : '' }}>Theo số tiền (₫)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="filter_discount_amount">Số tiền giảm (từ)</label>
+                            <input type="number" 
+                                   name="filter_discount_amount" 
+                                   id="filter_discount_amount" 
+                                   class="form-control" 
+                                   value="{{ request('filter_discount_amount') }}"
+                                   placeholder="Nhập số tiền...">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Lọc
+                        </button>
+                        <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Xóa bộ lọc
+                        </a>
+                        @if(request()->hasAny(['filter_code', 'filter_scope', 'filter_discount_type', 'filter_discount_amount']))
+                            <span class="ml-2 text-muted">
+                                <i class="fas fa-info-circle"></i> Đang lọc: {{ $promotions->count() }} kết quả
+                            </span>
+                        @endif
+                    </div>
+                </div>
+            </form>
+    </div>
+</div>
+
 <div class="card shadow mb-4">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">
@@ -240,6 +313,49 @@
                 }
             });
         });
+        
+        // Tự động lọc khi chọn "Phạm vi áp dụng"
+        const filterScope = document.getElementById('filter_scope');
+        if (filterScope) {
+            filterScope.addEventListener('change', function() {
+                // Tự động submit form khi chọn phạm vi áp dụng
+                document.getElementById('filterForm').submit();
+            });
+        }
+        
+        // Tự động lọc khi chọn "Loại giảm giá"
+        const filterDiscountType = document.getElementById('filter_discount_type');
+        if (filterDiscountType) {
+            filterDiscountType.addEventListener('change', function() {
+                // Tự động submit form khi chọn loại giảm giá
+                document.getElementById('filterForm').submit();
+            });
+        }
+        
+        // Tự động lọc khi nhập "Mã KM" (với debounce để tránh submit quá nhiều)
+        const filterCode = document.getElementById('filter_code');
+        let filterCodeTimeout = null;
+        if (filterCode) {
+            filterCode.addEventListener('input', function() {
+                // Clear timeout trước đó nếu có
+                if (filterCodeTimeout) {
+                    clearTimeout(filterCodeTimeout);
+                }
+                
+                // Đợi 500ms sau khi user ngừng gõ mới submit
+                filterCodeTimeout = setTimeout(function() {
+                    document.getElementById('filterForm').submit();
+                }, 500);
+            });
+            
+            // Cũng submit khi blur (rời khỏi input)
+            filterCode.addEventListener('blur', function() {
+                if (filterCodeTimeout) {
+                    clearTimeout(filterCodeTimeout);
+                }
+                document.getElementById('filterForm').submit();
+            });
+        }
     });
 </script>
 @endpush
