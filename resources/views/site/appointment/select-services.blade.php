@@ -402,16 +402,7 @@
                         </div>
 
                         <!-- Filter Tags -->
-                        <div class="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            @foreach($filterTags as $tag)
-                                <button type="button"
-                                        class="filter-tag-btn"
-                                        data-tag="{{ strtolower($tag) }}"
-                                        style="padding: 6px 14px; font-size: 12px; border: 1px solid #ddd; background: #fff; color: #333; border-radius: 20px; cursor: pointer; transition: all 0.3s ease; font-weight: 500;">
-                                    {{ $tag }}
-                                </button>
-                            @endforeach
-                        </div>
+                  
                     </div>
 
                     <!-- Services by Category -->

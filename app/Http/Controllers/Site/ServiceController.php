@@ -55,6 +55,20 @@ class ServiceController extends Controller
         
         $sortBy = $request->get('sort_by', 'id_desc'); // 'id_desc', 'name_asc', 'name_desc', 'price_asc', 'price_desc'
 
+        // Load active promotions trước để tính giá cuối cùng
+        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at')
+            ->where('status', 'active')
+            ->where(function($query) {
+                $now = \Carbon\Carbon::now();
+                $query->where(function($q) use ($now) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
+                })->where(function($q) use ($now) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
+                });
+            })
+            ->get();
+
         $items = collect();
 
         // Get Services (single or variant)
@@ -91,16 +105,34 @@ class ServiceController extends Controller
             $services = $serviceQuery->orderBy('id', 'desc')->get();
             
             foreach ($services as $service) {
-                $price = $service->serviceVariants->where('is_active', true)->min('price') 
-                        ?? $service->serviceVariants->min('price') 
-                        ?? $service->base_price 
-                        ?? 0;
+                $finalPrice = 0;
                 
-                // Filter by price range
-                if ($minPrice !== null && $price < $minPrice) {
+                // Nếu service có variants, tính discount cho từng variant và lấy giá cuối cùng thấp nhất
+                if ($service->serviceVariants->count() > 0) {
+                    $activeVariants = $service->serviceVariants->where('is_active', true);
+                    if ($activeVariants->count() == 0) {
+                        $activeVariants = $service->serviceVariants;
+                    }
+                    
+                    $bestFinalPrice = null;
+                    foreach ($activeVariants as $variant) {
+                        $variantFinalPrice = $this->calculateFinalPriceForVariant($variant, $activePromotions);
+                        if ($bestFinalPrice === null || $variantFinalPrice < $bestFinalPrice) {
+                            $bestFinalPrice = $variantFinalPrice;
+                        }
+                    }
+                    $finalPrice = $bestFinalPrice ?? 0;
+                } else {
+                    // Service đơn - tính discount trực tiếp
+                    $originalPrice = $service->base_price ?? 0;
+                    $finalPrice = $this->calculateFinalPriceForService($service, $originalPrice, $activePromotions);
+                }
+                
+                // Filter by price range - sử dụng finalPrice
+                if ($minPrice !== null && $finalPrice < $minPrice) {
                     continue;
                 }
-                if ($maxPrice !== null && $price > $maxPrice) {
+                if ($maxPrice !== null && $finalPrice > $maxPrice) {
                     continue;
                 }
 
@@ -111,7 +143,7 @@ class ServiceController extends Controller
                     'id' => $service->id,
                     'name' => $service->name,
                     'image' => $service->image,
-                    'price' => $price,
+                    'price' => $finalPrice, // Sử dụng finalPrice thay vì originalPrice
                     'category' => $service->category,
                     'serviceVariants' => $service->serviceVariants,
                     'link' => route('site.services.show', $service->id),
@@ -143,13 +175,16 @@ class ServiceController extends Controller
             $combos = $comboQuery->orderBy('id', 'desc')->get();
             
             foreach ($combos as $combo) {
-                $price = $combo->price ?? 0;
+                $originalPrice = $combo->price ?? 0;
                 
-                // Filter by price range
-                if ($minPrice !== null && $price < $minPrice) {
+                // Tính giá cuối cùng sau khi áp dụng promotion
+                $finalPrice = $this->calculateFinalPriceForCombo($combo, $originalPrice, $activePromotions);
+                
+                // Filter by price range - sử dụng finalPrice
+                if ($minPrice !== null && $finalPrice < $minPrice) {
                     continue;
                 }
-                if ($maxPrice !== null && $price > $maxPrice) {
+                if ($maxPrice !== null && $finalPrice > $maxPrice) {
                     continue;
                 }
                 
@@ -158,7 +193,7 @@ class ServiceController extends Controller
                     'id' => $combo->id,
                     'name' => $combo->name,
                     'image' => $combo->image,
-                    'price' => $price,
+                    'price' => $finalPrice, // Sử dụng finalPrice thay vì originalPrice
                     'category' => $combo->category,
                     'link' => route('site.services.show', $combo->id),
                 ]);
@@ -202,19 +237,6 @@ class ServiceController extends Controller
             ]
         );
 
-        // Load active promotions
-        $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
-            ->whereNull('deleted_at')
-            ->where('status', 'active')
-            ->where(function($query) {
-                $now = \Carbon\Carbon::now();
-                $query->where(function($q) use ($now) {
-                    $q->whereNull('start_date')->orWhere('start_date', '<=', $now);
-                })->where(function($q) use ($now) {
-                    $q->whereNull('end_date')->orWhere('end_date', '>=', $now);
-                });
-            })
-            ->get();
 
         // If AJAX request, return JSON or HTML partial
         if ($request->ajax()) {
@@ -327,5 +349,218 @@ class ServiceController extends Controller
             ->get();
 
         return view('site.service-detail', compact('service', 'relatedServices', 'randomImages', 'activePromotions'));
+    }
+
+    /**
+     * Tính giá cuối cùng cho variant sau khi áp dụng promotion
+     */
+    protected function calculateFinalPriceForVariant($variant, $activePromotions)
+    {
+        $originalPrice = $variant->price ?? 0;
+        if ($originalPrice <= 0) {
+            return 0;
+        }
+
+        $discount = 0;
+        $now = \Carbon\Carbon::now();
+
+        foreach ($activePromotions ?? [] as $promo) {
+            if ($promo->apply_scope !== 'service') {
+                continue;
+            }
+            if ($promo->status !== 'active') continue;
+            if ($promo->start_date && $promo->start_date > $now) continue;
+            if ($promo->end_date && $promo->end_date < $now) continue;
+
+            // Check usage_limit
+            if ($promo->usage_limit) {
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                if ($totalUsage >= $promo->usage_limit) {
+                    continue;
+                }
+            }
+
+            $applies = false;
+            $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                || ($promo->combos && $promo->combos->count() > 0)
+                || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+            $applyToAll = !$hasSpecificServices ||
+                (($promo->services ? $promo->services->count() : 0) +
+                 ($promo->combos ? $promo->combos->count() : 0) +
+                 ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+
+            // Kiểm tra variant có trong promotion không
+            if ($applyToAll) {
+                $applies = true;
+            } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $variant->id)) {
+                $applies = true;
+            } elseif ($variant->service_id && $promo->services && $promo->services->contains('id', $variant->service_id)) {
+                $applies = true;
+            }
+
+            if ($applies) {
+                $currentDiscount = 0;
+                if ($promo->discount_type === 'percent') {
+                    $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                    if ($promo->max_discount_amount) {
+                        $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
+                    }
+                } else {
+                    $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+                }
+
+                if ($currentDiscount > $discount) {
+                    $discount = $currentDiscount;
+                }
+            }
+        }
+
+        return max(0, $originalPrice - $discount);
+    }
+
+    /**
+     * Tính giá cuối cùng cho service sau khi áp dụng promotion
+     */
+    protected function calculateFinalPriceForService($service, $originalPrice, $activePromotions)
+    {
+        if ($originalPrice <= 0) {
+            return 0;
+        }
+
+        $discount = 0;
+        $now = \Carbon\Carbon::now();
+
+        foreach ($activePromotions ?? [] as $promo) {
+            // Chỉ áp dụng discount trực tiếp cho service khi promotion được cấu hình "By service"
+            if ($promo->apply_scope !== 'service') {
+                continue;
+            }
+            if ($promo->status !== 'active') continue;
+            if ($promo->start_date && $promo->start_date > $now) continue;
+            if ($promo->end_date && $promo->end_date < $now) continue;
+
+            // Check usage_limit
+            if ($promo->usage_limit) {
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                if ($totalUsage >= $promo->usage_limit) {
+                    continue;
+                }
+            }
+
+            $applies = false;
+            $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                || ($promo->combos && $promo->combos->count() > 0)
+                || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+            $applyToAll = !$hasSpecificServices ||
+                (($promo->services ? $promo->services->count() : 0) +
+                 ($promo->combos ? $promo->combos->count() : 0) +
+                 ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+
+            // Kiểm tra service có variants hay không
+            if ($service->serviceVariants->count() > 0) {
+                // Service có variants - kiểm tra từng variant
+                foreach ($service->serviceVariants->where('is_active', true) as $variant) {
+                    if ($applyToAll) {
+                        $applies = true;
+                        break;
+                    } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $variant->id)) {
+                        $applies = true;
+                        break;
+                    } elseif ($promo->services && $promo->services->contains('id', $service->id)) {
+                        $applies = true;
+                        break;
+                    }
+                }
+            } else {
+                // Service đơn
+                if ($applyToAll) {
+                    $applies = true;
+                } elseif ($promo->services && $promo->services->contains('id', $service->id)) {
+                    $applies = true;
+                }
+            }
+
+            if ($applies) {
+                $currentDiscount = 0;
+                if ($promo->discount_type === 'percent') {
+                    $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                    if ($promo->max_discount_amount) {
+                        $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
+                    }
+                } else {
+                    $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+                }
+
+                if ($currentDiscount > $discount) {
+                    $discount = $currentDiscount;
+                }
+            }
+        }
+
+        return max(0, $originalPrice - $discount);
+    }
+
+    /**
+     * Tính giá cuối cùng cho combo sau khi áp dụng promotion
+     */
+    protected function calculateFinalPriceForCombo($combo, $originalPrice, $activePromotions)
+    {
+        if ($originalPrice <= 0) {
+            return 0;
+        }
+
+        $discount = 0;
+        $now = \Carbon\Carbon::now();
+
+        foreach ($activePromotions ?? [] as $promo) {
+            // Chỉ áp dụng discount trực tiếp cho combo khi promotion được cấu hình "By service"
+            if ($promo->apply_scope !== 'service') {
+                continue;
+            }
+            if ($promo->status !== 'active') continue;
+            if ($promo->start_date && $promo->start_date > $now) continue;
+            if ($promo->end_date && $promo->end_date < $now) continue;
+
+            // Check usage_limit
+            if ($promo->usage_limit) {
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                if ($totalUsage >= $promo->usage_limit) {
+                    continue;
+                }
+            }
+
+            $applies = false;
+            $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                || ($promo->combos && $promo->combos->count() > 0)
+                || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+            $applyToAll = !$hasSpecificServices ||
+                (($promo->services ? $promo->services->count() : 0) +
+                 ($promo->combos ? $promo->combos->count() : 0) +
+                 ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+
+            if ($applyToAll) {
+                $applies = true;
+            } elseif ($promo->combos && $promo->combos->contains('id', $combo->id)) {
+                $applies = true;
+            }
+
+            if ($applies) {
+                $currentDiscount = 0;
+                if ($promo->discount_type === 'percent') {
+                    $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                    if ($promo->max_discount_amount) {
+                        $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
+                    }
+                } else {
+                    $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+                }
+
+                if ($currentDiscount > $discount) {
+                    $discount = $currentDiscount;
+                }
+            }
+        }
+
+        return max(0, $originalPrice - $discount);
     }
 }

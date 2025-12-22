@@ -48,6 +48,12 @@
     }
 }
 
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
 .appointment-card {
     background: #fff;
     border-radius: 12px;
@@ -58,6 +64,8 @@
     height: 100%;
     overflow: hidden;
     box-sizing: border-box;
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid #ff9800;
 }
 
 .appointment-info-card {
@@ -84,8 +92,8 @@
 }
 
 .card-title i {
-    color: #BC9321;
-    font-size: 16px;
+    color: #ff9800;
+    font-size: 18px;
 }
 
 .info-content {
@@ -200,13 +208,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 15px;
-    background: #f8f9fa;
+    background: #fff;
     border-radius: 8px;
     margin-bottom: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
-    border: 1px solid #e9ecef;
+    border: 1px solid #e0e0e0;
     width: 100%;
     box-sizing: border-box;
     overflow: hidden;
@@ -266,11 +274,20 @@
     color: #666;
 }
 
+.service-details {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
 .service-price {
     display: flex;
     align-items: baseline;
     margin-left: 12px;
     flex-shrink: 0;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
 }
 
 .price-amount {
@@ -362,13 +379,14 @@
 }
 
 .total-section {
-    background: linear-gradient(135deg, #4A3600 0%, #6B4E1F 100%);
-    color: #fff;
+    background: #fff;
+    color: #333;
     padding: 18px 20px;
     border-radius: 8px;
     margin-top: 15px;
     flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(74, 54, 0, 0.2);
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .total-row {
@@ -387,6 +405,9 @@
     display: flex;
     align-items: baseline;
     gap: 3px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
 }
 
 .total-amount {
