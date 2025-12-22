@@ -221,11 +221,15 @@
             }
             
             // Check per_user_limit - if user has reached their limit, skip it
+            // CHỈ đếm các PromotionUsage có appointment đã thanh toán
             if ($promo->per_user_limit) {
                 $userId = auth()->id();
                 if ($userId) {
                     $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
                         ->where('user_id', $userId)
+                        ->whereHas('appointment', function($query) {
+                            $query->where('status', 'Đã thanh toán');
+                        })
                         ->count();
                     if ($userUsage >= $promo->per_user_limit) {
                         continue; // Skip this promotion, use original price
@@ -244,7 +248,8 @@
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                if ($promo->apply_scope === 'order' || $applyToAll) {
+                // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc dịch vụ có trong danh sách
+                if ($applyToAll) {
                     $applies = true;
                 } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
                     $applies = true;
@@ -257,7 +262,8 @@
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                if ($promo->apply_scope === 'order' || $applyToAll) {
+                // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc variant có trong danh sách
+                if ($applyToAll) {
                     $applies = true;
                 } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
                     $applies = true;
@@ -272,7 +278,8 @@
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                if ($promo->apply_scope === 'order' || $applyToAll) {
+                // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc combo có trong danh sách
+                if ($applyToAll) {
                     $applies = true;
                 } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
                     $applies = true;

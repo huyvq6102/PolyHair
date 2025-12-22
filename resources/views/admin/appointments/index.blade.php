@@ -142,7 +142,20 @@
                             </td>
                             <td>{{ $appointment->start_at ? $appointment->start_at->format('d/m/Y H:i') : 'N/A' }}</td>
                             <td>
-                                <span class="badge badge-{{ $appointment->status == 'Hoàn thành' ? 'success' : ($appointment->status == 'Đã hủy' ? 'danger' : ($appointment->status == 'Đã xác nhận' ? 'info' : 'warning')) }}">
+                                @php
+                                    // Định nghĩa màu cho từng trạng thái
+                                    $statusColors = [
+                                        'Chờ xử lý' => 'secondary',      // Xám
+                                        'Đã xác nhận' => 'info',        // Xanh dương
+                                        'Đang thực hiện' => 'warning',   // Cam/vàng
+                                        'Hoàn thành' => 'success',       // Xanh lá
+                                        'Đã thanh toán' => 'primary',    // Xanh đậm
+                                        'Đã hủy' => 'danger',           // Đỏ
+                                        'Chưa thanh toán' => 'warning',  // Cam/vàng
+                                    ];
+                                    $badgeClass = $statusColors[$appointment->status] ?? 'secondary';
+                                @endphp
+                                <span class="badge badge-{{ $badgeClass }}">
                                     {{ $appointment->status }}
                                 </span>
                                 @if($appointment->status == 'Đã hủy' && $appointment->cancellation_reason)

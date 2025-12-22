@@ -11,12 +11,50 @@ class PromotionService
     /**
      * Get all active promotions.
      */
-    public function getAll()
+    public function getAll(array $filters = [])
     {
-        return Promotion::with(['services', 'combos', 'serviceVariants'])
-            ->whereNull('deleted_at')
-            ->orderBy('id', 'desc')
-            ->get();
+        $query = Promotion::with(['services', 'combos', 'serviceVariants'])
+            ->whereNull('deleted_at');
+        
+        // Filter theo mã KM
+        if (!empty($filters['code'])) {
+            $query->where('code', 'like', '%' . $filters['code'] . '%');
+        }
+        
+        // Filter theo phạm vi áp dụng
+        if (!empty($filters['scope'])) {
+            $query->where('apply_scope', $filters['scope']);
+        }
+        
+        // Filter theo loại giảm giá
+        if (!empty($filters['discount_type'])) {
+            $query->where('discount_type', $filters['discount_type']);
+        }
+        
+        // Filter theo số tiền giảm (từ)
+        if (!empty($filters['discount_amount']) && is_numeric($filters['discount_amount'])) {
+            $discountAmount = (float) $filters['discount_amount'];
+            $query->where(function($q) use ($discountAmount) {
+                // Nếu là discount_type = 'amount', so sánh trực tiếp discount_amount
+                $q->where(function($subQ) use ($discountAmount) {
+                    $subQ->where('discount_type', 'amount')
+                         ->where('discount_amount', '>=', $discountAmount);
+                })
+                // Nếu là discount_type = 'percent', tính toán max_discount_amount hoặc ước tính
+                ->orWhere(function($subQ) use ($discountAmount) {
+                    $subQ->where('discount_type', 'percent')
+                         ->where(function($percentQ) use ($discountAmount) {
+                             // Nếu có max_discount_amount, so sánh với nó
+                             $percentQ->whereNotNull('max_discount_amount')
+                                      ->where('max_discount_amount', '>=', $discountAmount)
+                                      // Hoặc không có max_discount_amount (có thể giảm nhiều hơn)
+                                      ->orWhereNull('max_discount_amount');
+                         });
+                });
+            });
+        }
+        
+        return $query->orderBy('id', 'desc')->get();
     }
 
     /**
