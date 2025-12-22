@@ -9,7 +9,7 @@
         background: #f8f9fa;
         min-height: 100vh;
     }
-    
+
     .review-form-container {
         background: #fff;
         border-radius: 10px;
@@ -17,28 +17,28 @@
         padding: 30px;
         margin-bottom: 30px;
     }
-    
+
     .review-header {
         text-align: center;
         margin-bottom: 30px;
         padding-bottom: 20px;
         border-bottom: 2px solid #f0f0f0;
     }
-    
+
     .review-title {
         font-size: 28px;
         font-weight: 600;
-        color: #4A3600;
+        color: #d8b26a;
         margin-bottom: 10px;
     }
-    
+
     .image-preview {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         margin-top: 15px;
     }
-    
+
     .image-preview-item {
         position: relative;
         width: 120px;
@@ -47,13 +47,13 @@
         overflow: hidden;
         border: 2px solid #ddd;
     }
-    
+
     .image-preview-item img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    
+
     .image-preview-item .remove-image {
         position: absolute;
         top: 5px;
@@ -127,9 +127,9 @@
                             <label class="form-label fw-bold">
                                 <i class="fa fa-comment"></i> Nội dung bình luận <span class="text-danger">*</span>
                             </label>
-                            <textarea name="comment" 
-                                      rows="6" 
-                                      class="form-control @error('comment') is-invalid @enderror" 
+                            <textarea name="comment"
+                                      rows="6"
+                                      class="form-control @error('comment') is-invalid @enderror"
                                       placeholder="Ví dụ: Kỳ vọng của bạn về không gian, dịch vụ, phong cách phục vụ, giá cả..."
                                       required>{{ old('comment') }}</textarea>
                             <small class="form-text text-muted">Tối đa 5000 ký tự</small>
@@ -143,17 +143,17 @@
                             <label class="form-label fw-bold">
                                 <i class="fa fa-image"></i> Hình ảnh minh họa (tùy chọn)
                             </label>
-                            <input type="file" 
-                                   name="images[]" 
-                                   id="images" 
-                                   class="form-control @error('images.*') is-invalid @enderror" 
+                            <input type="file"
+                                   name="images[]"
+                                   id="images"
+                                   class="form-control @error('images.*') is-invalid @enderror"
                                    accept="image/jpeg,image/png,image/jpg,image/gif"
                                    multiple>
                             <small class="form-text text-muted">Có thể upload nhiều hình ảnh (JPG, PNG, GIF - tối đa 2MB mỗi ảnh)</small>
                             @error('images.*')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            
+
                             <div class="image-preview" id="imagePreview"></div>
                         </div>
 
@@ -177,12 +177,12 @@
 @push('scripts')
 <script>
     let selectedFiles = [];
-    
+
     // Image preview
     document.getElementById('images').addEventListener('change', function(e) {
         const preview = document.getElementById('imagePreview');
         const files = Array.from(e.target.files);
-        
+
         // Add new files to selectedFiles array
         files.forEach(file => {
             if (file.type.startsWith('image/')) {
@@ -193,10 +193,10 @@
                 }
             }
         });
-        
+
         // Update preview
         updatePreview();
-        
+
         // Update input files
         updateInputFiles();
     });
@@ -204,7 +204,7 @@
     function updatePreview() {
         const preview = document.getElementById('imagePreview');
         preview.innerHTML = '';
-        
+
         selectedFiles.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = function(e) {

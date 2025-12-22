@@ -23,12 +23,12 @@ class CustomerController extends Controller
         if (!$currentUser) {
             return redirect()->route('login');
         }
-        
+
         if (Auth::id() != $id && !$currentUser->isAdmin()) {
             abort(403, 'Bạn không có quyền xem thông tin người dùng này.');
         }
 
-        // Tự động cập nhật trạng thái lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" nếu đã quá 10 giây
+        // Tự động cập nhật trạng thái lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" nếu đã quá 1 phút
         $this->autoConfirmPendingAppointments($id);
 
         $user = User::with([
@@ -71,7 +71,7 @@ class CustomerController extends Controller
         if (!$currentUser) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-        
+
         if (Auth::id() != $id && !$currentUser->isAdmin()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
@@ -113,17 +113,17 @@ $appointments = $user->appointments->map(function($appointment) {
     }
 
     /**
-     * Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 10 giây
+     * Tự động chuyển lịch hẹn từ "Chờ xử lý" sang "Đã xác nhận" sau 30 giây
      */
     private function autoConfirmPendingAppointments($userId)
     {
         try {
-            $cutoffTime = \Carbon\Carbon::now()->subSeconds(10);
+            $cutoffTime = \Carbon\Carbon::now()->subMinute(1);
 
             $appointments = Appointment::where('user_id', $userId)
                 ->where('status', 'Chờ xử lý')
                 ->where('created_at', '<=', $cutoffTime)
-                ->whereRaw('TIMESTAMPDIFF(SECOND, created_at, NOW()) >= 10') // Đảm bảo đã qua ít nhất 10 giây
+                ->whereRaw('TIMESTAMPDIFF(SECOND, created_at, NOW()) >= 60') // Đảm bảo đã qua ít nhất 1 phút
                 ->get();
 
             foreach ($appointments as $appointment) {

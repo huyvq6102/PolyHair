@@ -14,7 +14,7 @@
             padding: 20px;
         }
         .header {
-            background-color: #4A3600;
+            background-color:#0b57d0;
             color: #fff;
             padding: 20px;
             text-align: center;
@@ -31,7 +31,7 @@
             padding: 15px;
             margin: 15px 0;
             border-radius: 5px;
-            border-left: 4px solid #4A3600;
+            border-left: 4px solid #0b57d0;
         }
         .info-row {
             margin: 10px 0;
@@ -43,7 +43,7 @@
         }
         .label {
             font-weight: bold;
-            color: #4A3600;
+            color:rgb(0, 0, 0);
             display: inline-block;
             width: 150px;
         }
@@ -66,15 +66,7 @@
             border-top: 1px solid #ddd;
             margin-top: 20px;
         }
-        .button {
-            display: inline-block;
-            padding: 12px 30px;
-            background-color: #4A3600;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
+     
     </style>
 </head>
 <body>
@@ -171,11 +163,11 @@
             @endif
         </div>
         
-        <p><strong>Lưu ý:</strong> Vui lòng thanh toán để hoàn tất đặt lịch. Bạn có thể thanh toán tại giỏ hàng của mình.</p>
+        {{-- <p><strong>Lưu ý:</strong> Vui lòng thanh toán để hoàn tất đặt lịch. Bạn có thể thanh toán tại giỏ hàng của mình.</p>
         
         <div style="text-align: center;">
             <a href="{{ route('site.cart.index') }}" class="button">Xem giỏ hàng</a>
-        </div>
+        </div> --}}
         
         <p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi qua số điện thoại: <strong>+10 367 267 2678</strong></p>
     </div>

@@ -10,12 +10,12 @@
         min-height: 100vh;
         padding: 120px 20px 40px;
     }
-    
+
     .appointment-detail-wrapper {
         max-width: 900px;
         margin: 0 auto;
     }
-    
+
     /* Header Section */
     .appointment-header-section {
         background: white;
@@ -27,7 +27,7 @@
         align-items: center;
         gap: 16px;
     }
-    
+
     .header-icon {
         width: 48px;
         height: 48px;
@@ -40,28 +40,28 @@
         font-size: 24px;
         font-weight: bold;
     }
-    
+
     .header-content {
         flex: 1;
     }
-    
+
     .header-content h1 {
         font-size: 28px;
         font-weight: 700;
         color: #333;
         margin: 0 0 8px 0;
     }
-    
+
     .booking-code {
         font-size: 14px;
         color: #666;
     }
-    
+
     .booking-code strong {
         color: #0d6efd;
         font-weight: 600;
     }
-    
+
     /* Two Column Layout */
     .appointment-details-grid {
         display: grid;
@@ -69,13 +69,13 @@
         gap: 24px;
         margin-bottom: 24px;
     }
-    
+
     @media (max-width: 768px) {
         .appointment-details-grid {
             grid-template-columns: 1fr;
         }
     }
-    
+
     /* Info Card */
     .info-card {
         background: white;
@@ -83,7 +83,7 @@
         padding: 24px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    
+
     .card-header {
         display: flex;
         align-items: center;
@@ -92,7 +92,7 @@
         padding-bottom: 16px;
         border-bottom: 2px solid #f0f0f0;
     }
-    
+
     .card-icon {
         width: 32px;
         height: 32px;
@@ -104,14 +104,14 @@
         color: white;
         font-size: 18px;
     }
-    
+
     .card-title {
         font-size: 20px;
         font-weight: 600;
         color: #333;
         margin: 0;
     }
-    
+
     .info-row {
         display: flex;
         justify-content: space-between;
@@ -119,18 +119,18 @@
         padding: 12px 0;
         border-bottom: 1px solid #f0f0f0;
     }
-    
+
     .info-row:last-child {
         border-bottom: none;
     }
-    
+
     .info-label {
         font-size: 14px;
         color: #666;
         font-weight: 500;
         min-width: 130px;
     }
-    
+
     .info-value {
         font-size: 14px;
         color: #333;
@@ -138,7 +138,7 @@
         text-align: right;
         flex: 1;
     }
-    
+
     .status-badge {
         display: inline-block;
         padding: 6px 12px;
@@ -146,39 +146,39 @@
         font-size: 12px;
         font-weight: 600;
     }
-    
+
     .status-pending {
         background: #ffc107;
         color: #333;
     }
-    
+
     .status-confirmed {
         background: #28a745;
         color: #fff;
     }
-    
+
     .status-cancelled {
         background: #6c757d;
         color: #fff;
     }
-    
+
     .status-in-progress {
         background: #007bff;
         color: #fff;
     }
-    
+
     .status-completed {
         background: #28a745;
         color: #fff;
     }
-    
+
     /* Services Card */
     .service-list-wrapper {
         display: flex;
         flex-direction: column;
         min-height: 0;
     }
-    
+
     .service-item {
         display: flex;
         justify-content: space-between;
@@ -194,22 +194,22 @@
         width: 100%;
         box-sizing: border-box;
     }
-    
+
     .service-item:hover {
         background: #e9ecef;
         border-color: #BC9321;
         box-shadow: 0 2px 6px rgba(188, 147, 33, 0.15);
     }
-    
+
     .service-item:last-child {
         margin-bottom: 0;
     }
-    
+
     .service-info {
         flex: 1;
         min-width: 0;
     }
-    
+
     .service-name {
         font-size: 16px;
         font-weight: 600;
@@ -218,14 +218,14 @@
         line-height: 1.4;
         word-wrap: break-word;
     }
-    
+
     .service-meta {
         display: flex;
         gap: 12px;
         font-size: 12px;
         color: #999;
     }
-    
+
     .service-type {
         font-size: 11px;
         color: #666;
@@ -234,80 +234,72 @@
         border-radius: 12px;
         font-weight: 500;
     }
-    
+
     .service-duration {
         font-size: 11px;
         color: #666;
     }
-    
+
     .service-price {
         display: flex;
         align-items: baseline;
         margin-left: 12px;
         flex-shrink: 0;
     }
-    
+
     .price-amount {
         font-size: 18px;
         font-weight: 700;
         color: #333;
     }
-    
+
     .price-currency {
         font-size: 14px;
         color: #333;
         margin-left: 2px;
     }
-    
+
     .total-section {
-        background: linear-gradient(135deg, #4A3600 0%, #6B4E1F 100%);
-        border-radius: 8px;
+        margin-top: 25px;
         padding: 20px;
-        margin-top: 20px;
-        box-shadow: 0 4px 12px rgba(74, 54, 0, 0.2);
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        background: #ffffff;
     }
-    
+
     .total-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
+        padding: 8px 0;
+        color: #212529;
+        font-size: 0.95rem;
     }
-    
-    .total-row:last-child {
-        margin-bottom: 0;
-        padding-top: 12px;
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
-        margin-top: 8px;
+
+   .total-row.discount {
+        color: #212529;
     }
-    
-    .total-label {
-        font-size: 16px;
+
+    .total-row.discount .total-amount {
+        color: #dc3545;
+    }
+
+     .total-row:last-child {
+        border-top: 1px solid #e0e0e0;
+        margin-top: 10px;
+        padding-top: 15px;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+     .total-label {
         font-weight: 500;
-        color: white;
     }
-    
-    .total-amount {
-        font-size: 18px;
-        font-weight: 700;
-        color: white;
-    }
-    
-    .total-row:last-child .total-label {
-        font-size: 18px;
+
+     .total-amount {
         font-weight: 600;
     }
-    
-    .total-row:last-child .total-amount {
-        font-size: 22px;
-        font-weight: 700;
-    }
-    
-    .discount-amount {
-        color: #ffc107;
-        font-weight: 600;
-    }
-    
+
     /* Cancel Button */
     .cancel-section {
         background: white;
@@ -316,7 +308,7 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         overflow: hidden;
     }
-    
+
     .cancel-button {
         background: transparent;
         border: none;
@@ -331,18 +323,18 @@
         justify-content: space-between;
         transition: background-color 0.2s;
     }
-    
+
     .cancel-button:hover {
         background: #f8f8f8;
         color: #333;
     }
-    
+
     .cancel-button-left {
         display: flex;
         align-items: center;
         gap: 12px;
     }
-    
+
     .cancel-icon {
         width: 24px;
         height: 24px;
@@ -355,7 +347,7 @@
         font-size: 18px;
         line-height: 1;
     }
-    
+
     .chevron-right {
         color: #999;
         font-size: 18px;
@@ -384,7 +376,7 @@
                     <div class="card-icon">ℹ</div>
                     <h3 class="card-title">Thông tin lịch đặt</h3>
                 </div>
-                
+
                 <div class="info-row">
                     <span class="info-label">Trạng thái:</span>
                     <span class="info-value">
@@ -406,60 +398,60 @@
                         <span class="status-badge {{ $statusClass }}">{{ $status }}</span>
                     </span>
                 </div>
-                
+
                 <div class="info-row">
                     <span class="info-label">Ngày đặt:</span>
                     <span class="info-value">{{ $appointment->created_at ? \Carbon\Carbon::parse($appointment->created_at)->format('d/m/Y') : 'N/A' }}</span>
                 </div>
-                
+
                 @if($appointment->start_at)
                 <div class="info-row">
                     <span class="info-label">Giờ bắt đầu:</span>
                     <span class="info-value">{{ \Carbon\Carbon::parse($appointment->start_at)->format('H:i') }}</span>
                 </div>
                 @endif
-                
+
                 @if($appointment->end_at)
                 <div class="info-row">
                     <span class="info-label">Giờ kết thúc:</span>
                     <span class="info-value">{{ \Carbon\Carbon::parse($appointment->end_at)->format('H:i') }}</span>
                 </div>
                 @endif
-                
+
                 @php
                     $totalDuration = 0;
                     foreach ($appointment->appointmentDetails as $detail) {
                         $totalDuration += $detail->duration ?? 0;
                     }
                 @endphp
-                
+
                 @if($totalDuration > 0)
                 <div class="info-row">
                     <span class="info-label">Thời lượng:</span>
                     <span class="info-value">{{ $totalDuration }} phút</span>
                 </div>
                 @endif
-                
+
                 @if($appointment->employee && $appointment->employee->user)
                 <div class="info-row">
                     <span class="info-label">Nhân viên:</span>
                     <span class="info-value">{{ $appointment->employee->user->name }}</span>
                 </div>
                 @endif
-                
+
                 @if($appointment->user)
                 <div class="info-row">
                     <span class="info-label">Khách hàng:</span>
                     <span class="info-value">{{ $appointment->user->name }}</span>
                 </div>
-                
+
                 @if($appointment->user->phone)
                 <div class="info-row">
                     <span class="info-label">Số điện thoại:</span>
                     <span class="info-value">{{ $appointment->user->phone }}</span>
                 </div>
                 @endif
-                
+
                 @if($appointment->user->email)
                 <div class="info-row">
                     <span class="info-label">Email:</span>
@@ -475,15 +467,15 @@
                     <div class="card-icon">✂</div>
                     <h3 class="card-title">Danh sách dịch vụ</h3>
                 </div>
-                
+
                 <div class="service-list-wrapper">
                     @if($appointment->appointmentDetails->count() > 0)
                         @foreach($appointment->appointmentDetails as $detail)
                             <div class="service-item">
                                 <div class="service-info">
                                     <div class="service-name">
-                                        @if($detail->serviceVariant && $detail->serviceVariant->service)
-                                            {{ $detail->serviceVariant->service->name }} - {{ $detail->serviceVariant->name }}
+                                         @if($detail->serviceVariant)
+                                            {{ $detail->serviceVariant->name }}
                                         @elseif($detail->combo)
                                             {{ $detail->combo->name }}
                                         @elseif($detail->notes)
@@ -493,15 +485,19 @@
                                         @endif
                                     </div>
                                     <div class="service-meta">
-                                        @if($detail->combo)
-                                            <span class="service-type">Combo</span>
-                                        @else
-                                            <span class="service-type">Dịch vụ{{ $detail->serviceVariant ? '' : ' đơn' }}</span>
-                                        @endif
                                         @if($detail->duration)
                                             <span class="service-duration">{{ $detail->duration }} phút</span>
                                         @endif
                                     </div>
+                                    @if($detail->serviceVariant && $detail->serviceVariant->variantAttributes && $detail->serviceVariant->variantAttributes->count() > 0)
+                                    <div class="service-attributes" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                        @foreach($detail->serviceVariant->variantAttributes as $attr)
+                                        <span class="attribute-tag" style="background-color: #f0f0f0; color: #333; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                                            <strong>{{ $attr->attribute_name }}:</strong> {{ $attr->attribute_value }}
+                                        </span>
+                                        @endforeach
+                                    </div>
+                                    @endif
                                 </div>
                                 <div class="service-price">
                                     @php
@@ -517,23 +513,36 @@
                                 </div>
                             </div>
                         @endforeach
-                        
+
                         <!-- Total Section -->
                         <div class="total-section">
                             @php
                                 // Tính toán các giá trị để hiển thị
                                 // Tổng tiền = giá gốc của tất cả dịch vụ
                                 $displayTotalPrice = $totalOriginalPrice ?? $subtotal ?? 0;
-                                
+
                                 // Số tiền đã giảm = tổng tất cả các khoản giảm giá
-                                $displayDiscount = $totalDiscount ?? 0;
-                                
+                                $displayDiscount = $serviceLevelDiscount ?? ($totalDiscount ?? 0);
+
                                 // Số tiền cần thanh toán = tổng sau khi giảm giá
                                 $displayTotalAfterDiscount = $totalAfterDiscount ?? $subtotal ?? 0;
                             @endphp
-                            
-                    
-                            <!-- Số tiền cần thanh toán -->
+
+
+                             <div class="total-row">
+                                <span class="total-label">Tổng giá gốc:</span>
+                                <span class="total-amount">{{ number_format($displayTotalPrice, 0, ',', '.') }} ₫</span>
+                            </div>
+                            @if($displayDiscount > 0)
+                            <div class="total-row discount">
+                                <span class="total-label">Giảm giá tự động (từng dịch vụ):</span>
+                                <span class="total-amount">-{{ number_format($displayDiscount, 0, ',', '.') }} ₫</span>
+                            </div>
+                            <div class="total-row discount">
+                                <span class="total-label">Tổng giảm giá:</span>
+                                <span class="total-amount">-{{ number_format($displayDiscount, 0, ',', '.') }} ₫</span>
+                            </div>
+                            @endif
                             <div class="total-row">
                                 <span class="total-label">Tổng cộng:</span>
                                 <span class="total-amount">{{ number_format($displayTotalAfterDiscount, 0, ',', '.') }} ₫</span>
@@ -547,10 +556,18 @@
         </div>
 
         <!-- Cancel Button - Hiển thị cho cả guest và logged in user -->
-        @if($appointment->status !== 'Đã hủy')
+        @php
+            $canCancel = false;
+            if ($appointment->status === 'Chờ xử lý') {
+                $createdAt = \Carbon\Carbon::parse($appointment->created_at);
+                $secondsSinceCreated = $createdAt->diffInSeconds(now());
+                $canCancel = $secondsSinceCreated <= 30;
+            }
+        @endphp
+
+        @if($appointment->status !== 'Đã hủy' && $canCancel)
             <div class="cancel-section">
-                <form action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?');">
-                    @csrf
+                 <form id="cancelAppointmentForm" action="{{ route('site.appointment.cancel', $appointment->id) }}" method="POST">
                     <button type="submit" class="cancel-button">
                         <div class="cancel-button-left">
                             <div class="cancel-icon">×</div>
@@ -560,7 +577,37 @@
                     </button>
                 </form>
             </div>
+             @elseif($appointment->status !== 'Đã hủy' && $appointment->status === 'Đã xác nhận')
+            <div class="cancel-section" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 12px; padding: 16px; text-align: center; color: #856404;">
+                <p style="margin: 0; font-size: 14px;">
+                    <i class="fa fa-info-circle"></i> Lịch hẹn đã được xác nhận. Không thể hủy sau 30 giây kể từ khi đặt.
+                </p>
+            </div>
         @endif
     </div>
 </div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cancelForm = document.getElementById('cancelAppointmentForm');
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
+                // Disable button để tránh double submit
+                const submitBtn = cancelForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.6';
+                    submitBtn.style.cursor = 'not-allowed';
+                }
+
+                // Submit form
+                cancelForm.submit();
+            }
+        });
+    }
+});
+</script>
 @endsection

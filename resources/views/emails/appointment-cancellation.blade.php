@@ -88,75 +88,75 @@
     <div class="header">
         <h1>Thông báo hủy lịch hẹn</h1>
     </div>
-    
+
     <div class="content">
         <p>Xin chào <strong>{{ $appointment->user->name }}</strong>,</p>
-        
+
         <p>Chúng tôi xin thông báo rằng lịch hẹn của bạn đã được hủy.</p>
-        
+
         <div class="warning-box">
             <strong>⚠️ Lưu ý:</strong> Nếu bạn không thực hiện việc hủy lịch này, vui lòng liên hệ với chúng tôi ngay lập tức.
         </div>
-        
+
         <div class="info-box">
             <h3 style="margin-top: 0; color: #dc3545;">Thông tin lịch hẹn đã hủy</h3>
-            
+
             <div class="info-row">
                 <span class="label">Mã đặt lịch:</span>
                 <span class="value">#{{ $appointment->booking_code ?? $appointment->id }}</span>
             </div>
-            
+
             <div class="info-row">
                 <span class="label">Họ và tên:</span>
                 <span class="value">{{ $appointment->user->name }}</span>
             </div>
-            
+
             <div class="info-row">
                 <span class="label">Số điện thoại:</span>
                 <span class="value">{{ $appointment->user->phone }}</span>
             </div>
-            
+
             @if($appointment->user->email)
             <div class="info-row">
                 <span class="label">Email:</span>
                 <span class="value">{{ $appointment->user->email }}</span>
             </div>
             @endif
-            
+
             @if($appointment->employee)
             <div class="info-row">
                 <span class="label">Kỹ thuật viên:</span>
                 <span class="value">{{ $appointment->employee->user->name }}</span>
             </div>
             @endif
-            
+
             <div class="info-row">
                 <span class="label">Ngày đặt lịch:</span>
                 <span class="value">{{ \Carbon\Carbon::parse($appointment->start_at)->format('d/m/Y') }}</span>
             </div>
-            
+
             <div class="info-row">
                 <span class="label">Giờ bắt đầu:</span>
                 <span class="value">{{ \Carbon\Carbon::parse($appointment->start_at)->format('H:i') }}</span>
             </div>
-            
+
             <div class="info-row">
                 <span class="label">Giờ kết thúc:</span>
                 <span class="value">{{ \Carbon\Carbon::parse($appointment->end_at)->format('H:i') }}</span>
             </div>
-            
+
             <div class="info-row">
                 <span class="label">Trạng thái:</span>
                 <span class="value" style="color: #dc3545; font-weight: bold;">{{ $appointment->status }}</span>
             </div>
-            
+
             @if($appointment->cancellation_reason)
             <div class="info-row">
                 <span class="label">Lý do hủy:</span>
                 <span class="value">{{ $appointment->cancellation_reason }}</span>
             </div>
             @endif
-            
+
             @if($appointment->appointmentDetails && $appointment->appointmentDetails->count() > 0)
             <div class="info-row">
                 <span class="label">Dịch vụ:</span>
@@ -180,7 +180,7 @@
                 </div>
             </div>
             @endif
-            
+
             @if($appointment->note)
             <div class="info-row">
                 <span class="label">Ghi chú:</span>
@@ -188,19 +188,13 @@
             </div>
             @endif
         </div>
-        
-        <p>Nếu bạn muốn đặt lịch mới, vui lòng truy cập website của chúng tôi để đặt lịch lại.</p>
-        
-        <div style="text-align: center;">
-            <a href="{{ route('site.appointment.create') }}" class="button">Đặt lịch mới</a>
-        </div>
-        
+
         <p>Nếu bạn có bất kỳ câu hỏi nào hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi qua số điện thoại: <strong>+10 367 267 2678</strong></p>
     </div>
-    
+
     <div class="footer">
         <p>© {{ date('Y') }} PolyHair. Tất cả quyền được bảo lưu.</p>
-        <p>154, Cầu Giấy, Hà Nội | Email: contact@barbershop.com</p>
+        <p>154, Cầu Giấy, Hà Nội | Email: contact@PolyHair.com</p>
     </div>
 </body>
 </html>
