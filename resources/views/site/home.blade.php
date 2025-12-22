@@ -485,77 +485,136 @@
 </section>
 
 
-<!-- SHINE COLLECTION -->
-<section class="shine-collection-section py-5">
+<!-- TIN TỨC VỀ POLY HAIR -->
+<section class="news-section py-5">
     <div class="container">
-        <div class="d-flex align-items-start mb-4">
-            <span class="shine-bar mr-2"></span>
+        <div class="d-flex align-items-start mb-3">
+            <span class="bar mr-2"></span>
             <div>
-                <h3 class="shine-title ba-title mb-0">POLY COLLECTION - 'VIBE' NÀO CŨNG TOẢ SÁNG</h3>
+                <h3 class="title ba-title mb-0">TẠI SAO NÊN CHỌN POLY HAIR</h3>
             </div>
         </div>
 
-        <!-- Hero Banner -->
-        <div class="shine-hero-banner">
-            <div class="shine-hero-bg">
-                <img src="https://storage.30shine.com/web/v4/images/shine-bright/shine-bright_mobile.png" alt="SHINE BRIGHT">
+        <!-- News Grid -->
+        <div class="news-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+            <!-- Card 1 -->
+            <div class="news-card" style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s ease;">
+                <a href="#" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="news-card-image" style="width: 100%; height: 180px; overflow: hidden; background: #f5f5f5;">
+                        <img src="https://storage.30shine.com/ResourceWeb/data/images/landingpage/8lydo/ld-datlich/dat-lich-cat-toc-tien-loi-15.jpg" 
+                             alt="Title 1" 
+                             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;"
+                             onmouseover="this.style.transform='scale(1.05)';"
+                             onmouseout="this.style.transform='scale(1)';">
+                    </div>
+                    <div class="news-card-content" style="padding: 16px;">
+                        <h4 class="news-card-title" style="font-size: 18px; font-weight: 600; color: #333; margin: 0 0 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        🕒 Đặt lịch nhanh chóng
+                        </h4>
+                        <p class="news-card-excerpt" style="font-size: 14px; color: #666; margin: 0; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        Chỉ 30 giây để hoàn tất
+                        Chọn thợ cắt, khung giờ phù hợp và xác nhận ngay – không cần gọi điện, không chờ đợi.
+                        </p>
+                    </div>
+                </a>
             </div>
-            <div class="shine-cloud cloud-left"></div>
-            <div class="shine-cloud cloud-right"></div>
+            
+            <!-- Card 2 -->
+            <div class="news-card" style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s ease;">
+                <a href="#" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="news-card-image" style="width: 100%; height: 180px; overflow: hidden; background: #f5f5f5;">
+                        <img src="https://storage.30shine.com/web/v4/images/tin-tuc-30shine/6.png" 
+                             alt="Title 2" 
+                             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;"
+                             onmouseover="this.style.transform='scale(1.05)';"
+                             onmouseout="this.style.transform='scale(1)';">
+                    </div>
+                    <div class="news-card-content" style="padding: 16px;">
+                        <h4 class="news-card-title" style="font-size: 18px; font-weight: 600; color: #333; margin: 0 0 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        💈 Thợ cắt & salon uy tín
+                        </h4>
+                        <p class="news-card-excerpt" style="font-size: 14px; color: #666; margin: 0; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        Đã được xác minh chất lượng
+                        Danh sách dịch vụ và barber được chọn lọc kỹ lưỡng, kèm đánh giá thực tế từ khách hàng.
+                        </p>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Card 3 -->
+            <div class="news-card" style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s ease;">
+                <a href="#" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="news-card-image" style="width: 100%; height: 180px; overflow: hidden; background: #f5f5f5;">
+                        <img src="https://cdn.tienphong.vn/images/3097997c9acee51d36045c378f94a8a8d602d4f47a458ee95a27bb7fdffd5dc83457a433cfcaf3f7c65e2a86f2c75e63/img-9468.jpg" 
+                             alt="Title 3" 
+                             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;"
+                             onmouseover="this.style.transform='scale(1.05)';"
+                             onmouseout="this.style.transform='scale(1)';">
+                    </div>
+                    <div class="news-card-content" style="padding: 16px;">
+                        <h4 class="news-card-title" style="font-size: 18px; font-weight: 600; color: #333; margin: 0 0 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        🔔 Đặt lịch thông minh
+                        </h4>
+                        <p class="news-card-excerpt" style="font-size: 14px; color: #666; margin: 0; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        Không lo quên lịch cắt tóc
+                        Hệ thống tự động gửi lịch hẹn qua thông báo Mail, giúp bạn luôn đúng giờ và chủ động thời gian.
+                        </p>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Card 4 -->
+            <div class="news-card" style="background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s ease;">
+                <a href="#" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="news-card-image" style="width: 100%; height: 180px; overflow: hidden; background: #f5f5f5;">
+                        <img src="https://static.vecteezy.com/system/resources/previews/019/138/480/non_2x/time-planning-icon-for-your-website-design-logo-app-ui-free-vector.jpg" 
+                             alt="Title 4" 
+                             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;"
+                             onmouseover="this.style.transform='scale(1.05)';"
+                             onmouseout="this.style.transform='scale(1)';">
+                    </div>
+                    <div class="news-card-content" style="padding: 16px;">
+                        <h4 class="news-card-title" style="font-size: 18px; font-weight: 600; color: #333; margin: 0 0 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        💳 Minh bạch & tiện lợi
+                        </h4>
+                        <p class="news-card-excerpt" style="font-size: 14px; color: #666; margin: 0; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        Xem trước giá, dịch vụ chi tiết và dễ dàng hủy/đổi lịch khi cần.
+                        </p>
+                    </div>
+                </a>
+            </div>
         </div>
-
-        <!-- Collection Cards Grid -->
-        <div class="shine-collections-grid">
-            <div class="shine-collection-card">
-                <div class="shine-card-img">
-                    <img src="https://storage.30shine.com/web/v4/images/shine-collection/mobile/pc_04.jpg" alt="ANH TRAI SAY HAIR">
-                </div>
-
-            </div>
-
-            <div class="shine-collection-card">
-                <div class="shine-card-img">
-                    <img src="https://storage.30shine.com/web/v4/images/shine-collection/mobile/pc_03.jpg" alt="BTS K-PERM">
-                </div>
-
-            </div>
-
-            <div class="shine-collection-card">
-                <div class="shine-card-img">
-                    <img src="https://storage.30shine.com/web/v4/images/shine-collection/mobile/pc_02.jpg" alt="BAD BOY">
-                </div>
-
-            </div>
-        </div>
+        
+        <style>
+            .news-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            
+            @media (max-width: 1200px) {
+                .news-grid {
+                    grid-template-columns: repeat(3, 1fr) !important;
+                }
+            }
+            
+            @media (max-width: 768px) {
+                .news-grid {
+                    grid-template-columns: repeat(2, 1fr) !important;
+                }
+            }
+            
+            @media (max-width: 576px) {
+                .news-grid {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+        </style>
     </div>
 </section>
 
 
 
-    <!-- cộng đồng -->
-<section class="community-section py-4">
-  <div class="container">
-    <div class="community-slider">
-      <div class="comm-viewport">
-        <div class="comm-track">
-          @foreach([
-            ['name'=>'Fanpage','count'=>'178.000+','img'=>'https://trakyhairsalon.com/thumbs/100x100x2/upload/photo/facebook-84181.png'],
-            ['name'=>'Zalo','count'=>'79.000+','img'=>'https://trakyhairsalon.com/thumbs/100x100x2/upload/photo/zalo-82972.png'],
-            ['name'=>'Tiktok channel','count'=>'634.000+','img'=>'https://trakyhairsalon.com/thumbs/100x100x2/upload/photo/tiktok-50110.png'],
-            ['name'=>'Instagram','count'=>'140.000+','img'=>'https://trakyhairsalon.com/thumbs/100x100x2/upload/photo/instagram-89822.png'],
-            ['name'=>'Chi nhánh','count'=>'63+','img'=>'https://trakyhairsalon.com/thumbs/100x100x2/upload/photo/maps-67360.png'],
-          ] as $cd)
-          <div class="comm-card">
-            <div class="comm-img"><img src="{{ $cd['img'] }}" alt="{{ $cd['name'] }}"></div>
-            <div class="comm-desc">{{ $cd['count'] }}</div>
-          </div>
-          @endforeach
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-    <!-- end cộng đồng -->
+
 
 <!-- Modal chọn variant -->
 <div class="modal fade" id="variantSelectionModal" tabindex="-1" role="dialog" aria-labelledby="variantSelectionModalLabel" aria-hidden="true">

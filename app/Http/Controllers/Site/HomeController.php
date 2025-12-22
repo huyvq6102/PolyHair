@@ -38,7 +38,7 @@ class HomeController extends Controller
         $products = $this->productService->getWithLimit(8, 0);
         $productsOnSale = $this->productService->getOnSale(8, 0);
         $services = $this->serviceService->getMostBooked(6, 0); // 6 services = 2 hàng x 3 cột
-        $news = $this->newsService->getWithLimit(3, 0);
+        $news = $this->newsService->getWithLimit(4, 0);
 
         // Load active promotions
         $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
