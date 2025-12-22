@@ -31,7 +31,7 @@
           <div class="filter-group mb-3">
             <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Tìm kiếm</h5>
             <input type="text" name="keyword" class="form-control filter-select" placeholder="Tìm dịch vụ ..." value="{{ $keyword ?? '' }}" id="keywordInput" style="padding: 6px 10px; font-size: 13px;">
-            
+
           </div>
 
           <!-- Filter by Type -->
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Reset opacity trước khi cập nhật
                     serviceGrid.style.opacity = '1';
                 }
-                
+
                 // Cập nhật nội dung
                 serviceGrid.innerHTML = data.html;
                 servicePagination.innerHTML = data.pagination || '';
@@ -599,29 +599,29 @@ function openVariantModal(button) {
     const serviceName = button.getAttribute('data-service-name');
     const variantsJson = button.getAttribute('data-variants');
     const variants = JSON.parse(variantsJson);
-    
+
     // Set service name
     document.querySelector('.service-name-display').textContent = serviceName;
-    
+
     // Clear previous variants
     const variantsList = document.querySelector('.variants-list');
     variantsList.innerHTML = '';
-    
+
     // Add variants
     variants.forEach((variant, index) => {
         const variantOption = document.createElement('div');
         variantOption.className = 'variant-option';
         variantOption.dataset.variantId = variant.id;
-        
+
         // Sử dụng giá đã giảm nếu có, nếu không thì dùng giá gốc
         const displayPrice = variant.finalPrice !== undefined ? variant.finalPrice : variant.price;
         const originalPrice = variant.originalPrice !== undefined ? variant.originalPrice : variant.price;
         const hasDiscount = variant.discount && variant.discount > 0;
-        
+
         const formattedPrice = new Intl.NumberFormat('vi-VN').format(displayPrice) + 'vnđ';
         const formattedOriginalPrice = hasDiscount ? new Intl.NumberFormat('vi-VN').format(originalPrice) + 'vnđ' : '';
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
-        
+
         // Build attributes HTML
         let attributesHTML = '';
         if (variant.attributes && variant.attributes.length > 0) {
@@ -633,7 +633,7 @@ function openVariantModal(button) {
             });
             attributesHTML += '</div>';
         }
-        
+
         // Build notes HTML
         let notesHTML = '';
         if (variant.notes) {
@@ -641,7 +641,7 @@ function openVariantModal(button) {
                 ${variant.notes}
             </div>`;
         }
-        
+
         // Build price HTML với discount
         let priceHTML = '';
         if (hasDiscount) {
@@ -650,14 +650,13 @@ function openVariantModal(button) {
                     <span style="text-decoration: line-through; color: #999; font-size: 12px;">${formattedOriginalPrice}</span>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span class="variant-price">${formattedPrice}</span>
-                        ${variant.discountTag ? `<span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600;">${variant.discountTag}</span>` : ''}
-                    </div>
+                        ${variant.discountTag ? `<span style="background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: #fff; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; box-shadow: 0 2px 4px rgba(255, 68, 68, 0.25); letter-spacing: 0.2px; white-space: nowrap;">${variant.discountTag}</span>` : ''}
                 </div>
             `;
         } else {
             priceHTML = `<span class="variant-price">${formattedPrice}</span>`;
         }
-        
+
         variantOption.innerHTML = `
             <div class="variant-header">
                 <div style="flex: 1;">
@@ -673,17 +672,17 @@ function openVariantModal(button) {
             ${attributesHTML}
             ${notesHTML}
         `;
-        
+
         // Click handler
         variantOption.addEventListener('click', function() {
             // Remove selected class from all
             document.querySelectorAll('.variant-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
-            
+
             // Add selected class to clicked
             this.classList.add('selected');
-            
+
             // Enable continue button
             const continueBtn = document.getElementById('continueBookingBtn');
             if (continueBtn) {
@@ -692,15 +691,15 @@ function openVariantModal(button) {
                 continueBtn.style.cursor = 'pointer';
             }
         });
-        
+
         variantsList.appendChild(variantOption);
-        
+
         // Select first variant by default
         if (index === 0) {
             variantOption.click();
         }
     });
-    
+
     // Show modal
     $('#variantSelectionModal').modal('show');
 }
@@ -739,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
         continueBtn.disabled = true;
         continueBtn.style.opacity = '0.5';
         continueBtn.style.cursor = 'not-allowed';
-        
+
         continueBtn.addEventListener('click', function() {
             const selectedVariant = document.querySelector('.variant-option.selected');
             if (selectedVariant) {
@@ -748,10 +747,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = bookingUrl;
             }
         });
-        
+
         modalBody.appendChild(continueBtn);
     }
-    
+
     // Reset modal when closed
     $('#variantSelectionModal').on('hidden.bs.modal', function() {
         document.querySelectorAll('.variant-option').forEach(opt => {
@@ -763,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function() {
             continueBtn.style.cursor = 'not-allowed';
         }
     });
-    
+
     // Add click handler for close button (backup)
     const closeBtn = document.querySelector('#variantSelectionModal .close');
     if (closeBtn) {
@@ -772,7 +771,7 @@ document.addEventListener('DOMContentLoaded', function() {
             closeVariantModal();
         });
     }
-    
+
     // Close modal when clicking outside (on backdrop)
     const modal = document.getElementById('variantSelectionModal');
     if (modal) {

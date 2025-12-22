@@ -452,7 +452,7 @@ class AppointmentService
             // Chỉ kiểm tra và ban nếu là khách hàng tự hủy (không phải admin/employee)
             // Kiểm tra SAU KHI hủy để đếm chính xác số lần hủy bao gồm cả lịch vừa hủy
             $wasBanned = false;
-            
+
             // Chỉ kiểm tra ban nếu user tồn tại (không phải guest)
             if ($user) {
                 $shouldCheckBan = !$user->isAdmin() && !$user->isEmployee();
@@ -476,7 +476,7 @@ class AppointmentService
 
     /**
      * Kiểm tra và ban tài khoản nếu hủy quá giới hạn.
-     * 
+     *
      * @return bool True nếu user bị ban, False nếu không
      */
     protected function checkAndBanUserIfNeeded($user)
@@ -847,6 +847,9 @@ class AppointmentService
 
             $appointment->update([
                 'user_id' => $data['user_id'] ?? $appointment->user_id,
+                'guest_name' => $data['guest_name'] ?? $appointment->guest_name,
+                'guest_phone' => $data['guest_phone'] ?? $appointment->guest_phone,
+                'guest_email' => $data['guest_email'] ?? $appointment->guest_email,
                 'employee_id' => $data['employee_id'] ?? $appointment->employee_id,
                 'status' => $data['status'] ?? $appointment->status,
                 'start_at' => $data['start_at'] ?? $appointment->start_at,

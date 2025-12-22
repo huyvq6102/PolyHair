@@ -106,9 +106,9 @@
                             </div>
 
                             <!-- Nút hành động chính -->
-                            <div class="d-grid gap-3">
+                            <div class="d-grid">
                                 <a href="{{ route('site.appointment.create') }}"
-                                    class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm text-decoration-none">
+                                    class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm text-decoration-none appointment-book-btn" style="margin-bottom: 24px;">
                                     <i class="fas fa-calendar-plus me-2"></i>Đặt lịch ngay
                                 </a>
                                 <a href="{{ route('profile.edit') }}"
@@ -362,7 +362,7 @@
             </div>
         @endif
 
-        <div class="row g-3" id="appointments-list">
+        <div class="row g-3" id="appointments-list" style="max-height: 800px; overflow-y: auto; padding-right: 10px;">
             @forelse($allAppointmentsForFilter as $appointment)
                 <div class="col-12 appointment-item" data-appointment-id="{{ $appointment->id }}" data-appointment-status="{{ $appointment->status ?? 'Chờ xử lý' }}">
                     <div class="card border shadow-sm h-100">
@@ -471,7 +471,7 @@
                                 <!-- Tab Lịch sử thanh toán -->
                                 <div class="tab-pane fade" id="payment-history" role="tabpanel">
                                     <h5 class="mb-4">Lịch sử thanh toán</h5>
-                                    <div class="list-group">
+                                    <div class="list-group" id="payment-history-list">
                                         @forelse($user->payments as $payment)
                                             <div class="list-group-item mb-3">
                                                 <div class="d-flex w-100 justify-content-between">
@@ -487,21 +487,29 @@
                                                     </p>
                                                     @php
                                                         $status = $payment->status ?? 'pending';
-                                                        $badgeClass = 'bg-secondary';
+                                                        $badgeStyle = '';
+                                                        $badgeIcon = '';
                                                         $statusText = 'Chờ xử lý';
 
                                                         if ($status == 'completed') {
-                                                            $badgeClass = 'bg-success';
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-check-circle me-1"></i>';
                                                             $statusText = 'Thành công';
                                                         } elseif ($status == 'failed') {
-                                                            $badgeClass = 'bg-danger';
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-times-circle me-1"></i>';
                                                             $statusText = 'Thất bại';
                                                         } elseif ($status == 'refunded') {
-                                                            $badgeClass = 'bg-warning';
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-undo me-1"></i>';
                                                             $statusText = 'Hoàn tiền';
+                                                            } else {
+                                                            // Chờ xử lý
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-clock me-1"></i>';
                                                         }
                                                     @endphp
-                                                    <span class="badge {{ $badgeClass }}">{{ $statusText }}</span>
+                                                    <span class="badge payment-status-badge" style="{{ $badgeStyle }}">{!! $badgeIcon !!}{{ $statusText }}</span>
                                                 </div>
 
                                                 @php
@@ -564,6 +572,87 @@
             color: #fff !important;
             font-weight: 600 !important;
         }
+        /* Style cho danh sách lịch hẹn - có thể cuộn */
+    #appointments-list {
+        max-height: 800px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    /* Custom scrollbar cho danh sách lịch hẹn */
+    #appointments-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #appointments-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    #appointments-list::-webkit-scrollbar-thumb {
+        background: #d8b26a;
+        border-radius: 10px;
+    }
+
+    #appointments-list::-webkit-scrollbar-thumb:hover {
+        background: #c9a055;
+    }
+
+    /* Style cho danh sách lịch sử thanh toán - có thể cuộn */
+    #payment-history-list {
+        max-height: 800px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    /* Custom scrollbar cho danh sách lịch sử thanh toán */
+    #payment-history-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #payment-history-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    #payment-history-list::-webkit-scrollbar-thumb {
+        background: #d8b26a;
+        border-radius: 10px;
+    }
+
+    #payment-history-list::-webkit-scrollbar-thumb:hover {
+        background: #c9a055;
+    }
+
+    /* Style cho badge trạng thái thanh toán */
+    .payment-status-badge {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        transition: all 0.3s ease;
+    }
+
+    .payment-status-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .payment-status-badge i {
+        font-size: 0.9em;
+    }
+
+    /* Style cho button Đặt lịch ngay */
+    .appointment-book-btn {
+        background-color: #d8b26a !important;
+        border-color: #d8b26a !important;
+        color: #fff !important;
+    }
+
+    .appointment-book-btn:hover {
+        background-color: #c9a055 !important;
+        border-color: #c9a055 !important;
+        color: #fff !important;
+    }
     </style>
 @endpush
 

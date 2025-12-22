@@ -203,7 +203,7 @@
                         <!-- Chọn dịch vụ -->
                         <div class="mb-2" style="margin-top: 15px;">
                             <h5 class="fw-semibold mb-2" style="background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px; margin-bottom: 8px;">
-                                2. DỊCH VỤ <span class="text-danger">*</span>
+                                2. Dịch vụ <span class="text-danger">*</span>
                             </h5>
 
                             @php
@@ -238,7 +238,7 @@
                                         if ($promo->status !== 'active') continue;
                                         if ($promo->start_date && $promo->start_date > $now) continue;
                                         if ($promo->end_date && $promo->end_date < $now) continue;
-                                        
+
                                         // Check usage_limit - if promotion has reached its limit, skip it
                                         if ($promo->usage_limit) {
                                             $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
@@ -246,7 +246,7 @@
                                                 continue; // Skip this promotion, use original price
                                             }
                                         }
-                                        
+
                                         // Check per_user_limit - if user has reached their limit, skip it
                                         // CHỈ đếm các PromotionUsage có appointment đã thanh toán
                                         if ($promo->per_user_limit) {
@@ -355,7 +355,7 @@
 
                                 // Get active promotions for automatic discount calculation
                                 $activePromotions = $activePromotions ?? collect();
-                                
+
                                 // Get services
                                 if (request('service_id')) {
                                     $serviceIds = is_array(request('service_id')) ? request('service_id') : [request('service_id')];
@@ -1005,7 +1005,7 @@
     .time-slot-btn.unavailable {
         position: relative;
     }
-    
+
     .time-slot-btn.unavailable[title]:hover::after {
         content: attr(title);
         position: absolute;
@@ -1368,16 +1368,17 @@
 
         console.log('Form initialization complete. Valid URL variants:', validUrlVariants);
 
-        // Khôi phục thông tin từ localStorage khi quay lại từ trang chọn dịch vụ
-        const savedFormData = localStorage.getItem('appointmentFormData');
-        let restoredEmployeeId = null;
-        let restoredAppointmentDate = null;
-
         // Kiểm tra xem user đã đăng nhập chưa
         const isLoggedIn = {{ auth()->check() ? 'true' : 'false' }};
         const currentUserName = '{{ auth()->user()->name ?? '' }}';
         const currentUserPhone = '{{ auth()->user()->phone ?? '' }}';
         const currentUserEmail = '{{ auth()->user()->email ?? '' }}';
+
+        // Khôi phục thông tin từ localStorage khi quay lại từ trang chọn dịch vụ
+        const savedFormData = localStorage.getItem('appointmentFormData');
+        let restoredEmployeeId = null;
+        let restoredAppointmentDate = null;
+
         // Nếu user đã đăng nhập, ưu tiên thông tin từ server (không khôi phục từ localStorage)
         // Chỉ khôi phục thông tin đặt lịch (employee, date, time) từ localStorage
         if (savedFormData) {
@@ -1418,7 +1419,7 @@
                     restoredEmployeeId = formData.employee_id;
                     // Enable input date nếu đã có employee
                 }
-                
+
                 // ✅ Tự động chọn employee từ query parameter nếu có
                 const urlParams = new URLSearchParams(window.location.search);
                 const employeeIdFromUrl = urlParams.get('employee_id');
@@ -1433,12 +1434,12 @@
                 @if(isset($savedDate) && isset($savedWordTimeId))
                     const savedDate = '{{ $savedDate }}';
                     const savedWordTimeId = '{{ $savedWordTimeId }}';
-                    
+
                     if (savedDate) {
                         $('#appointment_date').val(savedDate);
                         restoredAppointmentDate = savedDate;
                     }
-                    
+
                     if (savedWordTimeId) {
                         $('#word_time_id').val(savedWordTimeId);
                     }
@@ -1645,7 +1646,7 @@
 
         // ✅ Đã sửa: Không tự động mở dropdown, chỉ mở khi user click
         // Container sẽ được mở khi user click vào toggle button
-        
+
         // Load employees by service on page load
             loadEmployeesByService();
             loadEmployeesForCarousel();
@@ -1764,7 +1765,7 @@
                 const $slider = $('.employee-slider');
                 $slider.empty();
                 $slider.append('<div style="text-align: center; padding: 20px; color: #999; width: 100%;">Vui lòng chọn dịch vụ trước để hiển thị kỹ thuật viên phù hợp</div>');
-                
+
                 // Không reset employee_id nếu có trong URL
                 if (!hasEmployeeIdInUrl) {
                     $('#employee_id').val('');
@@ -1822,7 +1823,7 @@
                             // ✅ Tự động chọn employee từ URL (chỉ khi có trong URL, không tự chọn ngẫu nhiên)
                             const urlParams = new URLSearchParams(window.location.search);
                             const employeeIdFromUrl = urlParams.get('employee_id');
-                            
+
                             // Chỉ tự động chọn nếu có employee_id trong URL (không tự chọn ngẫu nhiên)
                             if (employeeIdFromUrl && employeeIdFromUrl !== '' && employeeIdFromUrl !== '0') {
                                 // Đợi một chút để DOM được render xong
@@ -1831,16 +1832,16 @@
                                     if (selectedEmployee.length) {
                                         // Set hidden input
                                         $('#employee_id').val(employeeIdFromUrl);
-                                        
+
                                         // Highlight employee
                                         $('.employee-item-btn').removeClass('selected');
                                         $('.employee-item-btn .employee-avatar-wrapper').css('border-color', '#ddd');
                                         selectedEmployee.addClass('selected');
                                         selectedEmployee.find('.employee-avatar-wrapper').css('border-color', '#007bff');
-                                        
+
                                         // Enable date input
                                         $('#appointment_date').prop('disabled', false);
-                                        
+
                                         // Trigger change để load time slots nếu đã có date
                                         $('#employee_id').trigger('change');
                                     }
@@ -1883,12 +1884,12 @@
         function toggleEmployeeContainer() {
             const container = $('#employeeContainer');
             const chevron = $('.employee-chevron');
-            
+
             // Kiểm tra trạng thái hiện tại của container
             const isVisible = container.is(':visible') && container.css('display') !== 'none';
-            
+
             console.log('Toggling employee container. Current state:', isVisible);
-            
+
             if (isVisible) {
                 // Đóng container
                 container.slideUp(300, function() {
@@ -1899,7 +1900,7 @@
                 // Luôn load employees khi mở container (để đảm bảo có dữ liệu mới nhất)
                 console.log('Opening employee container, loading employees...');
                 loadEmployeesForCarousel();
-                
+
                 // Mở container ngay lập tức
                 container.slideDown(300, function() {
                     chevron.css('transform', 'rotate(180deg)');
@@ -1907,7 +1908,7 @@
                 });
             }
         }
-        
+
         // Gắn event handler với nhiều cách để đảm bảo hoạt động
         $(document).ready(function() {
             // Cách 1: Gắn trực tiếp vào element
@@ -1919,7 +1920,7 @@
                 return false;
             });
         });
-        
+
         // Cách 2: Gắn với document.on (backup)
         $(document).off('click', '#employeeToggleBtn').on('click', '#employeeToggleBtn', function(e) {
             e.preventDefault();
@@ -2059,7 +2060,7 @@
         $('input[name="phone"]').on('blur', function() {
             const value = $(this).val();
             const phoneTrimmed = value ? String(value).trim() : '';
-            
+
             if (phoneTrimmed && phoneTrimmed.length > 0) {
                 // Validate format: phải đủ 10 số và bắt đầu bằng số 0
                 const phoneRegex = /^0\d{9}$/;
@@ -2092,7 +2093,7 @@
         $('#email').on('blur', function() {
             const value = $(this).val();
             const emailTrimmed = value ? String(value).trim() : '';
-            
+
             if (emailTrimmed && emailTrimmed.length > 0) {
                 // Kiểm tra email có chứa ký tự @
                 if (!emailTrimmed.includes('@')) {
@@ -2521,7 +2522,7 @@
                                     }
                                     return false;
                                 });
-                                
+
                                 // ✅ SỬA: Đảm bảo tooltip tự động ẩn khi mouse leave (CSS tooltip tự động ẩn)
                             } else {
                                 availableCount++;
@@ -2578,7 +2579,7 @@
                         if (currentlySelectedTime && currentlySelectedWordTimeId) {
                             setTimeout(function() {
                                 const $savedBtn = $('.time-slot-btn[data-time="' + currentlySelectedTime + '"]');
-                                
+
                                 if ($savedBtn.length) {
                                     // Kiểm tra xem slot có còn available không
                                     if (!$savedBtn.hasClass('unavailable')) {
@@ -2606,12 +2607,12 @@
                             const savedTimeSlot = response.time_slots.find(function(slot) {
                                 return slot.word_time_id == savedWordTimeId;
                             });
-                            
+
                             if (savedTimeSlot) {
                                 // Delay một chút để đảm bảo DOM đã render xong tất cả time slot buttons
                                 setTimeout(function() {
                                     const $savedBtn = $('.time-slot-btn[data-word-time-id="' + savedWordTimeId + '"]');
-                                    
+
                                     if ($savedBtn.length) {
                                         if (!$savedBtn.hasClass('unavailable')) {
                                             // Nếu slot available, click để highlight và set đầy đủ giá trị
@@ -2654,7 +2655,7 @@
                     $('.time-slot-container').hide();
 
                     let errorMessage = 'Không thể tải khung giờ. Vui lòng thử lại.';
-                    
+
                     // Xử lý các loại lỗi khác nhau
                     if (xhr.status === 422) {
                         // Validation error
@@ -2685,7 +2686,7 @@
                     } else if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
-                    
+
                     timeSlotMessage.text(errorMessage).show();
                     timeSlotHidden.val('');
                     wordTimeIdInput.val('');
@@ -2867,12 +2868,12 @@
                 $errorDiv.find('span').text(message);
                 $errorDiv.show();
             }
-            
+
             const $field = $('#' + fieldId);
             if ($field.length) {
                 $field.addClass('is-invalid');
             }
-            
+
             // Xử lý đặc biệt cho employee
             if (fieldId === 'employee') {
                 $('#employeeToggleBtn').css('color', '#dc3545');
@@ -2986,10 +2987,10 @@
             // Check employee - kiểm tra kỹ hơn
             const employeeId = $('#employee_id').val();
             const employeeIdTrimmed = employeeId ? String(employeeId).trim() : '';
-            const hasEmployeeId = employeeIdTrimmed && 
-                                 employeeIdTrimmed !== '' && 
-                                 employeeIdTrimmed !== '0' && 
-                                 employeeIdTrimmed !== 'null' && 
+            const hasEmployeeId = employeeIdTrimmed &&
+                                 employeeIdTrimmed !== '' &&
+                                 employeeIdTrimmed !== '0' &&
+                                 employeeIdTrimmed !== 'null' &&
                                  employeeIdTrimmed !== 'undefined' &&
                                  !isNaN(employeeIdTrimmed); // Phải là số
 
@@ -3322,7 +3323,7 @@
                                 }
                             }
                         });
-                        
+
                         // ✅ SỬA: Nếu có message từ server và không có errors array, hiển thị ở time_slot-error
                         if (xhr.responseJSON.message && (!xhr.responseJSON.errors || Object.keys(xhr.responseJSON.errors).length === 0)) {
                             const errorMessage = xhr.responseJSON.message;
@@ -3358,7 +3359,7 @@
                         // Hiển thị thông báo đỏ ở dưới phần chọn khung giờ thay vì alert
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             const errorMessage = xhr.responseJSON.message;
-                            
+
                             // Kiểm tra nếu message liên quan đến time slot
                             if (errorMessage.includes('khung giờ') || errorMessage.includes('nhân viên rảnh')) {
                                 // Hiển thị thông báo đỏ ở dưới phần chọn khung giờ
@@ -3366,7 +3367,7 @@
                                 if ($timeSlotError.length) {
                                     $timeSlotError.find('span').text(errorMessage);
                                     $timeSlotError.show();
-                                    
+
                                     // Scroll đến phần chọn khung giờ
                                     $('html, body').animate({
                                         scrollTop: $timeSlotError.offset().top - 100

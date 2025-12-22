@@ -20,13 +20,13 @@
         <form id="appointment-edit-form" action="{{ route('admin.appointments.update', $appointment->id) }}" method="POST" class="needs-validation" novalidate>
             @csrf
             <input type="hidden" name="_method" value="PUT" id="form-method-put">
-            
+
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="name">Tên khách hàng <span class="text-danger">*</span></label>
-                        <input type="text" name="name" id="name" value="{{ old('name', $appointment->user->name ?? $appointment->guest_name ?? '') }}" 
-                               class="form-control @error('name') is-invalid @enderror" 
+                        <input type="text" name="name" id="name" value="{{ old('name', $appointment->user->name ?? $appointment->guest_name ?? '') }}"
+                               class="form-control @error('name') is-invalid @enderror"
                                placeholder="Nhập tên khách hàng" required>
                         @error('name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -38,8 +38,8 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="phone">Số điện thoại <span class="text-danger">*</span></label>
-                        <input type="text" name="phone" id="phone" value="{{ old('phone', $appointment->user->phone ?? '') }}" 
-                               class="form-control @error('phone') is-invalid @enderror" 
+                        <input type="text" name="phone" id="phone" value="{{ old('phone', $appointment->user->phone ?? $appointment->guest_phone ?? '') }}"
+                               class="form-control @error('phone') is-invalid @enderror"
                                placeholder="Nhập số điện thoại" required>
                         @error('phone')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -54,8 +54,8 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" name="email" id="email" value="{{ old('email', $appointment->user->email ?? '') }}" 
-                               class="form-control @error('email') is-invalid @enderror" 
+                        <input type="email" name="email" id="email" value="{{ old('email', $appointment->user->email ?? $appointment->guest_email ?? '') }}"
+                               class="form-control @error('email') is-invalid @enderror"
                                placeholder="Nhập email">
                         @error('email')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -123,10 +123,10 @@
                                                     $originalPrice = $service->base_price ?? 0;
                                                 }
                                             }
-                                            
+
                                             // Giá sau giảm (price_snapshot) - đây là giá đã được áp dụng discount tự động
                                             $finalPrice = $detail->price_snapshot ?? $originalPrice;
-                                            
+
                                             // Tính discount = giá gốc - giá sau giảm
                                             $discountAmount = $originalPrice > 0 ? ($originalPrice - $finalPrice) : 0;
                                             $hasDiscount = $discountAmount > 0 && $originalPrice > 0;
@@ -180,7 +180,7 @@
                                         // Tính tổng giá gốc và tổng discount từ từng dịch vụ
                                         $totalOriginalPrice = 0;
                                         $totalServiceDiscount = 0; // Discount tự động từ promotion service-level
-                                        
+
                                         foreach ($appointment->appointmentDetails as $detail) {
                                             // Lấy giá gốc
                                             $originalPrice = 0;
@@ -205,20 +205,20 @@
                                                     $originalPrice = $service->base_price ?? 0;
                                                 }
                                             }
-                                            
+
                                             $finalPrice = $detail->price_snapshot ?? $originalPrice;
                                             $serviceDiscount = $originalPrice > 0 ? ($originalPrice - $finalPrice) : 0;
-                                            
+
                                             $totalOriginalPrice += $originalPrice;
                                             $totalServiceDiscount += $serviceDiscount;
                                         }
-                                        
+
                                         // Lấy promotion từ payment nếu có (order-level discount)
                                         $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->first();
                                         $orderLevelDiscount = 0;
                                         $promotionCode = null;
                                         $promotion = null;
-                                        
+
                                         if ($payment && $payment->promotion_id) {
                                             $promotion = \App\Models\Promotion::find($payment->promotion_id);
                                         } else {
@@ -228,7 +228,7 @@
                                                 $promotion = \App\Models\Promotion::find($promotionUsage->promotion_id);
                                             }
                                         }
-                                        
+
                                         // Tính order-level discount (áp dụng trên tổng giá gốc)
                                         if ($promotion && $promotion->apply_scope === 'order') {
                                             $promotionCode = $promotion->code;
@@ -241,10 +241,10 @@
                                                 $orderLevelDiscount = min($promotion->discount_amount ?? 0, $totalOriginalPrice);
                                             }
                                         }
-                                        
+
                                         // Tổng discount = discount từ service + discount từ order
                                         $totalDiscount = $totalServiceDiscount + $orderLevelDiscount;
-                                        
+
                                         // Tổng thanh toán = giá gốc - tổng discount
                                         $total = max(0, $totalOriginalPrice - $totalDiscount);
                                     @endphp
@@ -299,9 +299,9 @@
                                         @foreach($singleServices as $service)
                                             <div class="col-md-4 mb-2">
                                                 <div class="form-check">
-                                                    <input class="form-check-input service-checkbox" type="checkbox" 
-                                                           name="new_services[]" 
-                                                           value="single_{{ $service->id }}" 
+                                                    <input class="form-check-input service-checkbox" type="checkbox"
+                                                           name="new_services[]"
+                                                           value="single_{{ $service->id }}"
                                                            id="service_single_{{ $service->id }}"
                                                            data-type="single"
                                                            data-id="{{ $service->id }}"
@@ -316,7 +316,7 @@
                                     </div>
                                 </div>
                             @endif
-                            
+
                             <!-- Dịch vụ biến thể -->
                             @if($variantServices->count() > 0)
                                 <div class="mb-3">
@@ -328,9 +328,9 @@
                                                 @foreach($service->serviceVariants as $variant)
                                                     <div class="col-md-4 mb-2">
                                                         <div class="form-check">
-                                                            <input class="form-check-input service-checkbox" type="checkbox" 
-                                                                   name="new_services[]" 
-                                                                   value="variant_{{ $variant->id }}" 
+                                                            <input class="form-check-input service-checkbox" type="checkbox"
+                                                                   name="new_services[]"
+                                                                   value="variant_{{ $variant->id }}"
                                                                    id="service_variant_{{ $variant->id }}"
                                                                    data-type="variant"
                                                                    data-id="{{ $variant->id }}"
@@ -348,7 +348,7 @@
                                     @endforeach
                                 </div>
                             @endif
-                            
+
                             <!-- Combo -->
                             @if($combos->count() > 0)
                                 <div class="mb-3">
@@ -357,9 +357,9 @@
                                         @foreach($combos as $combo)
                                             <div class="col-md-4 mb-2">
                                                 <div class="form-check">
-                                                    <input class="form-check-input service-checkbox" type="checkbox" 
-                                                           name="new_services[]" 
-                                                           value="combo_{{ $combo->id }}" 
+                                                    <input class="form-check-input service-checkbox" type="checkbox"
+                                                           name="new_services[]"
+                                                           value="combo_{{ $combo->id }}"
                                                            id="service_combo_{{ $combo->id }}"
                                                            data-type="combo"
                                                            data-id="{{ $combo->id }}"
@@ -379,7 +379,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -404,8 +404,8 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="appointment_date">Ngày đặt</label>
-                        <input type="date" name="appointment_date" id="appointment_date" 
-                               value="{{ old('appointment_date', $appointment->start_at ? $appointment->start_at->format('Y-m-d') : '') }}" 
+                        <input type="date" name="appointment_date" id="appointment_date"
+                               value="{{ old('appointment_date', $appointment->start_at ? $appointment->start_at->format('Y-m-d') : '') }}"
                                class="form-control @error('appointment_date') is-invalid @enderror"
                                min="{{ date('Y-m-d') }}">
                         @error('appointment_date')
@@ -417,8 +417,8 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="appointment_time">Giờ đặt</label>
-                        <input type="time" name="appointment_time" id="appointment_time" 
-                               value="{{ old('appointment_time', $appointment->start_at ? $appointment->start_at->format('H:i') : '') }}" 
+                        <input type="time" name="appointment_time" id="appointment_time"
+                               value="{{ old('appointment_time', $appointment->start_at ? $appointment->start_at->format('H:i') : '') }}"
                                class="form-control @error('appointment_time') is-invalid @enderror">
                         @error('appointment_time')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -430,8 +430,8 @@
 
             <div class="form-group">
                 <label for="note">Mô tả</label>
-                <textarea name="note" id="note" rows="3" 
-                          class="form-control @error('note') is-invalid @enderror" 
+                <textarea name="note" id="note" rows="3"
+                          class="form-control @error('note') is-invalid @enderror"
                           placeholder="Nhập mô tả (nếu có)">{{ old('note', $appointment->note) }}</textarea>
                 @error('note')
                     <div class="invalid-feedback">{{ $message }}</div>
@@ -457,7 +457,7 @@
         font-style: italic;
         opacity: 0.6;
     }
-    
+
     #status option:not(:disabled) {
         color: #333 !important;
         background-color: #fff !important;
@@ -479,7 +479,7 @@
                     if (methodInput) {
                         methodInput.value = 'PUT';
                     }
-                    
+
                     // Kiểm tra xem có input _method nào khác không và xóa nếu không phải PUT
                     var allMethodInputs = mainForm.querySelectorAll('input[name="_method"]');
                     allMethodInputs.forEach(function(input) {
@@ -489,7 +489,7 @@
                             input.value = 'PUT';
                         }
                     });
-                    
+
                     if (mainForm.checkValidity() === false) {
                         event.preventDefault();
                         event.stopPropagation();
@@ -497,7 +497,7 @@
                     mainForm.classList.add('was-validated');
                 }, false);
             }
-            
+
             // Validate các form khác (form xóa dịch vụ)
             var otherForms = document.querySelectorAll('.needs-validation:not(#appointment-edit-form)');
             otherForms.forEach(function(form) {
@@ -511,31 +511,31 @@
             });
         }, false);
     })();
-    
+
     // Không cần lọc dịch vụ theo nhân viên - hiển thị tất cả dịch vụ
-    
+
     // Validation: Không cho phép chọn ngày giờ trong quá khứ
     $(document).ready(function() {
         const appointmentDateInput = $('#appointment_date');
         const appointmentTimeInput = $('#appointment_time');
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-        
+
         // Set min date to today
         appointmentDateInput.attr('min', todayStr);
-        
+
         // Validate date and time on change
         function validateDateTime() {
             const selectedDate = appointmentDateInput.val();
             const selectedTime = appointmentTimeInput.val();
-            
+
             if (!selectedDate || !selectedTime) {
                 return true; // Allow empty values
             }
-            
+
             const selectedDateTime = new Date(selectedDate + ' ' + selectedTime);
             const now = new Date();
-            
+
             // Check if selected datetime is in the past
             if (selectedDateTime < now) {
                 alert('Không được chọn ngày giờ trong quá khứ! Vui lòng chọn ngày giờ từ bây giờ trở đi.');
@@ -545,16 +545,16 @@
                 appointmentTimeInput.val(currentTime);
                 return false;
             }
-            
+
             return true;
         }
-        
+
         // Validate when date changes
         appointmentDateInput.on('change', function() {
             const selectedDate = $(this).val();
             const today = new Date();
             const todayStr = today.toISOString().split('T')[0];
-            
+
             // If selected date is today, set min time to current time
             if (selectedDate === todayStr) {
                 const now = new Date();
@@ -564,15 +564,15 @@
                 // If future date, remove min time restriction
                 appointmentTimeInput.removeAttr('min');
             }
-            
+
             validateDateTime();
         });
-        
+
         // Validate when time changes
         appointmentTimeInput.on('change', function() {
             validateDateTime();
         });
-        
+
         // Validate on form submit
         $('#appointment-edit-form').on('submit', function(e) {
             if (!validateDateTime()) {
@@ -580,15 +580,15 @@
                 return false;
             }
         });
-        
+
         // Logic kiểm soát trạng thái: chỉ cho phép chọn trạng thái theo thứ tự
         function updateStatusOptions() {
             const statusSelect = document.getElementById('status');
             if (!statusSelect) return;
-            
+
             // Lấy trạng thái hiện tại của appointment
             const currentStatus = '{{ $appointment->status }}';
-            
+
             // Định nghĩa thứ tự trạng thái
             const statusOrder = {
                 'Chờ xử lý': 0,
@@ -597,20 +597,20 @@
                 'Hoàn thành': 3,
                 'Đã hủy': -1 // Đặc biệt
             };
-            
+
             const currentOrder = statusOrder[currentStatus] ?? 0;
-            
+
             // Duyệt qua tất cả các option
             Array.from(statusSelect.options).forEach(function(option) {
                 const optionValue = option.value;
                 const optionOrder = statusOrder[optionValue] ?? 0;
-                
+
                 // Nếu là trạng thái hiện tại, luôn cho phép chọn (nhưng sẽ disable nếu cần)
                 if (optionValue === currentStatus) {
                     option.disabled = false;
                     return;
                 }
-                
+
                 // Nếu đang ở "Hoàn thành", không cho phép chọn trạng thái khác
                 if (currentOrder === 3) {
                     // Chỉ cho phép giữ nguyên trạng thái hiện tại
@@ -619,7 +619,7 @@
                     option.style.backgroundColor = '#f5f5f5';
                     return;
                 }
-                
+
                 // Nếu đang ở "Đã hủy", không cho phép chọn trạng thái khác
                 if (currentStatus === 'Đã hủy') {
                     option.disabled = true;
@@ -627,7 +627,7 @@
                     option.style.backgroundColor = '#f5f5f5';
                     return;
                 }
-                
+
                 // Logic chính: chỉ cho phép chọn trạng thái tiếp theo ngay (currentOrder + 1)
                 // Hoặc cho phép hủy từ các trạng thái: Chờ xử lý, Đã xác nhận, Đang thực hiện
                 if (optionValue === 'Đã hủy') {
@@ -650,15 +650,15 @@
                 }
             });
         }
-        
+
         // Gọi hàm khi trang load
         updateStatusOptions();
-        
+
         // Cập nhật lại khi user thay đổi trạng thái (để validate real-time)
         $('#status').on('change', function() {
             const selectedValue = $(this).val();
             const currentStatus = '{{ $appointment->status }}';
-            
+
             // Nếu user chọn trạng thái không hợp lệ, reset về trạng thái hiện tại
             const statusOrder = {
                 'Chờ xử lý': 0,
@@ -667,13 +667,13 @@
                 'Hoàn thành': 3,
                 'Đã hủy': -1
             };
-            
+
             const currentOrder = statusOrder[currentStatus] ?? 0;
             const selectedOrder = statusOrder[selectedValue] ?? 0;
-            
+
             // Kiểm tra hợp lệ
             let isValid = false;
-            
+
             if (selectedValue === currentStatus) {
                 isValid = true;
             } else if (currentOrder === 3) {
@@ -685,7 +685,7 @@
             } else if (selectedOrder === currentOrder + 1) {
                 isValid = true; // Chỉ cho phép chọn trạng thái tiếp theo ngay (không được nhảy cóc)
             }
-            
+
             if (!isValid) {
                 alert('Không thể chọn trạng thái này. Vui lòng chọn trạng thái theo thứ tự hoặc trạng thái hợp lệ.');
                 $(this).val(currentStatus);

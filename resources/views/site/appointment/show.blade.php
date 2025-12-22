@@ -257,6 +257,15 @@
                                                 | Thời lượng: {{ $detail->duration }} phút
                                             @endif
                                         </div>
+                                        @if(count($attributes) > 0)
+                                        <div class="service-attributes" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                            @foreach($attributes as $attr)
+                                            <span class="attribute-tag" style="background-color: #f0f0f0; color: #333; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                                                <strong>{{ $attr['name'] }}:</strong> {{ $attr['value'] }}
+                                            </span>
+                                            @endforeach
+                                        </div>
+                                        @endif
                                     </div>
                                     <div class="service-price">
                                         {{ number_format($detail->price_snapshot ?? 0, 0, ',', '.') }}đ
