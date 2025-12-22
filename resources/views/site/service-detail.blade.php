@@ -1,6 +1,6 @@
 @extends('layouts.site')
 
-@section('title', ($combo ?? $service)->name ?? 'Chi tiết dịch vụ')
+@section('title', $service->name ?? 'Chi tiết dịch vụ')
 
 @section('content')
     <div class="service-detail-page" style="min-height: calc(100vh - 120px); margin-top: 120px; padding: 0; background: transparent;">
@@ -13,25 +13,20 @@
                 </a>
             </div>
 
-            @if(isset($combo))
-                <!-- Combo Detail Section -->
-                @include('site.service-detail-combo', ['combo' => $combo])
-            @else
-                <!-- Service Detail Section -->
-                <!-- Banner Section với 3 ảnh ngẫu nhiên -->
-                <div class="container" style="padding: 20px 15px;">
+            <!-- Banner Section với 3 ảnh ngẫu nhiên -->
+            <div class="container" style="padding: 20px 15px;">
                 <div class="service-banner" style="background: linear-gradient(135deg, #bc913f 0%, #a88235 50%, #bc913f 100%); padding: 30px 20px; position: relative; overflow: hidden; border-radius: 20px;">
                     <!-- Decorative elements -->
-                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%); transform: skewX(-20deg);"></div>
-                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 100%); transform: skewX(20deg);"></div>
+                    <div style="position: absolute; left: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, rgba(188, 145, 63, 0.3) 0%, transparent 100%); transform: skewX(-20deg);"></div>
+                    <div style="position: absolute; right: 0; top: 0; width: 150px; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(188, 145, 63, 0.3) 100%); transform: skewX(20deg);"></div>
 
-                        <div style="position: relative; z-index: 1;">
-                            <!-- Title -->
-                            <div class="text-center mb-4">
-                                <h1 style="color: #fff; font-size: 32px; font-weight: 800; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 8px rgba(0,0,0,0.3);">
-                                    {{ $service->name ?? 'Chi tiết dịch vụ' }}
-                                </h1>
-                            </div>
+                    <div style="position: relative; z-index: 1;">
+                        <!-- Title -->
+                        <div class="text-center mb-4">
+                            <h1 style="color: #fff; font-size: 32px; font-weight: 800; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 8px rgba(0,0,0,0.3);">
+                                {{ $service->name ?? 'Chi tiết dịch vụ' }}
+                            </h1>
+                        </div>
 
                         <!-- 3 ảnh ngẫu nhiên từ các thư mục uốn, nhuộm, cắt, gội -->
                         <div class="banner-images" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 800px; margin: 0 auto;">
@@ -71,9 +66,9 @@
                                 }
                                 $bannerImages = array_slice($bannerImages, 0, 3);
                             @endphp
-                            @foreach($bannerImages as $bannerData)
+                            @foreach($bannerImages as $bannerImg)
                                 <div class="banner-image-card" style="border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.3); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
-                                    <img src="{{ asset('legacy/images/' . $bannerData['folder'] . '/' . $bannerData['image']) }}"
+                                    <img src="{{ asset('legacy/images/' . $bannerImg['folder'] . '/' . $bannerImg['image']) }}"
                                          alt="Banner image"
                                          style="width: 100%; height: 200px; object-fit: cover; display: block;"
                                          onerror="this.src='{{ asset('legacy/images/products/default.jpg') }}';">
@@ -95,23 +90,11 @@
                     </div>
                     <p class="process-desc" style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 40px; padding-left: 20px;">
                         @php
-                            // Ưu tiên kiểm tra tên dịch vụ trước, sau đó mới kiểm tra category
                             $categoryName = strtolower($service->category->name ?? '');
                             $serviceName = strtolower($service->name ?? '');
-                            
-                            // Kiểm tra tên dịch vụ trước (ưu tiên cao hơn)
-                            $isUonService = strpos($serviceName, 'uốn') !== false;
-                            $isNhuomService = strpos($serviceName, 'nhuộm') !== false;
-                            $isGoiService = strpos($serviceName, 'gội') !== false;
-                            $isCatService = strpos($serviceName, 'cắt') !== false;
-                            
-                            // Nếu tên dịch vụ không có, mới kiểm tra category
-                            if (!$isUonService && !$isNhuomService && !$isGoiService && !$isCatService) {
-                                $isUonService = strpos($categoryName, 'uốn') !== false;
-                                $isNhuomService = strpos($categoryName, 'nhuộm') !== false;
-                                $isGoiService = strpos($categoryName, 'gội') !== false;
-                                $isCatService = strpos($categoryName, 'cắt') !== false;
-                            }
+                            $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
+                            $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
+                            $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
                         @endphp
                         @if($isUonService)
                             Dịch vụ uốn tóc chuyên nghiệp mang đến kiểu tóc xoăn tự nhiên, bền đẹp và phù hợp với phong cách cá nhân.
@@ -119,35 +102,20 @@
                             Dịch vụ nhuộm tóc chuyên nghiệp mang đến màu sắc hiện đại, bền màu và phù hợp với phong cách cá nhân.
                         @elseif($isGoiService)
                             Dịch vụ gội đầu chuyên nghiệp mang đến trải nghiệm thư giãn và chăm sóc tóc toàn diện.
-                        @elseif($isCatService)
-                            Dịch vụ cắt tóc chuyên nghiệp mang đến kiểu tóc hiện đại, gọn gàng và phù hợp phong cách cá nhân.
                         @else
-                            Dịch vụ chuyên nghiệp mang đến trải nghiệm tốt nhất cho khách hàng.
+                            Dịch vụ cắt xả mang đến kiểu tóc hiện đại, gọn gàng và phù hợp phong cách cá nhân.
                         @endif
                     </p>
 
                     <div class="process-steps-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px;">
                         @php
                             // Kiểm tra category hoặc tên dịch vụ để quyết định hiển thị bước nào
-                            // Ưu tiên kiểm tra tên dịch vụ trước, sau đó mới kiểm tra category
                             $categoryName = strtolower($service->category->name ?? '');
                             $serviceName = strtolower($service->name ?? '');
-                            
-                            // Kiểm tra tên dịch vụ trước (ưu tiên cao hơn)
-                            $isUonService = strpos($serviceName, 'uốn') !== false;
-                            $isNhuomService = strpos($serviceName, 'nhuộm') !== false;
-                            $isGoiService = strpos($serviceName, 'gội') !== false;
-                            $isCatService = strpos($serviceName, 'cắt') !== false;
-                            
-                            // Nếu tên dịch vụ không có, mới kiểm tra category
-                            if (!$isUonService && !$isNhuomService && !$isGoiService && !$isCatService) {
-                                $isUonService = strpos($categoryName, 'uốn') !== false;
-                                $isNhuomService = strpos($categoryName, 'nhuộm') !== false;
-                                $isGoiService = strpos($categoryName, 'gội') !== false;
-                                $isCatService = strpos($categoryName, 'cắt') !== false;
-                            }
+                            $isGoiService = (strpos($categoryName, 'gội') !== false || strpos($serviceName, 'gội') !== false);
+                            $isNhuomService = (strpos($categoryName, 'nhuộm') !== false || strpos($serviceName, 'nhuộm') !== false);
+                            $isUonService = (strpos($categoryName, 'uốn') !== false || strpos($serviceName, 'uốn') !== false);
 
-                            // Ưu tiên cắt trước gội để tránh trường hợp category có cả "cắt" và "gội"
                             if ($isUonService) {
                                 // Dịch vụ uốn
                                 $steps = [
@@ -164,15 +132,6 @@
                                     ['image' => 'nhuomb3.jpg', 'title' => 'Xả tóc', 'folder' => 'nhuom'],
                                     ['image' => 'nhuomb4.jpg', 'title' => 'Sấy vuốt tạo kiểu', 'folder' => 'nhuom'],
                                 ];
-                            } elseif ($isCatService) {
-                                // Chỉ dịch vụ có chữ "cắt" mới hiển thị các bước cắt
-                                $steps = [
-                                    ['image' => 'catb1.png', 'title' => 'Tư vấn kiểu tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb2.png', 'title' => 'Cắt tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb3.png', 'title' => 'Xả sạch tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb4.png', 'title' => 'Sấy tóc', 'folder' => 'cat'],
-                                    ['image' => 'catb5.png', 'title' => 'Tạo kiểu tóc', 'folder' => 'cat'],
-                                ];
                             } elseif ($isGoiService) {
                                 // Dịch vụ gội
                                 $steps = [
@@ -183,8 +142,14 @@
                                     ['image' => 'goib5.png', 'title' => 'Sấy tóc', 'folder' => 'goi'],
                                 ];
                             } else {
-                                // Không hiển thị bước nào nếu không phải uốn, nhuộm, gội, cắt
-                                $steps = [];
+                                // Dịch vụ cắt (mặc định)
+                                $steps = [
+                                    ['image' => 'catb1.png', 'title' => 'Tư vấn kiểu tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb2.png', 'title' => 'Cắt tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb3.png', 'title' => 'Xả sạch tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb4.png', 'title' => 'Sấy tóc', 'folder' => 'cat'],
+                                    ['image' => 'catb5.png', 'title' => 'Tạo kiểu tóc', 'folder' => 'cat'],
+                                ];
                             }
                         @endphp
                         @foreach($steps as $step)
@@ -223,7 +188,7 @@
                         <!-- Service Variants -->
                         @if($service->serviceVariants && $service->serviceVariants->count() > 0)
                         <div class="col-xl-12" style="padding: 0 15px; margin-bottom: 30px;">
-                            <h3 style="color: #4A3600; font-size: 24px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #d8b26a; padding-bottom: 10px;">
+                            <h3 style="color: #bc913f; font-size: 24px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #bc913f; padding-bottom: 10px;">
                                 Các gói dịch vụ
                             </h3>
                             <div class="row" style="margin: 0 -8px;">
@@ -284,7 +249,6 @@
                     Đặt lịch ngay
                 </a>
             </div>
-            @endif
         </div>
     </div>
 @endsection

@@ -449,6 +449,22 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+    #status option:disabled {
+        color: #999 !important;
+        background-color: #f5f5f5 !important;
+        font-style: italic;
+        opacity: 0.6;
+    }
+    
+    #status option:not(:disabled) {
+        color: #333 !important;
+        background-color: #fff !important;
+    }
+</style>
+@endpush
+
 @push('scripts')
 <script>
     (function() {
@@ -562,6 +578,118 @@
             if (!validateDateTime()) {
                 e.preventDefault();
                 return false;
+            }
+        });
+        
+        // Logic kiểm soát trạng thái: chỉ cho phép chọn trạng thái theo thứ tự
+        function updateStatusOptions() {
+            const statusSelect = document.getElementById('status');
+            if (!statusSelect) return;
+            
+            // Lấy trạng thái hiện tại của appointment
+            const currentStatus = '{{ $appointment->status }}';
+            
+            // Định nghĩa thứ tự trạng thái
+            const statusOrder = {
+                'Chờ xử lý': 0,
+                'Đã xác nhận': 1,
+                'Đang thực hiện': 2,
+                'Hoàn thành': 3,
+                'Đã hủy': -1 // Đặc biệt
+            };
+            
+            const currentOrder = statusOrder[currentStatus] ?? 0;
+            
+            // Duyệt qua tất cả các option
+            Array.from(statusSelect.options).forEach(function(option) {
+                const optionValue = option.value;
+                const optionOrder = statusOrder[optionValue] ?? 0;
+                
+                // Nếu là trạng thái hiện tại, luôn cho phép chọn (nhưng sẽ disable nếu cần)
+                if (optionValue === currentStatus) {
+                    option.disabled = false;
+                    return;
+                }
+                
+                // Nếu đang ở "Hoàn thành", không cho phép chọn trạng thái khác
+                if (currentOrder === 3) {
+                    // Chỉ cho phép giữ nguyên trạng thái hiện tại
+                    option.disabled = true;
+                    option.style.color = '#999';
+                    option.style.backgroundColor = '#f5f5f5';
+                    return;
+                }
+                
+                // Nếu đang ở "Đã hủy", không cho phép chọn trạng thái khác
+                if (currentStatus === 'Đã hủy') {
+                    option.disabled = true;
+                    option.style.color = '#999';
+                    option.style.backgroundColor = '#f5f5f5';
+                    return;
+                }
+                
+                // Logic chính: chỉ cho phép chọn trạng thái tiếp theo ngay (currentOrder + 1)
+                // Hoặc cho phép hủy từ các trạng thái: Chờ xử lý, Đã xác nhận, Đang thực hiện
+                if (optionValue === 'Đã hủy') {
+                    // Cho phép hủy từ các trạng thái: Chờ xử lý, Đã xác nhận, Đang thực hiện
+                    if (currentOrder >= 0 && currentOrder <= 2) {
+                        option.disabled = false;
+                    } else {
+                        option.disabled = true;
+                        option.style.color = '#999';
+                        option.style.backgroundColor = '#f5f5f5';
+                    }
+                } else if (optionOrder === currentOrder + 1) {
+                    // Chỉ cho phép chọn trạng thái tiếp theo ngay (không được nhảy cóc)
+                    option.disabled = false;
+                } else {
+                    // Không cho phép chọn trạng thái có thứ tự thấp hơn, bằng, hoặc cao hơn quá nhiều
+                    option.disabled = true;
+                    option.style.color = '#999';
+                    option.style.backgroundColor = '#f5f5f5';
+                }
+            });
+        }
+        
+        // Gọi hàm khi trang load
+        updateStatusOptions();
+        
+        // Cập nhật lại khi user thay đổi trạng thái (để validate real-time)
+        $('#status').on('change', function() {
+            const selectedValue = $(this).val();
+            const currentStatus = '{{ $appointment->status }}';
+            
+            // Nếu user chọn trạng thái không hợp lệ, reset về trạng thái hiện tại
+            const statusOrder = {
+                'Chờ xử lý': 0,
+                'Đã xác nhận': 1,
+                'Đang thực hiện': 2,
+                'Hoàn thành': 3,
+                'Đã hủy': -1
+            };
+            
+            const currentOrder = statusOrder[currentStatus] ?? 0;
+            const selectedOrder = statusOrder[selectedValue] ?? 0;
+            
+            // Kiểm tra hợp lệ
+            let isValid = false;
+            
+            if (selectedValue === currentStatus) {
+                isValid = true;
+            } else if (currentOrder === 3) {
+                isValid = false; // Không cho phép thay đổi từ Hoàn thành
+            } else if (currentStatus === 'Đã hủy') {
+                isValid = false; // Không cho phép thay đổi từ Đã hủy
+            } else if (selectedValue === 'Đã hủy' && currentOrder >= 0 && currentOrder <= 2) {
+                isValid = true; // Cho phép hủy từ Chờ xử lý, Đã xác nhận, Đang thực hiện
+            } else if (selectedOrder === currentOrder + 1) {
+                isValid = true; // Chỉ cho phép chọn trạng thái tiếp theo ngay (không được nhảy cóc)
+            }
+            
+            if (!isValid) {
+                alert('Không thể chọn trạng thái này. Vui lòng chọn trạng thái theo thứ tự hoặc trạng thái hợp lệ.');
+                $(this).val(currentStatus);
+                updateStatusOptions();
             }
         });
     });

@@ -233,31 +233,33 @@ class ServiceController extends Controller
     }
 
     /**
-     * Display the specified service.
+     * Display the specified service or combo.
      */
     public function show($id)
     {
-        // Kiểm tra xem có phải combo không (kiểm tra combo trước vì combo và service có thể có ID khác nhau)
-        $combo = \App\Models\Combo::with([
-            'comboItems.service.category', 
-            'comboItems.serviceVariant.service.category', 
-            'category'
-        ])->find($id);
+        // Kiểm tra xem là service hay combo
+        $service = Service::find($id);
+        $combo = null;
         
-        if ($combo) {
-            // Đây là combo - truyền combo vào view
-            $relatedServices = collect();
-            $randomImages = [];
+        if (!$service) {
+            // Nếu không tìm thấy service, kiểm tra xem có phải combo không
+            $combo = Combo::with([
+                'category', 
+                'comboItems.service.category',
+                'comboItems.service.serviceVariants',
+                'comboItems.serviceVariant.service'
+            ])->find($id);
             
-            return view('site.service-detail', compact('combo', 'relatedServices', 'randomImages'));
+            if (!$combo) {
+                abort(404, 'Dịch vụ hoặc combo không tồn tại');
+            }
+            
+            // Render view cho combo
+            return view('site.combo-detail', compact('combo'));
         }
         
-        // Đây là service thông thường
-        try {
-            $service = $this->serviceService->getOne($id);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            abort(404, 'Dịch vụ không tồn tại');
-        }
+        // Xử lý service như cũ
+        $service = $this->serviceService->getOne($id);
         $relatedServices = $this->serviceService->getRelated($service->category_id ?? 0, $id);
         
         // Kiểm tra category hoặc tên dịch vụ để quyết định lấy ảnh từ thư mục nào

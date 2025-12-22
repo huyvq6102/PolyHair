@@ -433,11 +433,12 @@ class AppointmentController extends Controller
                 ->find($promotionId);
         }
 
-        // Get all active promotions for automatic discount calculation
+        // Get all active promotions for automatic discount calculation (only service-level promotions)
         $now = Carbon::now();
         $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
             ->whereNull('deleted_at')
             ->where('status', 'active')
+            ->where('apply_scope', 'service') // Chỉ lấy promotion có apply_scope = 'service'
             ->where(function($query) use ($now) {
                 $query->whereNull('start_date')
                     ->orWhere('start_date', '<=', $now);
@@ -508,11 +509,15 @@ class AppointmentController extends Controller
             }
             
             // Check per_user_limit - if user has reached their limit, skip it
+            // CHỈ đếm các PromotionUsage có appointment đã thanh toán
             if ($promo->per_user_limit) {
                 $userId = auth()->id();
                 if ($userId) {
                     $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
                         ->where('user_id', $userId)
+                        ->whereHas('appointment', function($query) {
+                            $query->where('status', 'Đã thanh toán');
+                        })
                         ->count();
                     if ($userUsage >= $promo->per_user_limit) {
                         continue; // Skip this promotion, use original price
@@ -530,7 +535,8 @@ class AppointmentController extends Controller
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                if ($promo->apply_scope === 'order' || $applyToAll) {
+                // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc dịch vụ có trong danh sách
+                if ($applyToAll) {
                     $applies = true;
                 } elseif ($promo->services && $promo->services->contains('id', $item->id)) {
                     $applies = true;
@@ -543,7 +549,8 @@ class AppointmentController extends Controller
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                if ($promo->apply_scope === 'order' || $applyToAll) {
+                // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc variant có trong danh sách
+                if ($applyToAll) {
                     $applies = true;
                 } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
                     $applies = true;
@@ -558,7 +565,8 @@ class AppointmentController extends Controller
                     (($promo->services ? $promo->services->count() : 0) +
                      ($promo->combos ? $promo->combos->count() : 0) +
                      ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-                if ($promo->apply_scope === 'order' || $applyToAll) {
+                // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc combo có trong danh sách
+                if ($applyToAll) {
                     $applies = true;
                 } elseif ($promo->combos && $promo->combos->contains('id', $item->id)) {
                     $applies = true;
@@ -585,9 +593,15 @@ class AppointmentController extends Controller
                 }
             }
         }
-
+        
         $finalPrice = max(0, $originalPrice - $discount);
-
+        \Log::info('Final price :' . json_encode([
+            'originalPrice' => $originalPrice,
+            'discount' => $discount,
+            'finalPrice' => $finalPrice > 0 ? $finalPrice : $originalPrice,
+            'promotion' => $promotion
+        ]));
+        
         return [
             'originalPrice' => $originalPrice,
             'discount' => $discount,
@@ -696,7 +710,7 @@ class AppointmentController extends Controller
                 'combo_id' => $validated['combo_id'] ?? [],
                 'raw_request' => $request->all(),
             ]);
-
+    
             // Process service variants if selected (priority: variants over service/combo)
             // IMPORTANT: Only process the service_variants that were actually selected
             if (!empty($validated['service_variants'])) {
@@ -723,7 +737,7 @@ class AppointmentController extends Controller
                     'variant_ids' => $variantIds,
                     'count' => count($variantIds),
                 ]);
-
+                
                 foreach ($variantIds as $variantId) {
                     try {
                         $variant = \App\Models\ServiceVariant::with('service')->findOrFail($variantId);
@@ -732,6 +746,17 @@ class AppointmentController extends Controller
                         // Calculate discount for this variant
                         $discountResult = $this->calculateDiscountForItem($variant, 'variant', $activePromotions);
                         $finalPrice = $discountResult['finalPrice'];
+                        
+                        // Log để debug
+                        \Log::info('Appointment store - Variant discount calculation', [
+                            'variant_id' => $variantId,
+                            'variant_name' => $variant->name,
+                            'original_price' => $variant->price,
+                            'discount' => $discountResult['discount'],
+                            'final_price' => $finalPrice,
+                            'promotion_id' => $discountResult['promotion']->id ?? null,
+                            'active_promotions_count' => $activePromotions->count(),
+                        ]);
 
                         $serviceVariantData[] = [
                             'service_variant_id' => $variantId,
@@ -794,7 +819,6 @@ class AppointmentController extends Controller
                     ];
                 }
             }
-
             // Process services if selected
             if (!empty($validated['service_id'])) {
                 // Ensure it's an array and filter out any empty/null values
@@ -813,6 +837,7 @@ class AppointmentController extends Controller
 
                     // Calculate discount for this service
                     $discountResult = $this->calculateDiscountForItem($service, 'service', $activePromotions);
+                       
                     $finalPrice = $discountResult['finalPrice'];
 
                     $serviceVariantData[] = [
@@ -911,6 +936,16 @@ class AppointmentController extends Controller
                 'details_count' => $appointment->appointmentDetails->count(),
                 'expected_count' => count($serviceVariantData),
             ]);
+
+            // Khi lấy được thông tin discount thì sẽ save giữ liệu vào bảng promotion_usage
+            if ($discountResult['discount'] > 0) {
+                \App\Models\PromotionUsage::create([
+                    'promotion_id' => $discountResult['promotion']->id,
+                    'user_id' => $user ? $user->id : null,
+                    'appointment_id' => $appointment->id,
+                    'used_at' => Carbon::now(),
+                ]);
+            }
 
             // Verify appointment details count matches expected
             if ($appointment->appointmentDetails->count() !== count($serviceVariantData)) {
@@ -1079,14 +1114,14 @@ class AppointmentController extends Controller
             'reviews'
         ])->findOrFail($id);
 
-        // Calculate total price (price_snapshot already includes discount)
-        $totalPrice = 0;
+        // Calculate total price (price_snapshot already includes service-level discount)
+        $totalAfterServiceLevel = 0;
         $totalOriginalPrice = 0;
-        $totalDiscount = 0;
+        $serviceLevelDiscount = 0;
         
         foreach ($appointment->appointmentDetails as $detail) {
             $priceAfterDiscount = $detail->price_snapshot ?? 0;
-            $totalPrice += $priceAfterDiscount;
+            $totalAfterServiceLevel += $priceAfterDiscount;
             
             // Calculate original price and discount for display
             $originalPrice = 0;
@@ -1097,14 +1132,34 @@ class AppointmentController extends Controller
             } elseif ($detail->serviceVariant && $detail->serviceVariant->service && $detail->serviceVariant->service->base_price) {
                 // Fallback: get from parent service
                 $originalPrice = $detail->serviceVariant->service->base_price;
+            } elseif ($detail->notes) {
+                // For service without variant
+                $service = \App\Models\Service::where('name', $detail->notes)->first();
+                if ($service) {
+                    $originalPrice = $service->base_price ?? 0;
+                } else {
+                    $originalPrice = $priceAfterDiscount;
+                }
             } else {
                 // If we can't determine original price, use price_snapshot (no discount was applied)
                 $originalPrice = $priceAfterDiscount;
             }
             
             $totalOriginalPrice += $originalPrice;
-            $totalDiscount += max(0, $originalPrice - $priceAfterDiscount);
+            $serviceLevelDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
+        
+        // Tính order-level discount từ Payment (giống admin)
+        $orderLevelDiscount = 0;
+        $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->orderBy('created_at', 'desc')->first();
+        if ($payment && $payment->total > 0 && $totalAfterServiceLevel > 0) {
+            // Order-level discount = tổng sau service-level discount - tổng trong payment
+            $orderLevelDiscount = max(0, $totalAfterServiceLevel - $payment->total);
+        }
+        
+        // Tổng thanh toán cuối cùng
+        $totalPrice = max(0, $totalAfterServiceLevel - $orderLevelDiscount);
+        $totalDiscount = $serviceLevelDiscount + $orderLevelDiscount;
 
         // Check if user can review (appointment completed and not reviewed yet)
         $canReview = false;
@@ -1133,7 +1188,7 @@ class AppointmentController extends Controller
             'promotionUsages.promotion'
         ])->findOrFail($id);
 
-        // Tính tổng tiền từ appointment details (price_snapshot đã bao gồm discount tự động)
+        // Tính tổng tiền từ appointment details (price_snapshot đã bao gồm service-level discount)
         $subtotal = 0;
         $totalOriginalPrice = 0;
         $serviceLevelDiscount = 0; // Discount từ service-level promotions (đã áp dụng vào price_snapshot)
@@ -1148,21 +1203,29 @@ class AppointmentController extends Controller
                 $originalPrice = $detail->serviceVariant->price ?? 0;
             } elseif ($detail->combo) {
                 $originalPrice = $detail->combo->price ?? 0;
-            } else {
+            } elseif ($detail->notes) {
                 // For service without variant
-                $originalPrice = $priceAfterDiscount; // Fallback
+                $service = \App\Models\Service::where('name', $detail->notes)->first();
+                if ($service) {
+                    $originalPrice = $service->base_price ?? 0;
+                } else {
+                    $originalPrice = $priceAfterDiscount;
+                }
+            } else {
+                // Fallback
+                $originalPrice = $priceAfterDiscount;
             }
             
             $totalOriginalPrice += $originalPrice;
             $serviceLevelDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
 
-        // Tính tổng giảm giá từ order-level promotions (nếu có)
+        // Tính order-level discount từ Payment (giống admin)
         $orderLevelPromotionAmount = 0;
-        foreach ($appointment->promotionUsages as $usage) {
-            if ($usage->promotion && $usage->promotion->apply_scope === 'order') {
-                $orderLevelPromotionAmount += $usage->discount_amount ?? 0;
-            }
+        $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->orderBy('created_at', 'desc')->first();
+        if ($payment && $payment->total > 0 && $subtotal > 0) {
+            // Order-level discount = tổng sau service-level discount - tổng trong payment
+            $orderLevelPromotionAmount = max(0, $subtotal - $payment->total);
         }
 
         // Tính tổng sau giảm giá (đã bao gồm service-level discount trong price_snapshot)
