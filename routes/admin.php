@@ -52,7 +52,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
 
     // Promotions (View Only for Staff, Full CRUD for Admin)
     Route::get('promotions', [PromotionController::class, 'index'])->name('promotions.index');
-    Route::get('promotions/{id}', [PromotionController::class, 'show'])->name('promotions.show');
 
     // Payments (Accessible by Staff)
     Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
@@ -111,6 +110,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
         Route::resource('news', NewsController::class);
 
         // Promotions (Admin Only - Full CRUD)
+        // IMPORTANT: Specific routes (create, trash) must come BEFORE parameterized routes ({id})
         Route::get('promotions/trash', [PromotionController::class, 'trash'])->name('promotions.trash');
         Route::get('promotions/create', [PromotionController::class, 'create'])->name('promotions.create');
         Route::post('promotions', [PromotionController::class, 'store'])->name('promotions.store');
@@ -140,6 +140,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
 
     // Employees Management (View Only for Staff)
     Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+    
+    // Promotions show route (accessible by Staff - must come AFTER admin routes to avoid conflict with create/edit)
+    Route::get('promotions/{id}', [PromotionController::class, 'show'])->name('promotions.show');
 });
 
 // Employee appointment routes (accessible by employees only)

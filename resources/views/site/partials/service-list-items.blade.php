@@ -31,11 +31,15 @@
       }
       
       // Check per_user_limit - if user has reached their limit, skip it
+      // CHỈ đếm các PromotionUsage có appointment đã thanh toán
       if ($promo->per_user_limit) {
         $userId = auth()->id();
         if ($userId) {
           $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
             ->where('user_id', $userId)
+            ->whereHas('appointment', function($query) {
+                $query->where('status', 'Đã thanh toán');
+            })
             ->count();
           if ($userUsage >= $promo->per_user_limit) {
             continue; // Skip this promotion, use original price
@@ -53,7 +57,8 @@
           (($promo->services ? $promo->services->count() : 0) +
            ($promo->combos ? $promo->combos->count() : 0) +
            ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-        if ($promo->apply_scope === 'order' || $applyToAll) {
+        // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc dịch vụ có trong danh sách
+        if ($applyToAll) {
           $applies = true;
         } elseif (isset($item['id']) && $promo->services && $promo->services->contains('id', $item['id'])) {
           $applies = true;
@@ -66,7 +71,8 @@
           (($promo->services ? $promo->services->count() : 0) +
            ($promo->combos ? $promo->combos->count() : 0) +
            ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-        if ($promo->apply_scope === 'order' || $applyToAll) {
+        // Giống logic ở trang chủ: đơn giản và rõ ràng
+        if ($applyToAll) {
           $applies = true;
         } elseif (isset($item['id']) && $promo->serviceVariants && $promo->serviceVariants->contains('id', $item['id'])) {
           $applies = true;
@@ -79,7 +85,8 @@
           (($promo->services ? $promo->services->count() : 0) +
            ($promo->combos ? $promo->combos->count() : 0) +
            ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
-        if ($promo->apply_scope === 'order' || $applyToAll) {
+        // Vì đã filter apply_scope === 'service' ở trên, chỉ cần kiểm tra applyToAll hoặc combo có trong danh sách
+        if ($applyToAll) {
           $applies = true;
         } elseif (isset($item['id']) && $promo->combos && $promo->combos->contains('id', $item['id'])) {
           $applies = true;
@@ -124,29 +131,64 @@
 @endphp
 @forelse($items as $item)
   @php
-    // Tính discount
-    $itemDiscount = calculateDiscountForItem($item, $item['type'], $activePromotions ?? collect());
-    $displayPrice = $itemDiscount['finalPrice'] > 0 ? $itemDiscount['finalPrice'] : $item['price'];
+    // Tính discount - đặc biệt xử lý service_variant
+    $itemDiscount = null;
+    $displayPrice = 0;
+    
+    if ($item['type'] == 'service_variant' && isset($item['serviceVariants']) && $item['serviceVariants']->count() > 0) {
+      // Nếu là service có variants, tính discount cho từng variant và lấy giá tốt nhất
+      $bestPrice = null;
+      $bestDiscount = null;
+      $bestOriginalPrice = null;
+      
+      $activeVariants = $item['serviceVariants']->where('is_active', true);
+      if ($activeVariants->count() == 0) {
+        $activeVariants = $item['serviceVariants'];
+      }
+      
+      foreach ($activeVariants as $variant) {
+        // Tính discount cho variant này
+        $variantDiscount = calculateDiscountForItem([
+          'id' => $variant->id,
+          'price' => $variant->price,
+        ], 'service_variant', $activePromotions ?? collect());
+        
+        $variantFinalPrice = $variantDiscount['finalPrice'] > 0 ? $variantDiscount['finalPrice'] : $variant->price;
+        
+        if ($bestPrice === null || $variantFinalPrice < $bestPrice) {
+          $bestPrice = $variantFinalPrice;
+          $bestDiscount = $variantDiscount;
+          $bestOriginalPrice = $variantDiscount['originalPrice'];
+        }
+      }
+      
+      $itemDiscount = $bestDiscount;
+      $displayPrice = $bestPrice ?? $item['price'];
+    } else {
+      // Tính discount bình thường cho service_single hoặc combo
+      $itemDiscount = calculateDiscountForItem($item, $item['type'], $activePromotions ?? collect());
+      $displayPrice = $itemDiscount['finalPrice'] > 0 ? $itemDiscount['finalPrice'] : $item['price'];
+    }
     
     // Format giá tiền
     $formattedPrice = number_format($displayPrice, 0, ',', '.') . 'vnđ';
-    $formattedOriginalPrice = $itemDiscount['discount'] > 0 ? number_format($itemDiscount['originalPrice'], 0, ',', '.') . 'vnđ' : '';
+    $formattedOriginalPrice = ($itemDiscount['discount'] ?? 0) > 0 ? number_format($itemDiscount['originalPrice'] ?? $item['price'], 0, ',', '.') . 'vnđ' : '';
 
     // Đường dẫn ảnh
     $imagePath = $item['image']
         ? asset('legacy/images/products/' . $item['image'])
         : asset('legacy/images/products/default.jpg');
 
-    // Badge type
+    // Badge type - giống như trang chủ
     if ($item['type'] == 'service_single') {
-      $typeBadge = 'Dịch vụ lẻ';
-      $typeClass = 'badge-primary';
+      $typeBadge = 'DỊCH VỤ LẺ';
+      $typeClass = 'badge-service-single'; // Màu vàng như trang chủ
     } elseif ($item['type'] == 'service_variant') {
-      $typeBadge = 'Gói dịch vụ';
-      $typeClass = 'badge-info';
+      $typeBadge = 'GÓI DỊCH VỤ';
+      $typeClass = 'badge-service-package'; // Màu xanh như trang chủ
     } else {
-      $typeBadge = 'Combo';
-      $typeClass = 'badge-success';
+      $typeBadge = 'COMBO';
+      $typeClass = 'badge-combo';
     }
 
     // Tạo booking params cho nút đặt lịch
@@ -177,10 +219,20 @@
           ];
         }
         
+        // Tính discount cho variant này để hiển thị trong modal
+        $variantDiscount = calculateDiscountForItem([
+          'id' => $variant->id,
+          'price' => $variant->price,
+        ], 'service_variant', $activePromotions ?? collect());
+        
         $variantsData[] = [
           'id' => $variant->id,
           'name' => $variant->name,
-          'price' => $variant->price,
+          'price' => $variant->price, // Giá gốc
+          'originalPrice' => $variantDiscount['originalPrice'], // Giá gốc
+          'finalPrice' => $variantDiscount['finalPrice'], // Giá đã giảm
+          'discount' => $variantDiscount['discount'], // Số tiền giảm
+          'discountTag' => $variantDiscount['discountTag'], // Badge giảm giá
           'duration' => $variant->duration,
           'is_default' => $variant->is_default ?? false,
           'attributes' => $attributes,
@@ -199,9 +251,10 @@
   <div class="svc-card" style="position: relative;">
     <a class="svc-img" href="{{ $item['link'] }}" style="position: relative;">
       <img src="{{ $imagePath }}" alt="{{ $item['name'] }}">
-      <span class="badge {{ $typeClass }} position-absolute" style="top: 10px; right: 10px; z-index: 5;">{{ $typeBadge }}</span>
-      @if($itemDiscount['discount'] > 0)
-        <span style="position: absolute; top: 8px; left: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ $itemDiscount['discountTag'] }}</span>
+      <!-- Badge loại dịch vụ - góc trên bên phải -->
+      <span class="badge {{ $typeClass }} position-absolute" style="top: 10px; right: 10px; z-index: 5; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">{{ $typeBadge }}</span>
+      @if(($itemDiscount['discount'] ?? 0) > 0)
+        <span style="position: absolute; top: 8px; left: 8px; background: #ff4444; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">{{ $itemDiscount['discountTag'] ?? '' }}</span>
       @endif
     </a>
     <div class="svc-body">
@@ -210,7 +263,7 @@
         <div class="svc-price" style="display: flex; flex-direction: column; gap: 3px;">
           <div style="font-size: 11px; color: #666;">Giá từ:</div>
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            @if($itemDiscount['discount'] > 0)
+            @if(($itemDiscount['discount'] ?? 0) > 0)
               <span style="text-decoration: line-through; color: #999; font-size: 12px;">{{ $formattedOriginalPrice }}</span>
               <span style="color: #BC9321; font-weight: 700; font-size: 14px;">{{ $formattedPrice }}</span>
             @else
@@ -240,3 +293,24 @@
     <p>Chưa có dịch vụ hoặc combo nào.</p>
   </div>
 @endforelse
+
+<style>
+/* Badge styles giống trang chủ - màu sắc chính xác */
+.badge-service-single {
+  background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 4px rgba(216, 178, 106, 0.3) !important;
+}
+
+.badge-service-package {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3) !important;
+}
+
+.badge-combo {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3) !important;
+}
+</style>
