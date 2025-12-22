@@ -87,7 +87,7 @@
               if ($promo->status !== 'active') continue;
               if ($promo->start_date && $promo->start_date > $now) continue;
               if ($promo->end_date && $promo->end_date < $now) continue;
-              
+
               // Check usage_limit - if promotion has reached its limit, skip it
               if ($promo->usage_limit) {
                 $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
@@ -95,7 +95,7 @@
                   continue; // Skip this promotion, use original price
                 }
               }
-              
+
               // Check per_user_limit - if user has reached their limit, skip it
               // CHỈ đếm các PromotionUsage có appointment đã thanh toán
               if ($promo->per_user_limit) {
@@ -198,26 +198,26 @@
             $bestPrice = null;
             $bestDiscount = null;
             $bestOriginalPrice = null;
-            
+
             if ($service->serviceVariants && $service->serviceVariants->count() > 0) {
               // Nếu có variants, tính discount cho từng variant và lấy giá tốt nhất
               foreach ($service->serviceVariants->where('is_active', true) as $variant) {
                 $variantDiscount = calculateDiscountForService($variant, 'variant', $activePromotions ?? collect());
                 $variantFinalPrice = $variantDiscount['finalPrice'] > 0 ? $variantDiscount['finalPrice'] : $variant->price;
-                
+
                 if ($bestPrice === null || $variantFinalPrice < $bestPrice) {
                   $bestPrice = $variantFinalPrice;
                   $bestDiscount = $variantDiscount;
                   $bestOriginalPrice = $variantDiscount['originalPrice'];
                 }
               }
-              
+
               // Nếu không có variant active, lấy từ tất cả variants
               if ($bestPrice === null) {
                 foreach ($service->serviceVariants as $variant) {
                   $variantDiscount = calculateDiscountForService($variant, 'variant', $activePromotions ?? collect());
                   $variantFinalPrice = $variantDiscount['finalPrice'] > 0 ? $variantDiscount['finalPrice'] : $variant->price;
-                  
+
                   if ($bestPrice === null || $variantFinalPrice < $bestPrice) {
                     $bestPrice = $variantFinalPrice;
                     $bestDiscount = $variantDiscount;
@@ -232,14 +232,14 @@
               $bestDiscount = $serviceDiscount;
               $bestOriginalPrice = $serviceDiscount['originalPrice'];
             }
-            
+
             // Fallback nếu không có giá
             if ($bestPrice === null) {
               $bestPrice = $service->base_price ?? 0;
               $bestDiscount = ['discount' => 0, 'discountTag' => '', 'originalPrice' => $bestPrice];
               $bestOriginalPrice = $bestPrice;
             }
-            
+
             $displayPrice = $bestPrice;
             $serviceDiscount = $bestDiscount;
 
@@ -259,7 +259,7 @@
             $bookingParams = [];
             $hasVariants = false;
             $variantsData = [];
-            
+
             if ($service->serviceVariants && $service->serviceVariants->count() > 0) {
                 $hasVariants = true;
                 // Lấy danh sách variants active để hiển thị trong modal
@@ -272,7 +272,7 @@
                     if (!$variant->relationLoaded('variantAttributes')) {
                         $variant->load('variantAttributes');
                     }
-                    
+
                     $attributes = [];
                     foreach ($variant->variantAttributes as $attr) {
                         $attributes[] = [
@@ -280,10 +280,10 @@
                             'value' => $attr->attribute_value,
                         ];
                     }
-                    
+
                     // Tính discount cho variant này
                     $variantDiscount = calculateDiscountForService($variant, 'variant', $activePromotions ?? collect());
-                    
+
                     $variantsData[] = [
                         'id' => $variant->id,
                         'name' => $variant->name,
@@ -330,10 +330,10 @@
                 </div>
               </div>
               <div class="svc-right">
-                <span class="svc-rating">5 ★ Đánh giá</span>
+                <!-- <span class="svc-rating">5 ★ Đánh giá</span> -->
                 @if($hasVariants)
-                  <a class="svc-book select-variant-btn" 
-                     href="#" 
+                  <a class="svc-book select-variant-btn"
+                     href="#"
                      data-service-name="{{ $service->name }}"
                      data-variants="{{ json_encode($variantsData) }}"
                      onclick="event.preventDefault(); openVariantModal(this);">
@@ -511,7 +511,7 @@
                 <div class="shine-card-img">
                     <img src="https://storage.30shine.com/web/v4/images/shine-collection/mobile/pc_04.jpg" alt="ANH TRAI SAY HAIR">
                 </div>
-        
+
             </div>
 
             <div class="shine-collection-card">
@@ -708,29 +708,29 @@ function openVariantModal(button) {
     const serviceName = button.getAttribute('data-service-name');
     const variantsJson = button.getAttribute('data-variants');
     const variants = JSON.parse(variantsJson);
-    
+
     // Set service name
     document.querySelector('.service-name-display').textContent = serviceName;
-    
+
     // Clear previous variants
     const variantsList = document.querySelector('.variants-list');
     variantsList.innerHTML = '';
-    
+
     // Add variants
     variants.forEach((variant, index) => {
         const variantOption = document.createElement('div');
         variantOption.className = 'variant-option';
         variantOption.dataset.variantId = variant.id;
-        
+
         // Tính giá hiển thị - sử dụng finalPrice nếu có discount, nếu không thì dùng price
         const displayPrice = variant.finalPrice || variant.price;
         const originalPrice = variant.originalPrice || variant.price;
         const hasDiscount = variant.discount && variant.discount > 0;
-        
+
         const formattedPrice = new Intl.NumberFormat('vi-VN').format(displayPrice) + 'vnđ';
         const formattedOriginalPrice = hasDiscount ? new Intl.NumberFormat('vi-VN').format(originalPrice) + 'vnđ' : '';
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
-        
+
         // Build price HTML - hiển thị giá gốc (strikethrough) và giá sau discount
         let priceHTML = '';
         if (hasDiscount) {
@@ -752,7 +752,7 @@ function openVariantModal(button) {
                 </div>
             `;
         }
-        
+
         // Build attributes HTML
         let attributesHTML = '';
         if (variant.attributes && variant.attributes.length > 0) {
@@ -764,7 +764,7 @@ function openVariantModal(button) {
             });
             attributesHTML += '</div>';
         }
-        
+
         // Build notes HTML
         let notesHTML = '';
         if (variant.notes) {
@@ -772,7 +772,7 @@ function openVariantModal(button) {
                 ${variant.notes}
             </div>`;
         }
-        
+
         variantOption.innerHTML = `
             <div class="variant-header">
                 <div style="flex: 1;">
@@ -785,17 +785,17 @@ function openVariantModal(button) {
             ${attributesHTML}
             ${notesHTML}
         `;
-        
+
         // Click handler
         variantOption.addEventListener('click', function() {
             // Remove selected class from all
             document.querySelectorAll('.variant-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
-            
+
             // Add selected class to clicked
             this.classList.add('selected');
-            
+
             // Enable continue button
             const continueBtn = document.getElementById('continueBookingBtn');
             if (continueBtn) {
@@ -804,15 +804,15 @@ function openVariantModal(button) {
                 continueBtn.style.cursor = 'pointer';
             }
         });
-        
+
         variantsList.appendChild(variantOption);
-        
+
         // Select first variant by default
         if (index === 0) {
             variantOption.click();
         }
     });
-    
+
     // Show modal
     $('#variantSelectionModal').modal('show');
 }
@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
         continueBtn.disabled = true;
         continueBtn.style.opacity = '0.5';
         continueBtn.style.cursor = 'not-allowed';
-        
+
         continueBtn.addEventListener('click', function() {
             const selectedVariant = document.querySelector('.variant-option.selected');
             if (selectedVariant) {
@@ -860,10 +860,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = bookingUrl;
             }
         });
-        
+
         modalBody.appendChild(continueBtn);
     }
-    
+
     // Reset modal when closed
     $('#variantSelectionModal').on('hidden.bs.modal', function() {
         document.querySelectorAll('.variant-option').forEach(opt => {
@@ -875,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function() {
             continueBtn.style.cursor = 'not-allowed';
         }
     });
-    
+
     // Add click handler for close button (backup)
     const closeBtn = document.querySelector('#variantSelectionModal .close');
     if (closeBtn) {
@@ -884,7 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
             closeVariantModal();
         });
     }
-    
+
     // Close modal when clicking outside (on backdrop)
     const modal = document.getElementById('variantSelectionModal');
     if (modal) {
