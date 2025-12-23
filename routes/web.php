@@ -6,7 +6,6 @@ use App\Http\Controllers\Site\ProductController;
 use App\Http\Controllers\Site\ServiceController;
 use App\Http\Controllers\Site\BlogController;
 use App\Http\Controllers\Site\ContactController;
-use App\Http\Controllers\Site\CartController;
 use App\Http\Controllers\Site\AppointmentController;
 use App\Http\Controllers\Admin\EmployeeAppointmentController;
 use Illuminate\Support\Facades\Route;
@@ -39,20 +38,11 @@ Route::prefix('contact')->name('site.contact.')->group(function () {
     Route::post('/', [ContactController::class, 'store'])->name('store');
 });
 
-Route::prefix('cart')->name('site.cart.')->group(function () {
-    Route::get('/', [CartController::class, 'index'])->name('index');
-    Route::post('/add', [CartController::class, 'add'])->name('add');
-    Route::put('/update/{key}', [CartController::class, 'update'])->name('update');
-    Route::delete('/remove/{key}', [CartController::class, 'remove'])->name('remove');
-    Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
-    Route::get('/count', [CartController::class, 'count'])->name('count');
-    Route::get('/seed-fake-data', [CartController::class, 'seedFakeData'])->name('seed-fake-data');
-});
 
 Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::get('/', [AppointmentController::class, 'create'])->name('create');
     Route::get('/select-services', [AppointmentController::class, 'selectServices'])->name('select-services');
-    
+
     Route::get('/select-offers', [AppointmentController::class, 'selectOffers'])->name('select-offers');
     Route::get('/test-email', [\App\Http\Controllers\Site\TestEmailController::class, 'testEmail'])->name('test-email');
     Route::post('/save-selected-time', [AppointmentController::class, 'saveSelectedTime'])->name('save-selected-time');
@@ -61,6 +51,7 @@ Route::prefix('appointment')->name('site.appointment.')->group(function () {
     Route::get('/services-by-category', [AppointmentController::class, 'getServicesByCategory'])->name('services-by-category');
     Route::get('/employees-by-service', [AppointmentController::class, 'getEmployeesByService'])->name('employees-by-service');
     Route::get('/success/{id}', [AppointmentController::class, 'success'])->name('success');
+    Route::get('/{id}/status', [AppointmentController::class, 'getStatus'])->name('status');
     Route::post('/{id}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');
     Route::get('/{id}', [AppointmentController::class, 'show'])->name('show');
 });
@@ -76,7 +67,7 @@ Route::prefix('payment')->name('site.payments.')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'checkout'])->name('checkout');
     Route::post('/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('apply-coupon');
     Route::get('/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('remove-coupon');
-    
+
     // Appointment promotion routes
     Route::post('/appointment/apply-coupon', [AppointmentController::class, 'applyCoupon'])->name('appointment.apply-coupon');
     Route::get('/appointment/remove-coupon', [AppointmentController::class, 'removeCoupon'])->name('appointment.remove-coupon');

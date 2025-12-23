@@ -64,20 +64,24 @@
 
             <div class="form-row">
                 <div class="form-group col-md-6">
-                    <label for="shift_id">Ca làm việc <span class="text-danger">*</span></label>
-                    <select name="shift_id" id="shift_id" class="form-control @error('shift_id') is-invalid @enderror" required>
-                        <option value="">-- Chọn ca --</option>
+                    <label for="shift_ids">Ca làm việc <span class="text-danger">*</span></label>
+                    <select name="shift_ids[]" id="shift_ids" class="form-control select2-multiple @error('shift_ids') is-invalid @enderror @error('shift_ids.*') is-invalid @enderror" multiple required>
                         @foreach($shifts as $shift)
-                            <option value="{{ $shift->id }}" {{ old('shift_id', $schedule->shift_id) == $shift->id ? 'selected' : '' }}>
-                                {{ $shift->name }} ({{ $shift->display_time }})
-                            </option>
+                            @if($shift->name !== 'Ca cả ngày')
+                                <option value="{{ $shift->id }}" {{ (old('shift_ids') && in_array($shift->id, old('shift_ids'))) || (isset($currentShiftIds) && in_array($shift->id, $currentShiftIds)) ? 'selected' : '' }}>
+                                    {{ $shift->name }} ({{ $shift->display_time }})
+                                </option>
+                            @endif
                         @endforeach
                     </select>
-                    @error('shift_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                    @error('shift_ids')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @elseif($errors->has('shift_ids.*'))
+                        <div class="invalid-feedback d-block">{{ $errors->first('shift_ids.*') }}</div>
                     @else
-                        <div class="invalid-feedback">Vui lòng chọn ca làm việc</div>
+                        <div class="invalid-feedback">Vui lòng chọn ít nhất một ca làm việc</div>
                     @enderror
+                    <small class="form-text text-muted">Bạn có thể chọn nhiều ca làm việc cho nhân viên trong cùng một ngày.</small>
                 </div>
             </div>
 
@@ -117,7 +121,15 @@ $(document).ready(function() {
         closeOnSelect: false
     });
 
-    // Cập nhật validation khi thay đổi
+    // Select2 cho ca làm việc
+    $('#shift_ids').select2({
+        placeholder: 'Chọn ca làm việc',
+        allowClear: false,
+        width: '100%',
+        closeOnSelect: false
+    });
+
+    // Cập nhật validation khi thay đổi nhân viên
     $('#employee_ids').on('change', function() {
         const employeeCount = $('#employee_ids').val() ? $('#employee_ids').val().length : 0;
         
@@ -125,6 +137,17 @@ $(document).ready(function() {
             $('#employee_ids')[0].setCustomValidity('');
         } else {
             $('#employee_ids')[0].setCustomValidity('Vui lòng chọn ít nhất một nhân viên');
+        }
+    });
+
+    // Cập nhật validation khi thay đổi ca làm việc
+    $('#shift_ids').on('change', function() {
+        const shiftCount = $('#shift_ids').val() ? $('#shift_ids').val().length : 0;
+        
+        if (shiftCount > 0) {
+            $('#shift_ids')[0].setCustomValidity('');
+        } else {
+            $('#shift_ids')[0].setCustomValidity('Vui lòng chọn ít nhất một ca làm việc');
         }
     });
 });

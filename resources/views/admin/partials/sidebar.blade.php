@@ -12,7 +12,7 @@
     <!-- Sidebar - Brand -->
     <a class="sidebar-brand d-flex align-items-center justify-content-center mb-3 pt-5"
         href="{{ $isEmployee ? route('admin.working-schedules.index') : route('admin.dashboard') }}">
-        <img src="{{ asset('legacy/images/' . ($setting->logo ?? 'logox.png')) }}" alt="logo" width="90" height="70">
+        <img src="{{ asset('legacy/images/logox.png') }}" alt="logo" width="90" height="70">
     </a>
 
     <!-- Divider -->

@@ -259,7 +259,7 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_id'])) {
                 unset($queryParams['service_id']);
             }
-            
+
             // Giữ lại appointment_date và word_time_id từ Session hoặc request
             if (Session::has('appointment_date')) {
                 $queryParams['appointment_date'] = Session::get('appointment_date');
@@ -267,7 +267,7 @@ class AppointmentController extends Controller
             if (Session::has('word_time_id')) {
                 $queryParams['word_time_id'] = Session::get('word_time_id');
             }
-            
+
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -282,7 +282,7 @@ class AppointmentController extends Controller
             if (empty($queryParams['service_variants'])) {
                 unset($queryParams['service_variants']);
             }
-            
+
             // Giữ lại appointment_date và word_time_id từ Session hoặc request
             if (Session::has('appointment_date')) {
                 $queryParams['appointment_date'] = Session::get('appointment_date');
@@ -290,7 +290,7 @@ class AppointmentController extends Controller
             if (Session::has('word_time_id')) {
                 $queryParams['word_time_id'] = Session::get('word_time_id');
             }
-            
+
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -305,7 +305,7 @@ class AppointmentController extends Controller
             if (empty($queryParams['combo_id'])) {
                 unset($queryParams['combo_id']);
             }
-            
+
             // Giữ lại appointment_date và word_time_id từ Session hoặc request
             if (Session::has('appointment_date')) {
                 $queryParams['appointment_date'] = Session::get('appointment_date');
@@ -313,7 +313,7 @@ class AppointmentController extends Controller
             if (Session::has('word_time_id')) {
                 $queryParams['word_time_id'] = Session::get('word_time_id');
             }
-            
+
             return redirect()->route('site.appointment.create', $queryParams);
         }
 
@@ -450,9 +450,9 @@ class AppointmentController extends Controller
             ->get();
 
         return view('site.appointment.create', compact(
-            'employees', 
-            'wordTimes', 
-            'serviceCategories', 
+            'employees',
+            'wordTimes',
+            'serviceCategories',
             'combos',
             'restoredAppointmentDate',
             'restoredWordTimeId',
@@ -499,7 +499,7 @@ class AppointmentController extends Controller
             if ($promo->status !== 'active') continue;
             if ($promo->start_date && $promo->start_date > $now) continue;
             if ($promo->end_date && $promo->end_date < $now) continue;
-            
+
             // Check usage_limit - if promotion has reached its limit, skip it
             if ($promo->usage_limit) {
                 $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
@@ -507,7 +507,7 @@ class AppointmentController extends Controller
                     continue; // Skip this promotion, use original price
                 }
             }
-            
+
             // Check per_user_limit - if user has reached their limit, skip it
             // CHỈ đếm các PromotionUsage có appointment đã thanh toán
             if ($promo->per_user_limit) {
@@ -593,7 +593,7 @@ class AppointmentController extends Controller
                 }
             }
         }
-        
+
         $finalPrice = max(0, $originalPrice - $discount);
         \Log::info('Final price :' . json_encode([
             'originalPrice' => $originalPrice,
@@ -601,7 +601,7 @@ class AppointmentController extends Controller
             'finalPrice' => $finalPrice > 0 ? $finalPrice : $originalPrice,
             'promotion' => $promotion
         ]));
-        
+
         return [
             'originalPrice' => $originalPrice,
             'discount' => $discount,
@@ -634,7 +634,7 @@ class AppointmentController extends Controller
                 'word_time_id' => 'required|exists:word_time,id',
                 'note' => 'nullable|string|max:1000',
             ];
-            
+
             $validated = $request->validate($validationRules, [
                 'name.required' => 'Vui lòng nhập họ và tên',
                 'phone.required' => 'Vui lòng nhập số điện thoại',
@@ -682,7 +682,7 @@ class AppointmentController extends Controller
             // Calculate start and end time
             $appointmentDate = Carbon::parse($validated['appointment_date']);
             $timeString = $wordTime->formatted_time; // Use formatted_time to ensure H:i format
-            
+
             // Load active promotions for automatic discount calculation (only service-level promotions)
             $now = Carbon::now();
             $activePromotions = \App\Models\Promotion::with(['services', 'combos', 'serviceVariants'])
@@ -697,7 +697,7 @@ class AppointmentController extends Controller
                     });
                 })
                 ->get();
-            
+
             // Calculate total duration from selected service variants, service, or combo FIRST
             // (Cần tính trước để dùng cho việc tìm nhân viên còn trống)
             $totalDuration = 0;
@@ -710,7 +710,7 @@ class AppointmentController extends Controller
                 'combo_id' => $validated['combo_id'] ?? [],
                 'raw_request' => $request->all(),
             ]);
-    
+
             // Process service variants if selected (priority: variants over service/combo)
             // IMPORTANT: Only process the service_variants that were actually selected
             if (!empty($validated['service_variants'])) {
@@ -737,7 +737,7 @@ class AppointmentController extends Controller
                     'variant_ids' => $variantIds,
                     'count' => count($variantIds),
                 ]);
-                
+
                 foreach ($variantIds as $variantId) {
                     try {
                         $variant = \App\Models\ServiceVariant::with('service')->findOrFail($variantId);
@@ -746,7 +746,7 @@ class AppointmentController extends Controller
                         // Calculate discount for this variant
                         $discountResult = $this->calculateDiscountForItem($variant, 'variant', $activePromotions);
                         $finalPrice = $discountResult['finalPrice'];
-                        
+
                         // Log để debug
                         \Log::info('Appointment store - Variant discount calculation', [
                             'variant_id' => $variantId,
@@ -837,7 +837,7 @@ class AppointmentController extends Controller
 
                     // Calculate discount for this service
                     $discountResult = $this->calculateDiscountForItem($service, 'service', $activePromotions);
-                       
+
                     $finalPrice = $discountResult['finalPrice'];
 
                     $serviceVariantData[] = [
@@ -859,10 +859,10 @@ class AppointmentController extends Controller
             // Xử lý tự động chọn nhân viên nếu employee_id là "auto" hoặc null
             // (Phải tính totalDuration trước)
             $selectedEmployeeId = $validated['employee_id'] ?? null;
-            
+
             // ✅ QUAN TRỌNG: Xử lý selectedEmployeeId TRƯỚC khi tạo appointment
             // để đảm bảo serviceVariantData có employee_id đúng
-            
+
             // Log để debug
             // Validate employee exists
             $employee = \App\Models\Employee::find($selectedEmployeeId);
@@ -923,12 +923,12 @@ class AppointmentController extends Controller
                 'end_at' => $endAt,
                 'note' => $validated['note'] ?? null,
             ];
-            
+
             // Add guest info if not logged in
             if (!empty($guestInfo)) {
                 $appointmentData = array_merge($appointmentData, $guestInfo);
             }
-            
+
             $appointment = $this->appointmentService->create($appointmentData, $serviceVariantData);
 
             \Log::info('Appointment store - Created appointment', [
@@ -938,7 +938,8 @@ class AppointmentController extends Controller
             ]);
 
             // Khi lấy được thông tin discount thì sẽ save giữ liệu vào bảng promotion_usage
-            if ($discountResult['discount'] > 0) {
+             // Khi lấy được thông tin discount thì sẽ save giữ liệu vào bảng promotion_usage
+             if ($discountResult['discount'] > 0) {
                 \App\Models\PromotionUsage::create([
                     'promotion_id' => $discountResult['promotion']->id,
                     'user_id' => $user ? $user->id : null,
@@ -1061,7 +1062,7 @@ class AppointmentController extends Controller
             // Nếu đã đăng nhập, redirect đến trang thanh toán
             $isGuest = !Auth::check();
             $redirectUrl = route('site.appointment.success', $appointment->id);
-            
+
             $successMessage = $isGuest
                 ? '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Vui lòng kiểm tra thông tin lịch đặt của bạn.'
                 : '<i class="fa fa-check-circle"></i> Đặt lịch thành công! Lịch hẹn của bạn đã được thêm vào giỏ hàng. Vui lòng thanh toán để hoàn tất đặt lịch.';
@@ -1111,18 +1112,19 @@ class AppointmentController extends Controller
             'appointmentDetails.serviceVariant.variantAttributes',
             'appointmentDetails.combo',
             'payments',
-            'reviews'
+            'reviews',
+            'promotionUsages.promotion'
         ])->findOrFail($id);
 
         // Calculate total price (price_snapshot already includes service-level discount)
         $totalAfterServiceLevel = 0;
         $totalOriginalPrice = 0;
         $serviceLevelDiscount = 0;
-        
+
         foreach ($appointment->appointmentDetails as $detail) {
             $priceAfterDiscount = $detail->price_snapshot ?? 0;
             $totalAfterServiceLevel += $priceAfterDiscount;
-            
+
             // Calculate original price and discount for display
             $originalPrice = 0;
             if ($detail->serviceVariant && $detail->serviceVariant->price) {
@@ -1144,19 +1146,30 @@ class AppointmentController extends Controller
                 // If we can't determine original price, use price_snapshot (no discount was applied)
                 $originalPrice = $priceAfterDiscount;
             }
-            
+
             $totalOriginalPrice += $originalPrice;
             $serviceLevelDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
-        
+
         // Tính order-level discount từ Payment (giống admin)
         $orderLevelDiscount = 0;
+        $orderLevelPromotionCode = null;
         $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->orderBy('created_at', 'desc')->first();
         if ($payment && $payment->total > 0 && $totalAfterServiceLevel > 0) {
             // Order-level discount = tổng sau service-level discount - tổng trong payment
             $orderLevelDiscount = max(0, $totalAfterServiceLevel - $payment->total);
+            
+            // Tìm mã khuyến mại order-level từ promotionUsages
+            if ($orderLevelDiscount > 0 && $appointment->promotionUsages) {
+                foreach ($appointment->promotionUsages as $usage) {
+                    if ($usage->promotion && in_array($usage->promotion->apply_scope, ['order', 'customer_tier'])) {
+                        $orderLevelPromotionCode = $usage->promotion->code;
+                        break;
+                    }
+                }
+            }
         }
-        
+
         // Tổng thanh toán cuối cùng
         $totalPrice = max(0, $totalAfterServiceLevel - $orderLevelDiscount);
         $totalDiscount = $serviceLevelDiscount + $orderLevelDiscount;
@@ -1172,7 +1185,17 @@ class AppointmentController extends Controller
             $canReview = !$existingReview;
         }
 
-        return view('site.appointment.show', compact('appointment', 'totalPrice', 'totalOriginalPrice', 'totalDiscount', 'canReview', 'existingReview'));
+        return view('site.appointment.show', compact(
+            'appointment', 
+            'totalPrice', 
+            'totalOriginalPrice', 
+            'serviceLevelDiscount',
+            'orderLevelDiscount',
+            'orderLevelPromotionCode',
+            'totalDiscount', 
+            'canReview', 
+            'existingReview'
+        ));
     }
 
     /**
@@ -1184,6 +1207,7 @@ class AppointmentController extends Controller
             'user',
             'employee.user',
             'appointmentDetails.serviceVariant.service',
+            'appointmentDetails.serviceVariant.variantAttributes',
             'appointmentDetails.combo',
             'promotionUsages.promotion'
         ])->findOrFail($id);
@@ -1192,11 +1216,11 @@ class AppointmentController extends Controller
         $subtotal = 0;
         $totalOriginalPrice = 0;
         $serviceLevelDiscount = 0; // Discount từ service-level promotions (đã áp dụng vào price_snapshot)
-        
+
         foreach ($appointment->appointmentDetails as $detail) {
             $priceAfterDiscount = $detail->price_snapshot ?? 0;
             $subtotal += $priceAfterDiscount;
-            
+
             // Calculate original price for display
             $originalPrice = 0;
             if ($detail->serviceVariant) {
@@ -1215,17 +1239,28 @@ class AppointmentController extends Controller
                 // Fallback
                 $originalPrice = $priceAfterDiscount;
             }
-            
+
             $totalOriginalPrice += $originalPrice;
             $serviceLevelDiscount += max(0, $originalPrice - $priceAfterDiscount);
         }
 
         // Tính order-level discount từ Payment (giống admin)
         $orderLevelPromotionAmount = 0;
+        $orderLevelPromotionCode = null;
         $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->orderBy('created_at', 'desc')->first();
         if ($payment && $payment->total > 0 && $subtotal > 0) {
             // Order-level discount = tổng sau service-level discount - tổng trong payment
             $orderLevelPromotionAmount = max(0, $subtotal - $payment->total);
+            
+            // Tìm mã khuyến mại order-level từ promotionUsages
+            if ($orderLevelPromotionAmount > 0 && $appointment->promotionUsages) {
+                foreach ($appointment->promotionUsages as $usage) {
+                    if ($usage->promotion && in_array($usage->promotion->apply_scope, ['order', 'customer_tier'])) {
+                        $orderLevelPromotionCode = $usage->promotion->code;
+                        break;
+                    }
+                }
+            }
         }
 
         // Tính tổng sau giảm giá (đã bao gồm service-level discount trong price_snapshot)
@@ -1239,6 +1274,7 @@ class AppointmentController extends Controller
             'totalOriginalPrice' => $totalOriginalPrice,
             'serviceLevelDiscount' => $serviceLevelDiscount,
             'orderLevelPromotionAmount' => $orderLevelPromotionAmount,
+            'orderLevelPromotionCode' => $orderLevelPromotionCode,
             'totalDiscount' => $totalDiscount,
             'totalAfterDiscount' => $totalAfterDiscount,
         ]);
@@ -1296,13 +1332,13 @@ class AppointmentController extends Controller
             if ($employeeId === '' || $employeeId === '0' || $employeeId === 'auto') {
                 $employeeId = null;
             }
-            
+
             // Validate các trường khác
             $request->validate([
                 'appointment_date' => 'required|date|after_or_equal:today',
                 'total_duration' => 'nullable|integer|min:1', // Tổng thời gian dịch vụ đã chọn (phút)
             ]);
-            
+
             // Validate employee_id exists nếu không phải null
             if ($employeeId !== null) {
                 $employee = \App\Models\Employee::find($employeeId);
@@ -1449,7 +1485,7 @@ class AppointmentController extends Controller
 
             // Lưu các khoảng thời gian đã bị đặt (start_at đến end_at)
             $bookedTimeRanges = [];
-            
+
             foreach ($appointmentsToProcess as $appointment) {
                 if ($appointment->start_at) {
                     $appointmentStart = Carbon::parse($appointment->start_at);
@@ -1476,12 +1512,12 @@ class AppointmentController extends Controller
                             'start_carbon' => $appointmentStart,
                             'end_carbon' => $appointmentEnd
                         ];
-                        
+
                         $bookedTimeRanges[] = $range;
                     }
                 }
             }
-            
+
             // Debug log
             \Log::info('Available time slots calculation', [
                 'employee_id' => $employeeId,
@@ -1502,7 +1538,7 @@ class AppointmentController extends Controller
             // Tìm đơn đã hoàn thành trong ngày và lấy thời gian kết thúc
             // Nếu có đơn đã hoàn thành, đóng các slot SAU thời gian kết thúc đơn (vì thời gian thực đã qua)
             $completedAppointmentEndTime = null;
-            
+
             $completedAppointment = \App\Models\Appointment::where('employee_id', $employeeId)
                 ->whereDate('start_at', $appointmentDate->format('Y-m-d'))
                 ->where('status', 'Hoàn thành')
@@ -1539,7 +1575,7 @@ class AppointmentController extends Controller
                 $isInWorkingTime = false;
                 $shiftEndTime = null; // Lưu thời gian kết thúc ca làm việc
                 $slotTime = Carbon::createFromFormat('H:i', $timeString);
-                
+
 
                 // Debug log cho Quang Lực
                 $shouldDebug = false;
@@ -1812,7 +1848,7 @@ class AppointmentController extends Controller
                         }
                     }
                 }
-                
+
                 // Xác định trạng thái available của slot:
                 // - available = true: Nằm trong ca làm việc VÀ chưa bị đặt VÀ không phải quá khứ VÀ không sau thời gian hoàn thành đơn
                 // - available = false: Không nằm trong ca làm việc HOẶC đã bị đặt HOẶC là quá khứ HOẶC sau thời gian hoàn thành đơn
@@ -2149,6 +2185,29 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Get appointment status (API endpoint for polling)
+     */
+    public function getStatus($id)
+    {
+        try {
+            $appointment = \App\Models\Appointment::findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'appointment_id' => $appointment->id,
+                'status' => $appointment->status,
+                'booking_code' => $appointment->booking_code,
+                'updated_at' => $appointment->updated_at->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy lịch hẹn'
+            ], 404);
+        }
+    }
+
+    /**
      * Cancel an appointment.
      */
     public function cancel(Request $request, $id)
@@ -2158,7 +2217,7 @@ class AppointmentController extends Controller
 
             // Kiểm tra quyền: cho phép cả guest và logged in user hủy
             $currentUser = auth()->user();
-            
+
             // Nếu đã đăng nhập, kiểm tra quyền
             if ($currentUser) {
                 if (auth()->id() != $appointment->user_id && !$currentUser->isAdmin()) {
@@ -2172,53 +2231,31 @@ class AppointmentController extends Controller
             if ($user && $user->isBanned()) {
                 $bannedUntil = $user->banned_until;
                 $timeRemaining = $this->formatBanTimeRemaining($bannedUntil);
-                $banMessage = 'Tài khoản của bạn đã bị khóa. ' . 
-                             ($timeRemaining 
-                                 ? "Tài khoản sẽ được mở khóa sau {$timeRemaining}. " 
+                $banMessage = 'Tài khoản của bạn đã bị khóa. ' .
+                             ($timeRemaining
+                                 ? "Tài khoản sẽ được mở khóa sau {$timeRemaining}. "
                                  : 'Tài khoản sẽ được mở khóa sớm. ') .
                              ($user->ban_reason ? "Lý do: {$user->ban_reason}" : '');
                 return back()->with('error', $banMessage);
             }
 
             // Kiểm tra xem có thể hủy không
-            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 10 giây
+            // Chỉ có thể hủy khi status = 'Chờ xử lý' và chưa quá 30 phút
             if ($appointment->status !== 'Chờ xử lý') {
                 if ($appointment->status === 'Đã xác nhận') {
-                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 10 giây kể từ khi đặt.');
+                    return back()->with('error', 'Không thể hủy lịch hẹn đã được xác nhận. Lịch hẹn đã được tự động xác nhận sau 30 phút kể từ khi đặt.');
                 }
                 return back()->with('error', 'Chỉ có thể hủy lịch hẹn đang ở trạng thái "Chờ xử lý".');
             }
 
-            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 10 giây kể từ khi đặt
+            // Kiểm tra thời gian: chỉ có thể hủy trong vòng 30 phút kể từ khi đặt
             $createdAt = \Carbon\Carbon::parse($appointment->created_at);
             $now = now();
-            $secondsSinceCreated = $createdAt->diffInSeconds($now);
+            $minutesSinceCreated = $createdAt->diffInMinutes($now);
 
-            if ($secondsSinceCreated > 10) {
-                // Tự động chuyển trạng thái nếu đã quá 10 giây nhưng vẫn còn "Chờ xử lý"
-                if ($appointment->status === 'Chờ xử lý') {
-                    $appointment->update(['status' => 'Đã xác nhận']);
-                    
-                    // Log status change
-                    \App\Models\AppointmentLog::create([
-                        'appointment_id' => $appointment->id,
-                        'status_from' => 'Chờ xử lý',
-                        'status_to' => 'Đã xác nhận',
-                        'modified_by' => null, // Tự động xác nhận
-                    ]);
-                    
-                    // Broadcast status update
-                    $appointment->refresh();
-                    $appointment->load([
-                        'user',
-                        'employee.user',
-                        'appointmentDetails.serviceVariant.service',
-                        'appointmentDetails.combo'
-                    ]);
-                    event(new \App\Events\AppointmentStatusUpdated($appointment));
-                }
-                
-                return back()->with('error', 'Không thể hủy lịch hẹn sau 10 giây kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
+            if ($minutesSinceCreated > 30) {
+                // Không tự động xác nhận trong hàm hủy - chỉ trả về lỗi
+                return back()->with('error', 'Không thể hủy lịch hẹn sau 30 phút kể từ khi đặt. Lịch hẹn đã được tự động xác nhận.');
             }
 
             // Lấy lý do hủy từ form hoặc dùng mặc định
@@ -2230,25 +2267,25 @@ class AppointmentController extends Controller
             // Hủy lịch hẹn
             $modifiedBy = auth()->id(); // null nếu là guest
             $result = $this->appointmentService->cancelAppointment($id, $reason, $modifiedBy);
-            
+
             // Kiểm tra nếu user bị ban sau khi hủy
             if (isset($result['was_banned']) && $result['was_banned']) {
                 $user = $result['user'];
                 $bannedUntil = $user->banned_until;
                 $timeRemaining = $this->formatBanTimeRemaining($bannedUntil);
-                
+
                 // Logout user
                 auth()->logout();
                 request()->session()->invalidate();
                 request()->session()->regenerateToken();
-                
+
                 // Tạo thông báo
-                $banMessage = 'Tài khoản của bạn đã bị khóa vì hủy quá 3 đơn/ngày. ' . 
-                             ($timeRemaining 
-                                 ? "Tài khoản sẽ được mở khóa sau {$timeRemaining}. " 
+                $banMessage = 'Tài khoản của bạn đã bị khóa vì hủy quá 3 đơn/ngày. ' .
+                             ($timeRemaining
+                                 ? "Tài khoản sẽ được mở khóa sau {$timeRemaining}. "
                                  : 'Tài khoản sẽ được mở khóa sớm. ') .
                              ($user->ban_reason ? "Lý do: {$user->ban_reason}" : '');
-                
+
                 return redirect()->route('login')
                     ->with('error', $banMessage);
             }
@@ -2402,7 +2439,7 @@ class AppointmentController extends Controller
 
         // Sử dụng diffInRealMinutes để có số chính xác hơn, sau đó làm tròn lên
         $diffInMinutes = (int) ceil($now->diffInRealMinutes($bannedUntil, false));
-        
+
         if ($diffInMinutes < 60) {
             return $diffInMinutes . ' phút';
         }
@@ -2438,7 +2475,7 @@ class AppointmentController extends Controller
         }
 
         $code = $request->input('coupon_code');
-        
+
         // Get service IDs from request
         $serviceIds = $request->input('service_id', []);
         $variantIds = $request->input('service_variants', []);

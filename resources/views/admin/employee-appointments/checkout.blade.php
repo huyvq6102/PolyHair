@@ -162,7 +162,7 @@
                             <h6 class="mb-3">Khuyến mãi</h6>
                             
                             <!-- Chọn loại khuyến mãi (Tab) -->
-                            <div class="mb-3">
+                            <div class="mb-3" id="promotion_scope_selection" style="{{ (\Illuminate\Support\Facades\Session::has('coupon_code') || !empty($appliedCoupon) || ($promotion ?? 0) > 0) ? 'display:none;' : '' }}">
                                 <label class="form-label small fw-semibold mb-2">Chọn loại khuyến mãi:</label>
                                 <div class="row g-2">
                                     <div class="col-12 col-md-6">
@@ -214,7 +214,7 @@
                                     <span id="promotion_select_label" style="word-wrap: break-word; overflow-wrap: break-word;">Chọn mã khuyến mãi áp dụng theo hóa đơn:</span>
                                 </label>
                                 <div class="row g-2">
-                                    <div class="col-12 col-sm-8 col-md-8">
+                                    <div class="col-12 col-sm-6 col-md-6">
                                         <div class="position-relative">
                                             <select class="form-select promotion-select" id="promotion_select" name="promotion_select" style="padding: 10px 40px 10px 15px; font-size: 14px; border: 2px solid #e0e0e0; border-radius: 8px; transition: all 0.3s ease; background-color: #fff; width: 100%;">
                                                 <option value="">-- Chọn mã khuyến mãi --</option>
@@ -222,10 +222,20 @@
                                             <i class="fa fa-chevron-down" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #666; pointer-events: none; font-size: 12px;"></i>
                                         </div>
                                     </div>
-                                    <div class="col-12 col-sm-4 col-md-4">
+                                    <div class="col-6 col-sm-3 col-md-3">
                                         <button type="button" class="btn btn-primary w-100" id="btn_apply_promotion" style="white-space: nowrap;">
                                         <span class="d-none d-sm-inline">Áp dụng</span>
                                         </button>
+                                    </div>
+                                    <div class="col-6 col-sm-3 col-md-3">
+                                        <a href="{{ route('employee.appointments.remove-coupon', ['appointment_id' => $appointment->id]) }}"
+                                           class="btn btn-outline-danger w-100"
+                                           title="Bỏ mã khuyến mãi"
+                                           id="btn_remove_promotion"
+                                           onclick="document.getElementById('promotion_scope_selection').style.display = '';"
+                                           style="{{ (!\Illuminate\Support\Facades\Session::has('coupon_code') && empty($appliedCoupon) && ($promotion ?? 0) <= 0) ? 'display:none;' : '' }}">
+                                            <i class="fa fa-times"></i> Bỏ mã
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -246,14 +256,6 @@
                                     <div id="promotion_conditions"></div>
                                 </div>
                             </div>
-
-                            @if(\Illuminate\Support\Facades\Session::has('coupon_code'))
-                                <div class="mt-2">
-                                    <a href="{{ route('employee.appointments.remove-coupon', ['appointment_id' => $appointment->id]) }}" class="btn btn-sm btn-outline-danger" title="Xóa mã">
-                                        <i class="fa fa-times"></i> Xóa mã đã áp dụng
-                                    </a>
-                                </div>
-                            @endif
                             
                             @if(isset($promotionMessage))
                                 <small class="text-{{ $appliedCoupon ? 'success' : 'danger' }} d-block mt-2" style="word-wrap: break-word;">{{ $promotionMessage }}</small>
@@ -581,6 +583,12 @@
                                     appointment_id: appointmentId
                                 },
                                 success: function(response) {
+                                    // Hiện lại phần chọn loại khuyến mãi khi bỏ mã
+                                    const promotionScopeSelection = document.getElementById('promotion_scope_selection');
+                                    if (promotionScopeSelection) {
+                                        promotionScopeSelection.style.display = '';
+                                    }
+                                    
                                     const currentUrl = new URL(window.location.href);
                                     currentUrl.searchParams.set('promotion_scope', scope);
                                     window.location.href = currentUrl.toString();
@@ -724,6 +732,12 @@
                             
                             updatePrices(discountAmount);
                             
+                            // Ẩn phần chọn loại khuyến mãi sau khi áp dụng thành công
+                            const promotionScopeSelection = document.getElementById('promotion_scope_selection');
+                            if (promotionScopeSelection) {
+                                promotionScopeSelection.style.display = 'none';
+                            }
+                            
                             if (response.promotion && response.promotion.id) {
                                 const formPromotionId = document.getElementById('form_applied_promotion_id');
                                 if (formPromotionId) {
@@ -758,6 +772,12 @@
                             if (messageDiv) {
                                 messageDiv.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> ' + (response.message || 'Áp dụng mã khuyến mãi thành công!') + '</span>';
                                 messageDiv.style.display = 'block';
+                            }
+                            
+                            // Hiển thị nút Bỏ mã sau khi áp dụng thành công
+                            const btnRemove = document.getElementById('btn_remove_promotion');
+                            if (btnRemove) {
+                                btnRemove.style.display = 'block';
                             }
                             
                             isApplyingPromotion = false;

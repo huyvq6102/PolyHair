@@ -31,7 +31,7 @@
           <div class="filter-group mb-3">
             <h5 class="filter-title mb-2" style="font-size: 12px; margin-bottom: 6px;">Tìm kiếm</h5>
             <input type="text" name="keyword" class="form-control filter-select" placeholder="Tìm dịch vụ ..." value="{{ $keyword ?? '' }}" id="keywordInput" style="padding: 6px 10px; font-size: 13px;">
-            
+
           </div>
 
           <!-- Filter by Type -->
@@ -97,7 +97,6 @@
 
           <!-- Filter Buttons -->
           <div class="filter-actions">
-            <button type="submit" class="btn btn-primary btn-block mb-2" style="padding: 8px 12px; font-size: 13px;">Áp dụng</button>
             <a href="{{ route('site.services.index') }}" class="btn btn-secondary btn-block">Xóa bộ lọc</a>
           </div>
 
@@ -166,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Reset opacity trước khi cập nhật
                     serviceGrid.style.opacity = '1';
                 }
-                
+
                 // Cập nhật nội dung
                 serviceGrid.innerHTML = data.html;
                 servicePagination.innerHTML = data.pagination || '';
@@ -428,24 +427,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Attach pagination listeners khi trang load
     attachPaginationListeners();
-
-    // Xử lý nút "Áp dụng"
-    const applyButton = filterForm.querySelector('button[type="submit"]');
-    if (applyButton) {
-        applyButton.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Validate giá nếu đang ở chế độ custom
-            const priceRange = document.getElementById('priceRange').value;
-            if (priceRange === 'custom') {
-                if (!validatePriceRange()) {
-                    return false;
-                }
-            }
-
-            loadServices(buildUrl(1));
-        });
-    }
 });
 </script>
 
@@ -461,11 +442,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body" style="padding: 24px;">
-                <p class="service-name-display" style="font-size: 18px; color: #333; margin-bottom: 20px; font-weight: 700;"></p>
+            <div class="modal-body" style="padding: 24px; max-height: 60vh; overflow-y: auto;">
+                <p class="service-name-display" style="font-size: 16px; color: #666; margin-bottom: 20px; font-weight: 600;"></p>
                 <div class="variants-list" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Variants will be inserted here -->
                 </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e5e5e5; padding: 20px 24px; border-radius: 0 0 16px 16px;">
+                <button type="button" id="continueBookingBtn" class="btn-continue-booking" style="width: 100%; padding: 14px 24px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); border: none; color: #fff; transition: all 0.3s ease; cursor: pointer; opacity: 0.5; pointer-events: none;" disabled>
+                    Tiếp tục đặt lịch
+                </button>
             </div>
         </div>
     </div>
@@ -494,6 +480,17 @@ document.addEventListener('DOMContentLoaded', function() {
     border-width: 2px;
     background: #fef9f0;
     box-shadow: 0 2px 12px rgba(216, 178, 106, 0.2);
+}
+
+.btn-continue-booking:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(216, 178, 106, 0.4);
+}
+
+.btn-continue-booking:not(:disabled) {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
 }
 
 .variant-header {
@@ -525,24 +522,6 @@ document.addEventListener('DOMContentLoaded', function() {
     white-space: nowrap;
 }
 
-.variant-checkmark {
-    display: none;
-    width: 22px;
-    height: 22px;
-    background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%);
-    color: #fff;
-    border-radius: 50%;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.variant-option.selected .variant-checkmark {
-    display: flex;
-}
 
 .variant-duration {
     font-size: 13px;
@@ -599,29 +578,29 @@ function openVariantModal(button) {
     const serviceName = button.getAttribute('data-service-name');
     const variantsJson = button.getAttribute('data-variants');
     const variants = JSON.parse(variantsJson);
-    
+
     // Set service name
     document.querySelector('.service-name-display').textContent = serviceName;
-    
+
     // Clear previous variants
     const variantsList = document.querySelector('.variants-list');
     variantsList.innerHTML = '';
-    
+
     // Add variants
     variants.forEach((variant, index) => {
         const variantOption = document.createElement('div');
         variantOption.className = 'variant-option';
         variantOption.dataset.variantId = variant.id;
-        
+
         // Sử dụng giá đã giảm nếu có, nếu không thì dùng giá gốc
         const displayPrice = variant.finalPrice !== undefined ? variant.finalPrice : variant.price;
         const originalPrice = variant.originalPrice !== undefined ? variant.originalPrice : variant.price;
         const hasDiscount = variant.discount && variant.discount > 0;
-        
+
         const formattedPrice = new Intl.NumberFormat('vi-VN').format(displayPrice) + 'vnđ';
         const formattedOriginalPrice = hasDiscount ? new Intl.NumberFormat('vi-VN').format(originalPrice) + 'vnđ' : '';
         const durationText = variant.duration ? `Thời gian: ${variant.duration} phút` : '';
-        
+
         // Build attributes HTML
         let attributesHTML = '';
         if (variant.attributes && variant.attributes.length > 0) {
@@ -633,7 +612,7 @@ function openVariantModal(button) {
             });
             attributesHTML += '</div>';
         }
-        
+
         // Build notes HTML
         let notesHTML = '';
         if (variant.notes) {
@@ -641,66 +620,71 @@ function openVariantModal(button) {
                 ${variant.notes}
             </div>`;
         }
-        
+
         // Build price HTML với discount
         let priceHTML = '';
         if (hasDiscount) {
             priceHTML = `
-                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-                    <span style="text-decoration: line-through; color: #999; font-size: 12px;">${formattedOriginalPrice}</span>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span class="variant-price">${formattedPrice}</span>
-                        ${variant.discountTag ? `<span style="background: #ff4444; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 8px; font-weight: 600;">${variant.discountTag}</span>` : ''}
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span style="text-decoration: line-through; color: #999; font-size: 13px;">${formattedOriginalPrice}</span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="variant-price" style="font-size: 20px; font-weight: 700; color: #333;">${formattedPrice}</span>
+                        ${variant.discountTag ? `<span style="background: #ff4444; color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; white-space: nowrap;">${variant.discountTag}</span>` : ''}
                     </div>
                 </div>
             `;
         } else {
-            priceHTML = `<span class="variant-price">${formattedPrice}</span>`;
+            priceHTML = `<span class="variant-price" style="font-size: 20px; font-weight: 700; color: #333;">${formattedPrice}</span>`;
         }
-        
+
+        // Format attributes thành badge như trong ảnh (Mỏng: Ngắn, Dày: Trung bình, etc.)
+        let attrBadgeHTML = '';
+        if (variant.attributes && variant.attributes.length > 0) {
+            const attrText = variant.attributes.map(attr => `${attr.name}: ${attr.value}`).join(', ');
+            attrBadgeHTML = `<span style="display: inline-block; background: #f5f5f5; color: #666; font-size: 12px; padding: 6px 12px; border-radius: 12px; border: 1px solid #e5e5e5; margin-top: 8px;">${attrText}</span>`;
+        }
+
         variantOption.innerHTML = `
-            <div class="variant-header">
-                <div style="flex: 1;">
-                    <span class="variant-name">${variant.name}</span>
-                    ${variant.is_default ? '<span class="variant-default-badge">Mặc định</span>' : ''}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                <div style="flex: 1; min-width: 0;">
+                    <div class="variant-name" style="font-size: 16px; font-weight: 700; color: #333; margin-bottom: 8px;">${variant.name}</div>
+                    ${durationText ? `<div class="variant-duration" style="font-size: 13px; color: #666; margin-bottom: 8px;">${durationText}</div>` : ''}
+                    ${attrBadgeHTML}
                 </div>
-                <div class="variant-price-wrapper">
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
                     ${priceHTML}
-                    <span class="variant-checkmark">✓</span>
                 </div>
             </div>
-            ${durationText ? `<div class="variant-duration">${durationText}</div>` : ''}
-            ${attributesHTML}
-            ${notesHTML}
         `;
-        
+
         // Click handler
         variantOption.addEventListener('click', function() {
             // Remove selected class from all
             document.querySelectorAll('.variant-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
-            
+
             // Add selected class to clicked
             this.classList.add('selected');
-            
+
             // Enable continue button
             const continueBtn = document.getElementById('continueBookingBtn');
             if (continueBtn) {
                 continueBtn.disabled = false;
                 continueBtn.style.opacity = '1';
                 continueBtn.style.cursor = 'pointer';
+                continueBtn.style.pointerEvents = 'auto';
             }
         });
-        
+
         variantsList.appendChild(variantOption);
-        
+
         // Select first variant by default
         if (index === 0) {
             variantOption.click();
         }
     });
-    
+
     // Show modal
     $('#variantSelectionModal').modal('show');
 }
@@ -727,19 +711,10 @@ function closeVariantModal() {
 
 // Handle continue button
 document.addEventListener('DOMContentLoaded', function() {
-    // Create continue button if not exists
+    // Get continue button from modal footer
     let continueBtn = document.getElementById('continueBookingBtn');
-    if (!continueBtn) {
-        const modalBody = document.querySelector('#variantSelectionModal .modal-body');
-        continueBtn = document.createElement('button');
-        continueBtn.id = 'continueBookingBtn';
-        continueBtn.className = 'btn btn-primary btn-block';
-        continueBtn.style.cssText = 'margin-top: 20px; padding: 12px 24px; font-size: 16px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); border: none; color: #fff; transition: all 0.3s ease;';
-        continueBtn.textContent = 'Tiếp tục đặt lịch';
-        continueBtn.disabled = true;
-        continueBtn.style.opacity = '0.5';
-        continueBtn.style.cursor = 'not-allowed';
-        
+    
+    if (continueBtn) {
         continueBtn.addEventListener('click', function() {
             const selectedVariant = document.querySelector('.variant-option.selected');
             if (selectedVariant) {
@@ -748,22 +723,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = bookingUrl;
             }
         });
-        
-        modalBody.appendChild(continueBtn);
     }
-    
+
     // Reset modal when closed
     $('#variantSelectionModal').on('hidden.bs.modal', function() {
         document.querySelectorAll('.variant-option').forEach(opt => {
             opt.classList.remove('selected');
         });
+        const continueBtn = document.getElementById('continueBookingBtn');
         if (continueBtn) {
             continueBtn.disabled = true;
             continueBtn.style.opacity = '0.5';
             continueBtn.style.cursor = 'not-allowed';
+            continueBtn.style.pointerEvents = 'none';
         }
     });
-    
+
     // Add click handler for close button (backup)
     const closeBtn = document.querySelector('#variantSelectionModal .close');
     if (closeBtn) {
@@ -772,7 +747,7 @@ document.addEventListener('DOMContentLoaded', function() {
             closeVariantModal();
         });
     }
-    
+
     // Close modal when clicking outside (on backdrop)
     const modal = document.getElementById('variantSelectionModal');
     if (modal) {

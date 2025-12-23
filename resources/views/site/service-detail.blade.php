@@ -187,6 +187,117 @@
                     <div class="row" style="margin: 0;">
                         <!-- Service Variants -->
                         @if($service->serviceVariants && $service->serviceVariants->count() > 0)
+                        @php
+                            // Helper function để tính discount cho một item (service/variant/combo)
+                            function calculateDiscount($item, $itemType, $activePromotions) {
+                                $originalPrice = 0;
+                                $discount = 0;
+                                $finalPrice = 0;
+                                $promotion = null;
+                                $discountTag = '';
+
+                                if ($itemType === 'service') {
+                                    $originalPrice = $item->base_price ?? 0;
+                                } elseif ($itemType === 'variant') {
+                                    $originalPrice = $item->price ?? 0;
+                                } elseif ($itemType === 'combo') {
+                                    $originalPrice = $item->price ?? 0;
+                                }
+
+                                if ($originalPrice <= 0) {
+                                    return [
+                                        'originalPrice' => 0,
+                                        'discount' => 0,
+                                        'finalPrice' => 0,
+                                        'promotion' => null,
+                                        'discountTag' => ''
+                                    ];
+                                }
+
+                                $now = \Carbon\Carbon::now();
+
+                                foreach ($activePromotions ?? [] as $promo) {
+                                    if ($promo->apply_scope !== 'service') {
+                                        continue;
+                                    }
+                                    if ($promo->status !== 'active') continue;
+                                    if ($promo->start_date && $promo->start_date > $now) continue;
+                                    if ($promo->end_date && $promo->end_date < $now) continue;
+                                    
+                                    if ($promo->usage_limit) {
+                                        $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                                        if ($totalUsage >= $promo->usage_limit) {
+                                            continue;
+                                        }
+                                    }
+                                    
+                                    if ($promo->per_user_limit) {
+                                        $userId = auth()->id();
+                                        if ($userId) {
+                                            $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                                                ->where('user_id', $userId)
+                                                ->whereHas('appointment', function($query) {
+                                                    $query->where('status', 'Đã thanh toán');
+                                                })
+                                                ->count();
+                                            if ($userUsage >= $promo->per_user_limit) {
+                                                continue;
+                                            }
+                                        }
+                                    }
+
+                                    $applies = false;
+
+                                    if ($itemType === 'variant') {
+                                        $hasSpecificServices = ($promo->services && $promo->services->count() > 0)
+                                            || ($promo->combos && $promo->combos->count() > 0)
+                                            || ($promo->serviceVariants && $promo->serviceVariants->count() > 0);
+                                        $applyToAll = !$hasSpecificServices ||
+                                            (($promo->services ? $promo->services->count() : 0) +
+                                             ($promo->combos ? $promo->combos->count() : 0) +
+                                             ($promo->serviceVariants ? $promo->serviceVariants->count() : 0)) >= 20;
+                                        if ($applyToAll) {
+                                            $applies = true;
+                                        } elseif ($promo->serviceVariants && $promo->serviceVariants->contains('id', $item->id)) {
+                                            $applies = true;
+                                        } elseif ($item->service_id && $promo->services && $promo->services->contains('id', $item->service_id)) {
+                                            $applies = true;
+                                        }
+                                    }
+
+                                    if ($applies) {
+                                        $currentDiscount = 0;
+
+                                        if ($promo->discount_type === 'percent') {
+                                            $currentDiscount = ($originalPrice * ($promo->discount_percent ?? 0)) / 100;
+                                            if ($promo->max_discount_amount) {
+                                                $currentDiscount = min($currentDiscount, $promo->max_discount_amount);
+                                            }
+                                            $currentTag = '-' . ($promo->discount_percent ?? 0) . '%';
+                                        } else {
+                                            $currentDiscount = min($promo->discount_amount ?? 0, $originalPrice);
+                                            $currentTag = '';
+                                        }
+
+                                        if ($currentDiscount > $discount) {
+                                            $discount = $currentDiscount;
+                                            $promotion = $promo;
+                                            $discountTag = $currentTag;
+                                        }
+                                    }
+                                }
+                                
+                                $finalPrice = max(0, $originalPrice - $discount);
+                                
+                                return [
+                                    'originalPrice' => $originalPrice,
+                                    'discount' => $discount,
+                                    'finalPrice' => $finalPrice,
+                                    'promotion' => $promotion,
+                                    'discountTag' => $discountTag
+                                ];
+                            }
+                        @endphp
                         <div class="col-xl-12" style="padding: 0 15px; margin-bottom: 30px;">
                             <h3 style="color: #bc913f; font-size: 24px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #bc913f; padding-bottom: 10px;">
                                 Các gói dịch vụ
@@ -198,12 +309,23 @@
                                         if (!$variant->relationLoaded('variantAttributes')) {
                                             $variant->load('variantAttributes');
                                         }
+                                        
+                                        // Tính discount cho variant
+                                        $variantDiscount = calculateDiscount($variant, 'variant', $activePromotions ?? collect());
+                                        $formattedVariantOriginalPrice = number_format($variantDiscount['originalPrice'], 0, ',', '.');
+                                        $formattedVariantFinalPrice = number_format($variantDiscount['finalPrice'], 0, ',', '.');
                                     @endphp
                                     <div class="col-md-6" style="padding: 0 8px; margin-bottom: 15px;">
-                                        <div class="variant-card" style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; background: #fff; transition: all 0.3s; height: 100%;" onmouseover="this.style.borderColor='#d8b26a'; this.style.boxShadow='0 2px 10px rgba(216,178,106,0.2)';" onmouseout="this.style.borderColor='#e5e5e5'; this.style.boxShadow='none';">
-                                            <h4 style="color: #4A3600; font-size: 18px; font-weight: 600; margin: 0 0 10px 0;">
-                                                {{ $variant->name }}
-                                            </h4>
+                                        <div class="variant-card" data-variant-id="{{ $variant->id }}" style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; background: #fff; transition: all 0.3s; height: 100%; cursor: pointer; position: relative;" onmouseover="if(!this.classList.contains('selected')) { this.style.borderColor='#d8b26a'; this.style.boxShadow='0 2px 10px rgba(216,178,106,0.2)'; }" onmouseout="if(!this.classList.contains('selected')) { this.style.borderColor='#e5e5e5'; this.style.boxShadow='none'; }" onclick="selectVariant({{ $variant->id }}, this);">
+                                            <!-- Tên variant và badge discount cùng hàng -->
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                                <h4 style="color: #4A3600; font-size: 18px; font-weight: 600; margin: 0; flex: 1;">
+                                                    {{ $variant->name }}
+                                                </h4>
+                                                @if($variantDiscount['discount'] > 0 && $variantDiscount['discountTag'])
+                                                    <span style="background: #ff4444; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; margin-left: 10px;">{{ $variantDiscount['discountTag'] }}</span>
+                                                @endif
+                                            </div>
                                             
                                             <!-- Variant Attributes -->
                                             @if($variant->variantAttributes && $variant->variantAttributes->count() > 0)
@@ -217,9 +339,18 @@
                                             @endif
                                             
                                             <div class="variant-price" style="margin-bottom: 8px;">
-                                                <strong style="color: #BC9321; font-size: 24px; font-weight: 700;">
-                                                    {{ number_format($variant->price, 0, ',', '.') }}đ
-                                                </strong>
+                                                @if($variantDiscount['discount'] > 0)
+                                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                        <span style="text-decoration: line-through; color: #999; font-size: 14px;">{{ $formattedVariantOriginalPrice }}đ</span>
+                                                        <strong style="color: #BC9321; font-size: 24px; font-weight: 700;">
+                                                            {{ $formattedVariantFinalPrice }}đ
+                                                        </strong>
+                                                    </div>
+                                                @else
+                                                    <strong style="color: #BC9321; font-size: 24px; font-weight: 700;">
+                                                        {{ $formattedVariantOriginalPrice }}đ
+                                                    </strong>
+                                                @endif
                                             </div>
                                             @if($variant->duration)
                                                 <div class="variant-duration" style="color: #666; font-size: 14px;">
@@ -240,15 +371,88 @@
             <!-- Booking Button - Centered -->
             <div class="text-center" style="padding: 20px 0 40px 0;">
                 @php
-                    // Nếu dịch vụ có variants, truyền service_id để hiển thị các variants để chọn
+                    // Nếu dịch vụ có variants, sẽ dùng service_variants khi đã chọn
                     // Nếu không có variants, truyền service_id để đặt dịch vụ đơn
                     $bookingParams = ['service_id' => [$service->id]];
                 @endphp
-                <a href="{{ route('site.appointment.create', $bookingParams) }}" class="btn-booking" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
-                    <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
-                    Đặt lịch ngay
-                </a>
+                @if($service->serviceVariants && $service->serviceVariants->count() > 0)
+                    <a href="#" id="mainBookingBtn" class="btn-booking" onclick="handleBookingClick(event); return false;" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4); cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
+                        <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
+                        Đặt lịch ngay
+                    </a>
+                @else
+                    <a href="{{ route('site.appointment.create', $bookingParams) }}" id="mainBookingBtn" class="btn-booking" style="display: inline-block; text-align: center; padding: 18px 50px; background: linear-gradient(135deg, #d8b26a 0%, #8b5a2b 100%); color: #fff; text-decoration: none; border-radius: 50px; font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(216,178,106,0.4);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(216,178,106,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(216,178,106,0.4)';">
+                        <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
+                        Đặt lịch ngay
+                    </a>
+                @endif
             </div>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    let selectedVariantId = null;
+    const baseBookingUrl = '{{ route("site.appointment.create") }}';
+    
+    function selectVariant(variantId, element) {
+        // Remove selected class from all variant cards
+        document.querySelectorAll('.variant-card').forEach(card => {
+            card.classList.remove('selected');
+            card.style.borderColor = '#e5e5e5';
+            card.style.boxShadow = 'none';
+            card.style.background = '#fff';
+        });
+        
+        // Add selected class to clicked card
+        element.classList.add('selected');
+        element.style.borderColor = '#BC9321';
+        element.style.boxShadow = '0 4px 15px rgba(188, 145, 33, 0.4)';
+        element.style.background = '#fffef5';
+        
+        selectedVariantId = variantId;
+    }
+    
+    function handleBookingClick(event) {
+        event.preventDefault();
+        
+        if (!selectedVariantId) {
+            alert('Vui lòng chọn một gói dịch vụ trước khi đặt lịch!');
+            return false;
+        }
+        
+        // Redirect to booking page with selected variant ID
+        const bookingUrl = baseBookingUrl + '?service_variants[]=' + selectedVariantId;
+        window.location.href = bookingUrl;
+        
+        return false;
+    }
+    
+    // Initialize: if there's only one variant, auto-select it
+    document.addEventListener('DOMContentLoaded', function() {
+        const variantCards = document.querySelectorAll('.variant-card');
+        if (variantCards.length === 1) {
+            // Auto-select the only variant
+            const firstCard = variantCards[0];
+            const variantId = firstCard.getAttribute('data-variant-id');
+            if (variantId) {
+                selectVariant(variantId, firstCard);
+            }
+        }
+    });
+</script>
+
+<style>
+    .variant-card.selected {
+        border-color: #BC9321 !important;
+        box-shadow: 0 4px 15px rgba(188, 145, 33, 0.4) !important;
+        background: #fffef5 !important;
+    }
+    
+    .variant-card.selected:hover {
+        border-color: #BC9321 !important;
+        box-shadow: 0 4px 15px rgba(188, 145, 33, 0.4) !important;
+    }
+</style>
+@endpush

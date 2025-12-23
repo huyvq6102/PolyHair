@@ -106,9 +106,9 @@
                             </div>
 
                             <!-- Nút hành động chính -->
-                            <div class="d-grid gap-3">
+                            <div class="d-grid">
                                 <a href="{{ route('site.appointment.create') }}"
-                                    class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm text-decoration-none">
+                                    class="btn btn-primary btn-lg rounded-pill fw-bold d-flex align-items-center justify-content-center py-3 shadow-sm text-decoration-none appointment-book-btn" style="margin-bottom: 24px;">
                                     <i class="fas fa-calendar-plus me-2"></i>Đặt lịch ngay
                                 </a>
                                 <a href="{{ route('profile.edit') }}"
@@ -347,9 +347,9 @@
                             } elseif ($status === 'Hoàn thành') {
                                 $statusClass = 'btn-outline-success';
                             } elseif ($status === 'Đã thanh toán') {
-                                // Màu teal/xanh lá cây đậm để rõ ràng
-                                $statusClass = 'btn-outline-secondary';
-                                $customStyle = 'border-color: #20c997 !important; color: #20c997 !important; font-weight: 600; background-color: transparent !important;';
+                                // Màu teal (#17a2b8) để trùng với badge trong card
+                                $statusClass = 'btn-outline-info';
+                                $customStyle = 'border-color: #17a2b8 !important; color: #17a2b8 !important; font-weight: 600; background-color: transparent !important;';
                             } elseif ($status === 'Đã hủy') {
                                 $statusClass = 'btn-outline-danger';
                             }
@@ -362,7 +362,7 @@
             </div>
         @endif
 
-        <div class="row g-3" id="appointments-list">
+        <div class="row g-3" id="appointments-list" style="max-height: 800px; overflow-y: auto; padding-right: 10px;">
             @forelse($allAppointmentsForFilter as $appointment)
                 <div class="col-12 appointment-item" data-appointment-id="{{ $appointment->id }}" data-appointment-status="{{ $appointment->status ?? 'Chờ xử lý' }}">
                     <div class="card border shadow-sm h-100">
@@ -372,15 +372,41 @@
                                     <h6 class="mb-2 fw-bold">
                                         @if($appointment->appointmentDetails->count() > 0)
                                             @foreach($appointment->appointmentDetails as $detail)
-                                                @if($detail->serviceVariant)
-                                                    {{ $detail->serviceVariant->name }}
-                                                @elseif($detail->combo)
-                                                    {{ $detail->combo->name }}
-                                                @else
-                                                    Dịch vụ
-                                                @endif
+                                                @php
+                                                    $serviceName = 'Dịch vụ';
+                                                    
+                                                    // Kiểm tra serviceVariant với service relationship
+                                                    if ($detail->serviceVariant) {
+                                                        // Load service relationship nếu chưa có
+                                                        if (!$detail->serviceVariant->relationLoaded('service')) {
+                                                            $detail->serviceVariant->load('service');
+                                                        }
+                                                        
+                                                        if ($detail->serviceVariant->service) {
+                                                            // Hiển thị tên service gốc
+                                                            $serviceName = $detail->serviceVariant->service->name;
+                                                            // Nếu variant name khác service name và có ý nghĩa, thêm vào
+                                                            if ($detail->serviceVariant->name && 
+                                                                $detail->serviceVariant->name !== $detail->serviceVariant->service->name &&
+                                                                $detail->serviceVariant->name !== 'Dịch vụ đơn') {
+                                                                $serviceName .= ' - ' . $detail->serviceVariant->name;
+                                                            }
+                                                        } elseif ($detail->serviceVariant->name) {
+                                                            // Nếu không có service relationship, dùng variant name
+                                                            $serviceName = $detail->serviceVariant->name;
+                                                        }
+                                                    } elseif ($detail->combo) {
+                                                        $serviceName = $detail->combo->name ?? 'Combo';
+                                                    } elseif ($detail->notes) {
+                                                        // Dịch vụ đơn không có variant, tên được lưu trong notes
+                                                        $serviceName = $detail->notes;
+                                                    }
+                                                @endphp
+                                                {{ $serviceName }}
                                                 @if (!$loop->last) , @endif
                                             @endforeach
+                                        @else
+                                            <span class="text-muted">Chưa có dịch vụ</span>
                                         @endif
                                     </h6>
 
@@ -421,7 +447,7 @@
                                             } elseif ($appointment->status === 'Hoàn thành') {
                                                 $statusBadgeClass = 'bg-success text-white';
                                             } elseif ($appointment->status === 'Đã thanh toán') {
-                                                $statusBadgeClass = 'bg-success text-white';
+                                                $statusBadgeClass = 'bg-info text-white'; // Màu teal (#17a2b8) để trùng với trang chi tiết
                                             } elseif ($appointment->status === 'Đã hủy') {
                                                 $statusBadgeClass = 'bg-danger text-white';
                                             }
@@ -471,7 +497,7 @@
                                 <!-- Tab Lịch sử thanh toán -->
                                 <div class="tab-pane fade" id="payment-history" role="tabpanel">
                                     <h5 class="mb-4">Lịch sử thanh toán</h5>
-                                    <div class="list-group">
+                                    <div class="list-group" id="payment-history-list">
                                         @forelse($user->payments as $payment)
                                             <div class="list-group-item mb-3">
                                                 <div class="d-flex w-100 justify-content-between">
@@ -487,21 +513,29 @@
                                                     </p>
                                                     @php
                                                         $status = $payment->status ?? 'pending';
-                                                        $badgeClass = 'bg-secondary';
+                                                        $badgeStyle = '';
+                                                        $badgeIcon = '';
                                                         $statusText = 'Chờ xử lý';
 
                                                         if ($status == 'completed') {
-                                                            $badgeClass = 'bg-success';
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-check-circle me-1"></i>';
                                                             $statusText = 'Thành công';
                                                         } elseif ($status == 'failed') {
-                                                            $badgeClass = 'bg-danger';
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-times-circle me-1"></i>';
                                                             $statusText = 'Thất bại';
                                                         } elseif ($status == 'refunded') {
-                                                            $badgeClass = 'bg-warning';
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-undo me-1"></i>';
                                                             $statusText = 'Hoàn tiền';
+                                                            } else {
+                                                            // Chờ xử lý
+                                                            $badgeStyle = 'background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);';
+                                                            $badgeIcon = '<i class="fas fa-clock me-1"></i>';
                                                         }
                                                     @endphp
-                                                    <span class="badge {{ $badgeClass }}">{{ $statusText }}</span>
+                                                    <span class="badge payment-status-badge" style="{{ $badgeStyle }}">{!! $badgeIcon !!}{{ $statusText }}</span>
                                                 </div>
 
                                                 @php
@@ -545,25 +579,106 @@
     <style>
         /* Style cho nút filter "Đã thanh toán" - màu teal/xanh lá cây đậm */
         .status-filter-btn[data-status="Đã thanh toán"] {
-            border-color: #20c997 !important;
-            color: #20c997 !important;
+            border-color: #17a2b8 !important;
+            color: #17a2b8 !important;
             font-weight: 600 !important;
             background-color: transparent !important;
         }
 
         .status-filter-btn[data-status="Đã thanh toán"]:hover {
-            background-color: #20c997 !important;
-            border-color: #20c997 !important;
+            background-color: #17a2b8 !important;
+            border-color: #17a2b8 !important;
             color: #fff !important;
             font-weight: 600 !important;
         }
 
         .status-filter-btn[data-status="Đã thanh toán"].active {
-            background-color: #20c997 !important;
-            border-color: #20c997 !important;
+            background-color: #17a2b8 !important;
+            border-color: #17a2b8 !important;
             color: #fff !important;
             font-weight: 600 !important;
         }
+        /* Style cho danh sách lịch hẹn - có thể cuộn */
+    #appointments-list {
+        max-height: 800px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    /* Custom scrollbar cho danh sách lịch hẹn */
+    #appointments-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #appointments-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    #appointments-list::-webkit-scrollbar-thumb {
+        background: #d8b26a;
+        border-radius: 10px;
+    }
+
+    #appointments-list::-webkit-scrollbar-thumb:hover {
+        background: #c9a055;
+    }
+
+    /* Style cho danh sách lịch sử thanh toán - có thể cuộn */
+    #payment-history-list {
+        max-height: 800px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    /* Custom scrollbar cho danh sách lịch sử thanh toán */
+    #payment-history-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #payment-history-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    #payment-history-list::-webkit-scrollbar-thumb {
+        background: #d8b26a;
+        border-radius: 10px;
+    }
+
+    #payment-history-list::-webkit-scrollbar-thumb:hover {
+        background: #c9a055;
+    }
+
+    /* Style cho badge trạng thái thanh toán */
+    .payment-status-badge {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        transition: all 0.3s ease;
+    }
+
+    .payment-status-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .payment-status-badge i {
+        font-size: 0.9em;
+    }
+
+    /* Style cho button Đặt lịch ngay */
+    .appointment-book-btn {
+        background-color: #d8b26a !important;
+        border-color: #d8b26a !important;
+        color: #fff !important;
+    }
+
+    .appointment-book-btn:hover {
+        background-color: #c9a055 !important;
+        border-color: #c9a055 !important;
+        color: #fff !important;
+    }
     </style>
 @endpush
 
@@ -812,7 +927,7 @@
                     appointmentElement.setAttribute('data-appointment-status', newStatus);
 
                     // Cập nhật class badge
-                    statusBadge.className = 'badge ms-2 appointment-status-badge';
+                    statusBadge.className = 'badge ms-2 appointment-status-badge text-white';
                     if (newStatus === 'Đã xác nhận') {
                         statusBadge.classList.add('bg-success');
                     } else if (newStatus === 'Chờ xử lý') {
@@ -826,7 +941,7 @@
                     } else if (newStatus === 'Chưa thanh toán') {
                         statusBadge.classList.add('bg-danger');
                     } else if (newStatus === 'Đã thanh toán') {
-                        statusBadge.classList.add('bg-success');
+                        statusBadge.classList.add('bg-info'); // Màu teal (#17a2b8) để trùng với trang chi tiết
                     } else {
                         statusBadge.classList.add('bg-info');
                     }

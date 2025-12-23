@@ -31,7 +31,7 @@ class AppointmentController extends Controller
     /**
      * Kiểm tra xem việc chuyển đổi trạng thái có được phép không.
      * Không cho phép rollback về trạng thái trước đó.
-     * 
+     *
      * @param string $oldStatus Trạng thái hiện tại
      * @param string $newStatus Trạng thái mới
      * @return bool
@@ -109,23 +109,23 @@ class AppointmentController extends Controller
         $employees = \App\Models\Employee::where('position', 'Stylist')
             ->with('user')
             ->get();
-        
+
         // Lấy dịch vụ đơn (không có biến thể)
         $singleServices = \App\Models\Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
             ->get();
-        
+
         // Lấy dịch vụ có biến thể
         $variantServices = \App\Models\Service::whereNull('deleted_at')
             ->whereHas('serviceVariants')
             ->with('serviceVariants')
             ->get();
-        
+
         // Lấy combo
         $combos = \App\Models\Combo::whereNull('deleted_at')
             ->with('comboItems')
             ->get();
-        
+
         return view('admin.appointments.create', compact('employees', 'singleServices', 'variantServices', 'combos'));
     }
 
@@ -199,17 +199,17 @@ class AppointmentController extends Controller
         // Prepare service data from selected services
         $serviceVariantData = [];
         $totalDuration = 0;
-        
+
         foreach ($validated['services'] as $serviceValue) {
             // Format: "type_id" (e.g., "single_1", "variant_5", "combo_2")
             $parts = explode('_', $serviceValue);
             if (count($parts) !== 2) {
                 continue;
             }
-            
+
             $serviceType = $parts[0];
             $serviceId = $parts[1];
-            
+
             if ($serviceType === 'single') {
                 $service = \App\Models\Service::find($serviceId);
                 if ($service) {
@@ -249,7 +249,7 @@ class AppointmentController extends Controller
                             $comboDuration += $item->service->base_duration ?? 0;
                         }
                     }
-                    
+
                     $serviceVariantData[] = [
                         'service_variant_id' => null,
                         'combo_id' => $combo->id,
@@ -268,7 +268,7 @@ class AppointmentController extends Controller
         if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
             $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
             $appointmentData['start_at'] = $startAt;
-            
+
             // Calculate end_at based on total service duration
             if ($totalDuration > 0) {
                 $appointmentData['end_at'] = $startAt->copy()->addMinutes($totalDuration);
@@ -300,29 +300,29 @@ class AppointmentController extends Controller
         $employees = \App\Models\Employee::where('position', 'Stylist')
             ->with('user')
             ->get();
-        
+
         // Lấy dịch vụ đơn (không có biến thể)
         $singleServices = \App\Models\Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
             ->get();
-        
+
         // Lấy dịch vụ có biến thể
         $variantServices = \App\Models\Service::whereNull('deleted_at')
             ->whereHas('serviceVariants')
             ->with('serviceVariants')
             ->get();
-        
+
         // Lấy combo
         $combos = \App\Models\Combo::whereNull('deleted_at')
             ->with('comboItems')
             ->get();
-        
+
         // Xác định loại dịch vụ hiện tại
         $currentServiceType = 'variant'; // default
         $currentServiceId = null;
         $currentServiceVariantId = null;
         $currentComboId = null;
-        
+
         if ($appointment->appointmentDetails->count() > 0) {
             $detail = $appointment->appointmentDetails->first();
             if ($detail->combo_id) {
@@ -345,12 +345,12 @@ class AppointmentController extends Controller
                 }
             }
         }
-        
+
         return view('admin.appointments.edit', compact(
-            'appointment', 
-            'employees', 
-            'singleServices', 
-            'variantServices', 
+            'appointment',
+            'employees',
+            'singleServices',
+            'variantServices',
             'combos',
             'currentServiceType',
             'currentServiceId',
@@ -370,7 +370,7 @@ class AppointmentController extends Controller
             'route' => $request->route()->getName(),
             'url' => $request->fullUrl()
         ]);
-        
+
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
@@ -419,11 +419,17 @@ class AppointmentController extends Controller
 
             // Prepare appointment data
             $appointmentData = [
-                'user_id' => $user->id,
+                 'user_id' => $user ? $user->id : $appointment->user_id,
                 'employee_id' => $validated['employee_id'] ?? null,
                 'status' => $validated['status'],
                 'note' => $validated['note'] ?? null,
             ];
+             // Nếu là guest appointment (không có user), cập nhật guest info
+            if (!$user) {
+                $appointmentData['guest_name'] = $validated['name'];
+                $appointmentData['guest_phone'] = $validated['phone'];
+                $appointmentData['guest_email'] = $validated['email'] ?? null;
+            }
 
             // Load active promotions for automatic discount calculation (only service-level promotions)
             $now = Carbon::now();
@@ -443,27 +449,27 @@ class AppointmentController extends Controller
             // Prepare new services data if any
             $newServiceVariantData = [];
             $additionalDuration = 0;
-            
+
             if (!empty($validated['new_services'])) {
                 foreach ($validated['new_services'] as $serviceValue) {
                     if (empty($serviceValue)) continue;
-                    
+
                     // Format: "type_id" (e.g., "single_1", "variant_5", "combo_2")
                     $parts = explode('_', $serviceValue);
                     if (count($parts) !== 2) {
                         continue;
                     }
-                    
+
                     $serviceType = $parts[0];
                     $serviceId = $parts[1];
-                    
+
                     if ($serviceType === 'single') {
                         $service = \App\Models\Service::find($serviceId);
                         if ($service) {
                             // Calculate discount for this service
                             $discountResult = $this->calculateDiscountForItem($service, 'service', $activePromotions);
                             $finalPrice = $discountResult['finalPrice'];
-                            
+
                             $newServiceVariantData[] = [
                                 'service_variant_id' => null,
                                 'combo_id' => null,
@@ -481,7 +487,7 @@ class AppointmentController extends Controller
                             // Calculate discount for this variant
                             $discountResult = $this->calculateDiscountForItem($serviceVariant, 'variant', $activePromotions);
                             $finalPrice = $discountResult['finalPrice'];
-                            
+
                             $newServiceVariantData[] = [
                                 'service_variant_id' => $serviceVariant->id,
                                 'combo_id' => null,
@@ -504,11 +510,11 @@ class AppointmentController extends Controller
                                     $comboDuration += $item->service->base_duration ?? 0;
                                 }
                             }
-                            
+
                             // Calculate discount for this combo
                             $discountResult = $this->calculateDiscountForItem($combo, 'combo', $activePromotions);
                             $finalPrice = $discountResult['finalPrice'];
-                            
+
                             $newServiceVariantData[] = [
                                 'service_variant_id' => null,
                                 'combo_id' => $combo->id,
@@ -527,7 +533,7 @@ class AppointmentController extends Controller
             // Set start_at and end_at if date and time provided
             if (!empty($validated['appointment_date']) && !empty($validated['appointment_time'])) {
                 $startAt = Carbon::parse($validated['appointment_date'] . ' ' . $validated['appointment_time']);
-                
+
                 // Kiểm tra không được chọn ngày giờ trong quá khứ
                 $now = Carbon::now('Asia/Ho_Chi_Minh');
                 if ($startAt->lt($now)) {
@@ -535,15 +541,15 @@ class AppointmentController extends Controller
                         ->withInput()
                         ->with('error', 'Không được chọn ngày giờ trong quá khứ! Vui lòng chọn ngày giờ từ bây giờ trở đi.');
                 }
-                
+
                 $appointmentData['start_at'] = $startAt;
-                
+
                 // Calculate total duration from existing services + new services
                 // Reload appointment to get fresh appointment details count
                 $appointment->refresh();
                 $existingDuration = $appointment->appointmentDetails->sum('duration');
                 $totalDuration = $existingDuration + $additionalDuration;
-                
+
                 // Always set end_at if we have start_at, even if duration is 0
                 $appointmentData['end_at'] = $startAt->copy()->addMinutes(max($totalDuration, 60)); // Minimum 60 minutes if no duration
             }
@@ -556,9 +562,9 @@ class AppointmentController extends Controller
                 'appointment_data' => $appointmentData,
                 'service_variant_data_count' => count($newServiceVariantData)
             ]);
-            
+
             $updatedAppointment = $this->appointmentService->update($id, $appointmentData, $newServiceVariantData);
-            
+
             \Illuminate\Support\Facades\Log::info('Appointment updated successfully', [
                 'appointment_id' => $id,
                 'appointment_deleted_at' => $updatedAppointment->deleted_at,
@@ -576,7 +582,7 @@ class AppointmentController extends Controller
                 'error' => $e->getTraceAsString(),
                 'request_data' => $request->all()
             ]);
-            
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Có lỗi xảy ra khi cập nhật lịch hẹn: ' . $e->getMessage());
@@ -591,19 +597,19 @@ class AppointmentController extends Controller
         try {
             $appointment = $this->appointmentService->getOne($appointmentId);
             $detail = \App\Models\AppointmentDetail::findOrFail($detailId);
-            
+
             if ($detail->appointment_id != $appointment->id) {
                 return redirect()->back()->with('error', 'Dịch vụ không thuộc lịch hẹn này!');
             }
-            
+
             // Kiểm tra số lượng dịch vụ - không cho xóa nếu chỉ còn 1 dịch vụ
             $serviceCount = $appointment->appointmentDetails->count();
             if ($serviceCount <= 1) {
                 return redirect()->back()->with('error', 'Không thể xóa dịch vụ cuối cùng! Đơn đặt phải có ít nhất 1 dịch vụ.');
             }
-            
+
             $detail->delete();
-            
+
             // Update appointment end_at if needed (recalculate based on remaining services)
             $appointment->refresh();
             $remainingDuration = $appointment->appointmentDetails->sum('duration');
@@ -611,7 +617,7 @@ class AppointmentController extends Controller
                 $appointment->end_at = \Carbon\Carbon::parse($appointment->start_at)->addMinutes($remainingDuration);
                 $appointment->save();
             }
-            
+
             return redirect()->route('admin.appointments.edit', $appointmentId)
                 ->with('success', 'Dịch vụ đã được xóa thành công!');
         } catch (\Exception $e) {
@@ -670,7 +676,7 @@ class AppointmentController extends Controller
     {
         $employee = \App\Models\Employee::with('services')->findOrFail($employeeId);
         $employeeServiceIds = $employee->services->pluck('id')->toArray();
-        
+
         // Lấy dịch vụ đơn
         $singleServices = \App\Models\Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
@@ -684,7 +690,7 @@ class AppointmentController extends Controller
                     'duration' => $service->base_duration ?? 0,
                 ];
             });
-        
+
         // Lấy dịch vụ có biến thể
         $variantServices = \App\Models\Service::whereNull('deleted_at')
             ->whereHas('serviceVariants')
@@ -705,7 +711,7 @@ class AppointmentController extends Controller
                     }),
                 ];
             });
-        
+
         // Combo - lấy tất cả vì combo có thể chứa nhiều dịch vụ
         $combos = \App\Models\Combo::whereNull('deleted_at')
             ->with('comboItems')
@@ -717,7 +723,7 @@ class AppointmentController extends Controller
                     'price' => $combo->price,
                 ];
             });
-        
+
         return response()->json([
             'singleServices' => $singleServices,
             'variantServices' => $variantServices,
@@ -737,7 +743,7 @@ class AppointmentController extends Controller
             'request_route' => request()->route()->getName() ?? 'unknown',
             'request_all' => request()->all()
         ]);
-        
+
         $this->appointmentService->delete($id);
 
         return redirect()->route('admin.appointments.index')
@@ -778,7 +784,7 @@ class AppointmentController extends Controller
         if (!$appointment) {
             return redirect()->route('admin.appointments.index')->with('error', 'Không tìm thấy lịch hẹn.');
         }
-        
+
         if ($appointment->status === 'Đã thanh toán') {
             return redirect()->route('admin.appointments.show', $appointment->id)
                              ->with('info', 'Lịch hẹn này đã được thanh toán.');
@@ -787,7 +793,7 @@ class AppointmentController extends Controller
         // Construct "Cart" data from Appointment
         $services = [];
         $subtotal = 0;
-        
+
         // Also build a cart array compatible with PaymentService/PromotionService
         $cart = [
             'appointment_' . $appointment->id => [
@@ -834,13 +840,13 @@ class AppointmentController extends Controller
         ];
 
         // Promotion Logic
-        $promotionAmount = 0; 
+        $promotionAmount = 0;
         $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
         $appliedCoupon = null;
         $promotionMessage = null;
 
         // Get applied promotion ID from request or session
-        $appliedPromotionId = $request->input('applied_promotion_id') 
+        $appliedPromotionId = $request->input('applied_promotion_id')
             ?? \Illuminate\Support\Facades\Session::get('applied_promotion_id');
 
         // If promotion ID is provided, use it
@@ -856,7 +862,7 @@ class AppointmentController extends Controller
         if ($couponCode) {
             $promotionService = app(\App\Services\PromotionService::class);
             $userIdForPromo = $appointment->user_id ?? (auth()->check() ? auth()->id() : null);
-            
+
             $result = $promotionService->validateAndCalculateDiscount(
                 $couponCode,
                 $cart,
@@ -919,7 +925,7 @@ class AppointmentController extends Controller
         // Actually the view hardcodes route('site.payments.process').
         // We should duplicate the view or make it dynamic.
         // For now, let's duplicate the view to 'admin.appointments.checkout' to be safe and customizable.
-        
+
         return view('admin.appointments.checkout', [
             'customer' => $customerData,
             'services' => $services,
@@ -953,7 +959,7 @@ class AppointmentController extends Controller
         try {
             $cart = \Illuminate\Support\Facades\Session::get('cart', []);
             $user = auth()->user(); // The Admin executing the payment
-            
+
             // Determine the "Payer" user (Customer) from appointment in cart
             $payer = null;
             $appointmentId = null;
@@ -965,7 +971,7 @@ class AppointmentController extends Controller
                     if ($appt) {
                         $payer = $appt->user; // The customer
                     }
-                    break; 
+                    break;
                 }
             }
 
@@ -975,7 +981,7 @@ class AppointmentController extends Controller
             $appliedPromotionId = $request->input('applied_promotion_id');
             $promotionDiscountAmount = $request->input('promotion_discount_amount', 0);
             $couponCode = \Illuminate\Support\Facades\Session::get('coupon_code');
-            
+
             // If applied_promotion_id is provided, ensure we have the correct coupon code
             if ($appliedPromotionId) {
                 $promotion = \App\Models\Promotion::find($appliedPromotionId);
@@ -984,7 +990,7 @@ class AppointmentController extends Controller
                     $couponCode = $promotion->code;
                     \Illuminate\Support\Facades\Session::put('coupon_code', $couponCode);
                     \Illuminate\Support\Facades\Session::put('applied_promotion_id', $appliedPromotionId);
-                    
+
                     \Illuminate\Support\Facades\Log::info('Admin checkout: Applied promotion', [
                         'promotion_id' => $appliedPromotionId,
                         'coupon_code' => $couponCode,
@@ -998,7 +1004,7 @@ class AppointmentController extends Controller
                     \Illuminate\Support\Facades\Session::put('applied_promotion_id', $promotion->id);
                 }
             }
-            
+
             $paymentMethod = $request->input('payment_method', 'cash');
 
             // Process Payment
@@ -1009,19 +1015,30 @@ class AppointmentController extends Controller
             if ($paymentMethod === 'cash') {
                  $payment->status = 'completed';
                  $payment->save();
-                 
+
                  if ($payment->appointment_id) {
                      $appt = \App\Models\Appointment::find($payment->appointment_id);
                      if ($appt) {
+                         $oldStatus = $appt->status;
                          $appt->status = 'Đã thanh toán';
                          $appt->save();
                          foreach ($appt->appointmentDetails as $detail) {
                             $detail->status = 'Hoàn thành';
                             $detail->save();
                          }
+                         
+                         // Broadcast status update event
+                         $appt->refresh();
+                         $appt->load([
+                             'user',
+                             'employee.user',
+                             'appointmentDetails.serviceVariant.service',
+                             'appointmentDetails.combo'
+                         ]);
+                         event(new \App\Events\AppointmentStatusUpdated($appt));
                      }
                  }
-                 
+
                  if ($payment->order_id) {
                      $order = \App\Models\Order::find($payment->order_id);
                      if ($order) {
@@ -1030,7 +1047,7 @@ class AppointmentController extends Controller
                      }
                  }
             }
-            
+
             \Illuminate\Support\Facades\Session::forget('cart');
             \Illuminate\Support\Facades\Session::forget('coupon_code');
 
@@ -1135,7 +1152,7 @@ class AppointmentController extends Controller
             $subtotal, // Use the dynamically calculated subtotal
             $appointment->user_id
         );
-        
+
         // Check if request is AJAX
         if ($request->ajax() || $request->wantsJson()) {
             if (!$result['valid']) {
@@ -1145,9 +1162,9 @@ class AppointmentController extends Controller
                     'error' => $result['message']
                 ], 400);
             }
-            
+
             \Illuminate\Support\Facades\Session::put('coupon_code', $code);
-            
+
             // Save applied promotion ID if provided
             $appliedPromotionId = $request->input('applied_promotion_id');
             if ($appliedPromotionId && isset($result['promotion'])) {
@@ -1155,7 +1172,7 @@ class AppointmentController extends Controller
             } elseif ($appliedPromotionId) {
                 \Illuminate\Support\Facades\Session::put('applied_promotion_id', $appliedPromotionId);
             }
-            
+
             $promotion = $result['promotion'];
             return response()->json([
                 'success' => true,
@@ -1172,14 +1189,14 @@ class AppointmentController extends Controller
                 ]
             ]);
         }
-        
+
         // Non-AJAX request handling
         if (!$result['valid']) {
             return back()->with('error', $result['message']);
         }
-        
+
         \Illuminate\Support\Facades\Session::put('coupon_code', $code);
-        
+
         // Save applied promotion ID if provided
         $appliedPromotionId = $request->input('applied_promotion_id');
         if ($appliedPromotionId && isset($result['promotion'])) {
@@ -1187,7 +1204,7 @@ class AppointmentController extends Controller
         } elseif ($appliedPromotionId) {
             \Illuminate\Support\Facades\Session::put('applied_promotion_id', $appliedPromotionId);
         }
-        
+
         return back()->with('success', 'Áp dụng mã khuyến mại thành công!');
     }
 
@@ -1245,7 +1262,7 @@ class AppointmentController extends Controller
             if ($promo->status !== 'active') continue;
             if ($promo->start_date && $promo->start_date > $now) continue;
             if ($promo->end_date && $promo->end_date < $now) continue;
-            
+
             // Check usage_limit - if promotion has reached its limit, skip it
             if ($promo->usage_limit) {
                 $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
@@ -1253,7 +1270,7 @@ class AppointmentController extends Controller
                     continue; // Skip this promotion, use original price
                 }
             }
-            
+
             // Check per_user_limit - if user has reached their limit, skip it
             // CHỈ đếm các PromotionUsage có appointment đã thanh toán
             if ($promo->per_user_limit) {
@@ -1339,7 +1356,7 @@ class AppointmentController extends Controller
                 }
             }
         }
-        
+
         $finalPrice = max(0, $originalPrice - $discount);
 
         return [
