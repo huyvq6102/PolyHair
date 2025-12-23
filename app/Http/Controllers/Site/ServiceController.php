@@ -106,6 +106,7 @@ class ServiceController extends Controller
             
             foreach ($services as $service) {
                 $finalPrice = 0;
+                $originalPrice = 0;
                 
                 // Nếu service có variants, tính discount cho từng variant và lấy giá cuối cùng thấp nhất
                 if ($service->serviceVariants->count() > 0) {
@@ -115,23 +116,32 @@ class ServiceController extends Controller
                     }
                     
                     $bestFinalPrice = null;
+                    $bestOriginalPrice = null;
                     foreach ($activeVariants as $variant) {
+                        $variantOriginalPrice = $variant->price ?? 0;
                         $variantFinalPrice = $this->calculateFinalPriceForVariant($variant, $activePromotions);
+                        // Lấy giá tốt nhất (thấp nhất) - kể cả khi không có promotion, finalPrice = originalPrice
                         if ($bestFinalPrice === null || $variantFinalPrice < $bestFinalPrice) {
                             $bestFinalPrice = $variantFinalPrice;
+                            $bestOriginalPrice = $variantOriginalPrice;
                         }
                     }
-                    $finalPrice = $bestFinalPrice ?? 0;
+                    // Nếu không có variant nào, fallback về base_price (trường hợp edge case)
+                    if ($bestFinalPrice === null) {
+                        $originalPrice = $service->base_price ?? 0;
+                        $finalPrice = $this->calculateFinalPriceForService($service, $originalPrice, $activePromotions);
+                    } else {
+                        $finalPrice = $bestFinalPrice;
+                        $originalPrice = $bestOriginalPrice;
+                    }
                 } else {
-                    // Service đơn - lưu giá gốc, để view tự tính discount
+                    // Service đơn - tính giá sau discount (nếu không có promotion thì finalPrice = originalPrice)
                     $originalPrice = $service->base_price ?? 0;
-                    // KHÔNG tính discount ở đây, để view tự tính để hiển thị đúng
+                    $finalPrice = $this->calculateFinalPriceForService($service, $originalPrice, $activePromotions);
                 }
                 
-                // Filter by price range - sử dụng giá gốc (base_price) để filter
-                $priceForFilter = $service->serviceVariants->count() > 0 
-                    ? ($finalPrice ?? ($service->serviceVariants->min('price') ?? 0))
-                    : ($service->base_price ?? 0);
+                // Filter by price range - sử dụng giá cuối cùng (sau discount) để filter
+                $priceForFilter = $finalPrice;
                 
                 if ($minPrice !== null && $priceForFilter < $minPrice) {
                     continue;
@@ -147,7 +157,8 @@ class ServiceController extends Controller
                     'id' => $service->id,
                     'name' => $service->name,
                     'image' => $service->image,
-                    'price' => $service->base_price ?? 0, // Lưu giá gốc, để view tự tính discount
+                    'price' => $originalPrice, // Lưu giá gốc, để view tự tính discount
+                    'finalPrice' => $finalPrice, // Lưu giá sau discount để sắp xếp
                     'category' => $service->category,
                     'serviceVariants' => $service->serviceVariants,
                     'link' => route('site.services.show', $service->id),
@@ -180,12 +191,13 @@ class ServiceController extends Controller
             
             foreach ($combos as $combo) {
                 $originalPrice = $combo->price ?? 0;
+                $finalPrice = $this->calculateFinalPriceForCombo($combo, $originalPrice, $activePromotions);
                 
-                // Filter by price range - sử dụng giá gốc để filter
-                if ($minPrice !== null && $originalPrice < $minPrice) {
+                // Filter by price range - sử dụng giá cuối cùng (sau discount) để filter
+                if ($minPrice !== null && $finalPrice < $minPrice) {
                     continue;
                 }
-                if ($maxPrice !== null && $originalPrice > $maxPrice) {
+                if ($maxPrice !== null && $finalPrice > $maxPrice) {
                     continue;
                 }
                 
@@ -195,6 +207,7 @@ class ServiceController extends Controller
                     'name' => $combo->name,
                     'image' => $combo->image,
                     'price' => $originalPrice, // Lưu giá gốc, để view tự tính discount
+                    'finalPrice' => $finalPrice, // Lưu giá sau discount để sắp xếp
                     'category' => $combo->category,
                     'link' => route('site.services.show', $combo->id),
                 ]);
@@ -210,10 +223,24 @@ class ServiceController extends Controller
                 $items = $items->sortByDesc('name')->values();
                 break;
             case 'price_asc':
-                $items = $items->sortBy('price')->values();
+                // Sắp xếp theo giá cuối cùng (sau discount) để khớp với giá hiển thị
+                // Nếu không có finalPrice (edge case), dùng giá gốc
+                $items = $items->sortBy(function($item) {
+                    // Ưu tiên dùng finalPrice (giá sau discount), nếu không có thì dùng giá gốc
+                    // Đảm bảo luôn có giá để sắp xếp, kể cả khi không có khuyến mãi
+                    $sortPrice = isset($item['finalPrice']) ? $item['finalPrice'] : ($item['price'] ?? 0);
+                    return $sortPrice;
+                })->values();
                 break;
             case 'price_desc':
-                $items = $items->sortByDesc('price')->values();
+                // Sắp xếp theo giá cuối cùng (sau discount) để khớp với giá hiển thị
+                // Nếu không có finalPrice (edge case), dùng giá gốc
+                $items = $items->sortByDesc(function($item) {
+                    // Ưu tiên dùng finalPrice (giá sau discount), nếu không có thì dùng giá gốc
+                    // Đảm bảo luôn có giá để sắp xếp, kể cả khi không có khuyến mãi
+                    $sortPrice = isset($item['finalPrice']) ? $item['finalPrice'] : ($item['price'] ?? 0);
+                    return $sortPrice;
+                })->values();
                 break;
             default: // 'id_desc'
                 $items = $items->sortByDesc('id')->values();
