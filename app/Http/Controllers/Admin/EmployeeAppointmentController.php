@@ -89,9 +89,11 @@ class EmployeeAppointmentController extends Controller
             return false;
         }
 
-        // Nếu đã "Hoàn thành", không cho phép chuyển sang trạng thái khác
+        // Cho phép sửa khi status là "Hoàn thành" - có thể giữ nguyên hoặc chuyển sang "Đã thanh toán"
+        // Nếu đã "Hoàn thành", chỉ cho phép giữ nguyên hoặc chuyển sang "Đã thanh toán"
         if ($oldStatus === 'Hoàn thành') {
-            return false;
+            // Cho phép giữ nguyên hoặc chuyển sang "Đã thanh toán"
+            return $newStatus === 'Hoàn thành' || $newStatus === 'Đã thanh toán';
         }
 
         // Chỉ cho phép chuyển sang trạng thái có thứ tự cao hơn (tiến về phía trước)
@@ -283,23 +285,11 @@ class EmployeeAppointmentController extends Controller
                 'note' => $validated['note'] ?? null,
             ], $serviceVariantData);
 
-            // If employee selected a promotion code, link it to this appointment & customer
-            if (!empty($validated['promotion_code'] ?? null) && $userId) {
-                // Chỉ chấp nhận promotion có status = 'active'
-                // Command sẽ tự động cập nhật trạng thái dựa trên ngày
-                $promotion = Promotion::where('code', $validated['promotion_code'])
-                    ->where('status', 'active')
-                    ->whereNull('deleted_at')
-                    ->first();
-
-                if ($promotion) {
-                    PromotionUsage::create([
-                        'promotion_id'   => $promotion->id,
-                        'user_id'        => $userId,
-                        'appointment_id' => $appointment->id,
-                        'used_at' => now(),
-                    ]);
-                }
+            // If employee selected a promotion code, lưu vào session để sử dụng khi thanh toán
+            // KHÔNG tạo PromotionUsage ở đây vì appointment chưa thanh toán
+            // PromotionUsage sẽ được tạo sau khi thanh toán thành công
+            if (!empty($validated['promotion_code'] ?? null)) {
+                \Illuminate\Support\Facades\Session::put('coupon_code', $validated['promotion_code']);
             }
 
             return redirect()->route('employee.appointments.show', $appointment->id)
@@ -537,6 +527,12 @@ class EmployeeAppointmentController extends Controller
 
         $appointment = $this->appointmentService->getOne($id);
 
+        // Không cho phép sửa khi trạng thái là "Đã thanh toán"
+        if ($appointment->status === 'Đã thanh toán') {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Không thể sửa lịch hẹn đã thanh toán.');
+        }
+
         // Receptionist can edit all appointments, no need to check ownership
 
         // Chỉ lấy nhân viên có position là Stylist (giống logic admin)
@@ -544,19 +540,57 @@ class EmployeeAppointmentController extends Controller
             ->with('user')
             ->get();
 
-        // Get single services (no variants)
+        // Lấy danh sách các dịch vụ đã có trong appointment để loại bỏ khỏi danh sách thêm mới
+        $existingServiceIds = [];
+        $existingVariantIds = [];
+        $existingComboIds = [];
+        
+        foreach ($appointment->appointmentDetails as $detail) {
+            if ($detail->combo_id) {
+                $existingComboIds[] = $detail->combo_id;
+            } elseif ($detail->service_variant_id) {
+                $existingVariantIds[] = $detail->service_variant_id;
+                // Lấy service_id từ variant
+                if ($detail->serviceVariant && $detail->serviceVariant->service_id) {
+                    $existingServiceIds[] = $detail->serviceVariant->service_id;
+                }
+            } elseif ($detail->notes) {
+                // Tìm service theo notes (tên dịch vụ)
+                $service = \App\Models\Service::where('name', $detail->notes)
+                    ->whereNull('deleted_at')
+                    ->whereDoesntHave('serviceVariants')
+                    ->first();
+                if ($service) {
+                    $existingServiceIds[] = $service->id;
+                }
+            }
+        }
+
+        // Get single services (no variants) - loại bỏ các dịch vụ đã có
         $singleServices = \App\Models\Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
+            ->whereNotIn('id', $existingServiceIds)
             ->get();
 
-        // Get services with variants
+        // Get services with variants - loại bỏ các dịch vụ đã có
         $variantServices = \App\Models\Service::whereNull('deleted_at')
             ->whereHas('serviceVariants')
-            ->with('serviceVariants')
-            ->get();
+            ->whereNotIn('id', $existingServiceIds)
+            ->with(['serviceVariants' => function($query) use ($existingVariantIds) {
+                // Loại bỏ các variant đã có
+                if (!empty($existingVariantIds)) {
+                    $query->whereNotIn('id', $existingVariantIds);
+                }
+            }])
+            ->get()
+            ->filter(function($service) {
+                // Chỉ giữ lại service có ít nhất 1 variant chưa được thêm
+                return $service->serviceVariants->count() > 0;
+            });
 
-        // Get combos
+        // Get combos - loại bỏ các combo đã có
         $combos = \App\Models\Combo::whereNull('deleted_at')
+            ->whereNotIn('id', $existingComboIds)
             ->with('comboItems')
             ->get();
 
@@ -622,6 +656,12 @@ class EmployeeAppointmentController extends Controller
         }
 
         $appointment = $this->appointmentService->getOne($id);
+
+        // Không cho phép sửa khi trạng thái là "Đã thanh toán"
+        if ($appointment->status === 'Đã thanh toán') {
+            return redirect()->route('employee.appointments.index')
+                ->with('error', 'Không thể sửa lịch hẹn đã thanh toán.');
+        }
 
         try {
             $validated = $request->validate([
@@ -717,7 +757,9 @@ class EmployeeAppointmentController extends Controller
                         $variant = \App\Models\ServiceVariant::with('service')->find($serviceId);
                         if ($variant) {
                             // Calculate discount for this variant
-                            $discountResult = $this->calculateDiscountForItem($variant, 'variant', $activePromotions);
+                            // Calculate discount for this variant - truyền user_id của appointment
+                            $userId = $appointment->user_id;
+                            $discountResult = $this->calculateDiscountForItem($variant, 'variant', $activePromotions, $userId);
                             $finalPrice = $discountResult['finalPrice'];
                             
                             $additionalDuration += $variant->duration ?? 60;
@@ -733,7 +775,9 @@ class EmployeeAppointmentController extends Controller
                         $combo = \App\Models\Combo::with('comboItems.serviceVariant')->find($serviceId);
                         if ($combo) {
                             // Calculate discount for this combo
-                            $discountResult = $this->calculateDiscountForItem($combo, 'combo', $activePromotions);
+                            // Calculate discount for this combo - truyền user_id của appointment
+                            $userId = $appointment->user_id;
+                            $discountResult = $this->calculateDiscountForItem($combo, 'combo', $activePromotions, $userId);
                             $finalPrice = $discountResult['finalPrice'];
                             
                             $additionalDuration += $combo->duration ?? 60;
@@ -749,7 +793,9 @@ class EmployeeAppointmentController extends Controller
                         $service = \App\Models\Service::find($serviceId);
                         if ($service) {
                             // Calculate discount for this service
-                            $discountResult = $this->calculateDiscountForItem($service, 'service', $activePromotions);
+                            // Calculate discount for this service - truyền user_id của appointment
+                            $userId = $appointment->user_id;
+                            $discountResult = $this->calculateDiscountForItem($service, 'service', $activePromotions, $userId);
                             $finalPrice = $discountResult['finalPrice'];
                             
                             $duration = $service->base_duration ?? 60;
@@ -991,6 +1037,8 @@ class EmployeeAppointmentController extends Controller
 
         // Get available promotions for dropdown
         $now = Carbon::now();
+        $userId = $appointment->user_id;
+        
         $availableOrderPromotions = Promotion::where('apply_scope', 'order')
             ->whereNull('deleted_at')
             ->where(function($query) use ($now) {
@@ -1006,7 +1054,22 @@ class EmployeeAppointmentController extends Controller
                       ->orWhere('status', 'active');
             })
             ->orderBy('id', 'desc')
-            ->get();
+            ->get()
+            ->filter(function($promotion) use ($userId) {
+                // Lọc các mã đã hết lượt per_user_limit
+                if ($promotion->per_user_limit && $userId) {
+                    $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promotion->id)
+                        ->where('user_id', $userId)
+                        ->whereHas('appointment', function($query) {
+                            $query->where('status', 'Đã thanh toán');
+                        })
+                        ->count();
+                    
+                    return $usageCount < $promotion->per_user_limit;
+                }
+                return true;
+            })
+            ->values();
 
         $availableCustomerTierPromotions = Promotion::where('apply_scope', 'customer_tier')
             ->whereNull('deleted_at')
@@ -1023,7 +1086,22 @@ class EmployeeAppointmentController extends Controller
                       ->orWhere('status', 'active');
             })
             ->orderBy('id', 'desc')
-            ->get();
+            ->get()
+            ->filter(function($promotion) use ($userId) {
+                // Lọc các mã đã hết lượt per_user_limit
+                if ($promotion->per_user_limit && $userId) {
+                    $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promotion->id)
+                        ->where('user_id', $userId)
+                        ->whereHas('appointment', function($query) {
+                            $query->where('status', 'Đã thanh toán');
+                        })
+                        ->count();
+                    
+                    return $usageCount < $promotion->per_user_limit;
+                }
+                return true;
+            })
+            ->values();
 
         return view('admin.employee-appointments.checkout', [
             'customer' => $customerData,
@@ -1139,6 +1217,13 @@ class EmployeeAppointmentController extends Controller
                             $detail->save();
                          }
                          
+                         // Ghi nhận việc sử dụng khuyến mãi order-level/customer_tier (nếu có)
+                         // PHẢI gọi TRƯỚC KHI xóa session để có thể lấy promotion từ session
+                         $appt->recordPromotionUsage();
+                         
+                         // Ghi nhận tất cả các khuyến mãi service-level đã được áp dụng
+                         $appt->recordServiceLevelPromotionUsages();
+                         
                          // Broadcast status update event
                          $appt->refresh();
                          $appt->load([
@@ -1160,6 +1245,7 @@ class EmployeeAppointmentController extends Controller
                  }
             }
 
+            // Xóa session SAU KHI đã ghi nhận promotion usage
             \Illuminate\Support\Facades\Session::forget('cart');
             \Illuminate\Support\Facades\Session::forget('coupon_code');
             \Illuminate\Support\Facades\Session::forget('applied_promotion_id');
@@ -1379,7 +1465,7 @@ class EmployeeAppointmentController extends Controller
      * Helper function to calculate discount for an item (service/variant/combo)
      * Logic must match with Site AppointmentController and service-list-items.blade.php
      */
-    protected function calculateDiscountForItem($item, $itemType, $activePromotions)
+    protected function calculateDiscountForItem($item, $itemType, $activePromotions, $userId = null)
     {
         $originalPrice = 0;
         if ($itemType === 'service') {
@@ -1414,9 +1500,13 @@ class EmployeeAppointmentController extends Controller
             if ($promo->start_date && $promo->start_date > $now) continue;
             if ($promo->end_date && $promo->end_date < $now) continue;
             
-            // Check usage_limit - if promotion has reached its limit, skip it
+            // Check usage_limit - CHỈ đếm các PromotionUsage có appointment đã thanh toán
             if ($promo->usage_limit) {
-                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)->count();
+                $totalUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
+                    ->whereHas('appointment', function($query) {
+                        $query->where('status', 'Đã thanh toán');
+                    })
+                    ->count();
                 if ($totalUsage >= $promo->usage_limit) {
                     continue; // Skip this promotion, use original price
                 }
@@ -1425,10 +1515,11 @@ class EmployeeAppointmentController extends Controller
             // Check per_user_limit - if user has reached their limit, skip it
             // CHỈ đếm các PromotionUsage có appointment đã thanh toán
             if ($promo->per_user_limit) {
-                $userId = $item->user_id ?? auth()->id();
-                if ($userId) {
+                // Sử dụng userId được truyền vào (từ appointment) hoặc lấy từ item hoặc auth
+                $checkUserId = $userId ?? ($item->user_id ?? auth()->id());
+                if ($checkUserId) {
                     $userUsage = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
-                        ->where('user_id', $userId)
+                        ->where('user_id', $checkUserId)
                         ->whereHas('appointment', function($query) {
                             $query->where('status', 'Đã thanh toán');
                         })

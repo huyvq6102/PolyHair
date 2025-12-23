@@ -363,12 +363,15 @@
             // Promotion data from PHP
             @php
                 $orderPromotionsData = $availableOrderPromotions->map(function($promo) use ($appointment) {
-                    $remainingUsage = null;
+                    $usageCount = 0;
                     if ($promo->per_user_limit && $appointment->user) {
+                        // CHỈ đếm các PromotionUsage có appointment đã thanh toán
                         $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
                             ->where('user_id', $appointment->user->id)
+                            ->whereHas('appointment', function($query) {
+                                $query->where('status', 'Đã thanh toán');
+                            })
                             ->count();
-                        $remainingUsage = max(0, $promo->per_user_limit - $usageCount);
                     }
                     return [
                         'id' => $promo->id,
@@ -384,17 +387,20 @@
                         'usage_limit' => $promo->usage_limit ?? null,
                         'start_date' => $promo->start_date ? $promo->start_date->format('d/m/Y') : null,
                         'end_date' => $promo->end_date ? $promo->end_date->format('d/m/Y') : null,
-                        'remaining_usage' => $remainingUsage,
+                        'usage_count' => $usageCount,
                     ];
                 });
                 
                 $customerTierPromotionsData = $availableCustomerTierPromotions->map(function($promo) use ($appointment) {
-                    $remainingUsage = null;
+                    $usageCount = 0;
                     if ($promo->per_user_limit && $appointment->user) {
+                        // CHỈ đếm các PromotionUsage có appointment đã thanh toán
                         $usageCount = \App\Models\PromotionUsage::where('promotion_id', $promo->id)
                             ->where('user_id', $appointment->user->id)
+                            ->whereHas('appointment', function($query) {
+                                $query->where('status', 'Đã thanh toán');
+                            })
                             ->count();
-                        $remainingUsage = max(0, $promo->per_user_limit - $usageCount);
                     }
                     return [
                         'id' => $promo->id,
@@ -411,7 +417,7 @@
                         'usage_limit' => $promo->usage_limit ?? null,
                         'start_date' => $promo->start_date ? $promo->start_date->format('d/m/Y') : null,
                         'end_date' => $promo->end_date ? $promo->end_date->format('d/m/Y') : null,
-                        'remaining_usage' => $remainingUsage,
+                        'usage_count' => $usageCount,
                     ];
                 });
             @endphp
@@ -538,8 +544,8 @@
                     conditions.push('Từ hạng ' + promo.min_customer_tier + ' trở lên');
                 }
                 if (promo.per_user_limit) {
-                    const usageText = promo.remaining_usage !== null 
-                        ? 'Mỗi khách hàng: ' + promo.remaining_usage + '/' + promo.per_user_limit + ' lần'
+                    const usageText = promo.usage_count !== undefined 
+                        ? 'Mỗi khách hàng: ' + promo.usage_count + '/' + promo.per_user_limit + ' lần'
                         : 'Mỗi khách hàng: ' + promo.per_user_limit + ' lần';
                     conditions.push(usageText);
                 }

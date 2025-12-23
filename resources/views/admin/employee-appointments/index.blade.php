@@ -140,7 +140,7 @@
                                                         </a>
                                                     @endif
 
-                                                    @if(isset($employee) && $employee && $employee->position === 'Receptionist')
+                                                    @if(isset($employee) && $employee && $employee->position === 'Receptionist' && $appointment->status !== 'Đã thanh toán')
                                                         <a href="{{ route('employee.appointments.edit', $appointment->id) }}"
                                                             class="btn btn-sm btn-warning" title="Sửa lịch hẹn">
                                                             <i class="fas fa-edit"></i>

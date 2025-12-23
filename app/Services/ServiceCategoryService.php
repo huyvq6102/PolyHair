@@ -24,6 +24,20 @@ class ServiceCategoryService
     }
 
     /**
+     * Get only active service categories.
+     */
+    public function getActive()
+    {
+        $query = ServiceCategory::where('is_active', true);
+
+        if (Schema::hasColumn('service_categories', 'sort_order')) {
+            $query->orderBy('sort_order');
+        }
+
+        return $query->orderBy('name')->get();
+    }
+
+    /**
      * Get one service category by id.
      */
     public function getOne($id)

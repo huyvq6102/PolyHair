@@ -65,17 +65,6 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label for="filter_discount_amount">Số tiền giảm (từ)</label>
-                            <input type="number" 
-                                   name="filter_discount_amount" 
-                                   id="filter_discount_amount" 
-                                   class="form-control" 
-                                   value="{{ request('filter_discount_amount') }}"
-                                   placeholder="Nhập số tiền...">
-                        </div>
-                    </div>
                 </div>
                 <div class="row">
                     <div class="col-md-12">
@@ -85,7 +74,7 @@
                         <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
                             <i class="fas fa-redo"></i> Xóa bộ lọc
                         </a>
-                        @if(request()->hasAny(['filter_code', 'filter_scope', 'filter_discount_type', 'filter_discount_amount']))
+                        @if(request()->hasAny(['filter_code', 'filter_scope', 'filter_discount_type']))
                             <span class="ml-2 text-muted">
                                 <i class="fas fa-info-circle"></i> Đang lọc: {{ $promotions->count() }} kết quả
                             </span>
