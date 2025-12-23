@@ -937,16 +937,10 @@ class AppointmentController extends Controller
                 'expected_count' => count($serviceVariantData),
             ]);
 
-            // Khi lấy được thông tin discount thì sẽ save giữ liệu vào bảng promotion_usage
-             // Khi lấy được thông tin discount thì sẽ save giữ liệu vào bảng promotion_usage
-             if ($discountResult['discount'] > 0) {
-                \App\Models\PromotionUsage::create([
-                    'promotion_id' => $discountResult['promotion']->id,
-                    'user_id' => $user ? $user->id : null,
-                    'appointment_id' => $appointment->id,
-                    'used_at' => Carbon::now(),
-                ]);
-            }
+            // KHÔNG tạo PromotionUsage ở đây vì appointment chưa thanh toán
+            // PromotionUsage sẽ được tạo sau khi thanh toán thành công thông qua:
+            // - recordPromotionUsage() cho order-level/customer_tier promotions
+            // - recordServiceLevelPromotionUsages() cho service-level promotions
 
             // Verify appointment details count matches expected
             if ($appointment->appointmentDetails->count() !== count($serviceVariantData)) {

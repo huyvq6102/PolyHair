@@ -611,12 +611,16 @@
                     return;
                 }
 
-                // Nếu đang ở "Hoàn thành", không cho phép chọn trạng thái khác
+                // Nếu đang ở "Hoàn thành", cho phép giữ nguyên hoặc chuyển sang "Đã thanh toán"
                 if (currentOrder === 3) {
-                    // Chỉ cho phép giữ nguyên trạng thái hiện tại
-                    option.disabled = true;
-                    option.style.color = '#999';
-                    option.style.backgroundColor = '#f5f5f5';
+                    // Cho phép giữ nguyên hoặc chuyển sang "Đã thanh toán"
+                    if (optionValue === 'Hoàn thành' || optionValue === 'Đã thanh toán') {
+                        option.disabled = false;
+                    } else {
+                        option.disabled = true;
+                        option.style.color = '#999';
+                        option.style.backgroundColor = '#f5f5f5';
+                    }
                     return;
                 }
 
@@ -677,7 +681,8 @@
             if (selectedValue === currentStatus) {
                 isValid = true;
             } else if (currentOrder === 3) {
-                isValid = false; // Không cho phép thay đổi từ Hoàn thành
+                // Cho phép chuyển từ "Hoàn thành" sang "Đã thanh toán"
+                isValid = selectedValue === 'Đã thanh toán';
             } else if (currentStatus === 'Đã hủy') {
                 isValid = false; // Không cho phép thay đổi từ Đã hủy
             } else if (selectedValue === 'Đã hủy' && currentOrder >= 0 && currentOrder <= 2) {

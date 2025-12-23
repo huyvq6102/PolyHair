@@ -361,6 +361,9 @@ class CheckoutController extends Controller
                              // Ghi nhận việc sử dụng khuyến mãi TRƯỚC KHI xóa session
                              $appt->recordPromotionUsage();
                              
+                             // Ghi nhận tất cả các khuyến mãi service-level đã được áp dụng
+                             $appt->recordServiceLevelPromotionUsages();
+                             
                              // Update details status
                              foreach ($appt->appointmentDetails as $detail) {
                                 $detail->status = 'Hoàn thành';
@@ -447,6 +450,9 @@ class CheckoutController extends Controller
 
                             // Ghi nhận việc sử dụng khuyến mãi
                             $appointment->recordPromotionUsage();
+                            
+                            // Ghi nhận tất cả các khuyến mãi service-level đã được áp dụng
+                            $appointment->recordServiceLevelPromotionUsages();
 
                             // Cập nhật chi tiết
                             foreach ($appointment->appointmentDetails as $detail) {

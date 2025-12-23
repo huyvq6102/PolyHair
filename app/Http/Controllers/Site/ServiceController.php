@@ -123,16 +123,20 @@ class ServiceController extends Controller
                     }
                     $finalPrice = $bestFinalPrice ?? 0;
                 } else {
-                    // Service đơn - tính discount trực tiếp
+                    // Service đơn - lưu giá gốc, để view tự tính discount
                     $originalPrice = $service->base_price ?? 0;
-                    $finalPrice = $this->calculateFinalPriceForService($service, $originalPrice, $activePromotions);
+                    // KHÔNG tính discount ở đây, để view tự tính để hiển thị đúng
                 }
                 
-                // Filter by price range - sử dụng finalPrice
-                if ($minPrice !== null && $finalPrice < $minPrice) {
+                // Filter by price range - sử dụng giá gốc (base_price) để filter
+                $priceForFilter = $service->serviceVariants->count() > 0 
+                    ? ($finalPrice ?? ($service->serviceVariants->min('price') ?? 0))
+                    : ($service->base_price ?? 0);
+                
+                if ($minPrice !== null && $priceForFilter < $minPrice) {
                     continue;
                 }
-                if ($maxPrice !== null && $finalPrice > $maxPrice) {
+                if ($maxPrice !== null && $priceForFilter > $maxPrice) {
                     continue;
                 }
 
@@ -143,7 +147,7 @@ class ServiceController extends Controller
                     'id' => $service->id,
                     'name' => $service->name,
                     'image' => $service->image,
-                    'price' => $finalPrice, // Sử dụng finalPrice thay vì originalPrice
+                    'price' => $service->base_price ?? 0, // Lưu giá gốc, để view tự tính discount
                     'category' => $service->category,
                     'serviceVariants' => $service->serviceVariants,
                     'link' => route('site.services.show', $service->id),
@@ -177,14 +181,11 @@ class ServiceController extends Controller
             foreach ($combos as $combo) {
                 $originalPrice = $combo->price ?? 0;
                 
-                // Tính giá cuối cùng sau khi áp dụng promotion
-                $finalPrice = $this->calculateFinalPriceForCombo($combo, $originalPrice, $activePromotions);
-                
-                // Filter by price range - sử dụng finalPrice
-                if ($minPrice !== null && $finalPrice < $minPrice) {
+                // Filter by price range - sử dụng giá gốc để filter
+                if ($minPrice !== null && $originalPrice < $minPrice) {
                     continue;
                 }
-                if ($maxPrice !== null && $finalPrice > $maxPrice) {
+                if ($maxPrice !== null && $originalPrice > $maxPrice) {
                     continue;
                 }
                 
@@ -193,7 +194,7 @@ class ServiceController extends Controller
                     'id' => $combo->id,
                     'name' => $combo->name,
                     'image' => $combo->image,
-                    'price' => $finalPrice, // Sử dụng finalPrice thay vì originalPrice
+                    'price' => $originalPrice, // Lưu giá gốc, để view tự tính discount
                     'category' => $combo->category,
                     'link' => route('site.services.show', $combo->id),
                 ]);

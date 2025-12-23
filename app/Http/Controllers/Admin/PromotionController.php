@@ -42,7 +42,6 @@ class PromotionController extends Controller
             'code' => $request->input('filter_code'),
             'scope' => $request->input('filter_scope'),
             'discount_type' => $request->input('filter_discount_type'),
-            'discount_amount' => $request->input('filter_discount_amount'),
         ];
         
         $promotions = $this->promotionService->getAll($filters);

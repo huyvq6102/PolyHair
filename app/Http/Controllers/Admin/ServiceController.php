@@ -96,7 +96,7 @@ class ServiceController extends Controller
      */
     public function create()
     {
-        $categories = $this->serviceCategoryService->getAll();
+        $categories = $this->serviceCategoryService->getActive();
         $singleServices = Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
             ->get();
@@ -336,7 +336,14 @@ class ServiceController extends Controller
         // Check if it's a combo
         if ($type === 'combo') {
             $combo = Combo::findOrFail($id);
-            $categories = $this->serviceCategoryService->getAll();
+            $categories = $this->serviceCategoryService->getActive();
+            // Nếu category hiện tại của combo bị ẩn, vẫn thêm vào danh sách
+            if ($combo->category_id && !$categories->contains('id', $combo->category_id)) {
+                $currentCategory = \App\Models\ServiceCategory::find($combo->category_id);
+                if ($currentCategory) {
+                    $categories->push($currentCategory);
+                }
+            }
             $singleServices = Service::whereNull('deleted_at')
                 ->whereDoesntHave('serviceVariants')
                 ->get();
@@ -359,7 +366,14 @@ class ServiceController extends Controller
             if ($service) {
                 // Đây là edit service có variants (ID là service ID)
                 $service->load(['category', 'serviceVariants.variantAttributes']);
-                $categories = $this->serviceCategoryService->getAll();
+                $categories = $this->serviceCategoryService->getActive();
+                // Nếu category hiện tại của service bị ẩn, vẫn thêm vào danh sách
+                if ($service->category_id && !$categories->contains('id', $service->category_id)) {
+                    $currentCategory = \App\Models\ServiceCategory::find($service->category_id);
+                    if ($currentCategory) {
+                        $categories->push($currentCategory);
+                    }
+                }
                 $singleServices = Service::whereNull('deleted_at')
                     ->whereDoesntHave('serviceVariants')
                     ->get();
@@ -373,7 +387,14 @@ class ServiceController extends Controller
                 if ($variant) {
                     // Đây là edit một variant đơn lẻ
                     $variant->load('service');
-                    $categories = $this->serviceCategoryService->getAll();
+                    $categories = $this->serviceCategoryService->getActive();
+                    // Nếu category hiện tại của service bị ẩn, vẫn thêm vào danh sách
+                    if ($variant->service && $variant->service->category_id && !$categories->contains('id', $variant->service->category_id)) {
+                        $currentCategory = \App\Models\ServiceCategory::find($variant->service->category_id);
+                        if ($currentCategory) {
+                            $categories->push($currentCategory);
+                        }
+                    }
                     $singleServices = Service::whereNull('deleted_at')
                         ->whereDoesntHave('serviceVariants')
                         ->get();
@@ -390,7 +411,14 @@ class ServiceController extends Controller
 
         // It's a service
         $service = Service::with(['category', 'serviceVariants.variantAttributes'])->findOrFail($id);
-        $categories = $this->serviceCategoryService->getAll();
+        $categories = $this->serviceCategoryService->getActive();
+        // Nếu category hiện tại của service bị ẩn, vẫn thêm vào danh sách
+        if ($service->category_id && !$categories->contains('id', $service->category_id)) {
+            $currentCategory = \App\Models\ServiceCategory::find($service->category_id);
+            if ($currentCategory) {
+                $categories->push($currentCategory);
+            }
+        }
         $singleServices = Service::whereNull('deleted_at')
             ->whereDoesntHave('serviceVariants')
             ->get();
