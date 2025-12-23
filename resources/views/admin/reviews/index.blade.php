@@ -183,17 +183,17 @@
                                     <a href="{{ route('admin.reviews.show', $review->id) }}" class="btn btn-sm btn-info" title="Xem chi tiết">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ route('admin.reviews.edit', $review->id) }}" class="btn btn-sm btn-warning" title="Sửa">
+                                    {{-- <a href="{{ route('admin.reviews.edit', $review->id) }}" class="btn btn-sm btn-warning" title="Sửa">
                                         <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('admin.reviews.hide', $review->id) }}" method="POST" class="d-inline" 
+                                    </a> --}}
+                                    <form action="{{ route('admin.reviews.hide', $review->id) }}" method="POST" class="d-inline"
                                           onsubmit="return confirm('Bạn có chắc muốn {{ $review->is_hidden ? 'hiển thị' : 'ẩn' }} bình luận này không?');">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-{{ $review->is_hidden ? 'success' : 'secondary' }}" title="{{ $review->is_hidden ? 'Hiển thị' : 'Ẩn' }}">
                                             <i class="fas fa-{{ $review->is_hidden ? 'eye' : 'eye-slash' }}"></i>
                                         </button>
                                     </form>
-                                    <form action="{{ route('admin.reviews.destroy', $review->id) }}" method="POST" class="d-inline" 
+                                    <form action="{{ route('admin.reviews.destroy', $review->id) }}" method="POST" class="d-inline"
                                           onsubmit="return confirm('Bạn có chắc muốn xóa vĩnh viễn bình luận này không? Hành động này không thể hoàn tác!');">
                                         @csrf
                                         @method('DELETE')
@@ -212,7 +212,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         <!-- Pagination -->
         @if($reviews->hasPages())
             <div class="d-flex justify-content-center mt-4">

@@ -76,10 +76,10 @@ class ReviewController extends Controller
      */
     public function edit(string $id)
     {
-        $review = Review::with(['user', 'service', 'appointment'])
-            ->findOrFail($id);
+        // $review = Review::with(['user', 'service', 'appointment'])
+        //     ->findOrFail($id);
 
-        return view('admin.reviews.edit', compact('review'));
+        // return view('admin.reviews.edit', compact('review'));
     }
 
     /**
@@ -87,17 +87,17 @@ class ReviewController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $validated = $request->validate([
-            'comment' => 'required|string|max:5000',
-        ]);
+        // $validated = $request->validate([
+        //     'comment' => 'required|string|max:5000',
+        // ]);
 
-        $review = Review::findOrFail($id);
-        $review->update([
-            'comment' => $validated['comment'],
-        ]);
+        // $review = Review::findOrFail($id);
+        // $review->update([
+        //     'comment' => $validated['comment'],
+        // ]);
 
-        return redirect()->route('admin.reviews.show', $review->id)
-            ->with('success', 'Bình luận đã được cập nhật thành công!');
+        // return redirect()->route('admin.reviews.show', $review->id)
+        //     ->with('success', 'Bình luận đã được cập nhật thành công!');
     }
 
     /**
