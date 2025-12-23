@@ -11,9 +11,9 @@
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Chi tiết bình luận #{{ $review->id }}</h1>
         <div>
-            <a href="{{ route('admin.reviews.edit', $review->id) }}" class="btn btn-warning">
+            {{-- <a href="{{ route('admin.reviews.edit', $review->id) }}" class="btn btn-warning">
                 <i class="fas fa-edit"></i> Sửa
-            </a>
+            </a> --}}
             <a href="{{ route('admin.reviews.index') }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Quay lại
             </a>
@@ -279,9 +279,9 @@
         </div>
         <div class="card-body">
             <div class="btn-group" role="group">
-                <a href="{{ route('admin.reviews.edit', $review->id) }}" class="btn btn-warning">
+                {{-- <a href="{{ route('admin.reviews.edit', $review->id) }}" class="btn btn-warning">
                     <i class="fas fa-edit"></i> Sửa bình luận
-                </a>
+                </a> --}}
                 <form action="{{ route('admin.reviews.hide', $review->id) }}" method="POST" class="d-inline"
                     onsubmit="return confirm('Bạn có chắc muốn {{ $review->is_hidden ? 'hiển thị' : 'ẩn' }} bình luận này không?');">
                     @csrf

@@ -1,4 +1,4 @@
-@extends('admin.layouts.app')
+{{-- @extends('admin.layouts.app')
 
 @section('title', 'Sửa bình luận')
 
@@ -20,12 +20,12 @@
         <form action="{{ route('admin.reviews.update', $review->id) }}" method="POST" class="needs-validation" novalidate>
             @csrf
             @method('PUT')
-            
+
             <div class="form-group">
                 <label for="comment">Nội dung bình luận <span class="text-danger">*</span></label>
-                <textarea name="comment" id="comment" rows="6" 
-                          class="form-control @error('comment') is-invalid @enderror" 
-                          placeholder="Nhập nội dung bình luận" 
+                <textarea name="comment" id="comment" rows="6"
+                          class="form-control @error('comment') is-invalid @enderror"
+                          placeholder="Nhập nội dung bình luận"
                           required>{{ old('comment', $review->comment) }}</textarea>
                 @error('comment')
                     <div class="invalid-feedback">{{ $message }}</div>
@@ -43,7 +43,7 @@
                         <p><strong>Dịch vụ:</strong> {{ $review->service->name ?? 'N/A' }}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Đánh giá:</strong> 
+                        <p><strong>Đánh giá:</strong>
                             @if($review->rating)
                                 @for($i = 1; $i <= 5; $i++)
                                     @if($i <= $review->rating)
@@ -57,7 +57,7 @@
                                 Chưa đánh giá
                             @endif
                         </p>
-                        <p><strong>Ngày tạo:</strong> 
+                        <p><strong>Ngày tạo:</strong>
                             {{ $review->created_at ? $review->created_at->format('d/m/Y H:i:s') : 'N/A' }}
                         </p>
                     </div>
@@ -65,7 +65,7 @@
             </div>
 
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> 
+                <i class="fas fa-info-circle"></i>
                 <strong>Lưu ý:</strong> Sau khi cập nhật, ngày giờ sẽ được cập nhật tự động.
             </div>
 
@@ -99,4 +99,4 @@
     })();
 </script>
 @endpush
-
+ --}}
